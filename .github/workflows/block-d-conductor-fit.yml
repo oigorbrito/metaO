@@ -1,0 +1,47 @@
+name: Block D Conductor L5 Fit
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/block-d-conductor-fit.yml'
+      - 'tests/integration/block_d_conductor_fit.py'
+      - 'docs/FOUNDATION-FIT.md'
+  workflow_dispatch:
+
+jobs:
+  conductor-fit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Conductor CLI
+        run: npm install -g @conductor-oss/conductor-cli
+      - name: Start Conductor
+        run: |
+          nohup conductor server start latest > conductor.log 2>&1 &
+          echo $! > conductor.pid
+          python - <<'PY'
+          import time, urllib.request
+          for _ in range(180):
+              try:
+                  with urllib.request.urlopen('http://localhost:8080/api/health', timeout=2) as r:
+                      if r.status < 500:
+                          break
+              except Exception:
+                  pass
+              time.sleep(1)
+          else:
+              raise SystemExit('Conductor did not become ready')
+          PY
+      - name: Execute Block D real-path fit suite
+        run: python tests/integration/block_d_conductor_fit.py
+      - name: Show Conductor log on failure
+        if: failure()
+        run: tail -n 300 conductor.log || true
