@@ -2,15 +2,14 @@ from __future__ import annotations
 
 import json
 import os
-import signal
 import subprocess
 import time
 import urllib.error
 import urllib.parse
 import urllib.request
-from pathlib import Path
 
 BASE = "http://localhost:8080/api"
+SERVER_VERSION = os.environ.get("CONDUCTOR_TEST_SERVER_VERSION", "3.32.0")
 
 
 def request(method: str, path: str, body=None, *, expected=(200, 204), timeout=15):
@@ -48,13 +47,25 @@ def wait_workflow(workflow_id: str, statuses: set[str], timeout=40):
     raise AssertionError(f"workflow {workflow_id} did not reach {statuses}; last={last}")
 
 
-def poll_task(task_type: str, timeout=30):
+def wait_health(timeout=120):
     deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            task = request("GET", f"/tasks/poll/{urllib.parse.quote(task_type)}?workerid=metao-fit", expected=(200, 204))
-        except AssertionError:
-            raise
+            request("GET", "/health", timeout=2)
+            return
+        except Exception:
+            time.sleep(1)
+    raise AssertionError("Conductor did not become healthy")
+
+
+def poll_task(task_type: str, timeout=30):
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        task = request(
+            "GET",
+            f"/tasks/poll/{urllib.parse.quote(task_type)}?workerid=metao-fit",
+            expected=(200, 204),
+        )
         if task:
             return task
         time.sleep(0.25)
@@ -135,13 +146,15 @@ def scenario_retry():
 
 
 def scenario_timeout():
-    wid = start(dynamic_simple(
-        "metao_fit_timeout",
-        "metao_fit_timeout_task",
-        retry_count=0,
-        timeout_seconds=2,
-        response_timeout_seconds=1,
-    ))
+    wid = start(
+        dynamic_simple(
+            "metao_fit_timeout",
+            "metao_fit_timeout_task",
+            retry_count=0,
+            timeout_seconds=2,
+            response_timeout_seconds=1,
+        )
+    )
     task = poll_task("metao_fit_timeout_task")
     assert task["workflowInstanceId"] == wid
     wf = wait_workflow(wid, {"TIMED_OUT", "FAILED"}, timeout=20)
@@ -167,29 +180,13 @@ def scenario_process_restart_preserves_state():
     before = request("GET", f"/workflow/{wid}?includeTasks=true")
     assert before["status"] == "RUNNING"
 
-    pid_file = Path("conductor.pid")
-    assert pid_file.exists(), "workflow did not provide conductor.pid"
-    pid = int(pid_file.read_text().strip())
-    os.kill(pid, signal.SIGTERM)
-    time.sleep(3)
-
-    proc = subprocess.Popen(
-        ["conductor", "server", "start", "latest"],
-        stdout=open("conductor-restart.log", "ab"),
-        stderr=subprocess.STDOUT,
-        start_new_session=True,
+    subprocess.run(["conductor", "server", "stop"], check=True)
+    time.sleep(2)
+    subprocess.run(
+        ["conductor", "server", "start", "--version", SERVER_VERSION],
+        check=True,
     )
-    pid_file.write_text(str(proc.pid))
-
-    deadline = time.time() + 120
-    while time.time() < deadline:
-        try:
-            request("GET", "/health", timeout=2)
-            break
-        except Exception:
-            time.sleep(1)
-    else:
-        raise AssertionError("Conductor failed to restart")
+    wait_health()
 
     after = request("GET", f"/workflow/{wid}?includeTasks=true")
     assert after["workflowId"] == wid
@@ -206,6 +203,7 @@ def main():
     # metaO need not import Conductor SDK types into its Core.
     health = request("GET", "/health")
     print("HEALTH=PASS", health)
+    print(f"CONDUCTOR_SERVER_VERSION={SERVER_VERSION}")
     ids = {
         "happy": scenario_happy_worker_and_state(),
         "retry": scenario_retry(),
