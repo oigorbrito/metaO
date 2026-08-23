@@ -1,6 +1,12 @@
 name: Block D Conductor L5 Fit
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/block-d-conductor-fit.yml'
+      - 'tests/integration/block_d_conductor_fit.py'
+      - 'docs/FOUNDATION-FIT.md'
   pull_request:
     paths:
       - '.github/workflows/block-d-conductor-fit.yml'
@@ -25,8 +31,7 @@ jobs:
         run: npm install -g @conductor-oss/conductor-cli
       - name: Start Conductor
         run: |
-          nohup conductor server start latest > conductor.log 2>&1 &
-          echo $! > conductor.pid
+          conductor server start --version 3.32.0-rc.22
           python - <<'PY'
           import time, urllib.request
           for _ in range(180):
@@ -44,4 +49,4 @@ jobs:
         run: python tests/integration/block_d_conductor_fit.py
       - name: Show Conductor log on failure
         if: failure()
-        run: tail -n 300 conductor.log || true
+        run: conductor server logs || true
