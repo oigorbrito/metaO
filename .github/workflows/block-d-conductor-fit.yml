@@ -18,6 +18,8 @@ jobs:
   conductor-fit:
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    env:
+      CONDUCTOR_TEST_SERVER_VERSION: '3.32.0'
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -31,7 +33,7 @@ jobs:
         run: npm install -g @conductor-oss/conductor-cli
       - name: Start Conductor
         run: |
-          conductor server start --version 3.32.0-rc.22
+          conductor server start --version "$CONDUCTOR_TEST_SERVER_VERSION"
           python - <<'PY'
           import time, urllib.request
           for _ in range(180):
