@@ -1,4 +1,4 @@
-name: Block D Conductor L5 Fit
+name: Conductor Real-Path Fit
 
 on:
   push:
@@ -6,11 +6,17 @@ on:
     paths:
       - '.github/workflows/block-d-conductor-fit.yml'
       - 'tests/integration/block_d_conductor_fit.py'
+      - 'tests/integration/block_f_conductor_adapter_fit.py'
+      - 'src/metao/durable.py'
+      - 'src/metao/adapters/conductor_http.py'
       - 'docs/FOUNDATION-FIT.md'
   pull_request:
     paths:
       - '.github/workflows/block-d-conductor-fit.yml'
       - 'tests/integration/block_d_conductor_fit.py'
+      - 'tests/integration/block_f_conductor_adapter_fit.py'
+      - 'src/metao/durable.py'
+      - 'src/metao/adapters/conductor_http.py'
       - 'docs/FOUNDATION-FIT.md'
   workflow_dispatch:
 
@@ -29,8 +35,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install Conductor CLI
-        run: npm install -g @conductor-oss/conductor-cli
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install metaO and Conductor CLI
+        run: |
+          python -m pip install -e .
+          npm install -g @conductor-oss/conductor-cli
       - name: Start Conductor
         run: |
           conductor server start --version "$CONDUCTOR_TEST_SERVER_VERSION"
@@ -47,8 +58,10 @@ jobs:
           else:
               raise SystemExit('Conductor did not become ready')
           PY
-      - name: Execute Block D real-path fit suite
+      - name: Block D foundation fit
         run: python tests/integration/block_d_conductor_fit.py
+      - name: Block F adapter fit
+        run: python tests/integration/block_f_conductor_adapter_fit.py
       - name: Show Conductor log on failure
         if: failure()
         run: conductor server logs || true
