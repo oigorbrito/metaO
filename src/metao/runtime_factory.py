@@ -26,7 +26,7 @@ from .runtime_certification import (
     RuntimeCertification,
     RuntimeCertificationStorePort,
     is_certificate_fresh,
-    latest_passing_certificate,
+    latest_certificate,
 )
 from .runtime_certification_revocation import (
     RuntimeCertificationRevocationStorePort,
@@ -250,42 +250,27 @@ def _latest_reusable_certificate(
     now_epoch: float | None,
     max_age_seconds: float | None,
 ) -> RuntimeCertification | None:
-    if revocations is None:
-        if max_age_seconds is None:
-            certificate_id = f"{orchestrator_id}:{runtime_version}:{probe_execution_id}"
-            existing = certifications.get(certificate_id)
-            return existing if existing is not None and existing.passed else None
-        return latest_passing_certificate(
-            certifications,
-            orchestrator_id=orchestrator_id,
-            runtime_version=runtime_version,
-            probe_execution_id=probe_execution_id,
+    """Return the latest exact verdict only when that generation is reusable."""
+
+    current = latest_certificate(
+        certifications,
+        orchestrator_id=orchestrator_id,
+        runtime_version=runtime_version,
+        probe_execution_id=probe_execution_id,
+    )
+    if current is None or not current.passed:
+        return None
+    if is_certificate_revoked(revocations, current.certificate_id):
+        return None
+    if max_age_seconds is not None:
+        assert now_epoch is not None
+        if not is_certificate_fresh(
+            current,
             now_epoch=now_epoch,
             max_age_seconds=max_age_seconds,
-        )
-
-    matches = []
-    for certificate in certifications.history(orchestrator_id):
-        if not certificate.passed:
-            continue
-        if certificate.runtime_version != runtime_version:
-            continue
-        if certificate.probe_execution_id != probe_execution_id:
-            continue
-        if is_certificate_revoked(revocations, certificate.certificate_id):
-            continue
-        if max_age_seconds is not None:
-            assert now_epoch is not None
-            if not is_certificate_fresh(
-                certificate,
-                now_epoch=now_epoch,
-                max_age_seconds=max_age_seconds,
-            ):
-                continue
-        matches.append(certificate)
-    if not matches:
-        return None
-    return max(matches, key=lambda item: (item.certified_at_epoch, item.certificate_id))
+        ):
+            return None
+    return current
 
 
 def create_operator_from_catalog(
@@ -348,7 +333,20 @@ def create_operator_from_catalog(
         runtime_version = plugin.orchestrator.descriptor.version
         reuse_passed = _reuse_passed_certificate(entry)
         max_age_seconds = _certificate_max_age_seconds(entry)
-        needs_generation_time = max_age_seconds is not None or certification_revocations is not None
+        current_verdict = latest_certificate(
+            certifications,
+            orchestrator_id=orchestrator_id,
+            runtime_version=runtime_version,
+            probe_execution_id=probe.execution_id,
+        )
+        already_generational = (
+            current_verdict is not None and current_verdict.certified_at_epoch > 0
+        )
+        needs_generation_time = (
+            max_age_seconds is not None
+            or certification_revocations is not None
+            or already_generational
+        )
         now_epoch = (
             _certification_now_epoch(certification_now_epoch)
             if needs_generation_time
