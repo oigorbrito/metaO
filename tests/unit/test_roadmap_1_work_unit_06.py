@@ -3,6 +3,8 @@ from __future__ import annotations
 from io import StringIO
 import json
 from pathlib import Path
+import shutil
+import subprocess
 import sys
 import tempfile
 from types import ModuleType
@@ -253,6 +255,22 @@ class MetaOCliV1Tests(unittest.TestCase):
         pyproject = (root / "pyproject.toml").read_text(encoding="utf-8")
         self.assertIn('[project.scripts]', pyproject)
         self.assertIn('metao = "metao.cli:main"', pyproject)
+
+    def test_installed_console_script_is_executable(self):
+        executable = shutil.which("metao")
+        self.assertIsNotNone(executable, "metao console script is not installed on PATH")
+        completed = subprocess.run(
+            [executable, "--help"],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertIn("metaO control-plane operator CLI", completed.stdout)
+        self.assertIn("run", completed.stdout)
+        self.assertIn("status", completed.stdout)
+        self.assertIn("approve", completed.stdout)
+        self.assertIn("resume", completed.stdout)
 
     def test_cli_remains_orchestrator_sdk_neutral(self):
         root = Path(__file__).resolve().parents[2]
