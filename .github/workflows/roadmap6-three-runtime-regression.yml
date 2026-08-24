@@ -10,6 +10,7 @@ on:
       - 'src/metao/runtime_control.py'
       - 'src/metao/runtime_certification.py'
       - 'src/metao/runtime_certification_revocation.py'
+      - 'tests/integration/_openai_agents_model.py'
       - 'tests/integration/test_r6_wu05_three_real_runtimes.py'
       - 'tests/integration/test_r6_wu04_openai_agents_real.py'
       - 'tests/integration/test_r5_wu04_real_certificate_lifecycle.py'
@@ -32,10 +33,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m pip install 'openai-agents==0.21.1' 'langgraph==1.2.11' 'crewai==1.15.16'
+          python -m pip install 'openai-agents==0.20.0' 'langgraph==1.2.11' 'crewai==1.15.16'
       - name: Confirm pinned runtime versions
         run: |
-          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.21.1'; assert version('langgraph') == '1.2.11'; assert version('crewai') == '1.15.16'; print('OpenAI Agents', version('openai-agents')); print('LangGraph', version('langgraph')); print('CrewAI', version('crewai'))"
+          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'; assert version('langgraph') == '1.2.11'; assert version('crewai') == '1.15.16'; print('OpenAI Agents', version('openai-agents')); print('LangGraph', version('langgraph')); print('CrewAI', version('crewai'))"
       - name: WU05 three real runtime evidence
         run: python tests/integration/test_r6_wu05_three_real_runtimes.py
       - name: WU04 third runtime conformance regression
