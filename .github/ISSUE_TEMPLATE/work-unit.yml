@@ -1,0 +1,126 @@
+name: Work unit / task
+
+description: Plan and track a feature, research, architecture, infra, test, documentation, or operational block.
+title: "[WU] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        metaO is Issue-first. The Issue owns intent, scope, acceptance, progress, and evidence.
+
+        Evidence policy:
+        - `IMPLEMENTED != EXECUTED`
+        - `EXECUTED != ACCEPTED`
+        - never claim PASS without executable evidence
+
+  - type: dropdown
+    id: work_type
+    attributes:
+      label: Work type
+      options:
+        - Feature
+        - Architecture
+        - Research
+        - Infrastructure
+        - Test / validation
+        - Documentation
+        - Release / operations
+        - Refactor
+    validations:
+      required: true
+
+  - type: input
+    id: parent
+    attributes:
+      label: Parent / roadmap Issue
+      description: Link the parent Issue when this is part of a larger roadmap or work tree.
+      placeholder: "#70"
+
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: State the outcome this work unit must achieve.
+      placeholder: What must be true when this Issue is complete?
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context and evidence
+      description: Record the evidence, prior decision, defect, measurement, or repository state that justifies this work.
+      placeholder: Links, SHAs, run/job IDs, current behavior, upstream evidence, or prior Issues/PRs.
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: In scope
+      placeholder: |
+        - item 1
+        - item 2
+    validations:
+      required: true
+
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+      description: Explicitly prevent silent scope creep.
+      placeholder: |
+        - no unrelated refactor
+        - no new runtime unless this Issue explicitly requires it
+    validations:
+      required: true
+
+  - type: textarea
+    id: invariants
+    attributes:
+      label: Architecture / safety invariants
+      description: List contracts or boundaries that must remain true.
+      placeholder: |
+        - ORCHESTRATOR_DONE != METAO_ACCEPTED
+        - ADOPT > ADAPT > BUILD
+        - no SDK-specific authority in Core
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Use executable, falsifiable criteria. Prepared code or static review alone is not PASS.
+      placeholder: |
+        - [ ] implementation complete
+        - [ ] focused tests executed
+        - [ ] regression executed
+        - [ ] real sandbox/integration executed when applicable
+        - [ ] evidence recorded with exact branch/SHA
+        - [ ] documentation updated
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies / blockers
+      placeholder: Related Issues, PRs, external services, local execution requirements, or `none`.
+
+  - type: textarea
+    id: evidence_plan
+    attributes:
+      label: Evidence plan
+      description: Define what output will prove PASS, FAIL, or BLOCKED.
+      placeholder: Commands, workflow names, expected evidence fields, logs, run IDs, or acceptance artifacts.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: discipline
+    attributes:
+      label: Execution discipline
+      options:
+        - label: I will not treat implementation, static review, or a pre-step infrastructure failure as functional PASS.
+          required: true
+        - label: Any scope expansion will be recorded in this Issue before implementation.
+          required: true
