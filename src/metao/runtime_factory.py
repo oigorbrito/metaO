@@ -18,11 +18,15 @@ from typing import Any, Callable, Mapping
 from .catalog import OrchestratorCatalog
 from .control_plane import EvidenceNormalizer
 from .core import OrchestratorContract, OrchestratorRegistry
+from .governed_catalog import GovernedOrchestratorCatalog
 from .mission_store import MissionStorePort
 from .operator import MissionOperator
+from .runtime_control import RuntimeControlStorePort
+from .sqlite_runtime_control import SQLiteRuntimeControlStore
 
 
 RUNTIME_CATALOG_ENV = "METAO_RUNTIME_CATALOG"
+RUNTIME_CONTROL_DB_ENV = "METAO_RUNTIME_CONTROL_DB"
 
 
 class RuntimeCatalogConfigError(ValueError):
@@ -109,12 +113,16 @@ def create_operator_from_catalog(
     path: str | Path,
     *,
     store: MissionStorePort,
+    controls: RuntimeControlStorePort | None = None,
 ) -> MissionOperator:
     """Build one configured MissionOperator from a trusted local manifest.
 
     The manifest itself contains only framework-neutral routing metadata and a
     Python plugin-factory reference. The referenced plugin code is trusted local
     code and is responsible for importing/configuring any orchestrator SDK.
+
+    When ``controls`` is provided, durable quarantine is projected over live
+    catalog health without mutating runtime descriptors or routing scores.
     """
 
     registry = OrchestratorRegistry()
@@ -145,22 +153,28 @@ def create_operator_from_catalog(
             reliability=_unit_interval(entry, "reliability", 0.5),
         )
 
-    return MissionOperator(registry=registry, catalog=catalog, store=store)
+    operational_catalog = (
+        GovernedOrchestratorCatalog(catalog, controls) if controls is not None else catalog
+    )
+    return MissionOperator(registry=registry, catalog=operational_catalog, store=store)
 
 
 def create_operator(*, store: MissionStorePort) -> MissionOperator:
-    """CLI-compatible factory using ``METAO_RUNTIME_CATALOG`` as manifest path."""
+    """CLI-compatible factory using environment-backed runtime configuration."""
 
     path = os.environ.get(RUNTIME_CATALOG_ENV)
     if not path:
         raise RuntimeCatalogConfigError(
             f"{RUNTIME_CATALOG_ENV} must point to a trusted runtime catalog JSON file"
         )
-    return create_operator_from_catalog(path, store=store)
+    control_path = os.environ.get(RUNTIME_CONTROL_DB_ENV)
+    controls = SQLiteRuntimeControlStore(control_path) if control_path else None
+    return create_operator_from_catalog(path, store=store, controls=controls)
 
 
 __all__ = [
     "RUNTIME_CATALOG_ENV",
+    "RUNTIME_CONTROL_DB_ENV",
     "RuntimeCatalogConfigError",
     "RuntimePlugin",
     "create_operator",
