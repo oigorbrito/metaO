@@ -1,5 +1,6 @@
 param(
     [string]$VenvPath = (Join-Path $env:LOCALAPPDATA "metaO\release-gate-venv"),
+    [string]$EvidenceRoot = (Join-Path $env:LOCALAPPDATA "metaO\release-gate-evidence"),
     [switch]$SkipInstall,
     [switch]$AllowDirty
 )
@@ -8,7 +9,6 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
-$ArtifactRoot = Join-Path $RepoRoot "artifacts\local-release-gate"
 
 function Invoke-NativeChecked {
     param(
@@ -221,9 +221,9 @@ try {
 
     $FailureCount = @($Results | Where-Object { $_.status -eq "FAIL" }).Count
     $Overall = if ($FailureCount -eq 0) { "PASS" } else { "FAIL" }
-    New-Item -ItemType Directory -Path $ArtifactRoot -Force | Out-Null
+    New-Item -ItemType Directory -Path $EvidenceRoot -Force | Out-Null
     $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $SummaryPath = Join-Path $ArtifactRoot "gate-$Timestamp.json"
+    $SummaryPath = Join-Path $EvidenceRoot "gate-$Timestamp.json"
 
     $Summary = [ordered]@{
         schema_version = 1
