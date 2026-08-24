@@ -11,6 +11,13 @@ from .core import (
     OrchestratorDescriptor,
     OrchestratorRegistry,
 )
+from .execution_handle import (
+    ActiveExecutionHandle,
+    ActiveExecutionNotFound,
+    ExecutionHandleStatus,
+    ExecutionHandleStorePort,
+    InMemoryExecutionHandleStore,
+)
 from .mission_store import (
     InMemoryMissionStore,
     MissionAlreadyExists,
@@ -25,6 +32,9 @@ from .operator import (
     MissionApprovalAlreadyDecided,
     MissionApprovalError,
     MissionApprovalNotGranted,
+    MissionCancellationError,
+    MissionCancellationUnavailable,
+    MissionNotCancellable,
     MissionNotWaitingApproval,
     MissionOperator,
     cancel,
@@ -34,6 +44,7 @@ from .operator import (
     status,
 )
 from .sqlite_event_ledger import EventLedgerCorrupt, SQLiteEventLedger
+from .sqlite_execution_handle import ExecutionHandleCorrupt, SQLiteExecutionHandleStore
 from .sqlite_store import MissionStoreCorrupt, SQLiteMissionStore
 
 __all__ = [
@@ -50,6 +61,11 @@ __all__ = [
     "CatalogEntryAlreadyExists",
     "OrchestratorCatalogEntry",
     "OrchestratorCatalog",
+    "ActiveExecutionHandle",
+    "ActiveExecutionNotFound",
+    "ExecutionHandleStatus",
+    "ExecutionHandleStorePort",
+    "InMemoryExecutionHandleStore",
     "MissionAlreadyExists",
     "MissionNotFound",
     "MissionRunContext",
@@ -58,10 +74,15 @@ __all__ = [
     "InMemoryMissionStore",
     "MissionStoreCorrupt",
     "SQLiteMissionStore",
+    "ExecutionHandleCorrupt",
+    "SQLiteExecutionHandleStore",
     "MissionApprovalError",
     "MissionNotWaitingApproval",
     "MissionApprovalAlreadyDecided",
     "MissionApprovalNotGranted",
+    "MissionCancellationError",
+    "MissionCancellationUnavailable",
+    "MissionNotCancellable",
     "MissionOperator",
     "MissionEventKind",
     "MissionEvent",

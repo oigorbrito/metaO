@@ -15,6 +15,7 @@ from .strategy import OrchestratorPoolState, select_orchestrator
 
 EvidenceNormalizer = Callable[..., object]
 AttemptClock = Callable[[], float]
+CancellationCheck = Callable[[], bool]
 
 
 class MissionStatus(StrEnum):
@@ -28,6 +29,21 @@ class MissionStatus(StrEnum):
     WAITING_APPROVAL = "WAITING_APPROVAL"
     BLOCKED = "BLOCKED"
     FAILED = "FAILED"
+    CANCELLED = "CANCELLED"
+
+
+@dataclass(frozen=True)
+class AttemptExecutionContext:
+    mission_id: str
+    attempt_number: int
+    execution_id: str
+    orchestrator_id: str
+    started_at_epoch: float
+    cost: float
+
+
+AttemptStarted = Callable[[AttemptExecutionContext], None]
+AttemptFinished = Callable[[AttemptExecutionContext, ExecutionResult, float], None]
 
 
 @dataclass(frozen=True)
@@ -157,6 +173,9 @@ def execute_mission_once(
     now_epoch: float = 0.0,
     attempt_number: int = 1,
     attempt_clock: AttemptClock | None = None,
+    cancellation_requested: CancellationCheck | None = None,
+    on_attempt_started: AttemptStarted | None = None,
+    on_attempt_finished: AttemptFinished | None = None,
 ) -> MissionOutcome:
     """Execute one independently accepted mission attempt."""
 
@@ -273,9 +292,51 @@ def execute_mission_once(
     )
     clock = attempt_clock or time
     started_at_epoch = clock()
+    attempt_context = AttemptExecutionContext(
+        mission.mission_id,
+        attempt_number,
+        execution_id,
+        selected,
+        started_at_epoch,
+        selected_pool.cost,
+    )
+    if on_attempt_started is not None:
+        on_attempt_started(attempt_context)
+    if cancellation_requested is not None and cancellation_requested():
+        orchestrator.cancel(execution_id)
+
     execution = orchestrator.execute(request)
     ended_at_epoch = clock()
+    if on_attempt_finished is not None:
+        on_attempt_finished(attempt_context, execution, ended_at_epoch)
+
     running_history = selecting_history + (MissionStatus.RUNNING,)
+    cancelled = cancellation_requested is not None and cancellation_requested()
+    if cancelled:
+        runtime_cancelled = execution.status is ExecutionStatus.CANCELLED
+        terminal = MissionStatus.CANCELLED if runtime_cancelled else MissionStatus.BLOCKED
+        reason = "operator_cancelled" if runtime_cancelled else "cancel_requested_runtime_completed"
+        acceptance = AcceptanceResult(AcceptanceDecision.BLOCK, (reason,))
+        attempt = MissionAttempt(
+            attempt_number,
+            execution_id,
+            selected,
+            execution.status,
+            acceptance.decision,
+            acceptance.reasons,
+            started_at_epoch=started_at_epoch,
+            ended_at_epoch=ended_at_epoch,
+            failure_class=FailureClass.RUNTIME if not runtime_cancelled else FailureClass.UNKNOWN,
+            cost=selected_pool.cost,
+        )
+        state = _state(
+            mission.mission_id,
+            terminal,
+            attempts=(attempt,),
+            history=running_history + (terminal,),
+        )
+        return MissionOutcome(mission.mission_id, selected, execution, acceptance, budget, (selected,), state)
+
     if execution.status is not ExecutionStatus.SUCCEEDED:
         acceptance = AcceptanceResult(AcceptanceDecision.NOT_DONE, ("execution_not_succeeded",))
         attempt = MissionAttempt(
@@ -342,6 +403,9 @@ def execute_mission(
     now_epoch: float = 0.0,
     max_attempts: int = 2,
     attempt_clock: AttemptClock | None = None,
+    cancellation_requested: CancellationCheck | None = None,
+    on_attempt_started: AttemptStarted | None = None,
+    on_attempt_finished: AttemptFinished | None = None,
 ) -> MissionOutcome:
     """Run a mission with auditable, bounded orchestrator failover."""
 
@@ -370,6 +434,9 @@ def execute_mission(
             now_epoch=now_epoch,
             attempt_number=attempt_index + 1,
             attempt_clock=attempt_clock,
+            cancellation_requested=cancellation_requested,
+            on_attempt_started=on_attempt_started,
+            on_attempt_finished=on_attempt_finished,
         )
         record = _attempt_from_outcome(outcome, attempt_index + 1, execution_id)
         if record is not None:
@@ -387,6 +454,17 @@ def execute_mission(
         history.append(MissionStatus.RUNNING)
         if outcome.execution is not None and outcome.execution.status is ExecutionStatus.SUCCEEDED:
             history.append(MissionStatus.VERIFYING)
+
+        if cancellation_requested is not None and cancellation_requested():
+            terminal = outcome.state.status if outcome.state is not None else MissionStatus.BLOCKED
+            history.append(terminal)
+            state = _state(
+                mission.mission_id,
+                terminal,
+                attempts=tuple(attempt_records),
+                history=tuple(history),
+            )
+            return replace(outcome, attempted_orchestrators=tuple(attempted), state=state)
 
         if outcome.acceptance.decision is AcceptanceDecision.ACCEPT:
             history.append(MissionStatus.ACCEPTED)
@@ -427,6 +505,10 @@ def execute_mission(
 __all__ = [
     "EvidenceNormalizer",
     "AttemptClock",
+    "CancellationCheck",
+    "AttemptExecutionContext",
+    "AttemptStarted",
+    "AttemptFinished",
     "MissionStatus",
     "MissionAttempt",
     "MissionState",

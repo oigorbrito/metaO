@@ -1,8 +1,8 @@
 """Observability decorator for MissionOperator.
 
 The decorator does not own mission semantics. It delegates execution, approval,
-resume and storage to the existing MissionOperator and projects the resulting
-auditable mission state into a uniform append-only event ledger.
+resume, cancellation and storage to the existing MissionOperator and projects
+the resulting auditable state into a uniform append-only event ledger.
 """
 
 from __future__ import annotations
@@ -11,6 +11,7 @@ from typing import Any
 
 from .control_plane import MissionOutcome, MissionStatus
 from .core import ExecutionStatus, Mission
+from .execution_handle import ActiveExecutionHandle
 from .governance import AcceptanceBudget, PolicyDecision
 from .acceptance import AcceptanceContext
 from .mission_store import MissionAlreadyExists, MissionNotFound, MissionRecord
@@ -18,7 +19,9 @@ from .observability import EventLedgerPort, MissionEvent, MissionEventKind
 from .operator import MissionOperator
 
 
-_TERMINAL = frozenset({MissionStatus.ACCEPTED, MissionStatus.BLOCKED, MissionStatus.FAILED})
+_TERMINAL = frozenset(
+    {MissionStatus.ACCEPTED, MissionStatus.BLOCKED, MissionStatus.FAILED, MissionStatus.CANCELLED}
+)
 
 
 class ObservableMissionOperator:
@@ -60,19 +63,9 @@ class ObservableMissionOperator:
                 "failure_class": None if attempt.failure_class is None else attempt.failure_class.value,
                 "cost": attempt.cost,
             }
-            self._event(
-                outcome.mission_id,
-                MissionEventKind.ORCHESTRATOR_SELECTED,
-                payload=common,
-                now_epoch=now_epoch,
-            )
+            self._event(outcome.mission_id, MissionEventKind.ORCHESTRATOR_SELECTED, payload=common, now_epoch=now_epoch)
             if attempt.execution_status is not None:
-                self._event(
-                    outcome.mission_id,
-                    MissionEventKind.RUNTIME_STARTED,
-                    payload=common,
-                    now_epoch=now_epoch,
-                )
+                self._event(outcome.mission_id, MissionEventKind.RUNTIME_STARTED, payload=common, now_epoch=now_epoch)
                 self._event(
                     outcome.mission_id,
                     MissionEventKind.RUNTIME_COMPLETED,
@@ -207,11 +200,7 @@ class ObservableMissionOperator:
         approved: bool = True,
         now_epoch: float = 0.0,
     ) -> MissionRecord:
-        record = self._operator.approve(
-            mission_id,
-            approver_id=approver_id,
-            approved=approved,
-        )
+        record = self._operator.approve(mission_id, approver_id=approver_id, approved=approved)
         assert record.approval_record is not None
         decision = record.approval_record
         self._event(
@@ -240,8 +229,38 @@ class ObservableMissionOperator:
         self._record_terminal(outcome, now_epoch=now_epoch)
         return outcome
 
+    def cancel(
+        self,
+        mission_id: str,
+        *,
+        now_epoch: float = 0.0,
+    ) -> ActiveExecutionHandle | MissionRecord:
+        result = self._operator.cancel(mission_id)
+        if isinstance(result, ActiveExecutionHandle):
+            payload = {
+                "execution_id": result.execution_id,
+                "orchestrator_id": result.orchestrator_id,
+                "attempt_number": result.attempt_number,
+                "cancel_requested": result.cancel_requested,
+                "cancel_delegated": result.cancel_delegated,
+            }
+        else:
+            payload = {"status": result.status.value, "pre_runtime": True}
+        self._event(
+            mission_id,
+            MissionEventKind.CANCELLATION_REQUESTED,
+            payload=payload,
+            now_epoch=now_epoch,
+        )
+        if isinstance(result, MissionRecord):
+            self._record_terminal(result.outcome, now_epoch=now_epoch)
+        return result
+
     def status(self, mission_id: str) -> MissionStatus:
         return self._operator.status(mission_id)
+
+    def active_execution(self, mission_id: str) -> ActiveExecutionHandle:
+        return self._operator.active_execution(mission_id)
 
     def inspect(self, mission_id: str) -> MissionRecord:
         return self._operator.inspect(mission_id)

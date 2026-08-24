@@ -2,19 +2,34 @@
 
 The module-level functions preserve the existing DurableExecutionPort API.
 MissionOperator is the product-facing, framework-neutral facade over the
-control-plane plus a MissionStorePort, including durable human approval/resume.
+control-plane plus a MissionStorePort, including durable approval/resume and
+optional cross-process mission cancellation coordination.
 """
 
 from __future__ import annotations
 
 from dataclasses import replace
+from threading import Event, Lock, Thread
 from typing import Mapping
 
 from metao.acceptance import AcceptanceContext, AcceptanceDecision, AcceptanceResult
 from metao.catalog import OrchestratorCatalog
-from metao.control_plane import EvidenceNormalizer, MissionOutcome, MissionState, MissionStatus, execute_mission
-from metao.core import Mission, OrchestratorRegistry
+from metao.control_plane import (
+    AttemptExecutionContext,
+    EvidenceNormalizer,
+    MissionOutcome,
+    MissionState,
+    MissionStatus,
+    execute_mission,
+)
+from metao.core import ExecutionResult, ExecutionStatus, Mission, OrchestratorRegistry
 from metao.durable import DurableExecutionPort, DurableExecutionSpec, DurableExecutionState
+from metao.execution_handle import (
+    ActiveExecutionHandle,
+    ActiveExecutionNotFound,
+    ExecutionHandleStatus,
+    ExecutionHandleStorePort,
+)
 from metao.governance import (
     AcceptanceBudget,
     ApprovalRecord,
@@ -23,7 +38,13 @@ from metao.governance import (
     require_human,
     resume_after_approval,
 )
-from metao.mission_store import MissionAlreadyExists, MissionRecord, MissionRunContext, MissionStorePort
+from metao.mission_store import (
+    MissionAlreadyExists,
+    MissionNotFound,
+    MissionRecord,
+    MissionRunContext,
+    MissionStorePort,
+)
 from metao.strategy import OrchestratorPoolState
 
 
@@ -64,15 +85,25 @@ class MissionApprovalNotGranted(MissionApprovalError):
     pass
 
 
+class MissionCancellationError(RuntimeError):
+    pass
+
+
+class MissionCancellationUnavailable(MissionCancellationError):
+    pass
+
+
+class MissionNotCancellable(MissionCancellationError):
+    pass
+
+
 class MissionOperator:
     """Configured synchronous mission facade backed by a MissionStorePort.
 
-    Prefer ``catalog=`` for product usage. ``pools`` + ``normalizers`` remain
-    supported as the lower-level compatibility path proven by earlier blocks.
-
-    Human approval is durable at the mission-record boundary. A mission stopped
-    at WAITING_APPROVAL can therefore be approved and resumed after process
-    restart when the store itself is durable.
+    Cancellation remains cooperative at the runtime boundary: metaO persists the
+    active execution/cancel request and delegates ``cancel(execution_id)`` to the
+    selected orchestrator. A runtime that cannot interrupt an in-flight call may
+    still complete, but metaO will fail closed and never accept that late result.
     """
 
     def __init__(
@@ -94,11 +125,116 @@ class MissionOperator:
         self._pools = tuple(pools)
         self._normalizers = dict(normalizers or {})
         self._store = store
+        self._execution_handles: ExecutionHandleStorePort | None = None
+        self._cancel_poll_interval_s = 0.05
+        self._watchers: dict[str, tuple[Event, Thread]] = {}
+        self._watchers_lock = Lock()
+
+    def configure_execution_handles(
+        self,
+        store: ExecutionHandleStorePort,
+        *,
+        poll_interval_s: float = 0.05,
+    ) -> "MissionOperator":
+        if poll_interval_s <= 0:
+            raise ValueError("cancellation poll interval must be positive")
+        self._execution_handles = store
+        self._cancel_poll_interval_s = poll_interval_s
+        return self
 
     def _routing_inputs(self) -> tuple[tuple[OrchestratorPoolState, ...], Mapping[str, EvidenceNormalizer]]:
         if self._catalog is not None:
             return self._catalog.pools(), self._catalog.normalizers()
         return self._pools, self._normalizers
+
+    def _cancel_requested(self, mission_id: str) -> bool:
+        if self._execution_handles is None:
+            return False
+        try:
+            return self._execution_handles.get(mission_id).cancel_requested
+        except ActiveExecutionNotFound:
+            return False
+
+    def _delegate_cancel(self, handle: ActiveExecutionHandle) -> ActiveExecutionHandle:
+        if self._execution_handles is None:
+            raise MissionCancellationUnavailable("mission cancellation is not configured")
+        if handle.cancel_delegated:
+            return handle
+        self._registry.get(handle.orchestrator_id).cancel(handle.execution_id)
+        return self._execution_handles.mark_cancel_delegated(handle.mission_id)
+
+    def _start_cancel_watcher(self, handle: ActiveExecutionHandle) -> None:
+        if self._execution_handles is None:
+            return
+        stop = Event()
+
+        def watch() -> None:
+            while not stop.wait(self._cancel_poll_interval_s):
+                try:
+                    current = self._execution_handles.get(handle.mission_id)
+                except ActiveExecutionNotFound:
+                    return
+                if current.execution_id != handle.execution_id:
+                    return
+                if current.status is not ExecutionHandleStatus.ACTIVE:
+                    return
+                if current.cancel_requested and not current.cancel_delegated:
+                    try:
+                        self._delegate_cancel(current)
+                    except Exception:
+                        continue
+                    return
+
+        thread = Thread(target=watch, name=f"metao-cancel-{handle.execution_id}", daemon=True)
+        with self._watchers_lock:
+            self._watchers[handle.execution_id] = (stop, thread)
+        thread.start()
+
+    def _attempt_started(self, context: AttemptExecutionContext) -> None:
+        if self._execution_handles is None:
+            return
+        handle = self._execution_handles.activate(
+            ActiveExecutionHandle(
+                mission_id=context.mission_id,
+                execution_id=context.execution_id,
+                orchestrator_id=context.orchestrator_id,
+                attempt_number=context.attempt_number,
+                started_at_epoch=context.started_at_epoch,
+                cost=context.cost,
+            )
+        )
+        if handle.cancel_requested and not handle.cancel_delegated:
+            self._delegate_cancel(handle)
+        self._start_cancel_watcher(handle)
+
+    def _attempt_finished(
+        self,
+        context: AttemptExecutionContext,
+        execution: ExecutionResult,
+        ended_at_epoch: float,
+    ) -> None:
+        if self._execution_handles is None:
+            return
+        with self._watchers_lock:
+            watcher = self._watchers.pop(context.execution_id, None)
+        if watcher is not None:
+            stop, thread = watcher
+            stop.set()
+            thread.join(timeout=max(self._cancel_poll_interval_s * 4, 0.05))
+        self._execution_handles.complete(
+            context.mission_id,
+            ended_at_epoch=ended_at_epoch,
+            execution_status=execution.status,
+        )
+
+    def _execution_kwargs(self, mission_id: str) -> dict[str, object]:
+        if self._execution_handles is None:
+            return {}
+        return {
+            "cancellation_requested": lambda: self._cancel_requested(mission_id),
+            "on_attempt_started": self._attempt_started,
+            "on_attempt_finished": self._attempt_finished,
+        }
 
     def run(
         self,
@@ -114,6 +250,13 @@ class MissionOperator:
         """Execute and atomically register one canonical mission outcome."""
         if self._store.contains(mission.mission_id):
             raise MissionAlreadyExists(mission.mission_id)
+        if self._execution_handles is not None:
+            try:
+                self._execution_handles.get(mission.mission_id)
+            except ActiveExecutionNotFound:
+                pass
+            else:
+                raise MissionAlreadyExists(mission.mission_id)
 
         prefix = execution_id_prefix or f"{mission.mission_id}-exec"
         run_context = MissionRunContext(policy, budget, acceptance_context, prefix, max_attempts)
@@ -129,6 +272,7 @@ class MissionOperator:
             execution_id_prefix=prefix,
             now_epoch=now_epoch,
             max_attempts=max_attempts,
+            **self._execution_kwargs(mission.mission_id),
         )
 
         approval_request = None
@@ -224,6 +368,7 @@ class MissionOperator:
             execution_id_prefix=context.execution_id_prefix,
             now_epoch=now_epoch,
             max_attempts=context.max_attempts,
+            **self._execution_kwargs(mission_id),
         )
         assert outcome.state is not None
         combined_state = MissionState(
@@ -236,8 +381,80 @@ class MissionOperator:
         self._store.replace(replace(current, outcome=outcome))
         return outcome
 
+    def cancel(self, mission_id: str) -> ActiveExecutionHandle | MissionRecord:
+        """Request cancellation and delegate it only from the executing owner.
+
+        Every caller persists the request. Only the MissionOperator instance that
+        owns the active execution watcher may set ``cancel_delegated``; a second
+        CLI process can call a fresh runtime instance as best effort but leaves
+        the durable flag open for the executing process to confirm delegation.
+        """
+        try:
+            current = self._store.get(mission_id)
+        except MissionNotFound:
+            current = None
+
+        if current is not None:
+            if current.status is MissionStatus.WAITING_APPROVAL:
+                assert current.outcome.state is not None
+                acceptance = AcceptanceResult(
+                    AcceptanceDecision.BLOCK,
+                    current.outcome.acceptance.reasons + ("operator_cancelled",),
+                    current.outcome.acceptance.proof,
+                )
+                state = MissionState(
+                    mission_id,
+                    MissionStatus.CANCELLED,
+                    current.outcome.state.attempts,
+                    current.outcome.state.history + (MissionStatus.CANCELLED,),
+                )
+                outcome = replace(current.outcome, acceptance=acceptance, state=state)
+                return self._store.replace(replace(current, outcome=outcome))
+            raise MissionNotCancellable(f"mission is already terminal: {current.status.value}")
+
+        if self._execution_handles is None:
+            raise MissionCancellationUnavailable("mission cancellation is not configured")
+        try:
+            handle = self._execution_handles.get(mission_id)
+        except ActiveExecutionNotFound as exc:
+            raise MissionNotCancellable(f"mission has no active execution: {mission_id}") from exc
+        if handle.status is not ExecutionHandleStatus.ACTIVE:
+            raise MissionNotCancellable(f"mission execution is already complete: {mission_id}")
+
+        requested = self._execution_handles.request_cancel(mission_id)
+        with self._watchers_lock:
+            owns_execution = requested.execution_id in self._watchers
+        if owns_execution:
+            try:
+                return self._delegate_cancel(requested)
+            except Exception:
+                return self._execution_handles.get(mission_id)
+
+        try:
+            self._registry.get(requested.orchestrator_id).cancel(requested.execution_id)
+        except Exception:
+            pass
+        return self._execution_handles.get(mission_id)
+
     def status(self, mission_id: str) -> MissionStatus:
-        return self._store.get(mission_id).status
+        try:
+            return self._store.get(mission_id).status
+        except MissionNotFound:
+            if self._execution_handles is None:
+                raise
+            handle = self._execution_handles.get(mission_id)
+            if handle.status is ExecutionHandleStatus.ACTIVE:
+                return MissionStatus.RUNNING
+            if handle.execution_status is ExecutionStatus.CANCELLED:
+                return MissionStatus.CANCELLED
+            if handle.execution_status is ExecutionStatus.FAILED:
+                return MissionStatus.FAILED
+            return MissionStatus.VERIFYING
+
+    def active_execution(self, mission_id: str) -> ActiveExecutionHandle:
+        if self._execution_handles is None:
+            raise MissionCancellationUnavailable("mission cancellation is not configured")
+        return self._execution_handles.get(mission_id)
 
     def inspect(self, mission_id: str) -> MissionRecord:
         return self._store.get(mission_id)
@@ -256,5 +473,8 @@ __all__ = [
     "MissionNotWaitingApproval",
     "MissionApprovalAlreadyDecided",
     "MissionApprovalNotGranted",
+    "MissionCancellationError",
+    "MissionCancellationUnavailable",
+    "MissionNotCancellable",
     "MissionOperator",
 ]
