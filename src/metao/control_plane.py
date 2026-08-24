@@ -2,13 +2,13 @@
 
 This module composes already-proven framework-neutral pieces: registry,
 strategy, global policy/budget, orchestrator execution, evidence normalization,
-and final metaO acceptance. It intentionally knows nothing about LangGraph,
-CrewAI, or any other orchestrator SDK.
+final metaO acceptance, and bounded failover. It intentionally knows nothing
+about LangGraph, CrewAI, or any other orchestrator SDK.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Callable, Mapping
 
 from .acceptance import AcceptanceContext, AcceptanceDecision, AcceptanceResult, evaluate_acceptance
@@ -26,10 +26,15 @@ class MissionOutcome:
     execution: ExecutionResult | None
     acceptance: AcceptanceResult
     budget: AcceptanceBudget
+    attempted_orchestrators: tuple[str, ...] = ()
 
 
 def _blocked(reason: str) -> AcceptanceResult:
     return AcceptanceResult(AcceptanceDecision.BLOCK, (reason,))
+
+
+def _eligible_pools(mission: Mission, pools: tuple[OrchestratorPoolState, ...]) -> tuple[OrchestratorPoolState, ...]:
+    return tuple(pool for pool in pools if mission.required_capabilities <= pool.capabilities)
 
 
 def execute_mission_once(
@@ -44,42 +49,25 @@ def execute_mission_once(
     execution_id: str,
     now_epoch: float = 0.0,
 ) -> MissionOutcome:
-    """Execute one independently accepted mission attempt.
-
-    Hard policy gates run before strategy. The chosen orchestrator executes
-    through the neutral contract. Its adapter-specific result is normalized at
-    the boundary, then metaO performs final acceptance independently.
-    """
+    """Execute one independently accepted mission attempt."""
 
     if policy.effect is not PolicyEffect.ALLOW:
-        return MissionOutcome(
-            mission.mission_id,
-            None,
-            None,
-            _blocked(f"policy:{policy.effect.value.lower()}"),
-            budget,
-        )
+        return MissionOutcome(mission.mission_id, None, None, _blocked(f"policy:{policy.effect.value.lower()}"), budget)
     if policy.policy_bundle_id != acceptance_context.policy_bundle_id:
-        return MissionOutcome(
-            mission.mission_id,
-            None,
-            None,
-            _blocked("policy_bundle_mismatch"),
-            budget,
-        )
+        return MissionOutcome(mission.mission_id, None, None, _blocked("policy_bundle_mismatch"), budget)
 
-    selected = select_orchestrator(pools)
+    selected = select_orchestrator(_eligible_pools(mission, pools))
     if selected is None:
         return MissionOutcome(mission.mission_id, None, None, _blocked("no_eligible_orchestrator"), budget)
 
     orchestrator = registry.get(selected)
     normalizer = normalizers.get(selected)
     if normalizer is None:
-        return MissionOutcome(mission.mission_id, selected, None, _blocked("missing_evidence_normalizer"), budget)
+        return MissionOutcome(mission.mission_id, selected, None, _blocked("missing_evidence_normalizer"), budget, (selected,))
 
     obligation_ids = tuple(sorted(acceptance_context.required_obligations))
     if len(obligation_ids) != 1:
-        return MissionOutcome(mission.mission_id, selected, None, _blocked("single_attempt_requires_one_obligation"), budget)
+        return MissionOutcome(mission.mission_id, selected, None, _blocked("single_attempt_requires_one_obligation"), budget, (selected,))
 
     request = ExecutionRequest(
         execution_id=execution_id,
@@ -103,6 +91,7 @@ def execute_mission_once(
             execution,
             AcceptanceResult(AcceptanceDecision.NOT_DONE, ("execution_not_succeeded",)),
             budget,
+            (selected,),
         )
 
     budget_after = budget.consume(verifier_attempts=1)
@@ -113,13 +102,62 @@ def execute_mission_once(
         output=dict(execution.output),
         attempt_id="attempt-1",
     )
-    acceptance = evaluate_acceptance(
-        acceptance_context,
-        (evidence,),
-        now_epoch=now_epoch,
-        executor_done=True,
-    )
-    return MissionOutcome(mission.mission_id, selected, execution, acceptance, budget_after)
+    acceptance = evaluate_acceptance(acceptance_context, (evidence,), now_epoch=now_epoch, executor_done=True)
+    return MissionOutcome(mission.mission_id, selected, execution, acceptance, budget_after, (selected,))
 
 
-__all__ = ["EvidenceNormalizer", "MissionOutcome", "execute_mission_once"]
+def execute_mission(
+    *,
+    mission: Mission,
+    registry: OrchestratorRegistry,
+    pools: tuple[OrchestratorPoolState, ...],
+    normalizers: Mapping[str, EvidenceNormalizer],
+    policy: PolicyDecision,
+    budget: AcceptanceBudget,
+    acceptance_context: AcceptanceContext,
+    execution_id_prefix: str,
+    now_epoch: float = 0.0,
+    max_attempts: int = 2,
+) -> MissionOutcome:
+    """Run a mission with bounded orchestrator failover.
+
+    Failed or independently rejected attempts are excluded before the next
+    deterministic strategy decision. Policy denial happens before any runtime
+    is invoked, and the acceptance budget is carried across attempts.
+    """
+
+    if max_attempts < 1:
+        raise ValueError("max_attempts must be at least 1")
+
+    attempted: list[str] = []
+    current_budget = budget
+    last: MissionOutcome | None = None
+
+    for attempt_index in range(max_attempts):
+        remaining = tuple(pool for pool in pools if pool.orchestrator_id not in attempted)
+        outcome = execute_mission_once(
+            mission=mission,
+            registry=registry,
+            pools=remaining,
+            normalizers=normalizers,
+            policy=policy,
+            budget=current_budget,
+            acceptance_context=acceptance_context,
+            execution_id=f"{execution_id_prefix}-{attempt_index + 1}",
+            now_epoch=now_epoch,
+        )
+        if outcome.orchestrator_id is not None and outcome.orchestrator_id not in attempted:
+            attempted.append(outcome.orchestrator_id)
+        current_budget = outcome.budget
+        last = replace(outcome, attempted_orchestrators=tuple(attempted))
+
+        if outcome.acceptance.decision is AcceptanceDecision.ACCEPT:
+            return last
+        if outcome.orchestrator_id is None:
+            return last
+
+    assert last is not None
+    return last
+
+
+__all__ = ["EvidenceNormalizer", "MissionOutcome", "execute_mission_once", "execute_mission"]
