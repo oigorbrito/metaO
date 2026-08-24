@@ -26,3 +26,5 @@ jobs:
         run: python tests/integration/test_o2_e2e_sandbox.py
       - name: O3 failover sandbox
         run: python tests/integration/test_o3_failover_sandbox.py
+      - name: O4 governance hard gates
+        run: python tests/integration/test_o4_governance_gates.py
