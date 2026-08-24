@@ -1,0 +1,169 @@
+"""Global policy, acceptance budget, approval and confidence governance.
+
+Composition roles frozen in Block C:
+- OMA-style policy identity/evidence semantics;
+- Conductor durable HUMAN-task semantics as the transport target;
+- Inspect-AI-style verification limits and escalation patterns.
+
+This module owns framework-neutral governance decisions only; it does not import
+Conductor or any orchestrator SDK.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, replace
+from enum import Enum
+from typing import Optional
+
+from .acceptance import AcceptanceDecision
+
+
+class PolicyEffect(str, Enum):
+    ALLOW = "ALLOW"
+    DENY = "DENY"
+    REQUIRE_HUMAN = "REQUIRE_HUMAN"
+
+
+@dataclass(frozen=True)
+class PolicyDecision:
+    effect: PolicyEffect
+    policy_bundle_id: str
+    reason: str = ""
+
+
+def evaluate_policy(*, policy_bundle_id: str, allowed: bool, require_human: bool = False, reason: str = "") -> PolicyDecision:
+    if not allowed:
+        return PolicyDecision(PolicyEffect.DENY, policy_bundle_id, reason or "policy_denied")
+    if require_human:
+        return PolicyDecision(PolicyEffect.REQUIRE_HUMAN, policy_bundle_id, reason or "human_approval_required")
+    return PolicyDecision(PolicyEffect.ALLOW, policy_bundle_id, reason)
+
+
+class BudgetExhausted(RuntimeError):
+    pass
+
+
+@dataclass(frozen=True)
+class AcceptanceBudget:
+    money_limit: float
+    token_limit: int
+    wall_time_limit_s: float
+    verifier_attempt_limit: int
+    money_used: float = 0.0
+    tokens_used: int = 0
+    wall_time_used_s: float = 0.0
+    verifier_attempts_used: int = 0
+
+    def remaining_money(self) -> float:
+        return self.money_limit - self.money_used
+
+    def consume(
+        self,
+        *,
+        money: float = 0.0,
+        tokens: int = 0,
+        wall_time_s: float = 0.0,
+        verifier_attempts: int = 0,
+    ) -> "AcceptanceBudget":
+        if min(money, tokens, wall_time_s, verifier_attempts) < 0:
+            raise ValueError("budget consumption cannot be negative")
+        updated = replace(
+            self,
+            money_used=self.money_used + money,
+            tokens_used=self.tokens_used + tokens,
+            wall_time_used_s=self.wall_time_used_s + wall_time_s,
+            verifier_attempts_used=self.verifier_attempts_used + verifier_attempts,
+        )
+        if updated.money_used > updated.money_limit:
+            raise BudgetExhausted("acceptance money budget exhausted")
+        if updated.tokens_used > updated.token_limit:
+            raise BudgetExhausted("acceptance token budget exhausted")
+        if updated.wall_time_used_s > updated.wall_time_limit_s:
+            raise BudgetExhausted("acceptance wall-time budget exhausted")
+        if updated.verifier_attempts_used > updated.verifier_attempt_limit:
+            raise BudgetExhausted("acceptance verifier-attempt budget exhausted")
+        return updated
+
+
+@dataclass(frozen=True)
+class ApprovalRequest:
+    approval_id: str
+    mission_id: str
+    execution_id: str
+    subject_state_id: str
+    policy_bundle_id: str
+    reason: str
+
+
+@dataclass(frozen=True)
+class ApprovalRecord:
+    approval_id: str
+    mission_id: str
+    execution_id: str
+    subject_state_id: str
+    policy_bundle_id: str
+    approver_id: str
+    approved: bool
+
+
+def require_human(
+    *,
+    approval_id: str,
+    mission_id: str,
+    execution_id: str,
+    subject_state_id: str,
+    policy_bundle_id: str,
+    reason: str,
+) -> ApprovalRequest:
+    return ApprovalRequest(
+        approval_id=approval_id,
+        mission_id=mission_id,
+        execution_id=execution_id,
+        subject_state_id=subject_state_id,
+        policy_bundle_id=policy_bundle_id,
+        reason=reason,
+    )
+
+
+def resume_after_approval(request: ApprovalRequest, record: ApprovalRecord) -> AcceptanceDecision:
+    bindings = (
+        request.approval_id == record.approval_id,
+        request.mission_id == record.mission_id,
+        request.execution_id == record.execution_id,
+        request.subject_state_id == record.subject_state_id,
+        request.policy_bundle_id == record.policy_bundle_id,
+    )
+    if not all(bindings):
+        return AcceptanceDecision.BLOCK
+    return AcceptanceDecision.ACCEPT if record.approved else AcceptanceDecision.BLOCK
+
+
+def apply_confidence_after_hard_gates(
+    hard_gate_decision: AcceptanceDecision,
+    *,
+    confidence: float,
+    threshold: float = 0.8,
+) -> AcceptanceDecision:
+    if hard_gate_decision != AcceptanceDecision.ACCEPT:
+        return hard_gate_decision
+    if not 0.0 <= confidence <= 1.0:
+        raise ValueError("confidence must be in [0, 1]")
+    if not 0.0 <= threshold <= 1.0:
+        raise ValueError("threshold must be in [0, 1]")
+    if confidence < threshold:
+        return AcceptanceDecision.REQUIRE_HUMAN
+    return AcceptanceDecision.ACCEPT
+
+
+__all__ = [
+    "PolicyEffect",
+    "PolicyDecision",
+    "evaluate_policy",
+    "BudgetExhausted",
+    "AcceptanceBudget",
+    "ApprovalRequest",
+    "ApprovalRecord",
+    "require_human",
+    "resume_after_approval",
+    "apply_confidence_after_hard_gates",
+]
