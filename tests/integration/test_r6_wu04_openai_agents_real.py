@@ -4,8 +4,8 @@ from importlib.metadata import version as package_version
 import unittest
 
 from agents import Agent, Runner, set_tracing_disabled
-from agents.testing import ScriptedModel, assistant_message
 
+from _openai_agents_model import ScriptedModel, assistant_message
 from metao.adapters.openai_agents import (
     OpenAIAgentsOrchestratorAdapter,
     normalize_evidence,
@@ -14,7 +14,7 @@ from metao.core import ExecutionRequest, ExecutionStatus, HealthStatus, Mission
 from metao.runtime_conformance import assert_runtime_conformant
 
 
-OPENAI_AGENTS_VERSION = "0.21.1"
+OPENAI_AGENTS_VERSION = "0.20.0"
 
 
 def probe_request(execution_id: str = "r6-openai-agents-conformance") -> ExecutionRequest:
@@ -28,7 +28,7 @@ def probe_request(execution_id: str = "r6-openai-agents-conformance") -> Executi
         {
             "obligation_id": "runtime_conformance",
             "subject_id": "openai-agents-runtime",
-            "subject_state_id": "openai-agents-0.21.1",
+            "subject_state_id": "openai-agents-0.20.0",
             "verification_context_id": "roadmap6-wu04",
             "policy_bundle_id": "runtime-certification-v1",
             "verifier_id": "metao-runtime-conformance",
