@@ -29,10 +29,11 @@ from .governance import (
     PolicyEffect,
 )
 from .mission_store import MissionAlreadyExists, MissionNotFound, MissionRecord, MissionRunContext
+from .replan import FailureClass
 
 
-_SCHEMA_VERSION = 2
-_SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2})
+_SCHEMA_VERSION = 3
+_SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2, 3})
 
 
 class MissionStoreCorrupt(RuntimeError):
@@ -319,6 +320,10 @@ def _encode_state(state: MissionState) -> dict[str, Any]:
                 "execution_status": None if item.execution_status is None else item.execution_status.value,
                 "acceptance_decision": item.acceptance_decision.value,
                 "reasons": list(item.reasons),
+                "started_at_epoch": item.started_at_epoch,
+                "ended_at_epoch": item.ended_at_epoch,
+                "failure_class": None if item.failure_class is None else item.failure_class.value,
+                "cost": item.cost,
             }
             for item in state.attempts
         ],
@@ -338,6 +343,10 @@ def _decode_state(data: Mapping[str, Any]) -> MissionState:
             execution_status=None if item.get("execution_status") is None else ExecutionStatus(str(item["execution_status"])),
             acceptance_decision=AcceptanceDecision(str(item["acceptance_decision"])),
             reasons=tuple(str(reason) for reason in item.get("reasons", [])),
+            started_at_epoch=None if item.get("started_at_epoch") is None else float(item["started_at_epoch"]),
+            ended_at_epoch=None if item.get("ended_at_epoch") is None else float(item["ended_at_epoch"]),
+            failure_class=None if item.get("failure_class") is None else FailureClass(str(item["failure_class"])),
+            cost=float(item.get("cost", 0.0)),
         )
         for item in attempts_data
     )
