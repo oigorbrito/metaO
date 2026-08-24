@@ -28,3 +28,5 @@ jobs:
         run: python tests/integration/test_o3_failover_sandbox.py
       - name: O4 governance hard gates
         run: python tests/integration/test_o4_governance_gates.py
+      - name: O5 runtime swap without Core change
+        run: python tests/integration/test_o5_runtime_swap.py
