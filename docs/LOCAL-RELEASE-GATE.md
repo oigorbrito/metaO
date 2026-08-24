@@ -152,24 +152,25 @@ The local gate executes, independently records and summarizes:
 20. Block O O5 runtime swap;
 21. SDK-neutral Core/control-plane boundary.
 
-The script runs all test gates even if an individual test gate fails, then returns a non-zero process exit code when any recorded gate is `FAIL`.
+The script runs all normal test gates even if an individual test gate fails, then returns a non-zero process exit code when any recorded gate is `FAIL`.
 
-Bootstrap/environment failures such as missing Python 3.12 or dependency installation failure are classified separately from test failures. They never count as a metaO functional PASS.
+Bootstrap/environment failures such as missing Python 3.12 or dependency installation failure are classified separately from test failures. Unexpected harness failures after bootstrap are also separate. Neither can count as a metaO functional PASS.
 
 ## Evidence format
 
-The generated JSON contains:
+The gate attempts to emit JSON evidence for PASS, test failure, bootstrap failure and harness failure. The generated JSON contains:
 
 ```text
 schema_version
 UTC timestamp
-Git branch
-Git commit
-clean_worktree
+Git branch when available
+Git commit when available
+clean_worktree when available
 Python version when available
 exact runtime pins
+hosted_runner_blocker
 phase
-bootstrap_error when present
+fatal_error when present
 per-gate status / exit code / duration
 failure_count
 overall
@@ -181,6 +182,7 @@ Expected overall values are:
 PASS
 TEST_FAIL
 BOOTSTRAP_FAIL
+HARNESS_FAIL
 ```
 
 A legitimate local PASS requires:
@@ -188,9 +190,20 @@ A legitimate local PASS requires:
 ```text
 clean_worktree = true
 phase = complete
+fatal_error = null
 failure_count = 0
 overall = PASS
 ```
+
+Exit-code semantics are:
+
+```text
+0 = PASS
+1 = completed test battery with one or more test gate failures
+2 = bootstrap or harness failure
+```
+
+If the evidence path itself is unavailable, the script reports that separately and still exits non-zero.
 
 ## Evidence semantics
 
