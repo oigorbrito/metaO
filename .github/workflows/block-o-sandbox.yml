@@ -1,0 +1,32 @@
+name: Block O Sandbox Evidence
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/block-o-sandbox.yml'
+      - 'src/metao/**'
+      - 'tests/integration/test_o*.py'
+
+jobs:
+  sandbox-evidence:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install metaO and real LangGraph
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install 'langgraph==1.2.11'
+      - name: O1 real LangGraph through metaO adapter
+        run: python tests/integration/test_o1_langgraph_real.py
+      - name: O2 end-to-end sandbox mission
+        run: python tests/integration/test_o2_e2e_sandbox.py
+      - name: O3 failover sandbox
+        run: python tests/integration/test_o3_failover_sandbox.py
+      - name: O4 governance hard gates
+        run: python tests/integration/test_o4_governance_gates.py
+      - name: O5 runtime swap without Core change
+        run: python tests/integration/test_o5_runtime_swap.py
