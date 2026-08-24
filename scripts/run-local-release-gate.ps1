@@ -9,6 +9,17 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $RepoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
+$Results = [System.Collections.Generic.List[object]]::new()
+$Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$SummaryPath = Join-Path $EvidenceRoot "gate-$Timestamp.json"
+$ExitCode = 2
+$LocationPushed = $false
+$Phase = "bootstrap"
+$FatalError = $null
+$Branch = $null
+$Commit = $null
+$IsClean = $null
+$PythonVersion = $null
 
 function Invoke-NativeChecked {
     param(
@@ -26,7 +37,8 @@ function Invoke-NativeChecked {
 function Resolve-Python312 {
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($null -ne $py) {
-        & $py.Source -3.12 -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
+        $probeArgs = @("-3.12", "-c", "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)")
+        & $py.Source @probeArgs
         if ($LASTEXITCODE -eq 0) {
             return [pscustomobject]@{
                 FilePath = $py.Source
@@ -37,7 +49,8 @@ function Resolve-Python312 {
 
     $python = Get-Command python -ErrorAction SilentlyContinue
     if ($null -ne $python) {
-        & $python.Source -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
+        $probeArgs = @("-c", "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)")
+        & $python.Source @probeArgs
         if ($LASTEXITCODE -eq 0) {
             return [pscustomobject]@{
                 FilePath = $python.Source
@@ -49,13 +62,11 @@ function Resolve-Python312 {
     throw "Python 3.12 is required. Install Python 3.12 or make 'py -3.12' available."
 }
 
-$Results = [System.Collections.Generic.List[object]]::new()
-
 function Add-GateResult {
     param(
         [string]$Name,
         [string]$Status,
-        [int]$ExitCode,
+        [int]$ExitCodeValue,
         [double]$DurationSeconds,
         [string]$Detail = ""
     )
@@ -63,7 +74,7 @@ function Add-GateResult {
     $Results.Add([pscustomobject]@{
         name = $Name
         status = $Status
-        exit_code = $ExitCode
+        exit_code = $ExitCodeValue
         duration_seconds = [math]::Round($DurationSeconds, 3)
         detail = $Detail
     })
@@ -82,11 +93,11 @@ function Invoke-PythonGate {
     $watch.Stop()
 
     if ($code -eq 0) {
-        Add-GateResult -Name $Name -Status "PASS" -ExitCode 0 -DurationSeconds $watch.Elapsed.TotalSeconds
+        Add-GateResult -Name $Name -Status "PASS" -ExitCodeValue 0 -DurationSeconds $watch.Elapsed.TotalSeconds
         Write-Host "PASS: $Name"
     }
     else {
-        Add-GateResult -Name $Name -Status "FAIL" -ExitCode $code -DurationSeconds $watch.Elapsed.TotalSeconds
+        Add-GateResult -Name $Name -Status "FAIL" -ExitCodeValue $code -DurationSeconds $watch.Elapsed.TotalSeconds
         Write-Host "FAIL: $Name (exit $code)"
     }
 }
@@ -105,11 +116,11 @@ function Invoke-ExecutableGate {
     $watch.Stop()
 
     if ($code -eq 0) {
-        Add-GateResult -Name $Name -Status "PASS" -ExitCode 0 -DurationSeconds $watch.Elapsed.TotalSeconds
+        Add-GateResult -Name $Name -Status "PASS" -ExitCodeValue 0 -DurationSeconds $watch.Elapsed.TotalSeconds
         Write-Host "PASS: $Name"
     }
     else {
-        Add-GateResult -Name $Name -Status "FAIL" -ExitCode $code -DurationSeconds $watch.Elapsed.TotalSeconds
+        Add-GateResult -Name $Name -Status "FAIL" -ExitCodeValue $code -DurationSeconds $watch.Elapsed.TotalSeconds
         Write-Host "FAIL: $Name (exit $code)"
     }
 }
@@ -125,18 +136,52 @@ function Invoke-SdkBoundaryGate {
 
     if ($matches.Count -gt 0) {
         $detail = ($matches | ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line.Trim())" }) -join " | "
-        Add-GateResult -Name "sdk_neutral_boundary" -Status "FAIL" -ExitCode 1 -DurationSeconds $watch.Elapsed.TotalSeconds -Detail $detail
+        Add-GateResult -Name "sdk_neutral_boundary" -Status "FAIL" -ExitCodeValue 1 -DurationSeconds $watch.Elapsed.TotalSeconds -Detail $detail
         Write-Host "FAIL: SDK-neutral boundary"
         $matches | ForEach-Object { Write-Host $_ }
     }
     else {
-        Add-GateResult -Name "sdk_neutral_boundary" -Status "PASS" -ExitCode 0 -DurationSeconds $watch.Elapsed.TotalSeconds
+        Add-GateResult -Name "sdk_neutral_boundary" -Status "PASS" -ExitCodeValue 0 -DurationSeconds $watch.Elapsed.TotalSeconds
         Write-Host "PASS: SDK-neutral boundary"
     }
 }
 
-Push-Location $RepoRoot
+function Write-GateEvidence {
+    param(
+        [Parameter(Mandatory = $true)][string]$Overall,
+        [Parameter(Mandatory = $true)][int]$FailureCount
+    )
+
+    New-Item -ItemType Directory -Path $EvidenceRoot -Force | Out-Null
+
+    $Summary = [ordered]@{
+        schema_version = 1
+        generated_at_utc = (Get-Date).ToUniversalTime().ToString("o")
+        branch = $Branch
+        commit = $Commit
+        clean_worktree = $IsClean
+        python_version = $PythonVersion
+        runtime_pins = [ordered]@{
+            openai_agents = "0.21.1"
+            crewai = "1.15.16"
+            langgraph = "1.2.11"
+        }
+        hosted_runner_blocker = "external_pre_step_all_standard_hosted_os"
+        phase = $Phase
+        fatal_error = $FatalError
+        results = @($Results)
+        failure_count = $FailureCount
+        overall = $Overall
+    }
+
+    $Summary | ConvertTo-Json -Depth 8 | Set-Content -Path $SummaryPath -Encoding utf8
+}
+
 try {
+    New-Item -ItemType Directory -Path $EvidenceRoot -Force | Out-Null
+    Push-Location $RepoRoot
+    $LocationPushed = $true
+
     Invoke-NativeChecked -FilePath "git" -ArgumentList @("rev-parse", "--is-inside-work-tree")
     $Branch = (& git rev-parse --abbrev-ref HEAD).Trim()
     if ($LASTEXITCODE -ne 0) { throw "Unable to resolve Git branch" }
@@ -159,10 +204,10 @@ try {
     }
 
     $script:PythonExe = $VenvPython
-    & $script:PythonExe -c "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
-    if ($LASTEXITCODE -ne 0) {
-        throw "Existing gate venv is not Python 3.12. Remove '$VenvPath' or pass another -VenvPath."
-    }
+    Invoke-NativeChecked -FilePath $script:PythonExe -ArgumentList @(
+        "-c",
+        "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
+    )
 
     $PythonVersion = (& $script:PythonExe -c "import platform; print(platform.python_version())").Trim()
     if ($LASTEXITCODE -ne 0) { throw "Unable to read gate Python version" }
@@ -183,6 +228,8 @@ try {
             "langgraph==1.2.11"
         )
     }
+
+    $Phase = "tests"
 
     Invoke-PythonGate -Name "exact_runtime_versions" -ArgumentList @(
         "-c",
@@ -220,46 +267,56 @@ try {
     Invoke-SdkBoundaryGate
 
     $FailureCount = @($Results | Where-Object { $_.status -eq "FAIL" }).Count
-    $Overall = if ($FailureCount -eq 0) { "PASS" } else { "FAIL" }
-    New-Item -ItemType Directory -Path $EvidenceRoot -Force | Out-Null
-    $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
-    $SummaryPath = Join-Path $EvidenceRoot "gate-$Timestamp.json"
-
-    $Summary = [ordered]@{
-        schema_version = 1
-        generated_at_utc = (Get-Date).ToUniversalTime().ToString("o")
-        branch = $Branch
-        commit = $Commit
-        clean_worktree = $IsClean
-        python_version = $PythonVersion
-        runtime_pins = [ordered]@{
-            openai_agents = "0.21.1"
-            crewai = "1.15.16"
-            langgraph = "1.2.11"
-        }
-        hosted_runner_blocker = "external_pre_step"
-        results = $Results
-        failure_count = $FailureCount
-        overall = $Overall
+    $Phase = "complete"
+    if ($FailureCount -eq 0) {
+        $Overall = "PASS"
+        $ExitCode = 0
+    }
+    else {
+        $Overall = "TEST_FAIL"
+        $ExitCode = 1
     }
 
-    $Summary | ConvertTo-Json -Depth 8 | Set-Content -Path $SummaryPath -Encoding utf8
-
-    Write-Host "`n========================================"
-    Write-Host "LOCAL_RELEASE_GATE = $Overall"
-    Write-Host "BRANCH = $Branch"
-    Write-Host "COMMIT = $Commit"
-    Write-Host "CLEAN_WORKTREE = $IsClean"
-    Write-Host "RESULTS = $($Results.Count)"
-    Write-Host "FAILURES = $FailureCount"
-    Write-Host "EVIDENCE = $SummaryPath"
-    Write-Host "========================================"
-
-    if ($Overall -ne "PASS") {
-        exit 1
+    Write-GateEvidence -Overall $Overall -FailureCount $FailureCount
+}
+catch {
+    $FatalError = $_.Exception.Message
+    $FailureCount = @($Results | Where-Object { $_.status -eq "FAIL" }).Count
+    if ($Phase -eq "tests") {
+        $Overall = "HARNESS_FAIL"
     }
-    exit 0
+    else {
+        $Overall = "BOOTSTRAP_FAIL"
+    }
+    $ExitCode = 2
+
+    try {
+        Write-GateEvidence -Overall $Overall -FailureCount $FailureCount
+    }
+    catch {
+        Write-Error "Unable to write gate evidence: $($_.Exception.Message)"
+    }
+
+    Write-Error "Local release gate aborted during $Phase: $FatalError"
 }
 finally {
-    Pop-Location
+    if ($LocationPushed) {
+        Pop-Location
+    }
 }
+
+Write-Host "`n========================================"
+Write-Host "LOCAL_RELEASE_GATE = $Overall"
+Write-Host "PHASE = $Phase"
+Write-Host "BRANCH = $Branch"
+Write-Host "COMMIT = $Commit"
+Write-Host "CLEAN_WORKTREE = $IsClean"
+Write-Host "RESULTS = $($Results.Count)"
+Write-Host "FAILURES = $FailureCount"
+Write-Host "EVIDENCE = $SummaryPath"
+if ($FatalError) {
+    Write-Host "FATAL_ERROR = $FatalError"
+}
+Write-Host "========================================"
+
+exit $ExitCode
