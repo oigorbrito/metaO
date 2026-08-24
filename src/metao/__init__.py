@@ -16,9 +16,21 @@ from .mission_store import (
     MissionAlreadyExists,
     MissionNotFound,
     MissionRecord,
+    MissionRunContext,
     MissionStorePort,
 )
-from .operator import MissionOperator, cancel, inspect, resume, run, status
+from .operator import (
+    MissionApprovalAlreadyDecided,
+    MissionApprovalError,
+    MissionApprovalNotGranted,
+    MissionNotWaitingApproval,
+    MissionOperator,
+    cancel,
+    inspect,
+    resume,
+    run,
+    status,
+)
 from .sqlite_store import MissionStoreCorrupt, SQLiteMissionStore
 
 __all__ = [
@@ -37,11 +49,16 @@ __all__ = [
     "OrchestratorCatalog",
     "MissionAlreadyExists",
     "MissionNotFound",
+    "MissionRunContext",
     "MissionRecord",
     "MissionStorePort",
     "InMemoryMissionStore",
     "MissionStoreCorrupt",
     "SQLiteMissionStore",
+    "MissionApprovalError",
+    "MissionNotWaitingApproval",
+    "MissionApprovalAlreadyDecided",
+    "MissionApprovalNotGranted",
     "MissionOperator",
     "run",
     "status",
