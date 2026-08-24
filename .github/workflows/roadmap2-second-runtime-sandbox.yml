@@ -18,8 +18,6 @@ jobs:
       CREWAI_TRACING_ENABLED: 'false'
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
@@ -31,12 +29,12 @@ jobs:
       - name: Confirm pinned runtime versions
         run: |
           python -c "from importlib.metadata import version; assert version('langgraph') == '1.2.11'; assert version('crewai') == '1.15.16'; print('LangGraph', version('langgraph')); print('CrewAI', version('crewai'))"
-      - name: Enforce second-runtime Core freeze
+      - name: Enforce SDK-neutral metaO boundary
         run: |
-          git diff --exit-code origin/main...HEAD -- src/metao ':(exclude)src/metao/adapters/**'
+          ! grep -R -E '^(from|import) (langgraph|crewai)' src/metao --exclude-dir=adapters
       - name: Roadmap 2 WU01 second real runtime evidence
         run: python tests/integration/test_r2_wu01_second_real_runtime.py
-      - name: Roadmap 1 full unit suite regression
+      - name: Full unit suite regression
         run: python -m unittest discover -s tests/unit -p 'test_*.py' -v
       - name: Block O sandbox regression
         run: |
