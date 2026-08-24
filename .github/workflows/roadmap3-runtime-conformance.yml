@@ -1,0 +1,27 @@
+name: Roadmap 3 Runtime Conformance Harness
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/roadmap3-runtime-conformance.yml'
+      - 'src/metao/runtime_conformance.py'
+      - 'tests/unit/test_roadmap_3_work_unit_01.py'
+      - 'docs/ROADMAP-3-WU01-RUNTIME-CONFORMANCE-HARNESS.md'
+
+jobs:
+  runtime-conformance-harness:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install metaO
+        run: python -m pip install -e .
+      - name: WU01 runtime conformance evidence
+        run: python tests/unit/test_roadmap_3_work_unit_01.py
+      - name: Full unit suite regression
+        run: python -m unittest discover -s tests/unit -p 'test_*.py' -v
+      - name: SDK-neutral boundary
+        run: |
+          ! grep -E '^(from|import) (langgraph|crewai|sklearn|torch)' src/metao/runtime_conformance.py
