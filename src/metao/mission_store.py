@@ -38,8 +38,6 @@ class MissionRunContext:
             raise ValueError("mission run context requires execution_id_prefix")
         if self.max_attempts < 1:
             raise ValueError("mission run context max_attempts must be at least 1")
-        if self.policy.policy_bundle_id != self.acceptance_context.policy_bundle_id:
-            raise ValueError("mission run context policy bundle mismatch")
 
 
 @dataclass(frozen=True)
