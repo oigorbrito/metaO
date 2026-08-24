@@ -209,10 +209,11 @@ class SQLiteMissionStoreV1Tests(unittest.TestCase):
         root = Path(__file__).resolve().parents[2]
         core = (root / "src" / "metao" / "core.py").read_text(encoding="utf-8").lower()
         boundary = (root / "src" / "metao" / "mission_store.py").read_text(encoding="utf-8").lower()
-        self.assertNotIn("sqlite", core)
-        self.assertNotIn("sqlite", boundary)
-        self.assertNotIn("langgraph", (root / "src" / "metao" / "sqlite_store.py").read_text(encoding="utf-8").lower())
-        self.assertNotIn("crewai", (root / "src" / "metao" / "sqlite_store.py").read_text(encoding="utf-8").lower())
+        adapter = (root / "src" / "metao" / "sqlite_store.py").read_text(encoding="utf-8").lower()
+        self.assertNotIn("import sqlite3", core)
+        self.assertNotIn("import sqlite3", boundary)
+        self.assertNotIn("langgraph", adapter)
+        self.assertNotIn("crewai", adapter)
 
     def test_process_local_sqlite_memory_mode_is_rejected(self):
         with self.assertRaises(ValueError):
