@@ -106,7 +106,7 @@ class DurableRuntimeQuarantineV1Tests(unittest.TestCase):
             frozenset({"execution_result"}),
         )
 
-    def run(self, operator: MissionOperator, mission_id: str):
+    def run_mission(self, operator: MissionOperator, mission_id: str):
         return operator.run(
             Mission(mission_id, "govern runtime availability", frozenset({"workflow"})),
             policy=self.policy,
@@ -176,7 +176,7 @@ class DurableRuntimeQuarantineV1Tests(unittest.TestCase):
             updated_at_epoch=10.0,
         )
         operator, governed = configured_operator(primary, fallback, controls)
-        outcome = self.run(operator, "wu03-quarantine")
+        outcome = self.run_mission(operator, "wu03-quarantine")
         self.assertEqual(outcome.state.status, MissionStatus.ACCEPTED)
         self.assertEqual(outcome.orchestrator_id, "fallback")
         self.assertEqual(primary.calls, 0)
@@ -195,7 +195,7 @@ class DurableRuntimeQuarantineV1Tests(unittest.TestCase):
                 updated_at_epoch=10.0,
             )
         operator, _ = configured_operator(primary, fallback, controls)
-        outcome = self.run(operator, "wu03-all-quarantined")
+        outcome = self.run_mission(operator, "wu03-all-quarantined")
         self.assertEqual(outcome.state.status, MissionStatus.FAILED)
         self.assertIn("no_eligible_orchestrator", outcome.acceptance.reasons)
         self.assertEqual((primary.calls, fallback.calls), (0, 0))
@@ -222,7 +222,7 @@ class DurableRuntimeQuarantineV1Tests(unittest.TestCase):
         self.assertEqual(primary_entry.health, OrchestratorStatus.HEALTHY)
         self.assertEqual(primary_entry.quality, 0.99)
         self.assertEqual(primary_entry.cost, 0.01)
-        outcome = self.run(operator, "wu03-restored")
+        outcome = self.run_mission(operator, "wu03-restored")
         self.assertEqual(outcome.orchestrator_id, "primary")
         self.assertEqual((primary.calls, fallback.calls), (1, 0))
 
@@ -240,14 +240,14 @@ class DurableRuntimeQuarantineV1Tests(unittest.TestCase):
         operator, governed = configured_operator(primary, fallback, controls)
         primary_entry = next(e for e in governed.entries() if e.orchestrator_id == "primary")
         self.assertEqual(primary_entry.health, OrchestratorStatus.UNHEALTHY)
-        outcome = self.run(operator, "wu03-unhealthy")
+        outcome = self.run_mission(operator, "wu03-unhealthy")
         self.assertEqual(outcome.orchestrator_id, "fallback")
         self.assertEqual(primary.calls, 0)
 
     def test_quarantine_overrides_live_healthy_state_until_explicit_restore(self):
         primary, fallback = Runtime("primary"), Runtime("fallback")
         controls = InMemoryRuntimeControlStore()
-        operator, governed = configured_operator(primary, fallback, controls)
+        _, governed = configured_operator(primary, fallback, controls)
         self.assertEqual(
             next(e for e in governed.entries() if e.orchestrator_id == "primary").health,
             OrchestratorStatus.HEALTHY,
