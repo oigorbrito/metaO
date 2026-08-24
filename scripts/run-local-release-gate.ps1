@@ -164,7 +164,7 @@ function Write-GateEvidence {
         clean_worktree = $IsClean
         python_version = $PythonVersion
         runtime_pins = [ordered]@{
-            openai_agents = "0.21.1"
+            openai_agents = "0.20.0"
             crewai = "1.15.16"
             langgraph = "1.2.11"
         }
@@ -225,7 +225,7 @@ try {
         Invoke-NativeChecked -FilePath $script:PythonExe -ArgumentList @("-m", "pip", "install", "-e", ".")
         Invoke-NativeChecked -FilePath $script:PythonExe -ArgumentList @(
             "-m", "pip", "install",
-            "openai-agents==0.21.1",
+            "openai-agents==0.20.0",
             "crewai==1.15.16",
             "langgraph==1.2.11"
         )
@@ -235,7 +235,7 @@ try {
 
     Invoke-PythonGate -Name "exact_runtime_versions" -ArgumentList @(
         "-c",
-        "from importlib.metadata import version; assert version('openai-agents') == '0.21.1'; assert version('crewai') == '1.15.16'; assert version('langgraph') == '1.2.11'; print('OpenAI Agents', version('openai-agents')); print('CrewAI', version('crewai')); print('LangGraph', version('langgraph'))"
+        "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'; assert version('crewai') == '1.15.16'; assert version('langgraph') == '1.2.11'; print('OpenAI Agents', version('openai-agents')); print('CrewAI', version('crewai')); print('LangGraph', version('langgraph'))"
     )
 
     $MetaOExe = Join-Path $VenvPath "Scripts\metao.exe"
