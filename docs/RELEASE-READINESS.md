@@ -1,6 +1,6 @@
 # metaO Release Readiness
 
-Status: ROADMAP 7 FUNCTIONAL ASSEMBLY COMPLETE — EXECUTION AND MERGE GATES PENDING.
+Status: ROADMAP 2-7 CANONICAL ASSEMBLY COMPLETE — LOCAL RERUN AND MERGE GATES PENDING.
 
 This document separates executed evidence from assembled-but-unexecuted capability.
 
@@ -23,25 +23,28 @@ Real runtime evidence already executed on that merged line:
 - framework-neutral `OrchestratorContract`;
 - independent metaO acceptance.
 
-Those historical PASS results do not validate the later draft stack.
+Those historical PASS results do not validate the later Roadmap 2-7 draft stack.
 
-## Canonical Roadmap 2-5 candidate
+## Canonical Roadmap 2-7 candidate
 
-PR #56 / `roadmap6/integration-candidate-v1` remains the canonical cumulative integration candidate for Roadmaps 2-5.
+PR #68 / `roadmap7/integration-candidate-v1` is the single cumulative merge surface.
 
-It assembles:
+It supersedes individually merging the historical stacked PRs after executable validation.
+
+The candidate assembles:
 
 - deterministic advisory runtime feedback;
-- SDK-neutral runtime conformance;
-- fail-closed runtime admission;
-- durable PASS/FAIL certification;
-- exact certificate reuse;
-- certificate freshness;
-- immutable revocation;
-- certification lifecycle CLI;
-- latest exact certification verdict authority.
+- SDK-neutral runtime conformance and fail-closed admission;
+- durable certification, freshness, revocation and latest-verdict authority;
+- declarative certified onboarding and certificate reuse;
+- OpenAI Agents + CrewAI + LangGraph runtime adapters/regressions;
+- failure-aware deterministic replanning;
+- bounded durable human escalation;
+- heterogeneous three-runtime recovery;
+- independent metaO acceptance;
+- reproducible Windows local release gate.
 
-Critical invariant:
+Critical certification invariant:
 
 ```text
 for orchestrator_id + runtime_version + probe_execution_id
@@ -50,192 +53,174 @@ ONLY THE LATEST CERTIFICATE GENERATION IS AUTHORITATIVE
 
 Never fall back to an older PASS behind a newer FAIL, revoked PASS or stale generation.
 
-PR #56 remains draft/unmerged and has no post-stack PASS claim.
+## Runtime compatibility correction
 
-## Roadmap 6 — third runtime
-
-Roadmap 6 selected and prepared:
+The originally prepared Roadmap 6 third-runtime pin was:
 
 ```text
 OpenAI Agents SDK 0.21.1
-```
-
-Stack:
-
-- PR #57 — current third-runtime evaluation/selection;
-- PR #58 — thin OpenAI Agents adapter using `run_sync`/`final_output` duck typing;
-- PR #59 — three-real-runtime declarative regression;
-- PR #60 — Roadmap 6 closeout/readiness.
-
-Prepared exact-pin runtime set:
-
-```text
-OpenAI Agents 0.21.1
 CrewAI 1.15.16
 LangGraph 1.2.11
 ```
 
-Roadmap 6 preserves:
+The first real local pip resolution attempt proved that exact joint set is impossible:
+
+```text
+openai-agents 0.21.1 -> openai >=3,<4
+crewai 1.15.16       -> openai >=2.30,<3
+result                -> ResolutionImpossible
+```
+
+No functional test executed in that attempt.
+
+Upstream package metadata provides a compatible OpenAI Agents version while preserving the selected runtime and thin synchronous adapter architecture:
+
+```text
+openai-agents 0.20.0 -> openai >=2.45,<3
+crewai 1.15.16       -> openai >=2.30,<3
+shared range          -> openai >=2.45,<3
+```
+
+The active canonical runtime set is therefore:
+
+```text
+OpenAI Agents 0.20.0
+CrewAI 1.15.16
+LangGraph 1.2.11
+Python 3.12.x
+```
+
+The correction does not modify metaO Core, `OrchestratorContract`, selection authority, policy, budget, approval, acceptance or replan semantics.
+
+Because OpenAI Agents 0.20.0 predates the packaged `agents.testing.ScriptedModel` utility used by the originally prepared tests, provider-free integration tests now use the metaO-owned test-only helper `tests/integration/_openai_agents_model.py` built against the SDK public `Model` interface.
+
+See `docs/OPENAI-AGENTS-COMPATIBILITY-CORRECTION.md`.
+
+Historical Roadmap 6 documents may still mention 0.21.1 when describing the originally evaluated/prepared state; those statements are retained for audit history and are superseded by the compatibility-correction document for all current executable gates and merge decisions.
+
+## Architecture preserved
 
 ```text
 CORE_CHANGED_FOR_FRAMEWORK = NO
 ORCHESTRATOR_CONTRACT_CHANGED = NO
 SDK_IMPORT_IN_CORE = NO
 PAID_PROVIDER_REQUIRED_FOR_SANDBOX = NO
+ORCHESTRATOR_DONE != METAO_ACCEPTED
 ```
 
-## Roadmap 7 — failure-aware recovery authority
+No fourth runtime, learned routing, Kubernetes, cloud/distributed database expansion or framework-specific recovery authority was introduced.
 
-Roadmap 7 addressed a control-plane gap instead of adding another framework.
+## Roadmap 7 recovery authority
 
-### PR #61 — failure-aware replan authority
-
-The repository already had framework-neutral `FailureClass`, `ControlAction`, `ReplanLimit` and `replan.evaluate()`, but the real mission loop did not consume them.
-
-Prepared behavior:
-
-- runtime/timeout/transient failures may `REPLAN`;
-- cancellation `HALT`s;
-- exact automatic attempt exhaustion `ESCALATE`s;
-- runtime free-form error text cannot manufacture metaO `POLICY`, `BUDGET` or `ACCEPTANCE` authority;
-- framework SDK types remain outside Core/control-plane contracts.
-
-### PR #62 — durable bounded replan escalation
-
-Prepared durable human recovery semantics:
+Prepared behavior remains:
 
 ```text
-replan limit reached
-+ unattempted routable runtime exists
--> WAITING_APPROVAL
--> bound durable ApprovalRequest
+runtime/transient/timeout failure
+-> deterministic replan when policy allows
+-> exhausted automatic replan budget
+-> durable WAITING_APPROVAL only if an unattempted routable runtime remains
 -> human approval
 -> fresh health/quarantine snapshot
--> exactly ONE additional unattempted runtime attempt
-```
-
-Safety properties:
-
-- prior failed runtimes are not retried by escalation approval;
-- approval does not reset the mission;
-- approval does not create another automatic loop;
-- current outcome budget snapshot is preserved;
-- attempt numbering and lineage continue;
-- existing pre-runtime approval remains compatible;
-- no SQLite schema migration was required.
-
-### PR #63 — real three-runtime recovery regression
-
-Prepared heterogeneous recovery proof:
-
-```text
-OpenAI Agents runtime failure
--> REPLAN
--> CrewAI timeout
--> replan limit
--> durable human approval
--> LangGraph one-shot continuation
+-> exactly one additional unattempted runtime attempt
 -> independent metaO acceptance
 ```
 
-Also prepared:
+Safety properties remain:
 
-- quarantine of the remaining runtime after waiting;
-- SQLite restart between wait / approve / resume;
-- exact fresh certificate reuse across restart;
-- proof that already-attempted real runtimes are not re-executed after approval.
-
-WU03 adds no production code.
-
-### PR #64 candidate — Roadmap 7 closeout
-
-`roadmap7/wu04-closeout-readiness` records the assembled Roadmap 7 state and updates this readiness document.
-
-## Deliberately rejected scope
-
-Roadmap 7 did not add a separate durable `replan_action` field because the repository already persists:
-
-- `MissionAttempt.failure_class`;
-- `MissionState.history`;
-- `MissionRunContext.max_attempts`.
-
-Adding a redundant action field would require a SQLite migration without proportional audit value.
-
-Also not added:
-
-- repeated human escalation generations;
-- retries of already-failed runtimes after escalation;
-- learned recovery policy;
-- arbitrary runtime override by framework-specific hooks;
-- fourth orchestrator framework;
-- Kubernetes/cloud/distributed database expansion.
+- runtime free-form text cannot manufacture metaO POLICY/BUDGET/ACCEPTANCE authority;
+- prior failed runtimes are not retried by escalation approval;
+- approval does not reset the mission or create an unbounded loop;
+- attempt numbering and lineage continue across persistence/restart;
+- existing pre-runtime approval stays compatible;
+- no framework SDK type enters Core contracts.
 
 ## GitHub Actions execution blocker
 
 GitHub-hosted Actions continues to fail before the first job step materializes.
 
-Canonical controlled rerun evidence:
+Known evidence includes:
 
 ```text
-PR #56 workflow run = 32731724864
-run_attempt = 2
-job_id = 97451005960
-steps = null
-logs = BlobNotFound
+PR #56 rerun 32731724864 / job 97451005960 -> steps = null / BlobNotFound
+PR #61 run 32734246554 -> pre-step failure
+PR #62 run 32734943310 / job 97455418118 -> steps = null
+PR #63 run 32735224146 / job 97456307354 -> steps = null
+PR #65 minimal Ubuntu diagnostic / job 97461133603 -> steps = null
+PR #67 cross-OS diagnostic -> macOS, Windows and Ubuntu all steps = null
+PR #68 canonical candidate / job 97474055832 -> steps = null
 ```
 
-Roadmap 7 reproduced the same pre-execution class:
+No checkout, dependency installation or test command is known to have executed in those hosted jobs. They are external pre-execution blockers, not functional PASS/FAIL evidence for metaO code.
+
+## Local executable evidence so far
+
+The canonical local-gate path has produced these concrete findings:
 
 ```text
-WU01 workflow run = 32734246554
-conclusion = failure
+1. HARNESS_FAIL
+   cause: PowerShell parser ambiguity in "$code:" and "$Phase:"
+   correction: ${code}: and ${Phase}:
+   metaO functional tests executed: NO
 
-WU02 workflow run = 32734943310
-job_id = 97455418118
-steps = null
+2. BOOTSTRAP_FAIL
+   cause: Python 3.12 absent
+   correction: install Python 3.12
+   metaO functional tests executed: NO
 
-WU03 workflow run = 32735224146
-job_id = 97456307354
-steps = null
+3. BOOTSTRAP_FAIL / dependency resolver
+   cause: openai-agents 0.21.1 and crewai 1.15.16 require disjoint openai major ranges
+   correction: openai-agents 0.20.0, preserving selected runtime and architecture
+   metaO functional tests executed: NO
 ```
 
-No checkout, dependency installation or test command is known to have executed in these jobs. Therefore the failures are classified as external pre-execution blockers, not functional PASS/FAIL evidence for metaO code.
+These failures are useful executable evidence but are not functional code failures and are not PASS.
 
-## Required execution order
+## Required next execution
 
-No draft stack is merge-eligible until executable output confirms the gates.
+From a clean checkout of PR #68, recreate the isolated gate environment and rerun the full 21-gate battery using the active exact pins.
 
-Required order:
+Required result for local functional validation:
 
-1. execute PR #56 canonical Roadmap 2-5 candidate;
-2. fix any concrete regression without weakening Core boundaries;
-3. execute Roadmap 6 OpenAI Agents adapter/conformance;
-4. execute Roadmap 6 three-runtime lifecycle regression;
-5. execute Roadmap 7 WU01 failure-aware replan regression;
-6. execute Roadmap 7 WU02 durable escalation + SQLite restart regression;
-7. execute Roadmap 7 WU03 exact-pin heterogeneous recovery regression;
-8. run full unit suite;
-9. run real LangGraph/CrewAI/OpenAI Agents sandboxes;
-10. run Block O O1-O5;
-11. verify installed CLI compatibility and SDK-neutral source boundary;
-12. only then build/merge a clean canonical consolidation path.
+```text
+clean_worktree = true
+phase = complete
+fatal_error = null
+failure_count = 0
+overall = PASS
+```
 
-Do not merge all historical stacked PRs individually merely because implementation is assembled.
+If the run returns `TEST_FAIL`, fix only concrete failing gates and repeat the complete gate. If it returns `BOOTSTRAP_FAIL` or `HARNESS_FAIL`, correct the environment/harness without misclassifying the result as a metaO functional failure.
+
+## Merge rule
+
+Do not merge PR #68 while executable functional evidence is absent.
+
+After a verified local PASS on the exact candidate SHA:
+
+1. review the JSON evidence;
+2. verify the tested SHA equals PR #68 head;
+3. keep hosted Actions status explicitly separate while the external blocker remains;
+4. do not individually merge historical stacked PRs #56-#64 or component PR #66;
+5. only make PR #68 merge-eligible under the agreed green-gate policy.
 
 ## Current evidence status
 
 ```text
 LAST_MERGED_EXECUTED_FULL_SUITE = 171/171 PASS
-CANONICAL_PR_56_IMPLEMENTATION = ASSEMBLED
-ROADMAP_6_FUNCTIONAL_ASSEMBLY = COMPLETE
-ROADMAP_7_FUNCTIONAL_ASSEMBLY = COMPLETE
-THIRD_RUNTIME = OpenAI Agents SDK 0.21.1
+CANONICAL_PR_68_ASSEMBLY = COMPLETE
+THIRD_RUNTIME = OpenAI Agents SDK
+ACTIVE_OPENAI_AGENTS_PIN = 0.20.0
+CREWAI_PIN = 1.15.16
+LANGGRAPH_PIN = 1.2.11
+DEPENDENCY_CONFLICT_0_21_1 = CONFIRMED
+COMPATIBILITY_CORRECTION = APPLIED
 THREE_RUNTIME_LIFECYCLE_REGRESSION = PREPARED
 FAILURE_AWARE_REPLAN = PREPARED
 DURABLE_REPLAN_ESCALATION = PREPARED
 THREE_RUNTIME_RECOVERY_REGRESSION = PREPARED
-POST_BASELINE_TEST_PASS = NOT CLAIMED
-REMOTE_EXECUTION = BLOCKED_EXTERNAL
+LOCAL_GATE_RERUN_AFTER_COMPATIBILITY_FIX = PENDING
+POST_BASELINE_FUNCTIONAL_PASS = NOT CLAIMED
+REMOTE_EXECUTION = BLOCKED_EXTERNAL_PRE_STEP
 MERGE_GATE = PENDING
 PRODUCTION_CLAIM = NO
 ```
@@ -244,9 +229,9 @@ PRODUCTION_CLAIM = NO
 
 The repository does not currently claim:
 
+- executable validation of the complete Roadmap 2-7 candidate;
 - production deployment readiness or SLO compliance;
-- executable validation of the draft Roadmap 2-7 stack;
-- paid provider production execution;
+- paid-provider production execution;
 - scale/load characteristics not separately measured;
 - Kubernetes/cloud/distributed-database readiness;
 - learned routing/reinforcement learning;
@@ -254,11 +239,11 @@ The repository does not currently claim:
 
 ## Next legitimate gate
 
-The next legitimate gate is **executable evidence**, followed by canonical stack consolidation after green results.
+The next legitimate gate is **full local executable evidence from the corrected canonical candidate**.
 
 Until then:
 
-- do not merge PR #56 or the stacked Roadmap 6/7 PRs;
-- do not convert pre-step Actions failures into functional code failures;
+- do not merge PR #68;
+- do not convert pre-step Actions failures into functional failures;
 - do not declare PASS without real output;
 - do not add another framework merely to keep feature count moving.
