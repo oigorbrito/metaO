@@ -21,6 +21,7 @@ class FailureClass(str, Enum):
     BUDGET = "budget"
     ACCEPTANCE = "acceptance"
     RUNTIME = "runtime"
+    CANCELLED = "cancelled"
     UNKNOWN = "unknown"
 
 
@@ -48,6 +49,8 @@ class ReplanLimit:
 
 def classify_failure(error: object) -> FailureClass:
     text = str(error).lower()
+    if "cancel" in text:
+        return FailureClass.CANCELLED
     if "timeout" in text or "timed out" in text:
         return FailureClass.TIMEOUT
     if "policy" in text or "denied" in text or "forbidden" in text:
@@ -71,7 +74,7 @@ def evaluate(
 ) -> Evaluation:
     if failure is None:
         return Evaluation(ControlAction.CONTINUE, "no failure")
-    if failure in {FailureClass.POLICY, FailureClass.BUDGET}:
+    if failure in {FailureClass.POLICY, FailureClass.BUDGET, FailureClass.CANCELLED}:
         return Evaluation(ControlAction.HALT, f"hard gate: {failure.value}")
     if not replan_allowed(attempts, limit):
         return Evaluation(ControlAction.ESCALATE, "replan limit exhausted")
