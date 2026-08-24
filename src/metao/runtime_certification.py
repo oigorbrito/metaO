@@ -140,6 +140,31 @@ def is_certificate_fresh(
     return (now_epoch - certificate.certified_at_epoch) <= max_age_seconds
 
 
+def latest_certificate(
+    store: RuntimeCertificationStorePort,
+    *,
+    orchestrator_id: str,
+    runtime_version: str,
+    probe_execution_id: str,
+) -> RuntimeCertification | None:
+    """Return the newest exact generation regardless of PASS/FAIL.
+
+    This is the authoritative lifecycle verdict for one runtime/version/probe
+    binding. Older PASS generations must never silently supersede a newer FAIL or
+    operator-revoked generation.
+    """
+
+    matches = [
+        item
+        for item in store.history(orchestrator_id)
+        if item.runtime_version == runtime_version
+        and item.probe_execution_id == probe_execution_id
+    ]
+    if not matches:
+        return None
+    return max(matches, key=lambda item: (item.certified_at_epoch, item.certificate_id))
+
+
 def latest_passing_certificate(
     store: RuntimeCertificationStorePort,
     *,
@@ -149,7 +174,11 @@ def latest_passing_certificate(
     now_epoch: float | None = None,
     max_age_seconds: float | None = None,
 ) -> RuntimeCertification | None:
-    """Find the newest exact PASS generation, optionally enforcing freshness."""
+    """Find the newest exact PASS generation, optionally enforcing freshness.
+
+    Kept as a low-level historical query for compatibility. Onboarding authority
+    must use :func:`latest_certificate` so a newer FAIL cannot be skipped.
+    """
 
     if (now_epoch is None) != (max_age_seconds is None):
         raise ValueError("freshness lookup requires both now_epoch and max_age_seconds")
@@ -236,6 +265,7 @@ __all__ = [
     "InMemoryRuntimeCertificationStore",
     "certificate_identity",
     "is_certificate_fresh",
+    "latest_certificate",
     "latest_passing_certificate",
     "certification_from_report",
     "record_report",
