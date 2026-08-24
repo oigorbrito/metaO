@@ -57,12 +57,12 @@ class Roadmap6WorkUnit04Tests(unittest.TestCase):
             FakeRunner(),
             object(),
             orchestrator_id="openai-agents-real",
-            version="0.21.1",
+            version="0.20.0",
         )
 
         self.assertIsInstance(adapter, OrchestratorContract)
         self.assertEqual(adapter.descriptor.orchestrator_id, "openai-agents-real")
-        self.assertEqual(adapter.descriptor.version, "0.21.1")
+        self.assertEqual(adapter.descriptor.version, "0.20.0")
         self.assertEqual(adapter.descriptor.capabilities, frozenset({"workflow", "agent"}))
         self.assertEqual(adapter.descriptor.metadata["adapter"], "openai-agents")
 
@@ -82,7 +82,7 @@ class Roadmap6WorkUnit04Tests(unittest.TestCase):
             runner,
             agent,
             orchestrator_id="openai-agents-real",
-            version="0.21.1",
+            version="0.20.0",
         )
         probe = request(context={"z": 2, "a": "one"})
 
@@ -163,14 +163,14 @@ class Roadmap6WorkUnit04Tests(unittest.TestCase):
         first = normalize_evidence(
             request=probe,
             orchestrator_id="openai-agents-real",
-            adapter_version="0.21.1",
+            adapter_version="0.20.0",
             output=output,
             attempt_id="attempt-7",
         )
         second = normalize_evidence(
             request=probe,
             orchestrator_id="openai-agents-real",
-            adapter_version="0.21.1",
+            adapter_version="0.20.0",
             output=output,
             attempt_id="attempt-7",
         )
@@ -181,7 +181,7 @@ class Roadmap6WorkUnit04Tests(unittest.TestCase):
         self.assertEqual(first.mission_id, "r6-wu04-mission")
         self.assertEqual(first.execution_id, "r6-wu04-exec")
         self.assertEqual(first.orchestrator_id, "openai-agents-real")
-        self.assertEqual(first.adapter_version, "0.21.1")
+        self.assertEqual(first.adapter_version, "0.20.0")
         self.assertEqual(first.attempt_id, "attempt-7")
         self.assertEqual(first.provenance_root, "openai-agents:openai-agents-real:r6-wu04-exec")
         self.assertTrue(first.payload_digest)
