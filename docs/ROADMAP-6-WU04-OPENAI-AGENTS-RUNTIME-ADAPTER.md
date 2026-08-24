@@ -2,7 +2,7 @@
 
 Date: 2026-08-24
 
-Status: IMPLEMENTATION PREPARED / EXECUTION PENDING / MERGE GATE PENDING
+Status: IMPLEMENTATION PREPARED / COMPATIBILITY CORRECTED / EXECUTION PENDING / MERGE GATE PENDING
 
 ## Goal
 
@@ -10,8 +10,10 @@ Implement the third runtime selected by Roadmap 6 WU03 without changing metaO Co
 
 Selected runtime:
 
-- OpenAI Agents SDK
-- pinned real sandbox version: `openai-agents==0.21.1`
+- OpenAI Agents SDK;
+- active executable version: `openai-agents==0.20.0`.
+
+The originally prepared 0.21.1 pin was superseded after the real joint pip resolver proved it incompatible with CrewAI 1.15.16. See `docs/OPENAI-AGENTS-COMPATIBILITY-CORRECTION.md`.
 
 ## Architecture
 
@@ -23,25 +25,18 @@ Mission
   -> OpenAI Agents SDK runtime
 ```
 
-Production boundary rule:
+Production boundary:
 
 ```text
 src/metao/adapters/openai_agents.py
 ```
 
-uses only duck typing for:
+uses duck typing for:
 
 - `runner.run_sync(agent, input)`;
 - result `final_output`.
 
-It does **not** import:
-
-- `agents`;
-- `openai`;
-- Responses API types;
-- provider-specific model types.
-
-The SDK is imported only by the real integration sandbox/test.
+It does **not** import `agents`, `openai`, Responses API types or provider-specific model types.
 
 ## Contract mapping
 
@@ -50,34 +45,31 @@ The SDK is imported only by the real integration sandbox/test.
 | `descriptor` | adapter-owned immutable descriptor, capabilities `workflow` + `agent` |
 | `health()` | healthy only when `run_sync` is callable and an agent is configured |
 | `execute()` | deterministic neutral mission/context JSON -> `run_sync` -> normalized `ExecutionResult` |
-| runtime exception | normalized to `ExecutionStatus.FAILED`; exception does not escape the adapter |
-| `cancel()` | preserves existing metaO pre-dispatch cancellation semantics |
+| runtime exception | normalized to `ExecutionStatus.FAILED`; exception does not escape adapter |
+| `cancel()` | preserves metaO pre-dispatch cancellation semantics |
 | evidence | deterministic digest + runtime/execution provenance binding |
 
 ## Why pre-dispatch cancellation remains the boundary
 
-OpenAI Agents supports active cancellation for streamed results, but the current metaO Core contract exposes:
+The current Core contract exposes:
 
 ```python
 cancel(execution_id: str) -> None
 ```
 
-and does not expose a runtime execution handle.
-
-Changing the Core contract only to expose one framework's streaming result would violate the central architecture test. Therefore WU04 deliberately preserves the same pre-dispatch cancellation semantics used by the LangGraph and CrewAI adapters.
-
-A future generic execution-handle evolution is only valid if independently justified for all runtimes.
+and does not expose a framework execution handle. Changing Core only for one SDK would violate the central architecture test. WU04 therefore keeps the same pre-dispatch cancellation semantics used by the existing adapters.
 
 ## Deterministic real SDK sandbox
 
-The integration test uses first-party OpenAI Agents testing utilities:
+OpenAI Agents 0.20.0 preserves the public provider-neutral `Model` interface and synchronous `Runner.run_sync` path required by the adapter.
+
+The later packaged `agents.testing.ScriptedModel` used by the original 0.21.1 preparation is not used by the corrected candidate. Provider-free tests instead use:
 
 ```text
-agents.testing.ScriptedModel
-agents.testing.assistant_message
+tests/integration/_openai_agents_model.py
 ```
 
-The upstream SDK documents these utilities as provider-neutral, in-memory test doubles that make no model API requests.
+This small test-only model implements the SDK public `Model` boundary, queues deterministic success/error steps and performs no provider call.
 
 The real SDK sandbox therefore exercises:
 
@@ -85,12 +77,10 @@ The real SDK sandbox therefore exercises:
 real Agent
 + real Runner.run_sync
 + real runner loop
-+ ScriptedModel provider boundary
++ public Model provider boundary
 + metaO adapter
 + existing Runtime Conformance Harness
 ```
-
-without requiring an OpenAI API key or paid provider call.
 
 Tracing is explicitly disabled in the real test.
 
@@ -100,18 +90,17 @@ Tracing is explicitly disabled in the real test.
 
 `tests/unit/test_roadmap_6_work_unit_04.py`
 
-Prepared assertions:
+Prepared assertions include:
 
 1. adapter structurally satisfies `OrchestratorContract`;
 2. descriptor/version/capabilities remain metaO-owned;
 3. health checks synchronous runner + configured agent;
-4. mission/context input serialization is deterministic;
-5. scalar final output is normalized;
-6. mapping final output is preserved;
-7. runtime exceptions become `FAILED` results;
-8. pre-dispatch cancellation prevents SDK dispatch;
-9. evidence normalization is deterministic and correctly bound;
-10. production adapter source contains no `agents` / `openai` SDK import.
+4. mission/context serialization is deterministic;
+5. scalar/mapping final output normalization;
+6. runtime exceptions become `FAILED` results;
+7. pre-dispatch cancellation prevents SDK dispatch;
+8. evidence normalization is deterministic and correctly bound;
+9. production adapter source contains no SDK import.
 
 ### Real SDK integration suite
 
@@ -119,55 +108,37 @@ Prepared assertions:
 
 Prepared assertions:
 
-1. installed package is exactly `openai-agents==0.21.1`;
-2. real `Runner.run_sync` executes against `ScriptedModel` without a provider;
-3. the existing SDK-neutral Runtime Conformance Harness passes the real runtime boundary when executed;
-4. cancellation-before-dispatch does not consume the SDK model script.
+1. installed package is exactly `openai-agents==0.20.0`;
+2. real `Runner.run_sync` executes against the deterministic test-only `Model` without a provider;
+3. the existing SDK-neutral Runtime Conformance Harness accepts the real runtime boundary;
+4. cancellation-before-dispatch does not consume a model step.
 
-Important: these are **prepared assertions**, not claimed PASS results.
+These remain prepared assertions until execution.
 
 ## CI gate
 
-`.github/workflows/roadmap6-openai-agents-runtime.yml`
+`.github/workflows/roadmap6-openai-agents-runtime.yml` now installs and verifies `openai-agents==0.20.0`, runs the WU04 unit/integration regressions, runtime-conformance regression, full unit suite and SDK-neutral production boundary guard.
 
-Prepared gate:
+## Compatibility evidence
 
-1. install metaO;
-2. install `openai-agents==0.21.1`;
-3. verify exact installed version;
-4. run WU04 unit suite;
-5. run WU04 real deterministic integration suite;
-6. run existing runtime-conformance regression;
-7. run full unit regression;
-8. enforce no `agents` / `openai` imports anywhere under `src/metao`.
+```text
+openai-agents 0.20.0 -> openai >=2.45,<3
+crewai 1.15.16       -> openai >=2.30,<3
+shared range          -> openai >=2.45,<3
+CORE_CHANGED          -> NO
+ORCHESTRATOR_CONTRACT_CHANGED -> NO
+```
 
 ## Execution status
 
-At WU04 creation time:
-
 ```text
 WU04_IMPLEMENTATION = PREPARED
-WU04_LOCAL_EXECUTION = BLOCKED_BY_CURRENT_CHAT_NETWORK
-WU04_GITHUB_ACTIONS_EXECUTION = PENDING
+WU04_COMPATIBILITY_CORRECTION = APPLIED
+WU04_LOCAL_EXECUTION_AFTER_FIX = PENDING
 WU04_TEST_PASS = NOT CLAIMED
 WU04_MERGE_GATE = PENDING
 CORE_CHANGED = NO
 SDK_IN_CORE = NO
 ```
 
-The current chat sandbox cannot resolve `github.com`, so it cannot clone/install the repository for local execution. The project also carries the known GitHub-hosted Actions pre-step failure blocker. Neither condition is treated as a functional code failure, and neither permits a PASS claim.
-
-## Next work unit after executable WU04 evidence exists
-
-Roadmap 6 WU05 — Three Runtime Declarative Certification / Selection should:
-
-1. compose LangGraph 1.2.11, CrewAI 1.15.16, and OpenAI Agents 0.21.1 in one manifest;
-2. actively certify all three using the existing admission/conformance pipeline;
-3. prove exact certificate reuse on restart;
-4. prove deterministic selection across three heterogeneous runtimes;
-5. prove failover when the preferred runtime fails or becomes ineligible;
-6. prove quarantine/live health remain authoritative over feedback;
-7. preserve freshness/revocation/latest-verdict authority;
-8. assert Core source remains unchanged.
-
-WU05 must not be called PASS until those real runtimes execute.
+The next legitimate step is executable evidence from the full canonical local release gate, not further feature expansion.
