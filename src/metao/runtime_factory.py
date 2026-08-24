@@ -23,12 +23,19 @@ from .runtime_admission import (
     RuntimeCertificateAdmissionError,
 )
 from .runtime_certification import (
+    RuntimeCertification,
     RuntimeCertificationStorePort,
+    is_certificate_fresh,
     latest_passing_certificate,
+)
+from .runtime_certification_revocation import (
+    RuntimeCertificationRevocationStorePort,
+    is_certificate_revoked,
 )
 from .runtime_control import RuntimeControlStorePort
 from .runtime_feedback import RuntimeFeedbackStorePort, record_outcome
 from .sqlite_runtime_certification import SQLiteRuntimeCertificationStore
+from .sqlite_runtime_certification_revocation import SQLiteRuntimeCertificationRevocationStore
 from .sqlite_runtime_control import SQLiteRuntimeControlStore
 from .sqlite_runtime_feedback import SQLiteRuntimeFeedbackStore
 
@@ -37,6 +44,7 @@ RUNTIME_CATALOG_ENV = "METAO_RUNTIME_CATALOG"
 RUNTIME_CONTROL_DB_ENV = "METAO_RUNTIME_CONTROL_DB"
 RUNTIME_FEEDBACK_DB_ENV = "METAO_RUNTIME_FEEDBACK_DB"
 RUNTIME_CERTIFICATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_DB"
+RUNTIME_CERTIFICATION_REVOCATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_REVOCATION_DB"
 
 
 class RuntimeCatalogConfigError(ValueError):
@@ -232,6 +240,54 @@ def _certification_now_epoch(value: float | None) -> float:
     return result
 
 
+def _latest_reusable_certificate(
+    certifications: RuntimeCertificationStorePort,
+    revocations: RuntimeCertificationRevocationStorePort | None,
+    *,
+    orchestrator_id: str,
+    runtime_version: str,
+    probe_execution_id: str,
+    now_epoch: float | None,
+    max_age_seconds: float | None,
+) -> RuntimeCertification | None:
+    if revocations is None:
+        if max_age_seconds is None:
+            certificate_id = f"{orchestrator_id}:{runtime_version}:{probe_execution_id}"
+            existing = certifications.get(certificate_id)
+            return existing if existing is not None and existing.passed else None
+        return latest_passing_certificate(
+            certifications,
+            orchestrator_id=orchestrator_id,
+            runtime_version=runtime_version,
+            probe_execution_id=probe_execution_id,
+            now_epoch=now_epoch,
+            max_age_seconds=max_age_seconds,
+        )
+
+    matches = []
+    for certificate in certifications.history(orchestrator_id):
+        if not certificate.passed:
+            continue
+        if certificate.runtime_version != runtime_version:
+            continue
+        if certificate.probe_execution_id != probe_execution_id:
+            continue
+        if is_certificate_revoked(revocations, certificate.certificate_id):
+            continue
+        if max_age_seconds is not None:
+            assert now_epoch is not None
+            if not is_certificate_fresh(
+                certificate,
+                now_epoch=now_epoch,
+                max_age_seconds=max_age_seconds,
+            ):
+                continue
+        matches.append(certificate)
+    if not matches:
+        return None
+    return max(matches, key=lambda item: (item.certified_at_epoch, item.certificate_id))
+
+
 def create_operator_from_catalog(
     path: str | Path,
     *,
@@ -239,13 +295,19 @@ def create_operator_from_catalog(
     controls: RuntimeControlStorePort | None = None,
     feedback: RuntimeFeedbackStorePort | None = None,
     certifications: RuntimeCertificationStorePort | None = None,
+    certification_revocations: RuntimeCertificationRevocationStorePort | None = None,
     certification_now_epoch: float | None = None,
 ) -> MissionOperator:
     """Build one operator, optionally certifying entries before admission."""
 
     registry = OrchestratorRegistry()
     catalog = OrchestratorCatalog(registry)
-    admission = RuntimeAdmissionGate(registry, catalog, certifications)
+    admission = RuntimeAdmissionGate(
+        registry,
+        catalog,
+        certifications,
+        certification_revocations,
+    )
 
     for entry in _read_manifest(path):
         factory_spec = _required_string(entry, "factory")
@@ -286,27 +348,23 @@ def create_operator_from_catalog(
         runtime_version = plugin.orchestrator.descriptor.version
         reuse_passed = _reuse_passed_certificate(entry)
         max_age_seconds = _certificate_max_age_seconds(entry)
+        needs_generation_time = max_age_seconds is not None or certification_revocations is not None
         now_epoch = (
             _certification_now_epoch(certification_now_epoch)
-            if max_age_seconds is not None
+            if needs_generation_time
             else None
         )
 
         if reuse_passed:
-            if max_age_seconds is None:
-                certificate_id = f"{orchestrator_id}:{runtime_version}:{probe.execution_id}"
-                existing = certifications.get(certificate_id)
-                if existing is not None and not existing.passed:
-                    existing = None
-            else:
-                existing = latest_passing_certificate(
-                    certifications,
-                    orchestrator_id=orchestrator_id,
-                    runtime_version=runtime_version,
-                    probe_execution_id=probe.execution_id,
-                    now_epoch=now_epoch,
-                    max_age_seconds=max_age_seconds,
-                )
+            existing = _latest_reusable_certificate(
+                certifications,
+                certification_revocations,
+                orchestrator_id=orchestrator_id,
+                runtime_version=runtime_version,
+                probe_execution_id=probe.execution_id,
+                now_epoch=now_epoch,
+                max_age_seconds=max_age_seconds,
+            )
             if existing is not None:
                 try:
                     admission.admit_certified(
@@ -314,7 +372,7 @@ def create_operator_from_catalog(
                         plugin.normalizer,
                         existing,
                         expected_probe_execution_id=probe.execution_id,
-                        now_epoch=now_epoch,
+                        now_epoch=now_epoch if max_age_seconds is not None else None,
                         max_age_seconds=max_age_seconds,
                         **metrics,
                     )
@@ -363,6 +421,7 @@ def create_operator(
     runtime_control_db: str | Path | None = None,
     runtime_feedback_db: str | Path | None = None,
     runtime_certification_db: str | Path | None = None,
+    runtime_certification_revocation_db: str | Path | None = None,
     certification_now_epoch: float | None = None,
 ) -> MissionOperator:
     """CLI-compatible factory using environment-backed runtime configuration."""
@@ -379,10 +438,20 @@ def create_operator(
         or os.environ.get(RUNTIME_CERTIFICATION_DB_ENV)
         or control_path
     )
+    revocation_path = (
+        runtime_certification_revocation_db
+        or os.environ.get(RUNTIME_CERTIFICATION_REVOCATION_DB_ENV)
+        or certification_path
+    )
     controls = SQLiteRuntimeControlStore(control_path) if control_path else None
     feedback = SQLiteRuntimeFeedbackStore(feedback_path) if feedback_path else None
     certifications = (
         SQLiteRuntimeCertificationStore(certification_path) if certification_path else None
+    )
+    certification_revocations = (
+        SQLiteRuntimeCertificationRevocationStore(revocation_path)
+        if revocation_path
+        else None
     )
     return create_operator_from_catalog(
         path,
@@ -390,6 +459,7 @@ def create_operator(
         controls=controls,
         feedback=feedback,
         certifications=certifications,
+        certification_revocations=certification_revocations,
         certification_now_epoch=certification_now_epoch,
     )
 
@@ -399,6 +469,7 @@ __all__ = [
     "RUNTIME_CONTROL_DB_ENV",
     "RUNTIME_FEEDBACK_DB_ENV",
     "RUNTIME_CERTIFICATION_DB_ENV",
+    "RUNTIME_CERTIFICATION_REVOCATION_DB_ENV",
     "RuntimeCatalogConfigError",
     "RuntimePlugin",
     "RuntimeCatalogOperator",
