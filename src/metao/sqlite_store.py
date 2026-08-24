@@ -17,15 +17,22 @@ from pathlib import Path
 import sqlite3
 from typing import Any
 
-from .acceptance import AcceptanceDecision, AcceptanceProof, AcceptanceResult
+from .acceptance import AcceptanceContext, AcceptanceDecision, AcceptanceProof, AcceptanceResult
 from .control_plane import MissionAttempt, MissionOutcome, MissionState, MissionStatus
 from .core import EvidenceEnvelope as CoreEvidenceEnvelope
 from .core import ExecutionResult, ExecutionStatus, Mission
-from .governance import AcceptanceBudget
-from .mission_store import MissionAlreadyExists, MissionNotFound, MissionRecord
+from .governance import (
+    AcceptanceBudget,
+    ApprovalRecord,
+    ApprovalRequest,
+    PolicyDecision,
+    PolicyEffect,
+)
+from .mission_store import MissionAlreadyExists, MissionNotFound, MissionRecord, MissionRunContext
 
 
-_SCHEMA_VERSION = 1
+_SCHEMA_VERSION = 2
+_SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2})
 
 
 class MissionStoreCorrupt(RuntimeError):
@@ -186,6 +193,120 @@ def _decode_budget(data: Mapping[str, Any]) -> AcceptanceBudget:
     )
 
 
+def _encode_acceptance_context(context: AcceptanceContext) -> dict[str, Any]:
+    return {
+        "subject_id": context.subject_id,
+        "subject_state_id": context.subject_state_id,
+        "verification_context_id": context.verification_context_id,
+        "policy_bundle_id": context.policy_bundle_id,
+        "required_obligations": sorted(context.required_obligations),
+        "trusted_verifiers": sorted(context.trusted_verifiers),
+        "trusted_provenance_roots": sorted(context.trusted_provenance_roots),
+        "authorized_authorities": sorted(context.authorized_authorities),
+    }
+
+
+def _decode_acceptance_context(data: Mapping[str, Any]) -> AcceptanceContext:
+    return AcceptanceContext(
+        subject_id=str(data["subject_id"]),
+        subject_state_id=str(data["subject_state_id"]),
+        verification_context_id=str(data["verification_context_id"]),
+        policy_bundle_id=str(data["policy_bundle_id"]),
+        required_obligations=frozenset(str(item) for item in data.get("required_obligations", [])),
+        trusted_verifiers=frozenset(str(item) for item in data.get("trusted_verifiers", [])),
+        trusted_provenance_roots=frozenset(str(item) for item in data.get("trusted_provenance_roots", [])),
+        authorized_authorities=frozenset(str(item) for item in data.get("authorized_authorities", [])),
+    )
+
+
+def _encode_run_context(context: MissionRunContext | None) -> dict[str, Any] | None:
+    if context is None:
+        return None
+    return {
+        "policy": {
+            "effect": context.policy.effect.value,
+            "policy_bundle_id": context.policy.policy_bundle_id,
+            "reason": context.policy.reason,
+        },
+        "budget": _encode_budget(context.budget),
+        "acceptance_context": _encode_acceptance_context(context.acceptance_context),
+        "execution_id_prefix": context.execution_id_prefix,
+        "max_attempts": context.max_attempts,
+    }
+
+
+def _decode_run_context(data: Mapping[str, Any] | None) -> MissionRunContext | None:
+    if data is None:
+        return None
+    policy_data = data["policy"]
+    policy = PolicyDecision(
+        PolicyEffect(str(policy_data["effect"])),
+        str(policy_data["policy_bundle_id"]),
+        str(policy_data.get("reason", "")),
+    )
+    return MissionRunContext(
+        policy,
+        _decode_budget(data["budget"]),
+        _decode_acceptance_context(data["acceptance_context"]),
+        str(data["execution_id_prefix"]),
+        int(data.get("max_attempts", 2)),
+    )
+
+
+def _encode_approval_request(request: ApprovalRequest | None) -> dict[str, Any] | None:
+    if request is None:
+        return None
+    return {
+        "approval_id": request.approval_id,
+        "mission_id": request.mission_id,
+        "execution_id": request.execution_id,
+        "subject_state_id": request.subject_state_id,
+        "policy_bundle_id": request.policy_bundle_id,
+        "reason": request.reason,
+    }
+
+
+def _decode_approval_request(data: Mapping[str, Any] | None) -> ApprovalRequest | None:
+    if data is None:
+        return None
+    return ApprovalRequest(
+        approval_id=str(data["approval_id"]),
+        mission_id=str(data["mission_id"]),
+        execution_id=str(data["execution_id"]),
+        subject_state_id=str(data["subject_state_id"]),
+        policy_bundle_id=str(data["policy_bundle_id"]),
+        reason=str(data["reason"]),
+    )
+
+
+def _encode_approval_record(record: ApprovalRecord | None) -> dict[str, Any] | None:
+    if record is None:
+        return None
+    return {
+        "approval_id": record.approval_id,
+        "mission_id": record.mission_id,
+        "execution_id": record.execution_id,
+        "subject_state_id": record.subject_state_id,
+        "policy_bundle_id": record.policy_bundle_id,
+        "approver_id": record.approver_id,
+        "approved": record.approved,
+    }
+
+
+def _decode_approval_record(data: Mapping[str, Any] | None) -> ApprovalRecord | None:
+    if data is None:
+        return None
+    return ApprovalRecord(
+        approval_id=str(data["approval_id"]),
+        mission_id=str(data["mission_id"]),
+        execution_id=str(data["execution_id"]),
+        subject_state_id=str(data["subject_state_id"]),
+        policy_bundle_id=str(data["policy_bundle_id"]),
+        approver_id=str(data["approver_id"]),
+        approved=bool(data["approved"]),
+    )
+
+
 def _encode_state(state: MissionState) -> dict[str, Any]:
     return {
         "mission_id": state.mission_id,
@@ -248,6 +369,9 @@ def _record_to_json(record: MissionRecord) -> str:
             "attempted_orchestrators": list(outcome.attempted_orchestrators),
             "state": _encode_state(outcome.state),
         },
+        "run_context": _encode_run_context(record.run_context),
+        "approval_request": _encode_approval_request(record.approval_request),
+        "approval_record": _encode_approval_record(record.approval_record),
     }
     return json.dumps(payload, sort_keys=True, separators=(",", ":"), allow_nan=False)
 
@@ -257,7 +381,8 @@ def _record_from_json(raw: str) -> MissionRecord:
         payload = json.loads(raw)
         if not isinstance(payload, dict):
             raise MissionStoreCorrupt("mission snapshot root must be an object")
-        if int(payload.get("schema_version", -1)) != _SCHEMA_VERSION:
+        schema_version = int(payload.get("schema_version", -1))
+        if schema_version not in _SUPPORTED_SCHEMA_VERSIONS:
             raise MissionStoreCorrupt("unsupported mission snapshot schema version")
         mission_data = payload["mission"]
         outcome_data = payload["outcome"]
@@ -266,7 +391,6 @@ def _record_from_json(raw: str) -> MissionRecord:
             objective=str(mission_data["objective"]),
             required_capabilities=frozenset(str(item) for item in mission_data.get("required_capabilities", [])),
         )
-        state_data = outcome_data["state"]
         outcome = MissionOutcome(
             mission_id=str(outcome_data["mission_id"]),
             orchestrator_id=None if outcome_data.get("orchestrator_id") is None else str(outcome_data["orchestrator_id"]),
@@ -274,9 +398,16 @@ def _record_from_json(raw: str) -> MissionRecord:
             acceptance=_decode_acceptance(outcome_data["acceptance"]),
             budget=_decode_budget(outcome_data["budget"]),
             attempted_orchestrators=tuple(str(item) for item in outcome_data.get("attempted_orchestrators", [])),
-            state=_decode_state(state_data),
+            state=_decode_state(outcome_data["state"]),
         )
-        return MissionRecord(mission, outcome, revision=int(payload["revision"]))
+        return MissionRecord(
+            mission,
+            outcome,
+            revision=int(payload["revision"]),
+            run_context=_decode_run_context(payload.get("run_context")),
+            approval_request=_decode_approval_request(payload.get("approval_request")),
+            approval_record=_decode_approval_record(payload.get("approval_record")),
+        )
     except MissionStoreCorrupt:
         raise
     except (KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
@@ -318,7 +449,7 @@ class SQLiteMissionStore:
     @staticmethod
     def _validated(row: tuple[Any, ...]) -> MissionRecord:
         mission_id, status, revision, schema_version, raw = row
-        if int(schema_version) != _SCHEMA_VERSION:
+        if int(schema_version) not in _SUPPORTED_SCHEMA_VERSIONS:
             raise MissionStoreCorrupt("unsupported database schema version")
         record = _record_from_json(str(raw))
         if record.mission_id != str(mission_id):
