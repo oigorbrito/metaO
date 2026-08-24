@@ -6,51 +6,48 @@ Date: 2026-08-24
 
 ```text
 WU03_IMPLEMENTATION = PREPARED
-WU03_EXECUTION = PENDING
+WU03_COMPATIBILITY_CORRECTION = APPLIED
+WU03_EXECUTION_AFTER_FIX = PENDING
 WU03_PASS = NOT CLAIMED
 ```
 
 ## Objective
 
-Prove the Roadmap 7 recovery semantics across three heterogeneous real runtime SDKs without adding framework-specific recovery logic to metaO.
+Prove Roadmap 7 recovery semantics across three heterogeneous real runtime SDKs without adding framework-specific recovery logic to metaO.
 
-Pinned runtimes:
+Active pinned runtimes:
 
 ```text
-OpenAI Agents SDK 0.21.1
+OpenAI Agents SDK 0.20.0
 CrewAI 1.15.16
 LangGraph 1.2.11
 ```
 
-The regression reuses the existing adapters, declarative catalog, certification lifecycle, runtime controls, durable mission store and approval path.
+The originally prepared OpenAI Agents 0.21.1 pin was superseded after the real local resolver proved it incompatible with CrewAI 1.15.16. See `docs/OPENAI-AGENTS-COMPATIBILITY-CORRECTION.md`.
 
-WU03 adds no production code.
+The regression reuses existing adapters, declarative catalog, certification lifecycle, runtime controls, durable mission store and approval path. WU03 adds no production code.
 
 ## Deterministic provider-free scenario
 
-The real SDKs are configured with deterministic local test boundaries:
-
 ### OpenAI Agents
 
-Uses first-party `agents.testing.ScriptedModel`:
+Uses `tests/integration/_openai_agents_model.py`, a test-only deterministic implementation of the OpenAI Agents 0.20.0 public `Model` interface:
 
 1. certification model call succeeds;
 2. mission model call raises a deterministic runtime error.
 
 ### CrewAI
 
-Uses a `BaseLLM` subclass:
+Uses a deterministic `BaseLLM` subclass:
 
 1. certification call succeeds;
 2. mission call raises a deterministic timeout.
 
-No paid model provider is required.
-
 ### LangGraph
 
-Uses a compiled real `StateGraph` with a deterministic local node.
+Uses a compiled real `StateGraph` with a deterministic local node. It certifies successfully and remains unused during the first two automatic attempts.
 
-It certifies successfully and remains unused during the first two automatic attempts.
+No paid model provider is required.
 
 ## Expected recovery flow
 
@@ -85,15 +82,15 @@ Expected durable attempt lineage:
 3 langgraph-real      SUCCEEDED
 ```
 
-The third runtime is not allowed to execute before human approval.
+The third runtime cannot execute before human approval.
 
 ## Additional scenarios
 
 ### Quarantine after escalation
 
-After the mission reaches `WAITING_APPROVAL`, the only remaining runtime is quarantined before resume.
+After `WAITING_APPROVAL`, quarantine the only remaining runtime before resume.
 
-Expected result:
+Expected:
 
 ```text
 human approval remains valid
@@ -103,11 +100,11 @@ mission -> BLOCKED
 reason -> approved_escalation_no_remaining_runtime
 ```
 
-Approval therefore never overrides runtime control-plane health/quarantine authority.
+Approval never overrides runtime health/quarantine authority.
 
 ### SQLite restart
 
-The regression also prepares a full restart path:
+Prepared restart path:
 
 1. certify three real runtimes;
 2. execute OpenAI Agents + CrewAI failures;
@@ -118,15 +115,10 @@ The regression also prepares a full restart path:
 7. restart again;
 8. reuse certificates again;
 9. resume;
-10. execute only the remaining LangGraph runtime;
-11. preserve attempts `1,2,3` and the approval binding.
+10. execute only remaining LangGraph;
+11. preserve attempts `1,2,3` and approval binding.
 
-This verifies composition between:
-
-- Roadmap 4 certificate reuse;
-- Roadmap 5 freshness/revocation authority;
-- Roadmap 6 third runtime;
-- Roadmap 7 failure-aware replan and durable escalation.
+This composes Roadmap 4 certificate reuse, Roadmap 5 freshness/revocation authority, Roadmap 6 third runtime, and Roadmap 7 failure-aware replan/durable escalation.
 
 ## Architecture invariants
 
@@ -139,7 +131,7 @@ FRAMEWORK_SPECIFIC_REPLAN_LOGIC = NO
 PAID_PROVIDER_REQUIRED = NO
 ```
 
-All framework SDK imports remain in integration/sandbox code or adapters.
+Framework SDK imports remain in integration/sandbox code or adapters.
 
 ## Test file
 
@@ -147,9 +139,9 @@ All framework SDK imports remain in integration/sandbox code or adapters.
 
 Prepared checks:
 
-1. exact pinned runtime versions;
+1. exact active runtime versions;
 2. two heterogeneous real runtime failures -> human escalation -> third real runtime acceptance;
-3. quarantine of the remaining runtime after wait blocks the approved continuation;
+3. quarantine of remaining runtime after wait blocks approved continuation;
 4. SQLite restart reuses certificates and preserves full real-runtime attempt lineage.
 
 ## Gate
@@ -157,19 +149,13 @@ Prepared checks:
 The dedicated workflow installs:
 
 ```text
-openai-agents==0.21.1
+openai-agents==0.20.0
 crewai==1.15.16
 langgraph==1.2.11
 ```
 
-Then runs:
-
-1. Roadmap 7 WU03 real regression;
-2. Roadmap 7 WU01/WU02 focused unit regressions;
-3. Roadmap 6 three-runtime regression;
-4. full unit suite;
-5. SDK-neutral Core/control-plane boundary check.
+Then runs WU03 real recovery, WU01/WU02 focused regressions, Roadmap 6 three-runtime regression, full unit suite and SDK-neutral Core/control-plane boundary guard.
 
 ## Execution blocker
 
-GitHub-hosted Actions is still failing before job steps materialize. Therefore this regression is PREPARED only and no PASS/FAIL is claimed until an executable runner produces real output.
+GitHub-hosted Actions still fails before job steps materialize. The local compatibility correction has not yet been followed by a complete functional gate run. Therefore the regression remains PREPARED and no PASS/FAIL is claimed until actual test commands execute.
