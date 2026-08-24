@@ -4,7 +4,8 @@ A runtime is admitted to the operational registry/catalog only after either an
 active conformance probe succeeds or an explicitly reused persisted PASS
 certificate is strictly bound to the same runtime identity/version/probe id.
 Optional freshness policy additionally requires the reused certificate to remain
-inside its deterministic validity window.
+inside its deterministic validity window. Explicit certificate revocation always
+wins over reuse.
 """
 
 from __future__ import annotations
@@ -19,6 +20,10 @@ from .runtime_certification import (
     RuntimeCertificationStorePort,
     is_certificate_fresh,
     record_report,
+)
+from .runtime_certification_revocation import (
+    RuntimeCertificationRevocationStorePort,
+    is_certificate_revoked,
 )
 from .runtime_conformance import RuntimeConformanceReport, evaluate_runtime_conformance
 
@@ -63,10 +68,12 @@ class RuntimeAdmissionGate:
         registry: OrchestratorRegistry,
         catalog: OrchestratorCatalog,
         certifications: RuntimeCertificationStorePort | None = None,
+        revocations: RuntimeCertificationRevocationStorePort | None = None,
     ) -> None:
         self._registry = registry
         self._catalog = catalog
         self._certifications = certifications
+        self._revocations = revocations
 
     def _register(
         self,
@@ -124,6 +131,10 @@ class RuntimeAdmissionGate:
                 probe_execution_id=probe_request.execution_id,
                 certified_at_epoch=certified_at_epoch,
             )
+            if is_certificate_revoked(self._revocations, certification.certificate_id):
+                raise RuntimeCertificateAdmissionError(
+                    "active probe resolved to a revoked certificate generation"
+                )
         if not report.passed:
             raise RuntimeAdmissionError(report)
         orchestrator_id = self._register(
@@ -154,7 +165,7 @@ class RuntimeAdmissionGate:
         now_epoch: float | None = None,
         max_age_seconds: float | None = None,
     ) -> RuntimeCertificateAdmissionRecord:
-        """Admit without probing only from an exact persisted, optionally fresh PASS."""
+        """Admit without probing only from an exact persisted, fresh/unrevoked PASS."""
 
         if self._certifications is None:
             raise RuntimeCertificateAdmissionError("certification store is required for reuse")
@@ -168,6 +179,8 @@ class RuntimeAdmissionGate:
             raise RuntimeCertificateAdmissionError("certificate runtime version mismatch")
         if certificate.probe_execution_id != expected_probe_execution_id:
             raise RuntimeCertificateAdmissionError("certificate probe binding mismatch")
+        if is_certificate_revoked(self._revocations, certificate.certificate_id):
+            raise RuntimeCertificateAdmissionError("certificate is revoked")
         if (now_epoch is None) != (max_age_seconds is None):
             raise RuntimeCertificateAdmissionError(
                 "certificate freshness requires both now_epoch and max_age_seconds"
