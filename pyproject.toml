@@ -10,7 +10,7 @@ requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-metao = "metao.cli:main"
+metao = "metao.entrypoint:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
