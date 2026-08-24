@@ -7,6 +7,7 @@ import importlib
 import json
 import os
 from pathlib import Path
+import time
 from typing import Any, Callable, Mapping
 
 from .catalog import OrchestratorCatalog
@@ -21,7 +22,10 @@ from .runtime_admission import (
     RuntimeAdmissionGate,
     RuntimeCertificateAdmissionError,
 )
-from .runtime_certification import RuntimeCertificationStorePort
+from .runtime_certification import (
+    RuntimeCertificationStorePort,
+    latest_passing_certificate,
+)
 from .runtime_control import RuntimeControlStorePort
 from .runtime_feedback import RuntimeFeedbackStorePort, record_outcome
 from .sqlite_runtime_certification import SQLiteRuntimeCertificationStore
@@ -206,6 +210,28 @@ def _reuse_passed_certificate(entry: Mapping[str, Any]) -> bool:
     return value
 
 
+def _certificate_max_age_seconds(entry: Mapping[str, Any]) -> float | None:
+    config = _certification_config(entry)
+    if config is None or config.get("mode", "required") == "legacy":
+        return None
+    value = config.get("max_age_seconds")
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise RuntimeCatalogConfigError("certification.max_age_seconds must be numeric")
+    result = float(value)
+    if result <= 0:
+        raise RuntimeCatalogConfigError("certification.max_age_seconds must be positive")
+    return result
+
+
+def _certification_now_epoch(value: float | None) -> float:
+    result = time.time() if value is None else float(value)
+    if result < 0:
+        raise RuntimeCatalogConfigError("certification current time must be non-negative")
+    return result
+
+
 def create_operator_from_catalog(
     path: str | Path,
     *,
@@ -213,6 +239,7 @@ def create_operator_from_catalog(
     controls: RuntimeControlStorePort | None = None,
     feedback: RuntimeFeedbackStorePort | None = None,
     certifications: RuntimeCertificationStorePort | None = None,
+    certification_now_epoch: float | None = None,
 ) -> MissionOperator:
     """Build one operator, optionally certifying entries before admission."""
 
@@ -257,16 +284,38 @@ def create_operator_from_catalog(
 
         orchestrator_id = plugin.orchestrator.descriptor.orchestrator_id
         runtime_version = plugin.orchestrator.descriptor.version
-        if _reuse_passed_certificate(entry):
-            certificate_id = f"{orchestrator_id}:{runtime_version}:{probe.execution_id}"
-            existing = certifications.get(certificate_id)
-            if existing is not None and existing.passed:
+        reuse_passed = _reuse_passed_certificate(entry)
+        max_age_seconds = _certificate_max_age_seconds(entry)
+        now_epoch = (
+            _certification_now_epoch(certification_now_epoch)
+            if max_age_seconds is not None
+            else None
+        )
+
+        if reuse_passed:
+            if max_age_seconds is None:
+                certificate_id = f"{orchestrator_id}:{runtime_version}:{probe.execution_id}"
+                existing = certifications.get(certificate_id)
+                if existing is not None and not existing.passed:
+                    existing = None
+            else:
+                existing = latest_passing_certificate(
+                    certifications,
+                    orchestrator_id=orchestrator_id,
+                    runtime_version=runtime_version,
+                    probe_execution_id=probe.execution_id,
+                    now_epoch=now_epoch,
+                    max_age_seconds=max_age_seconds,
+                )
+            if existing is not None:
                 try:
                     admission.admit_certified(
                         plugin.orchestrator,
                         plugin.normalizer,
                         existing,
                         expected_probe_execution_id=probe.execution_id,
+                        now_epoch=now_epoch,
+                        max_age_seconds=max_age_seconds,
                         **metrics,
                     )
                 except RuntimeCertificateAdmissionError as exc:
@@ -280,6 +329,7 @@ def create_operator_from_catalog(
                 plugin.orchestrator,
                 plugin.normalizer,
                 probe,
+                certified_at_epoch=now_epoch if now_epoch is not None else 0.0,
                 **metrics,
             )
         except RuntimeAdmissionError as exc:
@@ -313,6 +363,7 @@ def create_operator(
     runtime_control_db: str | Path | None = None,
     runtime_feedback_db: str | Path | None = None,
     runtime_certification_db: str | Path | None = None,
+    certification_now_epoch: float | None = None,
 ) -> MissionOperator:
     """CLI-compatible factory using environment-backed runtime configuration."""
 
@@ -339,6 +390,7 @@ def create_operator(
         controls=controls,
         feedback=feedback,
         certifications=certifications,
+        certification_now_epoch=certification_now_epoch,
     )
 
 
