@@ -161,6 +161,10 @@ def _attempt_view(record: MissionRecord) -> list[dict[str, Any]]:
             "execution_status": None if item.execution_status is None else item.execution_status.value,
             "acceptance_decision": item.acceptance_decision.value,
             "reasons": list(item.reasons),
+            "started_at_epoch": item.started_at_epoch,
+            "ended_at_epoch": item.ended_at_epoch,
+            "failure_class": None if item.failure_class is None else item.failure_class.value,
+            "cost": item.cost,
         }
         for item in record.outcome.state.attempts
     ]
