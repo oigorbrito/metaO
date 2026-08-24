@@ -1,10 +1,4 @@
-"""Minimal metaO mission composition path.
-
-This module composes already-proven framework-neutral pieces: registry,
-strategy, global policy/budget, orchestrator execution, evidence normalization,
-final metaO acceptance, and bounded failover. It intentionally knows nothing
-about LangGraph, CrewAI, or any other orchestrator SDK.
-"""
+"""Minimal metaO mission composition path."""
 
 from __future__ import annotations
 
@@ -37,6 +31,15 @@ def _eligible_pools(mission: Mission, pools: tuple[OrchestratorPoolState, ...]) 
     return tuple(pool for pool in pools if mission.required_capabilities <= pool.capabilities)
 
 
+def _budget_has_capacity(budget: AcceptanceBudget) -> bool:
+    return (
+        budget.money_used < budget.money_limit
+        and budget.tokens_used < budget.token_limit
+        and budget.wall_time_used_s < budget.wall_time_limit_s
+        and budget.verifier_attempts_used < budget.verifier_attempt_limit
+    )
+
+
 def execute_mission_once(
     *,
     mission: Mission,
@@ -55,6 +58,8 @@ def execute_mission_once(
         return MissionOutcome(mission.mission_id, None, None, _blocked(f"policy:{policy.effect.value.lower()}"), budget)
     if policy.policy_bundle_id != acceptance_context.policy_bundle_id:
         return MissionOutcome(mission.mission_id, None, None, _blocked("policy_bundle_mismatch"), budget)
+    if not _budget_has_capacity(budget):
+        return MissionOutcome(mission.mission_id, None, None, _blocked("budget_exhausted"), budget)
 
     selected = select_orchestrator(_eligible_pools(mission, pools))
     if selected is None:
@@ -119,12 +124,7 @@ def execute_mission(
     now_epoch: float = 0.0,
     max_attempts: int = 2,
 ) -> MissionOutcome:
-    """Run a mission with bounded orchestrator failover.
-
-    Failed or independently rejected attempts are excluded before the next
-    deterministic strategy decision. Policy denial happens before any runtime
-    is invoked, and the acceptance budget is carried across attempts.
-    """
+    """Run a mission with bounded orchestrator failover."""
 
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
