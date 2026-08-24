@@ -6,73 +6,54 @@ Date: 2026-08-24
 
 ```text
 ROADMAP_6_FUNCTIONAL_ASSEMBLY = COMPLETE
+ROADMAP_6_COMPATIBILITY_CORRECTION = APPLIED
 ROADMAP_6_RUNTIME_VALIDATION = PENDING
 ROADMAP_6_REMOTE_EXECUTION = BLOCKED_EXTERNAL
 ROADMAP_6_MERGE_GATE = PENDING
 ROADMAP_6_PRODUCTION_CLAIM = NO
 ```
 
-Roadmap 6 is closed only at the implementation/readiness level. It is **not** validated, merge-ready, or production-proven because executable test evidence is still unavailable.
+Roadmap 6 is complete only at implementation/readiness level. It is not validated or merge-ready until executable evidence exists.
 
-## Baseline preservation
+## Historical selection and active pin
 
-Canonical pre-Roadmap-6 integration candidate:
+WU03 selected OpenAI Agents SDK as the third runtime after comparing OpenAI Agents, Microsoft Agent Framework and Google ADK. That runtime selection is preserved.
+
+The originally prepared exact package version was 0.21.1. The first real joint pip resolution later proved that version incompatible with CrewAI 1.15.16 in one environment:
 
 ```text
-PR #56
-branch: roadmap6/integration-candidate-v1
-base: main
+openai-agents 0.21.1 -> openai >=3,<4
+crewai 1.15.16       -> openai >=2.30,<3
 ```
 
-Roadmap 6 third-runtime work is stacked on top of that candidate. `main` remains untouched by WU03-WU06.
+The active executable version is therefore:
 
-PR #56 remains draft/unmerged and must not be merged without real execution evidence.
+```text
+OpenAI Agents 0.20.0 -> openai >=2.45,<3
+CrewAI 1.15.16       -> openai >=2.30,<3
+LangGraph 1.2.11
+shared openai range  -> >=2.45,<3
+```
+
+See `docs/OPENAI-AGENTS-COMPATIBILITY-CORRECTION.md`.
 
 ## WU03 — Third Runtime Evaluation / Selection
 
-PR #57
+Historical result:
 
 ```text
-branch: roadmap6/wu03-third-runtime-evaluation-v1
-base: roadmap6/integration-candidate-v1
+SELECTED_THIRD_RUNTIME = OpenAI Agents SDK
 ```
 
-Result:
+Selection rationale remains valid:
 
-```text
-SELECTED_THIRD_RUNTIME = OpenAI Agents SDK 0.21.1
-```
-
-Selection was based on current official upstream evidence across:
-
-- OpenAI Agents SDK;
-- Microsoft Agent Framework;
-- Google ADK Python.
-
-Primary deciding factors:
-
-- first-party synchronous `Runner.run_sync(...)` fits the existing synchronous metaO contract;
-- first-party provider-neutral deterministic `ScriptedModel` enables real SDK conformance without paid provider access;
-- adapter can remain a thin translation layer;
+- synchronous `Runner.run_sync(...)` fits the existing metaO execution contract;
+- provider-neutral public `Model` boundary supports deterministic provider-free testing;
+- adapter remains a thin translation layer;
 - no Core change is required;
-- runtime architecture adds a runner/handoff/guardrail-oriented implementation distinct from LangGraph and CrewAI.
-
-Execution classification:
-
-```text
-DOCUMENTED = YES
-EXECUTED = NO
-PASS = NOT CLAIMED
-```
+- runtime architecture is distinct from LangGraph and CrewAI.
 
 ## WU04 — OpenAI Agents Runtime Adapter
-
-PR #58
-
-```text
-branch: roadmap6/wu04-openai-agents-runtime-adapter-v1
-base: roadmap6/wu03-third-runtime-evaluation-v1
-```
 
 Prepared:
 
@@ -80,11 +61,9 @@ Prepared:
 - SDK-neutral duck typing via `run_sync` and `final_output`;
 - deterministic evidence normalization;
 - SDK-free adapter unit suite;
-- real `openai-agents==0.21.1` sandbox using `agents.testing.ScriptedModel`;
-- existing `Runtime Conformance Harness` reused unchanged;
+- real `openai-agents==0.20.0` provider-free sandbox using the SDK public `Model` boundary;
+- existing Runtime Conformance Harness reused unchanged;
 - dedicated workflow and framework-boundary guard.
-
-Architecture:
 
 ```text
 CORE_CHANGED = NO
@@ -93,21 +72,12 @@ SDK_IMPORT_IN_PRODUCTION_ADAPTER = NO
 SDK_IMPORT_IN_CORE = NO
 ```
 
-The existing metaO cancellation contract is preserved. WU04 does not expose an OpenAI Agents streaming result handle through Core.
-
 ## WU05 — Three Runtime Declarative Regression
 
-PR #59
+Active exact set:
 
 ```text
-branch: roadmap6/wu05-three-runtime-declarative-regression-v1
-base: roadmap6/wu04-openai-agents-runtime-adapter-v1
-```
-
-Prepared one real three-runtime regression with exact pins:
-
-```text
-OpenAI Agents 0.21.1
+OpenAI Agents 0.20.0
 CrewAI 1.15.16
 LangGraph 1.2.11
 ```
@@ -121,51 +91,21 @@ Prepared scenarios:
 5. deterministic selection across three heterogeneous runtimes;
 6. failed preferred OpenAI Agents runtime fails over to CrewAI;
 7. quarantine overrides preferred routing score;
-8. full existing unit suite preserves latest-certification-verdict authority.
+8. full unit suite preserves latest-certification-verdict authority.
 
-WU05 changes only:
+No WU05 production source change is required.
 
-- one integration regression;
-- one workflow;
-- one document.
+## Compatibility correction scope
 
-Direct WU04→WU05 comparison confirms no production source file changed.
+Comparison from the last locally attempted candidate SHA before this dependency correction shows the correction touches only workflows, release-gate harness/docs and tests. No `src/metao/**` file changed for the version correction.
 
-## External execution blocker — reconfirmed
+The 0.20.0 provider-free test seam is `tests/integration/_openai_agents_model.py`, which is test-only and based on the SDK public `Model` interface.
 
-The blocker is still GitHub-hosted Actions failing before job steps materialize.
+## External execution blocker
 
-Observed on Roadmap 6 itself:
+GitHub-hosted Actions still fails before job steps materialize, including minimal cross-OS diagnostics. Therefore hosted failures remain external pre-execution evidence rather than functional PASS/FAIL.
 
-### WU04 workflow
-
-```text
-Roadmap 6 OpenAI Agents Runtime
-conclusion = failure
-steps = null
-```
-
-### WU05 workflow
-
-```text
-Roadmap 6 Three Runtime Regression
-conclusion = failure
-steps = null
-```
-
-Therefore:
-
-- checkout did not execute;
-- dependency installation did not execute;
-- unit tests did not execute;
-- integration tests did not execute;
-- architecture grep did not execute.
-
-This remains an external execution blocker, not a functional PASS or FAIL result for the prepared code.
-
-## Canonical architectural invariants preserved
-
-Roadmap 6 does not change the frozen architecture:
+## Canonical architecture
 
 ```text
 Mission
@@ -173,46 +113,29 @@ Mission
   -> Policy / Budget
   -> OrchestratorContract
   -> Runtime Adapter
-  -> Orchestrator real
+  -> Real Orchestrator
   -> Evidence
   -> Independent Acceptance
   -> Accept / Replan / Failover / Block
 ```
 
-Still authoritative:
-
 ```text
 ORCHESTRATOR_DONE != METAO_ACCEPTED
 ```
 
-metaO continues to own:
-
-- runtime selection;
-- policy;
-- budget;
-- approval;
-- acceptance;
-- failover;
-- replanning;
-- quarantine;
-- certification lifecycle;
-- observability/audit authority.
-
-Runtime SDKs own only their internal execution.
+metaO retains authority over selection, policy, budget, approval, acceptance, failover/replan, quarantine, certification lifecycle and audit. Runtime SDKs own internal execution only.
 
 ## Third-runtime architecture test
-
-The intended acceptance question remains:
 
 ```text
 Can the entire third orchestrator, including its agents, tools, memory,
 model provider and workflows, be replaced without changing metaO Core?
 ```
 
-Roadmap 6 implementation answer:
+Design answer:
 
 ```text
-YES BY DESIGN
+YES
 ```
 
 Executable proof:
@@ -221,55 +144,31 @@ Executable proof:
 PENDING
 ```
 
-The OpenAI Agents adapter is outside Core and the three-runtime regression uses the same generic catalog/admission/routing/failover/lifecycle infrastructure already used by the previous runtimes.
+## Current canonical path
 
-## Merge and validation order
+The historical stacked PRs are not the merge path. PR #68 / `roadmap7/integration-candidate-v1` is the canonical cumulative candidate.
 
-When executable infrastructure is available, do not merge historical PRs opportunistically.
+Required next order:
 
-Required order:
+1. execute the corrected full local release gate on PR #68;
+2. classify any failure as bootstrap, harness or functional test evidence;
+3. fix concrete failures without weakening Core boundaries;
+4. rerun the complete gate;
+5. only after verified green evidence consider the canonical candidate merge-eligible under the agreed policy;
+6. do not individually merge the historical stacked PRs.
 
-1. execute PR #56 canonical integration candidate against its complete gate;
-2. fix any concrete regressions on the canonical candidate;
-3. only after #56 is green, decide whether to merge #56 or build a newer canonical candidate containing Roadmap 6;
-4. execute WU04 real OpenAI Agents conformance at the exact Roadmap 6 head;
-5. execute WU05 three-runtime regression at the exact Roadmap 6 head;
-6. run full unit regression and Block O O1-O5;
-7. verify SDK-neutral boundary and no Core diff;
-8. merge only green dependency-ordered work or a single newer canonical consolidation PR;
-9. supersede historical stacked PRs only after the canonical merged state contains their intended artifacts.
-
-Do not merge PRs #57-#60 into an unvalidated base merely to reduce the stack.
-
-## Failure handling once execution works
-
-If a real test fails:
+## Final declaration
 
 ```text
-FAIL = functional evidence
-```
+ROADMAP_6_WU03 = DOCUMENTED / RUNTIME_SELECTED
+ROADMAP_6_WU04 = IMPLEMENTATION_PREPARED / COMPATIBILITY_CORRECTED / NOT_EXECUTED_AFTER_FIX
+ROADMAP_6_WU05 = REGRESSION_PREPARED / COMPATIBILITY_CORRECTED / NOT_EXECUTED_AFTER_FIX
+ROADMAP_6_WU06 = CLOSEOUT_UPDATED
 
-Then:
-
-1. identify the exact failing invariant;
-2. prefer adapter/plugin correction;
-3. do not alter Core merely to accommodate OpenAI Agents;
-4. if the framework cannot satisfy the existing contract without invasive changes, reconsider the runtime selection rather than weakening the architecture;
-5. rerun focused test, full regression, real sandbox, and canonical gate;
-6. only then update PASS status.
-
-## Roadmap 6 final declaration
-
-```text
-ROADMAP_6_WU03 = DOCUMENTED / SELECTED
-ROADMAP_6_WU04 = IMPLEMENTATION_PREPARED / NOT_EXECUTED
-ROADMAP_6_WU05 = REGRESSION_PREPARED / NOT_EXECUTED
-ROADMAP_6_WU06 = CLOSEOUT_DOCUMENTED
-
-THIRD_RUNTIME = OpenAI Agents SDK 0.21.1
+THIRD_RUNTIME = OpenAI Agents SDK
+ACTIVE_OPENAI_AGENTS_PIN = 0.20.0
 THREE_RUNTIME_TARGET = OpenAI Agents + CrewAI + LangGraph
 CORE_MODIFICATION_REQUIRED = NO
 MAIN_MODIFIED = NO
-PR_56_MERGED = NO
-PASS_CLAIMED_WITHOUT_EXECUTION = NO
+FUNCTIONAL_PASS_AFTER_FIX = NOT CLAIMED
 ```
