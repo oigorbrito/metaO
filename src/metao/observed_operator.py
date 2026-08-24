@@ -55,6 +55,10 @@ class ObservableMissionOperator:
                 "attempt_number": attempt.attempt_number,
                 "execution_id": attempt.execution_id,
                 "orchestrator_id": attempt.orchestrator_id,
+                "started_at_epoch": attempt.started_at_epoch,
+                "ended_at_epoch": attempt.ended_at_epoch,
+                "failure_class": None if attempt.failure_class is None else attempt.failure_class.value,
+                "cost": attempt.cost,
             }
             self._event(
                 outcome.mission_id,
@@ -101,6 +105,7 @@ class ObservableMissionOperator:
                     outcome.mission_id,
                     MissionEventKind.REPLAN_REQUESTED,
                     payload={
+                        **common,
                         "after_attempt": attempt.attempt_number,
                         "previous_orchestrator_id": attempt.orchestrator_id,
                         "reasons": list(attempt.reasons),
