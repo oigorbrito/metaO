@@ -1,12 +1,13 @@
 # metaO Release Readiness
 
-Status: CANONICAL INTEGRATION CANDIDATE — EXECUTION AND MERGE GATES PENDING.
+Status: ROADMAP 6 FUNCTIONAL ASSEMBLY COMPLETE — EXECUTION AND MERGE GATES PENDING.
 
-This file deliberately separates three things:
+This file deliberately separates four things:
 
 1. evidence already executed on merged `main`;
-2. capability implemented in the canonical Roadmap 2-5 candidate;
-3. production claims that have not been proven.
+2. capability assembled in the canonical Roadmap 2-5 integration candidate;
+3. Roadmap 6 third-runtime work stacked on top of that candidate;
+4. production claims that have not been proven.
 
 ## Merged and executed baseline
 
@@ -26,15 +27,13 @@ Evidence already executed on that merged line includes:
 - runtime control CLI;
 - framework-neutral `OrchestratorContract` and independent acceptance boundary.
 
-These historical PASS results do **not** automatically validate later unmerged
-Roadmap 2 WU05 / Roadmap 3-5 changes.
+These historical PASS results do **not** automatically validate later unmerged Roadmap 2 WU05 / Roadmap 3-6 changes.
 
-## Canonical candidate capability
+## Canonical pre-Roadmap-6 integration candidate
 
-`roadmap6/integration-candidate-v1` is intended to be the single integration
-surface for all post-baseline work.
+PR #56 / branch `roadmap6/integration-candidate-v1` is the single integration surface for the cumulative Roadmap 2-5 work.
 
-It contains the cumulative functional implementation for:
+It contains:
 
 ### Deterministic runtime feedback
 
@@ -76,62 +75,128 @@ None of the above changes the central rule:
 
 `ORCHESTRATOR_DONE != METAO_ACCEPTED`
 
-Policy, budget, approval, independent acceptance, quarantine, failover, replanning,
-observability and audit remain metaO control-plane authorities. Runtime SDKs remain
-confined to adapters/plugins.
+Policy, budget, approval, independent acceptance, quarantine, failover, replanning, observability and audit remain metaO control-plane authorities. Runtime SDKs remain confined to adapters/plugins.
 
-## Reconciled stacked history
+## Roadmap 6 third-runtime stack
 
-The candidate inherits the linear Roadmap 3-5 stack and reconciles the two
-parallel Roadmap 2 branches without overwriting evolved production code.
+Roadmap 6 is stacked on top of PR #56 and remains draft/unmerged.
 
-From PR #38 it restores the previously missing:
+### WU03 — third runtime evaluation
 
-- focused deterministic-feedback test suite;
-- WU05 documentation;
-- WU05 workflow.
+PR #57 selected:
 
-The three feedback production modules already present in the later stack were
-confirmed as exact reused blobs. `runtime_factory.py` intentionally remains the
-newer cumulative implementation.
+`OpenAI Agents SDK 0.21.1`
 
-From PR #39 it restores the Roadmap 2 closeout history. This file supersedes the
-old #39 release-readiness wording because the integration candidate now includes
-Roadmaps 3-5.
+Selection was based on current upstream evidence and prioritized:
 
-## Candidate execution gate
+- architectural diversity;
+- a thin adapter;
+- deterministic provider-free testing;
+- zero Core changes;
+- upstream maintenance;
+- low operational cost.
 
-The candidate is **not merge-eligible** until executable output confirms:
+### WU04 — OpenAI Agents adapter
 
-1. full unit suite;
-2. Roadmap 2 WU05 deterministic-feedback suite;
-3. Roadmap 3 conformance/admission/certification regressions;
-4. Roadmap 4 certified onboarding/reuse regressions;
-5. Roadmap 5 freshness/revocation/lifecycle/latest-verdict regressions;
-6. real LangGraph 1.2.11 runtime regression;
-7. real CrewAI 1.15.16 runtime regression;
-8. real certified lifecycle regressions;
-9. Block O O1-O5;
-10. installed CLI smoke/compatibility;
-11. SDK-neutral Core/control-plane boundary.
+PR #58 prepares:
 
-A consolidated workflow exists to execute these gates when hosted runner
-allocation is available again.
+- `src/metao/adapters/openai_agents.py`;
+- SDK-neutral duck typing via `run_sync` and `final_output`;
+- deterministic evidence normalization;
+- SDK-free adapter unit tests;
+- real SDK sandbox using first-party `agents.testing.ScriptedModel`;
+- the existing framework-neutral Runtime Conformance Harness unchanged.
+
+Architecture status:
+
+```text
+CORE_CHANGED = NO
+ORCHESTRATOR_CONTRACT_CHANGED = NO
+SDK_IMPORT_IN_CORE = NO
+```
+
+### WU05 — three-runtime regression
+
+PR #59 prepares one declarative real-runtime regression with exact pins:
+
+```text
+OpenAI Agents 0.21.1
+CrewAI 1.15.16
+LangGraph 1.2.11
+```
+
+Prepared scenarios include:
+
+- active certification of all three runtimes;
+- exact PASS reuse inside TTL;
+- freshness-triggered recertification;
+- selective certificate revocation;
+- deterministic three-runtime selection;
+- heterogeneous failover;
+- quarantine overriding routing score;
+- preservation of latest-certification-verdict authority.
+
+Direct WU04 -> WU05 comparison shows only integration test, workflow and documentation changes; no production source file changed in WU05.
+
+### WU06 — closeout/readiness
+
+PR #60 records Roadmap 6 as functionally assembled but not executed or merge-ready.
+
+## Execution gate
+
+No post-baseline candidate is merge-eligible until executable output confirms the required gates.
+
+Required order:
+
+1. execute PR #56 canonical integration candidate;
+2. fix any concrete regression on PR #56 without weakening Core boundaries;
+3. execute WU04 real OpenAI Agents conformance;
+4. execute WU05 three-runtime regression;
+5. run the full unit suite;
+6. run real LangGraph/CrewAI/OpenAI Agents sandboxes;
+7. run Block O O1-O5;
+8. verify installed CLI compatibility;
+9. verify SDK-neutral Core/control-plane boundary;
+10. merge only dependency-ordered green work or a single later canonical consolidation candidate.
+
+## Current execution blocker
+
+GitHub-hosted Actions is currently failing before the first job step materializes.
+
+Observed across Roadmap 6 and the canonical PR #56:
+
+```text
+job conclusion = failure
+steps = [] / null
+job logs = BlobNotFound
+```
+
+A controlled rerun of the PR #56 canonical integration job on 2026-08-24 produced the same result:
+
+```text
+workflow run = 32731724864
+run_attempt = 2
+job = canonical-integration
+job_id = 97451005960
+steps = null
+logs = BlobNotFound
+```
+
+Therefore no checkout, dependency installation or test command executed. This is classified as an external execution blocker, not a functional PASS or FAIL result for metaO code.
 
 ## Current evidence status
-
-The GitHub-hosted runner problem affecting the post-WU04 work occurs before the
-first job step. The operator explicitly chose to continue implementation rather
-than treat that external allocation issue as a development blocker.
-
-Therefore:
 
 ```text
 LAST_MERGED_EXECUTED_FULL_SUITE = 171/171 PASS
 CANONICAL_CANDIDATE_IMPLEMENTATION = ASSEMBLED
+ROADMAP_6_FUNCTIONAL_ASSEMBLY = COMPLETE
+THIRD_RUNTIME_SELECTED = OpenAI Agents SDK 0.21.1
+THREE_RUNTIME_REGRESSION = PREPARED
 CANONICAL_CANDIDATE_TEST_PASS = NOT CLAIMED
-CANONICAL_CANDIDATE_REMOTE_EXECUTION = PENDING
-CANONICAL_CANDIDATE_MERGE_GATE = PENDING
+ROADMAP_6_TEST_PASS = NOT CLAIMED
+REMOTE_EXECUTION = BLOCKED_EXTERNAL
+MERGE_GATE = PENDING
+PRODUCTION_CLAIM = NO
 ```
 
 ## Not claimed
@@ -140,17 +205,23 @@ The repository does not currently claim:
 
 - production deployment readiness or SLO compliance;
 - external paid model/provider production execution;
+- executable proof of the OpenAI Agents integration;
+- executable proof of three-runtime selection/failover/lifecycle behavior;
 - Kubernetes/cloud/distributed-database readiness;
 - a configured Sigstore/Cosign production identity backend;
 - hostile-network cryptographic authenticity without such a provider;
 - learned routing, reinforcement learning or automatic training;
 - scale/load characteristics not separately measured;
-- security certification or penetration-test completion;
-- a third orchestrator framework integration.
+- security certification or penetration-test completion.
 
 ## Next architectural gate
 
-A third runtime should be evaluated only against this canonical integration
-candidate, not against one of the intermediate stacked PR heads. Selection of a
-third runtime must use current upstream documentation/code/tests and should not be
-made solely from historical familiarity.
+The third-runtime design gate is now complete at the implementation level. The next legitimate gate is **execution evidence**, not a fourth framework or broader infrastructure expansion.
+
+Until executable infrastructure is available:
+
+- continue only work that preserves the frozen architecture and has an explicit documented objective;
+- do not merge PR #56 or Roadmap 6 stacked PRs;
+- do not convert pre-step Action failures into functional FAIL claims;
+- do not declare PASS without real test output;
+- do not add a fourth runtime merely to continue feature count.
