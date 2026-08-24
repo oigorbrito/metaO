@@ -6,7 +6,6 @@ The adapter intentionally depends only on LangGraph's public runtime shape
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from hashlib import sha256
 import json
 from typing import Any
@@ -49,7 +48,7 @@ def normalize_evidence(
         policy_bundle_id=str(context.get("policy_bundle_id", "default-policy")),
         verifier_id=str(context.get("verifier_id", "adapter-observer")),
         payload_digest=_digest(output),
-        provenance=f"langgraph:{orchestrator_id}:{request.execution_id}",
+        provenance_root=f"langgraph:{orchestrator_id}:{request.execution_id}",
         authority_id=str(context.get("authority_id", "metao-runtime")),
         passed=True,
         created_at_epoch=float(context.get("created_at_epoch", 0.0)),
@@ -92,7 +91,7 @@ class LangGraphOrchestratorAdapter:
                 ExecutionStatus.SUCCEEDED,
                 output=output,
             )
-        except Exception as exc:  # framework failure is normalized, not leaked
+        except Exception as exc:
             return ExecutionResult(
                 request.execution_id,
                 self.descriptor.orchestrator_id,
