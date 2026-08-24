@@ -7,6 +7,7 @@ on:
       - 'src/metao/control_plane.py'
       - 'src/metao/operator.py'
       - 'src/metao/adapters/**'
+      - 'tests/integration/_openai_agents_model.py'
       - 'tests/integration/test_r7_wu03_three_runtime_recovery.py'
       - 'tests/integration/test_r6_wu05_three_real_runtimes.py'
       - 'tests/unit/test_roadmap_7_work_unit_01.py'
@@ -29,10 +30,10 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install -e .
-          python -m pip install 'openai-agents==0.21.1' 'crewai==1.15.16' 'langgraph==1.2.11'
+          python -m pip install 'openai-agents==0.20.0' 'crewai==1.15.16' 'langgraph==1.2.11'
       - name: Confirm exact runtime versions
         run: |
-          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.21.1'; assert version('crewai') == '1.15.16'; assert version('langgraph') == '1.2.11'; print('OpenAI Agents', version('openai-agents')); print('CrewAI', version('crewai')); print('LangGraph', version('langgraph'))"
+          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'; assert version('crewai') == '1.15.16'; assert version('langgraph') == '1.2.11'; print('OpenAI Agents', version('openai-agents')); print('CrewAI', version('crewai')); print('LangGraph', version('langgraph'))"
       - name: Roadmap 7 real three-runtime recovery
         run: python tests/integration/test_r7_wu03_three_runtime_recovery.py
       - name: Roadmap 7 focused unit regressions
