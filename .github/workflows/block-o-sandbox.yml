@@ -24,3 +24,5 @@ jobs:
         run: python tests/integration/test_o1_langgraph_real.py
       - name: O2 end-to-end sandbox mission
         run: python tests/integration/test_o2_e2e_sandbox.py
+      - name: O3 failover sandbox
+        run: python tests/integration/test_o3_failover_sandbox.py
