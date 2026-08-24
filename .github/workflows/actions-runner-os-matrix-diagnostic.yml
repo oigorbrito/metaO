@@ -1,0 +1,33 @@
+name: Actions Runner OS Matrix Diagnostic
+
+on:
+  pull_request:
+    branches:
+      - roadmap7/wu04-closeout-readiness
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ubuntu:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ubuntu runner allocated
+        run: echo runner-ok-ubuntu
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 5
+    steps:
+      - name: Windows runner allocated
+        shell: powershell
+        run: Write-Host "runner-ok-windows"
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 5
+    steps:
+      - name: macOS runner allocated
+        run: echo runner-ok-macos
