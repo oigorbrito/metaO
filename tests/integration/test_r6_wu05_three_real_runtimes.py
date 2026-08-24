@@ -10,12 +10,12 @@ from typing import Any, ClassVar
 import unittest
 
 from agents import Agent as OpenAIAgent, Runner, set_tracing_disabled
-from agents.testing import ScriptedModel, assistant_message
 from crewai import Agent, Crew, Process, Task
 from crewai.llms.base_llm import BaseLLM
 from langgraph.graph import END, START, StateGraph
 from typing_extensions import TypedDict
 
+from _openai_agents_model import ScriptedModel, assistant_message
 from metao.acceptance import AcceptanceContext, AcceptanceDecision
 from metao.adapters.crewai import CrewAIOrchestratorAdapter, normalize_evidence as normalize_crewai
 from metao.adapters.langgraph import LangGraphOrchestratorAdapter, normalize_evidence as normalize_langgraph
@@ -34,7 +34,7 @@ from metao.sqlite_runtime_certification_revocation import SQLiteRuntimeCertifica
 from metao.strategy import OrchestratorStatus
 
 
-OPENAI_AGENTS_VERSION = "0.21.1"
+OPENAI_AGENTS_VERSION = "0.20.0"
 CREWAI_VERSION = "1.15.16"
 LANGGRAPH_VERSION = "1.2.11"
 
@@ -298,10 +298,7 @@ class ThreeRealRuntimesV1Tests(unittest.TestCase):
             certifications, _ = self.stores(db)
 
             ids = {entry.orchestrator_id for entry in operator.runtime_entries()}
-            histories = {
-                runtime_id: certifications.history(runtime_id)
-                for runtime_id in ids
-            }
+            histories = {runtime_id: certifications.history(runtime_id) for runtime_id in ids}
 
         self.assertEqual(ids, {"openai-agents-real", "crewai-real", "langgraph-real"})
         self.assertEqual(len(self.openai_models), 1)
