@@ -27,7 +27,42 @@ steps = null
 logs = BlobNotFound
 ```
 
-Therefore this failure is outside metaO test assertions and happens before runner execution.
+A second diagnostic removed the possibility that the failure was specific to the Ubuntu pool. Three independent one-step jobs were prepared with no checkout, setup action, dependency installation or metaO execution:
+
+```text
+PR = #67
+workflow = Actions Runner OS Matrix Diagnostic
+run = 32737346242
+
+macos-latest
+  job = 97463231179
+  conclusion = failure
+  steps = null
+
+windows-latest
+  job = 97463231312
+  conclusion = failure
+  steps = null
+  logs = BlobNotFound
+
+ubuntu-latest
+  job = 97463231320
+  conclusion = failure
+  steps = null
+```
+
+Both diagnostic PRs were closed unmerged after capturing evidence.
+
+Therefore:
+
+```text
+METAO_TEST_LOGIC_CAUSE = NO
+WORKFLOW_COMPLEXITY_CAUSE = NO
+HOSTED_OS_SPECIFIC = NO
+HOSTED_OS_SWITCH_WORKAROUND = NO
+```
+
+The current blocker is upstream of repository test execution and affects standard GitHub-hosted runner allocation for this private repository/account.
 
 ## Gate branch
 
@@ -119,7 +154,7 @@ The local gate executes, independently records and summarizes:
 
 The script runs all test gates even if an individual test gate fails, then returns a non-zero process exit code when any recorded gate is `FAIL`.
 
-Bootstrap failures such as missing Python 3.12 or dependency installation failure stop before the test battery; those are environment failures, not metaO functional PASS results.
+Bootstrap/environment failures such as missing Python 3.12 or dependency installation failure are classified separately from test failures. They never count as a metaO functional PASS.
 
 ## Evidence format
 
@@ -131,17 +166,28 @@ UTC timestamp
 Git branch
 Git commit
 clean_worktree
-Python version
+Python version when available
 exact runtime pins
+phase
+bootstrap_error when present
 per-gate status / exit code / duration
 failure_count
 overall
+```
+
+Expected overall values are:
+
+```text
+PASS
+TEST_FAIL
+BOOTSTRAP_FAIL
 ```
 
 A legitimate local PASS requires:
 
 ```text
 clean_worktree = true
+phase = complete
 failure_count = 0
 overall = PASS
 ```
@@ -169,12 +215,24 @@ The remote Actions blocker remains a separate infrastructure condition until a h
 
 ## Hosted-runner remediation
 
-Because the minimal one-step workflow reproduces the problem, repository code changes should not be used to chase this failure.
+Because minimal one-step workflows reproduce the problem across Linux, Windows and macOS, repository code changes and hosted OS changes should not be used to chase this failure.
 
-Operational checks are now limited to:
+Operational checks are limited to:
 
-1. GitHub account **Settings -> Billing -> Spending limits**: Actions spending limit enabled and above zero;
-2. Actions enabled for the private repository;
-3. if those are healthy, GitHub Support with run/job IDs including `32736704068 / 97461133603` and the earlier Roadmap runs.
+1. GitHub account **Settings -> Billing -> Spending limits**: verify Actions spending/usage is enabled and not blocked;
+2. repository **Settings -> Actions -> General**: verify Actions is enabled for the private repository;
+3. if those are healthy, contact GitHub Support and provide the diagnostic IDs:
+
+```text
+single Ubuntu diagnostic
+  run 32736704068
+  job 97461133603
+
+cross-OS diagnostic
+  run 32737346242
+  macOS job   97463231179
+  Windows job 97463231312
+  Ubuntu job  97463231320
+```
 
 This diagnostic is intentionally outside the metaO architecture roadmap.
