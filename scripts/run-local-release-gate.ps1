@@ -20,6 +20,8 @@ $Branch = $null
 $Commit = $null
 $IsClean = $null
 $PythonVersion = $null
+$Overall = "BOOTSTRAP_FAIL"
+$FailureCount = 0
 
 function Invoke-NativeChecked {
     param(
@@ -148,8 +150,8 @@ function Invoke-SdkBoundaryGate {
 
 function Write-GateEvidence {
     param(
-        [Parameter(Mandatory = $true)][string]$Overall,
-        [Parameter(Mandatory = $true)][int]$FailureCount
+        [Parameter(Mandatory = $true)][string]$OverallValue,
+        [Parameter(Mandatory = $true)][int]$FailureCountValue
     )
 
     New-Item -ItemType Directory -Path $EvidenceRoot -Force | Out-Null
@@ -170,8 +172,8 @@ function Write-GateEvidence {
         phase = $Phase
         fatal_error = $FatalError
         results = @($Results)
-        failure_count = $FailureCount
-        overall = $Overall
+        failure_count = $FailureCountValue
+        overall = $OverallValue
     }
 
     $Summary | ConvertTo-Json -Depth 8 | Set-Content -Path $SummaryPath -Encoding utf8
@@ -277,27 +279,27 @@ try {
         $ExitCode = 1
     }
 
-    Write-GateEvidence -Overall $Overall -FailureCount $FailureCount
+    Write-GateEvidence -OverallValue $Overall -FailureCountValue $FailureCount
 }
 catch {
     $FatalError = $_.Exception.Message
     $FailureCount = @($Results | Where-Object { $_.status -eq "FAIL" }).Count
-    if ($Phase -eq "tests") {
-        $Overall = "HARNESS_FAIL"
+    if ($Phase -eq "bootstrap") {
+        $Overall = "BOOTSTRAP_FAIL"
     }
     else {
-        $Overall = "BOOTSTRAP_FAIL"
+        $Overall = "HARNESS_FAIL"
     }
     $ExitCode = 2
 
     try {
-        Write-GateEvidence -Overall $Overall -FailureCount $FailureCount
+        Write-GateEvidence -OverallValue $Overall -FailureCountValue $FailureCount
     }
     catch {
-        Write-Error "Unable to write gate evidence: $($_.Exception.Message)"
+        Write-Warning "Unable to write gate evidence: $($_.Exception.Message)"
     }
 
-    Write-Error "Local release gate aborted during $Phase: $FatalError"
+    Write-Warning "Local release gate aborted during $Phase: $FatalError"
 }
 finally {
     if ($LocationPushed) {
