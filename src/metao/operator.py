@@ -21,6 +21,7 @@ from metao.control_plane import (
     MissionState,
     MissionStatus,
     execute_mission,
+    execute_mission_once,
 )
 from metao.core import ExecutionResult, ExecutionStatus, Mission, OrchestratorRegistry
 from metao.durable import DurableExecutionPort, DurableExecutionSpec, DurableExecutionState
@@ -45,7 +46,7 @@ from metao.mission_store import (
     MissionRunContext,
     MissionStorePort,
 )
-from metao.strategy import OrchestratorPoolState
+from metao.strategy import OrchestratorPoolState, select_orchestrator
 
 
 def run(port: DurableExecutionPort, spec: DurableExecutionSpec) -> str:
@@ -146,6 +147,75 @@ class MissionOperator:
         if self._catalog is not None:
             return self._catalog.pools(), self._catalog.normalizers()
         return self._pools, self._normalizers
+
+    def _remaining_routable_pools(
+        self,
+        mission: Mission,
+        attempted_orchestrators: tuple[str, ...],
+    ) -> tuple[OrchestratorPoolState, ...]:
+        """Return a fresh live snapshot containing only unattempted candidates."""
+
+        attempted = set(attempted_orchestrators)
+        pools, _ = self._routing_inputs()
+        remaining = tuple(
+            pool
+            for pool in pools
+            if pool.orchestrator_id not in attempted
+            and mission.required_capabilities <= pool.capabilities
+        )
+        if select_orchestrator(remaining) is None:
+            return ()
+        return remaining
+
+    @staticmethod
+    def _is_replan_limit_outcome(outcome: MissionOutcome) -> bool:
+        return (
+            outcome.state is not None
+            and bool(outcome.state.attempts)
+            and "replan_limit_reached" in outcome.acceptance.reasons
+        )
+
+    def _promote_replan_escalation(
+        self,
+        mission: Mission,
+        outcome: MissionOutcome,
+    ) -> MissionOutcome:
+        """Project a replan-limit terminal result into durable human waiting.
+
+        The projection is allowed only when a currently routable unattempted
+        runtime exists. Human approval never authorizes retrying a runtime that
+        already failed in the current mission lineage.
+        """
+
+        if not self._is_replan_limit_outcome(outcome):
+            return outcome
+        if outcome.state is None:
+            return outcome
+        if not self._remaining_routable_pools(mission, outcome.attempted_orchestrators):
+            return outcome
+
+        history = outcome.state.history
+        if history and history[-1] in {
+            MissionStatus.FAILED,
+            MissionStatus.BLOCKED,
+            MissionStatus.CANCELLED,
+        }:
+            history = history[:-1] + (MissionStatus.WAITING_APPROVAL,)
+        elif not history or history[-1] is not MissionStatus.WAITING_APPROVAL:
+            history = history + (MissionStatus.WAITING_APPROVAL,)
+
+        acceptance = AcceptanceResult(
+            AcceptanceDecision.REQUIRE_HUMAN,
+            outcome.acceptance.reasons,
+            outcome.acceptance.proof,
+        )
+        state = MissionState(
+            mission.mission_id,
+            MissionStatus.WAITING_APPROVAL,
+            outcome.state.attempts,
+            history,
+        )
+        return replace(outcome, acceptance=acceptance, state=state)
 
     def _cancel_requested(self, mission_id: str) -> bool:
         if self._execution_handles is None:
@@ -274,16 +344,18 @@ class MissionOperator:
             max_attempts=max_attempts,
             **self._execution_kwargs(mission.mission_id),
         )
+        outcome = self._promote_replan_escalation(mission, outcome)
 
         approval_request = None
         if outcome.state is not None and outcome.state.status is MissionStatus.WAITING_APPROVAL:
+            escalation = bool(outcome.state.attempts) and "replan_limit_reached" in outcome.acceptance.reasons
             approval_request = require_human(
                 approval_id=f"{mission.mission_id}:approval:1",
                 mission_id=mission.mission_id,
                 execution_id=f"{prefix}-approval",
                 subject_state_id=acceptance_context.subject_state_id,
                 policy_bundle_id=policy.policy_bundle_id,
-                reason=policy.reason or "human_approval_required",
+                reason="replan_limit_reached" if escalation else (policy.reason or "human_approval_required"),
             )
 
         self._store.create(
@@ -335,6 +407,84 @@ class MissionOperator:
         denied_outcome = replace(current.outcome, acceptance=denied_acceptance, state=denied_state)
         return self._store.replace(replace(current, outcome=denied_outcome, approval_record=record))
 
+    def _resume_replan_escalation(
+        self,
+        current: MissionRecord,
+        *,
+        resumed_policy: PolicyDecision,
+        now_epoch: float,
+    ) -> MissionOutcome:
+        """Use one approved extra attempt against an unattempted live runtime."""
+
+        if current.run_context is None or current.outcome.state is None:
+            raise MissionApprovalError("mission is missing persisted escalation context")
+
+        context = current.run_context
+        prior_state = current.outcome.state
+        remaining = self._remaining_routable_pools(
+            current.mission,
+            current.outcome.attempted_orchestrators,
+        )
+        if not remaining:
+            acceptance = AcceptanceResult(
+                AcceptanceDecision.BLOCK,
+                current.outcome.acceptance.reasons + ("approved_escalation_no_remaining_runtime",),
+                current.outcome.acceptance.proof,
+            )
+            state = MissionState(
+                current.mission_id,
+                MissionStatus.BLOCKED,
+                prior_state.attempts,
+                prior_state.history + (MissionStatus.BLOCKED,),
+            )
+            outcome = replace(current.outcome, acceptance=acceptance, state=state)
+            self._store.replace(replace(current, outcome=outcome))
+            return outcome
+
+        _, normalizers = self._routing_inputs()
+        next_attempt = len(prior_state.attempts) + 1
+        continued = execute_mission_once(
+            mission=current.mission,
+            registry=self._registry,
+            pools=remaining,
+            normalizers=normalizers,
+            policy=resumed_policy,
+            budget=current.outcome.budget,
+            acceptance_context=context.acceptance_context,
+            execution_id=f"{context.execution_id_prefix}-{next_attempt}",
+            now_epoch=now_epoch,
+            attempt_number=next_attempt,
+            **self._execution_kwargs(current.mission_id),
+        )
+        assert continued.state is not None
+
+        attempted = list(current.outcome.attempted_orchestrators)
+        for orchestrator_id in continued.attempted_orchestrators:
+            if orchestrator_id not in attempted:
+                attempted.append(orchestrator_id)
+
+        combined_state = MissionState(
+            current.mission_id,
+            continued.state.status,
+            prior_state.attempts + continued.state.attempts,
+            prior_state.history + continued.state.history[1:],
+        )
+        acceptance = continued.acceptance
+        if acceptance.decision is not AcceptanceDecision.ACCEPT:
+            acceptance = AcceptanceResult(
+                acceptance.decision,
+                acceptance.reasons + ("approved_escalation_attempt_exhausted",),
+                acceptance.proof,
+            )
+        outcome = replace(
+            continued,
+            acceptance=acceptance,
+            attempted_orchestrators=tuple(attempted),
+            state=combined_state,
+        )
+        self._store.replace(replace(current, outcome=outcome))
+        return outcome
+
     def resume(self, mission_id: str, *, now_epoch: float = 0.0) -> MissionOutcome:
         """Resume an approved mission using its persisted original run context."""
         current = self._store.get(mission_id)
@@ -347,8 +497,6 @@ class MissionOperator:
         if current.run_context is None:
             raise MissionApprovalError("mission is missing persisted run context")
         assert current.outcome.state is not None
-        if current.outcome.state.attempts:
-            raise MissionApprovalError("approval resume expects a pre-runtime waiting state")
 
         context = current.run_context
         resumed_policy = PolicyDecision(
@@ -356,6 +504,16 @@ class MissionOperator:
             context.policy.policy_bundle_id,
             f"approved:{current.approval_record.approval_id}",
         )
+
+        if current.outcome.state.attempts:
+            if not self._is_replan_limit_outcome(current.outcome):
+                raise MissionApprovalError("runtime-attempt approval is not a recognized replan escalation")
+            return self._resume_replan_escalation(
+                current,
+                resumed_policy=resumed_policy,
+                now_epoch=now_epoch,
+            )
+
         pools, normalizers = self._routing_inputs()
         outcome = execute_mission(
             mission=current.mission,
