@@ -47,6 +47,17 @@ class RuntimePlugin:
             raise RuntimeCatalogConfigError("runtime plugin normalizer must be callable")
 
 
+class RuntimeCatalogOperator(MissionOperator):
+    """MissionOperator with a read-only operational runtime catalog surface."""
+
+    def __init__(self, *, registry, catalog, store: MissionStorePort) -> None:
+        super().__init__(registry=registry, catalog=catalog, store=store)
+        self._runtime_catalog_view = catalog
+
+    def runtime_entries(self):
+        return self._runtime_catalog_view.entries()
+
+
 def _as_object(value: Any, name: str) -> Mapping[str, Any]:
     if not isinstance(value, dict):
         raise RuntimeCatalogConfigError(f"{name} must be a JSON object")
@@ -156,10 +167,18 @@ def create_operator_from_catalog(
     operational_catalog = (
         GovernedOrchestratorCatalog(catalog, controls) if controls is not None else catalog
     )
-    return MissionOperator(registry=registry, catalog=operational_catalog, store=store)
+    return RuntimeCatalogOperator(
+        registry=registry,
+        catalog=operational_catalog,
+        store=store,
+    )
 
 
-def create_operator(*, store: MissionStorePort) -> MissionOperator:
+def create_operator(
+    *,
+    store: MissionStorePort,
+    runtime_control_db: str | Path | None = None,
+) -> MissionOperator:
     """CLI-compatible factory using environment-backed runtime configuration."""
 
     path = os.environ.get(RUNTIME_CATALOG_ENV)
@@ -167,7 +186,7 @@ def create_operator(*, store: MissionStorePort) -> MissionOperator:
         raise RuntimeCatalogConfigError(
             f"{RUNTIME_CATALOG_ENV} must point to a trusted runtime catalog JSON file"
         )
-    control_path = os.environ.get(RUNTIME_CONTROL_DB_ENV)
+    control_path = runtime_control_db or os.environ.get(RUNTIME_CONTROL_DB_ENV)
     controls = SQLiteRuntimeControlStore(control_path) if control_path else None
     return create_operator_from_catalog(path, store=store, controls=controls)
 
@@ -177,6 +196,7 @@ __all__ = [
     "RUNTIME_CONTROL_DB_ENV",
     "RuntimeCatalogConfigError",
     "RuntimePlugin",
+    "RuntimeCatalogOperator",
     "create_operator",
     "create_operator_from_catalog",
 ]
