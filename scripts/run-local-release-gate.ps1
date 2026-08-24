@@ -32,7 +32,7 @@ function Invoke-NativeChecked {
     & $FilePath @ArgumentList
     $code = $LASTEXITCODE
     if ($code -ne 0) {
-        throw "Command failed with exit code $code: $FilePath $($ArgumentList -join ' ')"
+        throw "Command failed with exit code ${code}: $FilePath $($ArgumentList -join ' ')"
     }
 }
 
@@ -299,7 +299,7 @@ catch {
         Write-Warning "Unable to write gate evidence: $($_.Exception.Message)"
     }
 
-    Write-Warning "Local release gate aborted during $Phase: $FatalError"
+    Write-Warning "Local release gate aborted during ${Phase}: $FatalError"
 }
 finally {
     if ($LocationPushed) {
