@@ -1,12 +1,12 @@
 # metaO Local Release Gate
 
-Status: OPERATIONAL FALLBACK FOR HOSTED-RUNNER OUTAGE.
+Status: OPERATIONAL FALLBACK FOR HOSTED-RUNNER OUTAGE — PENDING RERUN AFTER DEPENDENCY COMPATIBILITY FIX.
 
-This gate exists to produce executable evidence while GitHub-hosted Actions is failing before the first job step. It does **not** weaken the normal remote merge gate and it does not convert local execution into a production-readiness claim.
+This gate exists to produce executable evidence while GitHub-hosted Actions fails before the first job step. It does **not** weaken the normal remote merge gate and it does not convert local execution into a production-readiness claim.
 
-## Why this exists
+## Hosted-runner evidence
 
-The repository currently has repeated GitHub Actions runs with the same pre-step fingerprint:
+Repeated GitHub Actions runs fail with the same pre-step fingerprint:
 
 ```text
 job conclusion = failure
@@ -14,44 +14,22 @@ steps = null / []
 logs = BlobNotFound
 ```
 
-A dedicated minimal diagnostic PR removed metaO test complexity entirely and still reproduced the failure:
+Minimal diagnostics removed metaO test complexity and reproduced the failure:
 
 ```text
-PR = #65
-workflow = Actions Runner Diagnostic
-run = 32736704068
-job = 97461133603
-job name = smoke
-configured work = one ubuntu-latest shell step
+PR #65 / Ubuntu
+run 32736704068
+job 97461133603
 steps = null
 logs = BlobNotFound
+
+PR #67 / cross-OS
+macOS  job 97463231179 -> steps = null
+Windows job 97463231312 -> steps = null
+Ubuntu  job 97463231320 -> steps = null
 ```
 
-A second diagnostic removed the possibility that the failure was specific to the Ubuntu pool. Three independent one-step jobs were prepared with no checkout, setup action, dependency installation or metaO execution:
-
-```text
-PR = #67
-workflow = Actions Runner OS Matrix Diagnostic
-run = 32737346242
-
-macos-latest
-  job = 97463231179
-  conclusion = failure
-  steps = null
-
-windows-latest
-  job = 97463231312
-  conclusion = failure
-  steps = null
-  logs = BlobNotFound
-
-ubuntu-latest
-  job = 97463231320
-  conclusion = failure
-  steps = null
-```
-
-Both diagnostic PRs were closed unmerged after capturing evidence.
+Both diagnostics were closed unmerged.
 
 Therefore:
 
@@ -62,73 +40,101 @@ HOSTED_OS_SPECIFIC = NO
 HOSTED_OS_SWITCH_WORKAROUND = NO
 ```
 
-The current blocker is upstream of repository test execution and affects standard GitHub-hosted runner allocation for this private repository/account.
+The hosted blocker remains upstream of repository execution.
 
-## Gate branch
+## Canonical gate branch
 
-Run the gate from:
+Run only from the canonical integration candidate:
 
 ```text
-ops/local-release-gate-v1
+roadmap7/integration-candidate-v1
 ```
 
-That branch is based directly on `roadmap7/wu04-closeout-readiness` and adds only the local gate script plus this documentation.
+Historical branch `ops/local-release-gate-v1` is superseded for release evidence.
 
 ## Prerequisites
 
 - Windows PowerShell;
 - Git;
 - Python 3.12 available as `py -3.12` or `python`;
-- network access for the first dependency installation;
-- a clean checkout by default.
+- network access for dependency installation;
+- clean checkout by default.
 
-The gate creates an isolated Python environment outside the repository:
+The isolated environment is outside the repository:
 
 ```text
 %LOCALAPPDATA%\metaO\release-gate-venv
 ```
 
-Evidence is also written outside the repository so the run does not dirty its own checkout:
+Evidence is written outside the repository:
 
 ```text
 %LOCALAPPDATA%\metaO\release-gate-evidence\gate-<timestamp>.json
 ```
 
+## Dependency compatibility correction
+
+The first real Windows dependency-resolution attempt exposed an incompatible prepared set before any functional test ran:
+
+```text
+openai-agents 0.21.1 -> openai >=3,<4
+crewai 1.15.16       -> openai >=2.30,<3
+result                -> ResolutionImpossible
+```
+
+The evidence-based active set is now:
+
+```text
+openai-agents == 0.20.0   # requires openai >=2.45,<3
+crewai        == 1.15.16  # requires openai >=2.30,<3
+langgraph     == 1.2.11
+Python        == 3.12.x
+```
+
+The compatible shared OpenAI client range is therefore:
+
+```text
+openai >=2.45,<3
+```
+
+The third runtime remains OpenAI Agents SDK. No Core or `OrchestratorContract` change was required. See `docs/OPENAI-AGENTS-COMPATIBILITY-CORRECTION.md`.
+
+## Provider-free deterministic runtime seams
+
+No paid provider call is required by the prepared real-runtime tests:
+
+- OpenAI Agents 0.20.0 uses `tests/integration/_openai_agents_model.py`, a small test-only deterministic implementation of the SDK public `Model` interface;
+- CrewAI uses a deterministic local `BaseLLM`;
+- LangGraph uses local deterministic graphs.
+
+The OpenAI test helper is not production code and does not change the SDK-neutral Core boundary.
+
 ## Execute
 
-From the local metaO checkout:
+For a clean rerun after the earlier failed resolver attempt, remove the old gate venv once, then run the canonical candidate:
 
 ```powershell
+cd C:\Projetos\metao-gate
 git fetch origin
-git switch ops/local-release-gate-v1
+git switch roadmap7/integration-candidate-v1
 git pull --ff-only
+Remove-Item -Recurse -Force "$env:LOCALAPPDATA\metaO\release-gate-venv" -ErrorAction SilentlyContinue
+git status --short
+git rev-parse HEAD
 powershell -ExecutionPolicy Bypass -File .\scripts\run-local-release-gate.ps1
 ```
 
-For later runs using the already-installed exact dependency environment:
+For later diagnostic reruns using an already validated exact dependency environment:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\run-local-release-gate.ps1 -SkipInstall
 ```
 
-Dirty worktrees fail closed. `-AllowDirty` exists only for diagnosis and records `clean_worktree=false`; such a run should not be used as release evidence.
-
-## Exact runtime pins
-
-The script installs and verifies:
-
-```text
-openai-agents == 0.21.1
-crewai        == 1.15.16
-langgraph     == 1.2.11
-Python        == 3.12.x
-```
-
-No paid provider call is required by the prepared real-runtime tests. OpenAI Agents uses the deterministic first-party scripted model; CrewAI uses the deterministic local BaseLLM; LangGraph uses local deterministic graphs.
+Dirty worktrees fail closed. `-AllowDirty` exists only for diagnosis and records `clean_worktree=false`; such a run is not valid release evidence.
 
 ## Executed gates
 
-The local gate executes, independently records and summarizes:
+The local gate records 21 checks:
 
 1. exact runtime versions;
 2. installed CLI help;
@@ -152,37 +158,23 @@ The local gate executes, independently records and summarizes:
 20. Block O O5 runtime swap;
 21. SDK-neutral Core/control-plane boundary.
 
-The script runs all normal test gates even if an individual test gate fails, then returns a non-zero process exit code when any recorded gate is `FAIL`.
+Normal test gates continue after individual test failures so the final evidence contains the complete failing set.
 
-Bootstrap/environment failures such as missing Python 3.12 or dependency installation failure are classified separately from test failures. Unexpected harness failures after bootstrap are also separate. Neither can count as a metaO functional PASS.
-
-## Evidence format
-
-The gate attempts to emit JSON evidence for PASS, test failure, bootstrap failure and harness failure. The generated JSON contains:
+## Outcome classification
 
 ```text
-schema_version
-UTC timestamp
-Git branch when available
-Git commit when available
-clean_worktree when available
-Python version when available
-exact runtime pins
-hosted_runner_blocker
-phase
-fatal_error when present
-per-gate status / exit code / duration
-failure_count
-overall
+PASS           = full recorded battery completed with zero failures
+TEST_FAIL      = functional/test gates executed and one or more failed
+BOOTSTRAP_FAIL = environment/dependency setup failed before tests
+HARNESS_FAIL   = release-gate mechanics failed after bootstrap
 ```
 
-Expected overall values are:
+Exit codes:
 
 ```text
-PASS
-TEST_FAIL
-BOOTSTRAP_FAIL
-HARNESS_FAIL
+0 = PASS
+1 = TEST_FAIL
+2 = BOOTSTRAP_FAIL or HARNESS_FAIL
 ```
 
 A legitimate local PASS requires:
@@ -195,16 +187,6 @@ failure_count = 0
 overall = PASS
 ```
 
-Exit-code semantics are:
-
-```text
-0 = PASS
-1 = completed test battery with one or more test gate failures
-2 = bootstrap or harness failure
-```
-
-If the evidence path itself is unavailable, the script reports that separately and still exits non-zero.
-
 ## Evidence semantics
 
 A successful local gate may establish:
@@ -216,7 +198,7 @@ REAL_PROVIDER_FREE_RUNTIME_SANDBOXES = PASS
 SDK_NEUTRAL_BOUNDARY = PASS
 ```
 
-It must **not** be rewritten as:
+It does **not** establish:
 
 ```text
 GITHUB_ACTIONS = PASS
@@ -224,28 +206,16 @@ REMOTE_EXECUTION = PASS
 PRODUCTION_READY = YES
 ```
 
-The remote Actions blocker remains a separate infrastructure condition until a hosted run reaches `Set up job` and executes real steps.
+The remote Actions blocker remains separate until a hosted run reaches real steps.
 
-## Hosted-runner remediation
-
-Because minimal one-step workflows reproduce the problem across Linux, Windows and macOS, repository code changes and hosted OS changes should not be used to chase this failure.
-
-Operational checks are limited to:
-
-1. GitHub account **Settings -> Billing -> Spending limits**: verify Actions spending/usage is enabled and not blocked;
-2. repository **Settings -> Actions -> General**: verify Actions is enabled for the private repository;
-3. if those are healthy, contact GitHub Support and provide the diagnostic IDs:
+## Current status
 
 ```text
-single Ubuntu diagnostic
-  run 32736704068
-  job 97461133603
-
-cross-OS diagnostic
-  run 32737346242
-  macOS job   97463231179
-  Windows job 97463231312
-  Ubuntu job  97463231320
+DEPENDENCY_CONFLICT_0_21_1 = CONFIRMED
+ACTIVE_OPENAI_AGENTS_PIN = 0.20.0
+LOCAL_GATE_IMPLEMENTATION = UPDATED
+LOCAL_GATE_RERUN = PENDING
+FUNCTIONAL_PASS = NOT CLAIMED
+HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
+MERGE_GATE = PENDING
 ```
-
-This diagnostic is intentionally outside the metaO architecture roadmap.
