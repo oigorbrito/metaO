@@ -1,8 +1,9 @@
 """Framework-neutral mission record storage boundary.
 
-The first implementation is intentionally in-memory. The port is the product
-boundary; SQLite or another durable backend can replace it without changing the
-control-plane or orchestrator contracts.
+The port is the product boundary; in-memory, SQLite or another durable backend
+can replace one another without changing control-plane or orchestrator contracts.
+Mission records may also carry the framework-neutral run/approval context needed
+for a truthful approval resume after process restart.
 """
 
 from __future__ import annotations
@@ -10,8 +11,10 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 from typing import Protocol, runtime_checkable
 
+from .acceptance import AcceptanceContext
 from .control_plane import MissionOutcome, MissionStatus
 from .core import Mission
+from .governance import AcceptanceBudget, ApprovalRecord, ApprovalRequest, PolicyDecision
 
 
 class MissionAlreadyExists(RuntimeError):
@@ -23,10 +26,28 @@ class MissionNotFound(KeyError):
 
 
 @dataclass(frozen=True)
+class MissionRunContext:
+    policy: PolicyDecision
+    budget: AcceptanceBudget
+    acceptance_context: AcceptanceContext
+    execution_id_prefix: str
+    max_attempts: int = 2
+
+    def __post_init__(self) -> None:
+        if not self.execution_id_prefix:
+            raise ValueError("mission run context requires execution_id_prefix")
+        if self.max_attempts < 1:
+            raise ValueError("mission run context max_attempts must be at least 1")
+
+
+@dataclass(frozen=True)
 class MissionRecord:
     mission: Mission
     outcome: MissionOutcome
     revision: int = 1
+    run_context: MissionRunContext | None = None
+    approval_request: ApprovalRequest | None = None
+    approval_record: ApprovalRecord | None = None
 
     def __post_init__(self) -> None:
         if self.mission.mission_id != self.outcome.mission_id:
@@ -35,6 +56,22 @@ class MissionRecord:
             raise ValueError("mission record requires an auditable mission state")
         if self.revision < 1:
             raise ValueError("mission record revision must be positive")
+        if self.approval_request is not None and self.approval_request.mission_id != self.mission.mission_id:
+            raise ValueError("approval request mission id mismatch")
+        if self.approval_record is not None:
+            if self.approval_request is None:
+                raise ValueError("approval record requires approval request")
+            request = self.approval_request
+            record = self.approval_record
+            bindings = (
+                request.approval_id == record.approval_id,
+                request.mission_id == record.mission_id,
+                request.execution_id == record.execution_id,
+                request.subject_state_id == record.subject_state_id,
+                request.policy_bundle_id == record.policy_bundle_id,
+            )
+            if not all(bindings):
+                raise ValueError("approval record bindings do not match request")
 
     @property
     def mission_id(self) -> str:
@@ -88,6 +125,7 @@ class InMemoryMissionStore:
 __all__ = [
     "MissionAlreadyExists",
     "MissionNotFound",
+    "MissionRunContext",
     "MissionRecord",
     "MissionStorePort",
     "InMemoryMissionStore",
