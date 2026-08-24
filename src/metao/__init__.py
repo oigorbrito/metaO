@@ -10,7 +10,14 @@ from .core import (
     OrchestratorDescriptor,
     OrchestratorRegistry,
 )
-from .operator import cancel, inspect, resume, run, status
+from .mission_store import (
+    InMemoryMissionStore,
+    MissionAlreadyExists,
+    MissionNotFound,
+    MissionRecord,
+    MissionStorePort,
+)
+from .operator import MissionOperator, cancel, inspect, resume, run, status
 
 __all__ = [
     "EvidenceEnvelope",
@@ -23,6 +30,12 @@ __all__ = [
     "OrchestratorContract",
     "OrchestratorDescriptor",
     "OrchestratorRegistry",
+    "MissionAlreadyExists",
+    "MissionNotFound",
+    "MissionRecord",
+    "MissionStorePort",
+    "InMemoryMissionStore",
+    "MissionOperator",
     "run",
     "status",
     "inspect",
