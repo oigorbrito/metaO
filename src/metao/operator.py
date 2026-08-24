@@ -382,7 +382,13 @@ class MissionOperator:
         return outcome
 
     def cancel(self, mission_id: str) -> ActiveExecutionHandle | MissionRecord:
-        """Request cancellation and delegate it to the active orchestrator."""
+        """Request cancellation and delegate it only from the executing owner.
+
+        Every caller persists the request. Only the MissionOperator instance that
+        owns the active execution watcher may set ``cancel_delegated``; a second
+        CLI process can call a fresh runtime instance as best effort but leaves
+        the durable flag open for the executing process to confirm delegation.
+        """
         try:
             current = self._store.get(mission_id)
         except MissionNotFound:
@@ -416,12 +422,19 @@ class MissionOperator:
             raise MissionNotCancellable(f"mission execution is already complete: {mission_id}")
 
         requested = self._execution_handles.request_cancel(mission_id)
+        with self._watchers_lock:
+            owns_execution = requested.execution_id in self._watchers
+        if owns_execution:
+            try:
+                return self._delegate_cancel(requested)
+            except Exception:
+                return self._execution_handles.get(mission_id)
+
         try:
-            return self._delegate_cancel(requested)
+            self._registry.get(requested.orchestrator_id).cancel(requested.execution_id)
         except Exception:
-            # The durable request remains set. The executing process watcher may
-            # still delegate cancellation through its own live runtime instance.
-            return self._execution_handles.get(mission_id)
+            pass
+        return self._execution_handles.get(mission_id)
 
     def status(self, mission_id: str) -> MissionStatus:
         try:
