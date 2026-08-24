@@ -19,6 +19,7 @@ from .mission_store import (
     MissionStorePort,
 )
 from .operator import MissionOperator, cancel, inspect, resume, run, status
+from .sqlite_store import MissionStoreCorrupt, SQLiteMissionStore
 
 __all__ = [
     "EvidenceEnvelope",
@@ -39,6 +40,8 @@ __all__ = [
     "MissionRecord",
     "MissionStorePort",
     "InMemoryMissionStore",
+    "MissionStoreCorrupt",
+    "SQLiteMissionStore",
     "MissionOperator",
     "run",
     "status",
