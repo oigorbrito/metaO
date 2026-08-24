@@ -3,6 +3,8 @@
 A runtime is admitted to the operational registry/catalog only after either an
 active conformance probe succeeds or an explicitly reused persisted PASS
 certificate is strictly bound to the same runtime identity/version/probe id.
+Optional freshness policy additionally requires the reused certificate to remain
+inside its deterministic validity window.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ from .core import ExecutionRequest, OrchestratorContract, OrchestratorRegistry
 from .runtime_certification import (
     RuntimeCertification,
     RuntimeCertificationStorePort,
+    is_certificate_fresh,
     record_report,
 )
 from .runtime_conformance import RuntimeConformanceReport, evaluate_runtime_conformance
@@ -107,6 +110,7 @@ class RuntimeAdmissionGate:
         success_rate: float = 0.5,
         quality: float = 0.5,
         reliability: float = 0.5,
+        certified_at_epoch: float = 0.0,
     ) -> RuntimeAdmissionRecord:
         """Probe, optionally certify, then atomically register operational state."""
 
@@ -118,6 +122,7 @@ class RuntimeAdmissionGate:
                 report,
                 runtime_version=_runtime_version(orchestrator),
                 probe_execution_id=probe_request.execution_id,
+                certified_at_epoch=certified_at_epoch,
             )
         if not report.passed:
             raise RuntimeAdmissionError(report)
@@ -146,8 +151,10 @@ class RuntimeAdmissionGate:
         success_rate: float = 0.5,
         quality: float = 0.5,
         reliability: float = 0.5,
+        now_epoch: float | None = None,
+        max_age_seconds: float | None = None,
     ) -> RuntimeCertificateAdmissionRecord:
-        """Admit without executing a new probe only from an exact persisted PASS."""
+        """Admit without probing only from an exact persisted, optionally fresh PASS."""
 
         if self._certifications is None:
             raise RuntimeCertificateAdmissionError("certification store is required for reuse")
@@ -161,11 +168,28 @@ class RuntimeAdmissionGate:
             raise RuntimeCertificateAdmissionError("certificate runtime version mismatch")
         if certificate.probe_execution_id != expected_probe_execution_id:
             raise RuntimeCertificateAdmissionError("certificate probe binding mismatch")
+        if (now_epoch is None) != (max_age_seconds is None):
+            raise RuntimeCertificateAdmissionError(
+                "certificate freshness requires both now_epoch and max_age_seconds"
+            )
+        if now_epoch is not None and max_age_seconds is not None:
+            try:
+                fresh = is_certificate_fresh(
+                    certificate,
+                    now_epoch=now_epoch,
+                    max_age_seconds=max_age_seconds,
+                )
+            except ValueError as exc:
+                raise RuntimeCertificateAdmissionError("invalid certificate freshness policy") from exc
+            if not fresh:
+                raise RuntimeCertificateAdmissionError("certificate is stale")
         persisted = self._certifications.get(certificate.certificate_id)
         if persisted is None:
             raise RuntimeCertificateAdmissionError("certificate is not durably persisted")
         if persisted != certificate:
-            raise RuntimeCertificateAdmissionError("persisted certificate conflicts with supplied certificate")
+            raise RuntimeCertificateAdmissionError(
+                "persisted certificate conflicts with supplied certificate"
+            )
         admitted_id = self._register(
             orchestrator,
             normalizer,
