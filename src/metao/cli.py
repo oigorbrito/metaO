@@ -2,24 +2,27 @@
 
 The CLI owns persistence wiring only. Runtime wiring is supplied explicitly by a
 local factory (``module:function``) returning a configured MissionOperator, so
-no orchestrator SDK leaks into the CLI or Core.
+no orchestrator SDK leaks into the CLI or Core. Observability is added by the
+CLI as a decorator over that operator and persisted in the same SQLite file.
 """
 
 from __future__ import annotations
 
 import argparse
-from contextlib import nullcontext
 import importlib
 import json
 from pathlib import Path
 import sys
-from typing import Any, Callable, Mapping, Sequence, TextIO
+from typing import Any, Mapping, Sequence, TextIO
 
 from .acceptance import AcceptanceContext
 from .core import Mission
 from .governance import AcceptanceBudget, evaluate_policy
 from .mission_store import MissionAlreadyExists, MissionNotFound, MissionRecord
+from .observability import MissionEvent, MissionEventKind, thaw_event_value
+from .observed_operator import ObservableMissionOperator
 from .operator import MissionApprovalError, MissionOperator
+from .sqlite_event_ledger import EventLedgerCorrupt, SQLiteEventLedger
 from .sqlite_store import SQLiteMissionStore
 
 
@@ -124,7 +127,11 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
     }
 
 
-def _load_operator(factory_spec: str, store: SQLiteMissionStore) -> MissionOperator:
+def _load_operator(
+    factory_spec: str,
+    store: SQLiteMissionStore,
+    ledger: SQLiteEventLedger | None = None,
+) -> MissionOperator | ObservableMissionOperator:
     if ":" not in factory_spec:
         raise CLIInputError("factory must use module:function syntax")
     module_name, attribute = factory_spec.split(":", 1)
@@ -139,7 +146,9 @@ def _load_operator(factory_spec: str, store: SQLiteMissionStore) -> MissionOpera
     operator = factory(store=store)
     if not isinstance(operator, MissionOperator):
         raise CLIInputError("factory must return MissionOperator")
-    return operator
+    if ledger is None:
+        return operator
+    return ObservableMissionOperator(operator, ledger)
 
 
 def _attempt_view(record: MissionRecord) -> list[dict[str, Any]]:
@@ -226,6 +235,17 @@ def _record_view(record: MissionRecord, *, detailed: bool) -> dict[str, Any]:
     return base
 
 
+def _event_view(event: MissionEvent) -> dict[str, Any]:
+    return {
+        "event_id": event.event_id,
+        "mission_id": event.mission_id,
+        "sequence": event.sequence,
+        "kind": event.kind.value,
+        "occurred_at_epoch": event.occurred_at_epoch,
+        "payload": thaw_event_value(event.payload),
+    }
+
+
 def _write_json(value: Any, stream: TextIO) -> None:
     stream.write(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str))
     stream.write("\n")
@@ -248,11 +268,16 @@ def _parser() -> argparse.ArgumentParser:
 
     sub.add_parser("list", help="list persisted missions")
 
+    events_parser = sub.add_parser("events", help="show persisted mission event ledger")
+    events_parser.add_argument("mission_id")
+    events_parser.add_argument("--kind", choices=[kind.value for kind in MissionEventKind])
+
     approve_parser = sub.add_parser("approve", help="record human approval or denial")
     approve_parser.add_argument("mission_id")
     approve_parser.add_argument("--approver", required=True)
     approve_parser.add_argument("--deny", action="store_true")
     approve_parser.add_argument("--factory", required=True, help="configured operator factory module:function")
+    approve_parser.add_argument("--now-epoch", type=float, default=0.0)
 
     resume_parser = sub.add_parser("resume", help="resume an approved waiting mission")
     resume_parser.add_argument("mission_id")
@@ -268,8 +293,9 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
 
     try:
         store = SQLiteMissionStore(args.db)
+        ledger = SQLiteEventLedger(args.db)
         if args.command == "run":
-            operator = _load_operator(args.factory, store)
+            operator = _load_operator(args.factory, store, ledger)
             spec = _load_run_spec(args.mission_file)
             outcome = operator.run(**spec)
             _write_json(_record_view(operator.inspect(outcome.mission_id), detailed=False), out)
@@ -284,18 +310,43 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
         if args.command == "list":
             _write_json([_record_view(record, detailed=False) for record in store.list()], out)
             return 0
+        if args.command == "events":
+            items = ledger.list(args.mission_id)
+            if not items:
+                store.get(args.mission_id)
+            if args.kind is not None:
+                requested = MissionEventKind(args.kind)
+                items = tuple(event for event in items if event.kind is requested)
+            _write_json([_event_view(event) for event in items], out)
+            return 0
         if args.command == "approve":
-            operator = _load_operator(args.factory, store)
-            record = operator.approve(args.mission_id, approver_id=args.approver, approved=not args.deny)
+            operator = _load_operator(args.factory, store, ledger)
+            record = operator.approve(
+                args.mission_id,
+                approver_id=args.approver,
+                approved=not args.deny,
+                now_epoch=args.now_epoch,
+            )
             _write_json(_record_view(record, detailed=False), out)
             return 0
         if args.command == "resume":
-            operator = _load_operator(args.factory, store)
+            operator = _load_operator(args.factory, store, ledger)
             operator.resume(args.mission_id, now_epoch=args.now_epoch)
             _write_json(_record_view(operator.inspect(args.mission_id), detailed=False), out)
             return 0
         raise CLIInputError(f"unsupported command: {args.command}")
-    except (CLIInputError, MissionNotFound, MissionAlreadyExists, MissionApprovalError, ImportError, AttributeError, KeyError, TypeError, ValueError) as exc:
+    except (
+        CLIInputError,
+        MissionNotFound,
+        MissionAlreadyExists,
+        MissionApprovalError,
+        EventLedgerCorrupt,
+        ImportError,
+        AttributeError,
+        KeyError,
+        TypeError,
+        ValueError,
+    ) as exc:
         _write_json({"error": type(exc).__name__, "message": str(exc)}, err)
         return 2
 
