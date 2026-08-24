@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - ops/actions-runner-diagnostic-v1
+  pull_request:
+    branches:
+      - roadmap7/wu04-closeout-readiness
   workflow_dispatch:
 
 permissions:
