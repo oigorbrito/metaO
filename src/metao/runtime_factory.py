@@ -16,7 +16,11 @@ from .feedback_catalog import HistoricalFeedbackCatalog
 from .governed_catalog import GovernedOrchestratorCatalog
 from .mission_store import MissionStorePort
 from .operator import MissionOperator
-from .runtime_admission import RuntimeAdmissionError, RuntimeAdmissionGate
+from .runtime_admission import (
+    RuntimeAdmissionError,
+    RuntimeAdmissionGate,
+    RuntimeCertificateAdmissionError,
+)
 from .runtime_certification import RuntimeCertificationStorePort
 from .runtime_control import RuntimeControlStorePort
 from .runtime_feedback import RuntimeFeedbackStorePort, record_outcome
@@ -150,11 +154,17 @@ def _read_manifest(path: str | Path) -> tuple[Mapping[str, Any], ...]:
     return tuple(_as_object(item, "runtime entry") for item in runtimes)
 
 
-def _probe_request(entry: Mapping[str, Any], plugin: RuntimePlugin) -> ExecutionRequest | None:
+def _certification_config(entry: Mapping[str, Any]) -> Mapping[str, Any] | None:
     certification = entry.get("certification")
     if certification is None:
         return None
-    config = _as_object(certification, "certification")
+    return _as_object(certification, "certification")
+
+
+def _probe_request(entry: Mapping[str, Any], plugin: RuntimePlugin) -> ExecutionRequest | None:
+    config = _certification_config(entry)
+    if config is None:
+        return None
     mode = config.get("mode", "required")
     if mode == "legacy":
         return None
@@ -184,6 +194,16 @@ def _probe_request(entry: Mapping[str, Any], plugin: RuntimePlugin) -> Execution
         Mission(mission_id, objective, frozenset(capabilities)),
         context,
     )
+
+
+def _reuse_passed_certificate(entry: Mapping[str, Any]) -> bool:
+    config = _certification_config(entry)
+    if config is None or config.get("mode", "required") == "legacy":
+        return False
+    value = config.get("reuse_passed", False)
+    if not isinstance(value, bool):
+        raise RuntimeCatalogConfigError("certification.reuse_passed must be boolean")
+    return value
 
 
 def create_operator_from_catalog(
@@ -234,6 +254,27 @@ def create_operator_from_catalog(
             raise RuntimeCatalogConfigError(
                 "certification.mode=required needs a runtime certification store"
             )
+
+        orchestrator_id = plugin.orchestrator.descriptor.orchestrator_id
+        runtime_version = plugin.orchestrator.descriptor.version
+        if _reuse_passed_certificate(entry):
+            certificate_id = f"{orchestrator_id}:{runtime_version}:{probe.execution_id}"
+            existing = certifications.get(certificate_id)
+            if existing is not None and existing.passed:
+                try:
+                    admission.admit_certified(
+                        plugin.orchestrator,
+                        plugin.normalizer,
+                        existing,
+                        expected_probe_execution_id=probe.execution_id,
+                        **metrics,
+                    )
+                except RuntimeCertificateAdmissionError as exc:
+                    raise RuntimeCatalogConfigError(
+                        f"runtime certificate reuse failed: {orchestrator_id}"
+                    ) from exc
+                continue
+
         try:
             admission.admit(
                 plugin.orchestrator,
@@ -244,13 +285,13 @@ def create_operator_from_catalog(
         except RuntimeAdmissionError as exc:
             failed = ",".join(exc.report.failed_checks)
             raise RuntimeCatalogConfigError(
-                f"runtime certification failed: {plugin.orchestrator.descriptor.orchestrator_id}: {failed}"
+                f"runtime certification failed: {orchestrator_id}: {failed}"
             ) from exc
         except RuntimeCatalogConfigError:
             raise
         except Exception as exc:
             raise RuntimeCatalogConfigError(
-                f"runtime certified admission failed: {plugin.orchestrator.descriptor.orchestrator_id}"
+                f"runtime certified admission failed: {orchestrator_id}"
             ) from exc
 
     operational_catalog = (
