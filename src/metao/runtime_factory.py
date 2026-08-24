@@ -18,15 +18,19 @@ from typing import Any, Callable, Mapping
 from .catalog import OrchestratorCatalog
 from .control_plane import EvidenceNormalizer
 from .core import OrchestratorContract, OrchestratorRegistry
+from .feedback_catalog import HistoricalFeedbackCatalog
 from .governed_catalog import GovernedOrchestratorCatalog
 from .mission_store import MissionStorePort
 from .operator import MissionOperator
 from .runtime_control import RuntimeControlStorePort
+from .runtime_feedback import RuntimeFeedbackStorePort, record_outcome
 from .sqlite_runtime_control import SQLiteRuntimeControlStore
+from .sqlite_runtime_feedback import SQLiteRuntimeFeedbackStore
 
 
 RUNTIME_CATALOG_ENV = "METAO_RUNTIME_CATALOG"
 RUNTIME_CONTROL_DB_ENV = "METAO_RUNTIME_CONTROL_DB"
+RUNTIME_FEEDBACK_DB_ENV = "METAO_RUNTIME_FEEDBACK_DB"
 
 
 class RuntimeCatalogConfigError(ValueError):
@@ -48,14 +52,51 @@ class RuntimePlugin:
 
 
 class RuntimeCatalogOperator(MissionOperator):
-    """MissionOperator with a read-only operational runtime catalog surface."""
+    """MissionOperator with runtime catalog visibility and advisory feedback.
 
-    def __init__(self, *, registry, catalog, store: MissionStorePort) -> None:
+    Feedback is deliberately non-authoritative. A feedback storage failure never
+    rewrites or invalidates a mission outcome that the control plane has already
+    durably committed; the last error remains inspectable on this operator
+    instance. Routing simply continues from the last durable history.
+    """
+
+    def __init__(
+        self,
+        *,
+        registry,
+        catalog,
+        store: MissionStorePort,
+        feedback: RuntimeFeedbackStorePort | None = None,
+    ) -> None:
         super().__init__(registry=registry, catalog=catalog, store=store)
         self._runtime_catalog_view = catalog
+        self._runtime_feedback = feedback
+        self._last_feedback_error: Exception | None = None
 
     def runtime_entries(self):
         return self._runtime_catalog_view.entries()
+
+    def feedback_error(self) -> Exception | None:
+        return self._last_feedback_error
+
+    def _record_runtime_feedback(self, outcome) -> None:
+        if self._runtime_feedback is None:
+            return
+        try:
+            record_outcome(self._runtime_feedback, outcome)
+            self._last_feedback_error = None
+        except Exception as exc:  # advisory signal must not invalidate a committed mission
+            self._last_feedback_error = exc
+
+    def run(self, *args, **kwargs):
+        outcome = super().run(*args, **kwargs)
+        self._record_runtime_feedback(outcome)
+        return outcome
+
+    def resume(self, *args, **kwargs):
+        outcome = super().resume(*args, **kwargs)
+        self._record_runtime_feedback(outcome)
+        return outcome
 
 
 def _as_object(value: Any, name: str) -> Mapping[str, Any]:
@@ -125,16 +166,9 @@ def create_operator_from_catalog(
     *,
     store: MissionStorePort,
     controls: RuntimeControlStorePort | None = None,
+    feedback: RuntimeFeedbackStorePort | None = None,
 ) -> MissionOperator:
-    """Build one configured MissionOperator from a trusted local manifest.
-
-    The manifest itself contains only framework-neutral routing metadata and a
-    Python plugin-factory reference. The referenced plugin code is trusted local
-    code and is responsible for importing/configuring any orchestrator SDK.
-
-    When ``controls`` is provided, durable quarantine is projected over live
-    catalog health without mutating runtime descriptors or routing scores.
-    """
+    """Build one configured MissionOperator from a trusted local manifest."""
 
     registry = OrchestratorRegistry()
     catalog = OrchestratorCatalog(registry)
@@ -167,10 +201,13 @@ def create_operator_from_catalog(
     operational_catalog = (
         GovernedOrchestratorCatalog(catalog, controls) if controls is not None else catalog
     )
+    if feedback is not None:
+        operational_catalog = HistoricalFeedbackCatalog(operational_catalog, feedback)
     return RuntimeCatalogOperator(
         registry=registry,
         catalog=operational_catalog,
         store=store,
+        feedback=feedback,
     )
 
 
@@ -178,6 +215,7 @@ def create_operator(
     *,
     store: MissionStorePort,
     runtime_control_db: str | Path | None = None,
+    runtime_feedback_db: str | Path | None = None,
 ) -> MissionOperator:
     """CLI-compatible factory using environment-backed runtime configuration."""
 
@@ -187,13 +225,25 @@ def create_operator(
             f"{RUNTIME_CATALOG_ENV} must point to a trusted runtime catalog JSON file"
         )
     control_path = runtime_control_db or os.environ.get(RUNTIME_CONTROL_DB_ENV)
+    feedback_path = (
+        runtime_feedback_db
+        or os.environ.get(RUNTIME_FEEDBACK_DB_ENV)
+        or control_path
+    )
     controls = SQLiteRuntimeControlStore(control_path) if control_path else None
-    return create_operator_from_catalog(path, store=store, controls=controls)
+    feedback = SQLiteRuntimeFeedbackStore(feedback_path) if feedback_path else None
+    return create_operator_from_catalog(
+        path,
+        store=store,
+        controls=controls,
+        feedback=feedback,
+    )
 
 
 __all__ = [
     "RUNTIME_CATALOG_ENV",
     "RUNTIME_CONTROL_DB_ENV",
+    "RUNTIME_FEEDBACK_DB_ENV",
     "RuntimeCatalogConfigError",
     "RuntimePlugin",
     "RuntimeCatalogOperator",
