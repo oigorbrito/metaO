@@ -285,6 +285,16 @@ def _active_view(handle: ActiveExecutionHandle) -> dict[str, Any]:
     }
 
 
+def _active_or_mission_not_found(
+    handles: SQLiteExecutionHandleStore,
+    mission_id: str,
+) -> ActiveExecutionHandle:
+    try:
+        return handles.get(mission_id)
+    except ActiveExecutionNotFound as exc:
+        raise MissionNotFound(mission_id) from exc
+
+
 def _write_json(value: Any, stream: TextIO) -> None:
     stream.write(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str))
     stream.write("\n")
@@ -350,14 +360,14 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
                 record = store.get(args.mission_id)
                 value = {"mission_id": record.mission_id, "status": record.status.value, "revision": record.revision}
             except MissionNotFound:
-                value = _active_view(handles.get(args.mission_id))
+                value = _active_view(_active_or_mission_not_found(handles, args.mission_id))
             _write_json(value, out)
             return 0
         if args.command == "inspect":
             try:
                 value = _record_view(store.get(args.mission_id), detailed=True)
             except MissionNotFound:
-                value = _active_view(handles.get(args.mission_id))
+                value = _active_view(_active_or_mission_not_found(handles, args.mission_id))
             _write_json(value, out)
             return 0
         if args.command == "list":
@@ -369,7 +379,7 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
                 try:
                     store.get(args.mission_id)
                 except MissionNotFound:
-                    handles.get(args.mission_id)
+                    _active_or_mission_not_found(handles, args.mission_id)
             if args.kind is not None:
                 requested = MissionEventKind(args.kind)
                 items = tuple(event for event in items if event.kind is requested)
