@@ -4,14 +4,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from time import time
 from typing import Callable, Mapping
 
 from .acceptance import AcceptanceContext, AcceptanceDecision, AcceptanceResult, evaluate_acceptance
 from .core import ExecutionRequest, ExecutionResult, ExecutionStatus, Mission, OrchestratorRegistry
 from .governance import AcceptanceBudget, PolicyDecision, PolicyEffect
+from .replan import FailureClass, classify_failure
 from .strategy import OrchestratorPoolState, select_orchestrator
 
 EvidenceNormalizer = Callable[..., object]
+AttemptClock = Callable[[], float]
 
 
 class MissionStatus(StrEnum):
@@ -35,6 +38,28 @@ class MissionAttempt:
     execution_status: ExecutionStatus | None
     acceptance_decision: AcceptanceDecision
     reasons: tuple[str, ...] = ()
+    started_at_epoch: float | None = None
+    ended_at_epoch: float | None = None
+    failure_class: FailureClass | None = None
+    cost: float = 0.0
+
+    def __post_init__(self) -> None:
+        if self.attempt_number < 1:
+            raise ValueError("mission attempt number must be positive")
+        if not self.execution_id or not self.orchestrator_id:
+            raise ValueError("mission attempt requires execution and orchestrator ids")
+        if self.started_at_epoch is not None and self.started_at_epoch < 0:
+            raise ValueError("mission attempt start timestamp must be non-negative")
+        if self.ended_at_epoch is not None and self.ended_at_epoch < 0:
+            raise ValueError("mission attempt end timestamp must be non-negative")
+        if (
+            self.started_at_epoch is not None
+            and self.ended_at_epoch is not None
+            and self.ended_at_epoch < self.started_at_epoch
+        ):
+            raise ValueError("mission attempt end timestamp cannot precede start")
+        if self.cost < 0:
+            raise ValueError("mission attempt cost must be non-negative")
 
 
 @dataclass(frozen=True)
@@ -70,6 +95,13 @@ def _eligible_pools(mission: Mission, pools: tuple[OrchestratorPoolState, ...]) 
     return tuple(pool for pool in pools if mission.required_capabilities <= pool.capabilities)
 
 
+def _pool_by_id(pools: tuple[OrchestratorPoolState, ...], orchestrator_id: str) -> OrchestratorPoolState:
+    for pool in pools:
+        if pool.orchestrator_id == orchestrator_id:
+            return pool
+    raise KeyError(f"selected orchestrator pool missing: {orchestrator_id}")
+
+
 def _budget_has_capacity(budget: AcceptanceBudget) -> bool:
     return (
         budget.money_used < budget.money_limit
@@ -90,6 +122,8 @@ def _state(
 
 
 def _attempt_from_outcome(outcome: MissionOutcome, attempt_number: int, execution_id: str) -> MissionAttempt | None:
+    if outcome.state is not None and outcome.state.attempts:
+        return outcome.state.attempts[-1]
     if outcome.orchestrator_id is None:
         return None
     return MissionAttempt(
@@ -100,6 +134,14 @@ def _attempt_from_outcome(outcome: MissionOutcome, attempt_number: int, executio
         acceptance_decision=outcome.acceptance.decision,
         reasons=outcome.acceptance.reasons,
     )
+
+
+def _failure_class_for_execution(execution: ExecutionResult) -> FailureClass:
+    if execution.error:
+        classified = classify_failure(execution.error)
+        if classified is not FailureClass.UNKNOWN:
+            return classified
+    return FailureClass.RUNTIME
 
 
 def execute_mission_once(
@@ -114,6 +156,7 @@ def execute_mission_once(
     execution_id: str,
     now_epoch: float = 0.0,
     attempt_number: int = 1,
+    attempt_clock: AttemptClock | None = None,
 ) -> MissionOutcome:
     """Execute one independently accepted mission attempt."""
 
@@ -161,7 +204,8 @@ def execute_mission_once(
         )
         return MissionOutcome(mission.mission_id, None, None, _blocked("budget_exhausted"), budget, state=state)
 
-    selected = select_orchestrator(_eligible_pools(mission, pools))
+    eligible = _eligible_pools(mission, pools)
+    selected = select_orchestrator(eligible)
     selecting_history = base_history + (MissionStatus.SELECTING,)
     if selected is None:
         state = _state(
@@ -171,11 +215,20 @@ def execute_mission_once(
         )
         return MissionOutcome(mission.mission_id, None, None, _blocked("no_eligible_orchestrator"), budget, state=state)
 
+    selected_pool = _pool_by_id(eligible, selected)
     orchestrator = registry.get(selected)
     normalizer = normalizers.get(selected)
     if normalizer is None:
         acceptance = _blocked("missing_evidence_normalizer")
-        attempt = MissionAttempt(attempt_number, execution_id, selected, None, acceptance.decision, acceptance.reasons)
+        attempt = MissionAttempt(
+            attempt_number,
+            execution_id,
+            selected,
+            None,
+            acceptance.decision,
+            acceptance.reasons,
+            failure_class=FailureClass.ACCEPTANCE,
+        )
         state = _state(
             mission.mission_id,
             MissionStatus.BLOCKED,
@@ -187,7 +240,15 @@ def execute_mission_once(
     obligation_ids = tuple(sorted(acceptance_context.required_obligations))
     if len(obligation_ids) != 1:
         acceptance = _blocked("single_attempt_requires_one_obligation")
-        attempt = MissionAttempt(attempt_number, execution_id, selected, None, acceptance.decision, acceptance.reasons)
+        attempt = MissionAttempt(
+            attempt_number,
+            execution_id,
+            selected,
+            None,
+            acceptance.decision,
+            acceptance.reasons,
+            failure_class=FailureClass.ACCEPTANCE,
+        )
         state = _state(
             mission.mission_id,
             MissionStatus.BLOCKED,
@@ -210,7 +271,10 @@ def execute_mission_once(
             "created_at_epoch": now_epoch,
         },
     )
+    clock = attempt_clock or time
+    started_at_epoch = clock()
     execution = orchestrator.execute(request)
+    ended_at_epoch = clock()
     running_history = selecting_history + (MissionStatus.RUNNING,)
     if execution.status is not ExecutionStatus.SUCCEEDED:
         acceptance = AcceptanceResult(AcceptanceDecision.NOT_DONE, ("execution_not_succeeded",))
@@ -221,6 +285,10 @@ def execute_mission_once(
             execution.status,
             acceptance.decision,
             acceptance.reasons,
+            started_at_epoch=started_at_epoch,
+            ended_at_epoch=ended_at_epoch,
+            failure_class=_failure_class_for_execution(execution),
+            cost=selected_pool.cost,
         )
         state = _state(
             mission.mission_id,
@@ -247,6 +315,10 @@ def execute_mission_once(
         execution.status,
         acceptance.decision,
         acceptance.reasons,
+        started_at_epoch=started_at_epoch,
+        ended_at_epoch=ended_at_epoch,
+        failure_class=None if acceptance.decision is AcceptanceDecision.ACCEPT else FailureClass.ACCEPTANCE,
+        cost=selected_pool.cost,
     )
     state = _state(
         mission.mission_id,
@@ -269,6 +341,7 @@ def execute_mission(
     execution_id_prefix: str,
     now_epoch: float = 0.0,
     max_attempts: int = 2,
+    attempt_clock: AttemptClock | None = None,
 ) -> MissionOutcome:
     """Run a mission with auditable, bounded orchestrator failover."""
 
@@ -296,6 +369,7 @@ def execute_mission(
             execution_id=execution_id,
             now_epoch=now_epoch,
             attempt_number=attempt_index + 1,
+            attempt_clock=attempt_clock,
         )
         record = _attempt_from_outcome(outcome, attempt_index + 1, execution_id)
         if record is not None:
@@ -352,6 +426,7 @@ def execute_mission(
 
 __all__ = [
     "EvidenceNormalizer",
+    "AttemptClock",
     "MissionStatus",
     "MissionAttempt",
     "MissionState",
