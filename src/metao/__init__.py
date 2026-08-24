@@ -1,3 +1,4 @@
+from .catalog import CatalogEntryAlreadyExists, OrchestratorCatalog, OrchestratorCatalogEntry
 from .core import (
     EvidenceEnvelope,
     ExecutionRequest,
@@ -30,6 +31,9 @@ __all__ = [
     "OrchestratorContract",
     "OrchestratorDescriptor",
     "OrchestratorRegistry",
+    "CatalogEntryAlreadyExists",
+    "OrchestratorCatalogEntry",
+    "OrchestratorCatalog",
     "MissionAlreadyExists",
     "MissionNotFound",
     "MissionRecord",
