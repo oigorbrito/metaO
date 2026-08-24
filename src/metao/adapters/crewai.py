@@ -48,7 +48,7 @@ def normalize_evidence(
         policy_bundle_id=str(context.get("policy_bundle_id", "default-policy")),
         verifier_id=str(context.get("verifier_id", "adapter-observer")),
         payload_digest=_digest(output),
-        provenance=f"crewai:{orchestrator_id}:{request.execution_id}",
+        provenance_root=f"crewai:{orchestrator_id}:{request.execution_id}",
         authority_id=str(context.get("authority_id", "metao-runtime")),
         passed=True,
         created_at_epoch=float(context.get("created_at_epoch", 0.0)),
