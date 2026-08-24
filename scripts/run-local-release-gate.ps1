@@ -120,10 +120,10 @@ function Invoke-SdkBoundaryGate {
     $pattern = '^\s*(from|import)\s+(langgraph|crewai|agents|openai)(\s|\.|$)'
     $files = Get-ChildItem (Join-Path $RepoRoot "src\metao") -Filter "*.py" -File -Recurse |
         Where-Object { $_.FullName -notmatch '[\\/]adapters[\\/]' }
-    $matches = $files | Select-String -Pattern $pattern
+    $matches = @($files | Select-String -Pattern $pattern)
     $watch.Stop()
 
-    if ($matches) {
+    if ($matches.Count -gt 0) {
         $detail = ($matches | ForEach-Object { "$($_.Path):$($_.LineNumber):$($_.Line.Trim())" }) -join " | "
         Add-GateResult -Name "sdk_neutral_boundary" -Status "FAIL" -ExitCode 1 -DurationSeconds $watch.Elapsed.TotalSeconds -Detail $detail
         Write-Host "FAIL: SDK-neutral boundary"
@@ -219,7 +219,8 @@ try {
 
     Invoke-SdkBoundaryGate
 
-    $Overall = if (($Results | Where-Object { $_.status -eq "FAIL" }).Count -eq 0) { "PASS" } else { "FAIL" }
+    $FailureCount = @($Results | Where-Object { $_.status -eq "FAIL" }).Count
+    $Overall = if ($FailureCount -eq 0) { "PASS" } else { "FAIL" }
     New-Item -ItemType Directory -Path $ArtifactRoot -Force | Out-Null
     $Timestamp = Get-Date -Format "yyyyMMdd-HHmmss"
     $SummaryPath = Join-Path $ArtifactRoot "gate-$Timestamp.json"
@@ -238,6 +239,7 @@ try {
         }
         hosted_runner_blocker = "external_pre_step"
         results = $Results
+        failure_count = $FailureCount
         overall = $Overall
     }
 
@@ -249,6 +251,7 @@ try {
     Write-Host "COMMIT = $Commit"
     Write-Host "CLEAN_WORKTREE = $IsClean"
     Write-Host "RESULTS = $($Results.Count)"
+    Write-Host "FAILURES = $FailureCount"
     Write-Host "EVIDENCE = $SummaryPath"
     Write-Host "========================================"
 
