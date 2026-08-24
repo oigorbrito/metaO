@@ -8,7 +8,7 @@ on:
       - 'tests/integration/test_o*.py'
 
 jobs:
-  o1-langgraph-real:
+  sandbox-evidence:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -22,3 +22,5 @@ jobs:
           python -m pip install 'langgraph==1.2.11'
       - name: O1 real LangGraph through metaO adapter
         run: python tests/integration/test_o1_langgraph_real.py
+      - name: O2 end-to-end sandbox mission
+        run: python tests/integration/test_o2_e2e_sandbox.py
