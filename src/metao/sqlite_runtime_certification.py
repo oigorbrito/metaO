@@ -40,13 +40,25 @@ class SQLiteRuntimeCertificationStore:
                     passed INTEGER NOT NULL CHECK (passed IN (0, 1)),
                     failed_checks_json TEXT NOT NULL,
                     checks_digest TEXT NOT NULL,
-                    total_checks INTEGER NOT NULL CHECK (total_checks >= 1)
+                    total_checks INTEGER NOT NULL CHECK (total_checks >= 1),
+                    certified_at_epoch REAL NOT NULL DEFAULT 0 CHECK (certified_at_epoch >= 0)
                 )
                 """
             )
+            columns = {
+                str(row[1])
+                for row in connection.execute("PRAGMA table_info(runtime_certifications)").fetchall()
+            }
+            if "certified_at_epoch" not in columns:
+                # Legacy WU03 databases are migrated without rewriting old evidence.
+                # Timestamp zero deliberately means legacy/stale under freshness policy.
+                connection.execute(
+                    "ALTER TABLE runtime_certifications "
+                    "ADD COLUMN certified_at_epoch REAL NOT NULL DEFAULT 0"
+                )
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_runtime_certifications_orchestrator "
-                "ON runtime_certifications(orchestrator_id, certificate_id)"
+                "ON runtime_certifications(orchestrator_id, certified_at_epoch, certificate_id)"
             )
 
     @staticmethod
@@ -64,6 +76,7 @@ class SQLiteRuntimeCertificationStore:
                 failed_checks=tuple(failed),
                 checks_digest=str(row[6]),
                 total_checks=int(row[7]),
+                certified_at_epoch=float(row[8]),
             )
         except (TypeError, ValueError, json.JSONDecodeError) as exc:
             raise RuntimeCertificationCorrupt("invalid runtime certification row") from exc
@@ -73,7 +86,7 @@ class SQLiteRuntimeCertificationStore:
             row = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,runtime_version,probe_execution_id,
-                       passed,failed_checks_json,checks_digest,total_checks
+                       passed,failed_checks_json,checks_digest,total_checks,certified_at_epoch
                 FROM runtime_certifications WHERE certificate_id=?
                 """,
                 (certificate.certificate_id,),
@@ -87,8 +100,8 @@ class SQLiteRuntimeCertificationStore:
                 """
                 INSERT INTO runtime_certifications(
                     certificate_id,orchestrator_id,runtime_version,probe_execution_id,
-                    passed,failed_checks_json,checks_digest,total_checks
-                ) VALUES(?,?,?,?,?,?,?,?)
+                    passed,failed_checks_json,checks_digest,total_checks,certified_at_epoch
+                ) VALUES(?,?,?,?,?,?,?,?,?)
                 """,
                 (
                     certificate.certificate_id,
@@ -99,6 +112,7 @@ class SQLiteRuntimeCertificationStore:
                     json.dumps(list(certificate.failed_checks), separators=(",", ":")),
                     certificate.checks_digest,
                     certificate.total_checks,
+                    certificate.certified_at_epoch,
                 ),
             )
         return certificate
@@ -108,7 +122,7 @@ class SQLiteRuntimeCertificationStore:
             row = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,runtime_version,probe_execution_id,
-                       passed,failed_checks_json,checks_digest,total_checks
+                       passed,failed_checks_json,checks_digest,total_checks,certified_at_epoch
                 FROM runtime_certifications WHERE certificate_id=?
                 """,
                 (certificate_id,),
@@ -120,10 +134,10 @@ class SQLiteRuntimeCertificationStore:
             rows = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,runtime_version,probe_execution_id,
-                       passed,failed_checks_json,checks_digest,total_checks
+                       passed,failed_checks_json,checks_digest,total_checks,certified_at_epoch
                 FROM runtime_certifications
                 WHERE orchestrator_id=?
-                ORDER BY certificate_id
+                ORDER BY certified_at_epoch, certificate_id
                 """,
                 (orchestrator_id,),
             ).fetchall()
