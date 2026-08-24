@@ -1,10 +1,4 @@
-"""Declarative, framework-neutral runtime catalog factory.
-
-This module turns the existing CLI ``--factory module:function`` hook into a
-reusable multi-runtime configuration surface. Runtime-specific construction
-remains delegated to trusted local plugin factories; this module imports no
-orchestrator SDK.
-"""
+"""Declarative, framework-neutral runtime catalog factory."""
 
 from __future__ import annotations
 
@@ -17,16 +11,24 @@ from typing import Any, Callable, Mapping
 
 from .catalog import OrchestratorCatalog
 from .control_plane import EvidenceNormalizer
-from .core import OrchestratorContract, OrchestratorRegistry
+from .core import ExecutionRequest, Mission, OrchestratorContract, OrchestratorRegistry
+from .feedback_catalog import HistoricalFeedbackCatalog
 from .governed_catalog import GovernedOrchestratorCatalog
 from .mission_store import MissionStorePort
 from .operator import MissionOperator
+from .runtime_admission import RuntimeAdmissionError, RuntimeAdmissionGate
+from .runtime_certification import RuntimeCertificationStorePort
 from .runtime_control import RuntimeControlStorePort
+from .runtime_feedback import RuntimeFeedbackStorePort, record_outcome
+from .sqlite_runtime_certification import SQLiteRuntimeCertificationStore
 from .sqlite_runtime_control import SQLiteRuntimeControlStore
+from .sqlite_runtime_feedback import SQLiteRuntimeFeedbackStore
 
 
 RUNTIME_CATALOG_ENV = "METAO_RUNTIME_CATALOG"
 RUNTIME_CONTROL_DB_ENV = "METAO_RUNTIME_CONTROL_DB"
+RUNTIME_FEEDBACK_DB_ENV = "METAO_RUNTIME_FEEDBACK_DB"
+RUNTIME_CERTIFICATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_DB"
 
 
 class RuntimeCatalogConfigError(ValueError):
@@ -35,8 +37,6 @@ class RuntimeCatalogConfigError(ValueError):
 
 @dataclass(frozen=True)
 class RuntimePlugin:
-    """Framework-neutral product returned by a trusted runtime plugin factory."""
-
     orchestrator: OrchestratorContract
     normalizer: EvidenceNormalizer
 
@@ -48,14 +48,45 @@ class RuntimePlugin:
 
 
 class RuntimeCatalogOperator(MissionOperator):
-    """MissionOperator with a read-only operational runtime catalog surface."""
+    """MissionOperator with catalog visibility and advisory runtime feedback."""
 
-    def __init__(self, *, registry, catalog, store: MissionStorePort) -> None:
+    def __init__(
+        self,
+        *,
+        registry,
+        catalog,
+        store: MissionStorePort,
+        feedback: RuntimeFeedbackStorePort | None = None,
+    ) -> None:
         super().__init__(registry=registry, catalog=catalog, store=store)
         self._runtime_catalog_view = catalog
+        self._runtime_feedback = feedback
+        self._last_feedback_error: Exception | None = None
 
     def runtime_entries(self):
         return self._runtime_catalog_view.entries()
+
+    def feedback_error(self) -> Exception | None:
+        return self._last_feedback_error
+
+    def _record_runtime_feedback(self, outcome) -> None:
+        if self._runtime_feedback is None:
+            return
+        try:
+            record_outcome(self._runtime_feedback, outcome)
+            self._last_feedback_error = None
+        except Exception as exc:  # feedback is advisory after mission commit
+            self._last_feedback_error = exc
+
+    def run(self, *args, **kwargs):
+        outcome = super().run(*args, **kwargs)
+        self._record_runtime_feedback(outcome)
+        return outcome
+
+    def resume(self, *args, **kwargs):
+        outcome = super().resume(*args, **kwargs)
+        self._record_runtime_feedback(outcome)
+        return outcome
 
 
 def _as_object(value: Any, name: str) -> Mapping[str, Any]:
@@ -112,7 +143,6 @@ def _read_manifest(path: str | Path) -> tuple[Mapping[str, Any], ...]:
         raise RuntimeCatalogConfigError(f"cannot read runtime catalog: {path}") from exc
     except json.JSONDecodeError as exc:
         raise RuntimeCatalogConfigError(f"invalid runtime catalog JSON: {path}") from exc
-
     root = _as_object(payload, "runtime catalog")
     runtimes = root.get("runtimes")
     if not isinstance(runtimes, list) or not runtimes:
@@ -120,24 +150,55 @@ def _read_manifest(path: str | Path) -> tuple[Mapping[str, Any], ...]:
     return tuple(_as_object(item, "runtime entry") for item in runtimes)
 
 
+def _probe_request(entry: Mapping[str, Any], plugin: RuntimePlugin) -> ExecutionRequest | None:
+    certification = entry.get("certification")
+    if certification is None:
+        return None
+    config = _as_object(certification, "certification")
+    mode = config.get("mode", "required")
+    if mode == "legacy":
+        return None
+    if mode != "required":
+        raise RuntimeCatalogConfigError("certification.mode must be required or legacy")
+    probe = _as_object(config.get("probe"), "certification.probe")
+    execution_id = _required_string(probe, "execution_id")
+    objective = _required_string(probe, "objective")
+    mission_id = probe.get("mission_id", f"certify-{plugin.orchestrator.descriptor.orchestrator_id}")
+    if not isinstance(mission_id, str) or not mission_id:
+        raise RuntimeCatalogConfigError("certification.probe.mission_id must be a non-empty string")
+    capabilities = probe.get(
+        "required_capabilities",
+        sorted(plugin.orchestrator.descriptor.capabilities),
+    )
+    if not isinstance(capabilities, list) or not capabilities or not all(
+        isinstance(item, str) and item for item in capabilities
+    ):
+        raise RuntimeCatalogConfigError(
+            "certification.probe.required_capabilities must be a non-empty string list"
+        )
+    context = probe.get("context", {})
+    if not isinstance(context, dict):
+        raise RuntimeCatalogConfigError("certification.probe.context must be a JSON object")
+    return ExecutionRequest(
+        execution_id,
+        Mission(mission_id, objective, frozenset(capabilities)),
+        context,
+    )
+
+
 def create_operator_from_catalog(
     path: str | Path,
     *,
     store: MissionStorePort,
     controls: RuntimeControlStorePort | None = None,
+    feedback: RuntimeFeedbackStorePort | None = None,
+    certifications: RuntimeCertificationStorePort | None = None,
 ) -> MissionOperator:
-    """Build one configured MissionOperator from a trusted local manifest.
-
-    The manifest itself contains only framework-neutral routing metadata and a
-    Python plugin-factory reference. The referenced plugin code is trusted local
-    code and is responsible for importing/configuring any orchestrator SDK.
-
-    When ``controls`` is provided, durable quarantine is projected over live
-    catalog health without mutating runtime descriptors or routing scores.
-    """
+    """Build one operator, optionally certifying entries before admission."""
 
     registry = OrchestratorRegistry()
     catalog = OrchestratorCatalog(registry)
+    admission = RuntimeAdmissionGate(registry, catalog, certifications)
 
     for entry in _read_manifest(path):
         factory_spec = _required_string(entry, "factory")
@@ -152,10 +213,7 @@ def create_operator_from_catalog(
                 f"runtime factory must return RuntimePlugin: {factory_spec}"
             )
 
-        registry.register(plugin.orchestrator)
-        catalog.register(
-            plugin.orchestrator.descriptor.orchestrator_id,
-            normalizer=plugin.normalizer,
+        metrics = dict(
             cost=_number(entry, "cost", 0.0),
             latency_ms=_number(entry, "latency_ms", 1000.0),
             trust_profile=str(entry.get("trust_profile", "local")),
@@ -163,14 +221,48 @@ def create_operator_from_catalog(
             quality=_unit_interval(entry, "quality", 0.5),
             reliability=_unit_interval(entry, "reliability", 0.5),
         )
+        probe = _probe_request(entry, plugin)
+        if probe is None:
+            registry.register(plugin.orchestrator)
+            catalog.register(
+                plugin.orchestrator.descriptor.orchestrator_id,
+                normalizer=plugin.normalizer,
+                **metrics,
+            )
+            continue
+        if certifications is None:
+            raise RuntimeCatalogConfigError(
+                "certification.mode=required needs a runtime certification store"
+            )
+        try:
+            admission.admit(
+                plugin.orchestrator,
+                plugin.normalizer,
+                probe,
+                **metrics,
+            )
+        except RuntimeAdmissionError as exc:
+            failed = ",".join(exc.report.failed_checks)
+            raise RuntimeCatalogConfigError(
+                f"runtime certification failed: {plugin.orchestrator.descriptor.orchestrator_id}: {failed}"
+            ) from exc
+        except RuntimeCatalogConfigError:
+            raise
+        except Exception as exc:
+            raise RuntimeCatalogConfigError(
+                f"runtime certified admission failed: {plugin.orchestrator.descriptor.orchestrator_id}"
+            ) from exc
 
     operational_catalog = (
         GovernedOrchestratorCatalog(catalog, controls) if controls is not None else catalog
     )
+    if feedback is not None:
+        operational_catalog = HistoricalFeedbackCatalog(operational_catalog, feedback)
     return RuntimeCatalogOperator(
         registry=registry,
         catalog=operational_catalog,
         store=store,
+        feedback=feedback,
     )
 
 
@@ -178,6 +270,8 @@ def create_operator(
     *,
     store: MissionStorePort,
     runtime_control_db: str | Path | None = None,
+    runtime_feedback_db: str | Path | None = None,
+    runtime_certification_db: str | Path | None = None,
 ) -> MissionOperator:
     """CLI-compatible factory using environment-backed runtime configuration."""
 
@@ -187,13 +281,31 @@ def create_operator(
             f"{RUNTIME_CATALOG_ENV} must point to a trusted runtime catalog JSON file"
         )
     control_path = runtime_control_db or os.environ.get(RUNTIME_CONTROL_DB_ENV)
+    feedback_path = runtime_feedback_db or os.environ.get(RUNTIME_FEEDBACK_DB_ENV) or control_path
+    certification_path = (
+        runtime_certification_db
+        or os.environ.get(RUNTIME_CERTIFICATION_DB_ENV)
+        or control_path
+    )
     controls = SQLiteRuntimeControlStore(control_path) if control_path else None
-    return create_operator_from_catalog(path, store=store, controls=controls)
+    feedback = SQLiteRuntimeFeedbackStore(feedback_path) if feedback_path else None
+    certifications = (
+        SQLiteRuntimeCertificationStore(certification_path) if certification_path else None
+    )
+    return create_operator_from_catalog(
+        path,
+        store=store,
+        controls=controls,
+        feedback=feedback,
+        certifications=certifications,
+    )
 
 
 __all__ = [
     "RUNTIME_CATALOG_ENV",
     "RUNTIME_CONTROL_DB_ENV",
+    "RUNTIME_FEEDBACK_DB_ENV",
+    "RUNTIME_CERTIFICATION_DB_ENV",
     "RuntimeCatalogConfigError",
     "RuntimePlugin",
     "RuntimeCatalogOperator",
