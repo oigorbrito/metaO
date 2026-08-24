@@ -7,7 +7,7 @@ from pathlib import Path
 import sqlite3
 from typing import Any, Mapping
 
-from .observability import EventLedgerPort, MissionEvent, MissionEventKind, thaw_event_value
+from .observability import MissionEvent, MissionEventKind, thaw_event_value
 
 
 class EventLedgerCorrupt(RuntimeError):
@@ -49,8 +49,8 @@ class SQLiteEventLedger:
             )
 
     @staticmethod
-    def _payload_json(payload: Mapping[str, Any] | None) -> str:
-        value = thaw_event_value(payload or {})
+    def _payload_json(payload: Mapping[str, Any]) -> str:
+        value = thaw_event_value(payload)
         try:
             return json.dumps(value, sort_keys=True, separators=(",", ":"), allow_nan=False)
         except (TypeError, ValueError) as exc:
@@ -92,7 +92,6 @@ class SQLiteEventLedger:
             raise ValueError("mission_id is required")
         if occurred_at_epoch < 0:
             raise ValueError("event timestamp must be non-negative")
-        payload_json = self._payload_json(payload)
         with self._connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
@@ -100,12 +99,27 @@ class SQLiteEventLedger:
                 (mission_id,),
             ).fetchone()
             sequence = int(row[0]) + 1
-            event_id = f"{mission_id}:event:{sequence}"
+            event = MissionEvent(
+                event_id=f"{mission_id}:event:{sequence}",
+                mission_id=mission_id,
+                sequence=sequence,
+                kind=kind,
+                occurred_at_epoch=occurred_at_epoch,
+                payload=payload or {},
+            )
+            payload_json = self._payload_json(event.payload)
             connection.execute(
                 "INSERT INTO mission_events(event_id,mission_id,sequence,kind,occurred_at_epoch,payload_json) VALUES(?,?,?,?,?,?)",
-                (event_id, mission_id, sequence, kind.value, occurred_at_epoch, payload_json),
+                (
+                    event.event_id,
+                    event.mission_id,
+                    event.sequence,
+                    event.kind.value,
+                    event.occurred_at_epoch,
+                    payload_json,
+                ),
             )
-        return MissionEvent(event_id, mission_id, sequence, kind, occurred_at_epoch, payload or {})
+        return event
 
     def list(self, mission_id: str) -> tuple[MissionEvent, ...]:
         with self._connect() as connection:
@@ -122,7 +136,5 @@ class SQLiteEventLedger:
             ).fetchall()
         return tuple(self._decode(row) for row in rows)
 
-
-assert isinstance(SQLiteEventLedger, type)
 
 __all__ = ["EventLedgerCorrupt", "SQLiteEventLedger"]
