@@ -19,6 +19,8 @@ from .mission_store import (
     MissionRunContext,
     MissionStorePort,
 )
+from .observability import EventLedgerPort, InMemoryEventLedger, MissionEvent, MissionEventKind
+from .observed_operator import ObservableMissionOperator
 from .operator import (
     MissionApprovalAlreadyDecided,
     MissionApprovalError,
@@ -31,6 +33,7 @@ from .operator import (
     run,
     status,
 )
+from .sqlite_event_ledger import EventLedgerCorrupt, SQLiteEventLedger
 from .sqlite_store import MissionStoreCorrupt, SQLiteMissionStore
 
 __all__ = [
@@ -60,6 +63,13 @@ __all__ = [
     "MissionApprovalAlreadyDecided",
     "MissionApprovalNotGranted",
     "MissionOperator",
+    "MissionEventKind",
+    "MissionEvent",
+    "EventLedgerPort",
+    "InMemoryEventLedger",
+    "EventLedgerCorrupt",
+    "SQLiteEventLedger",
+    "ObservableMissionOperator",
     "run",
     "status",
     "inspect",
