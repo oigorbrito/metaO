@@ -2,8 +2,8 @@
 
 The CLI owns persistence wiring only. Runtime wiring is supplied explicitly by a
 local factory (``module:function``) returning a configured MissionOperator, so
-no orchestrator SDK leaks into the CLI or Core. Observability is added by the
-CLI as a decorator over that operator and persisted in the same SQLite file.
+no orchestrator SDK leaks into the CLI or Core. Observability and cancellation
+coordination use the same SQLite database as mission records.
 """
 
 from __future__ import annotations
@@ -16,13 +16,16 @@ import sys
 from typing import Any, Mapping, Sequence, TextIO
 
 from .acceptance import AcceptanceContext
-from .core import Mission
+from .control_plane import MissionStatus
+from .core import ExecutionStatus, Mission
+from .execution_handle import ActiveExecutionHandle, ActiveExecutionNotFound, ExecutionHandleStatus
 from .governance import AcceptanceBudget, evaluate_policy
 from .mission_store import MissionAlreadyExists, MissionNotFound, MissionRecord
 from .observability import MissionEvent, MissionEventKind, thaw_event_value
 from .observed_operator import ObservableMissionOperator
-from .operator import MissionApprovalError, MissionOperator
+from .operator import MissionApprovalError, MissionCancellationError, MissionOperator
 from .sqlite_event_ledger import EventLedgerCorrupt, SQLiteEventLedger
+from .sqlite_execution_handle import ExecutionHandleCorrupt, SQLiteExecutionHandleStore
 from .sqlite_store import SQLiteMissionStore
 
 
@@ -131,6 +134,7 @@ def _load_operator(
     factory_spec: str,
     store: SQLiteMissionStore,
     ledger: SQLiteEventLedger | None = None,
+    execution_handles: SQLiteExecutionHandleStore | None = None,
 ) -> MissionOperator | ObservableMissionOperator:
     if ":" not in factory_spec:
         raise CLIInputError("factory must use module:function syntax")
@@ -146,6 +150,8 @@ def _load_operator(
     operator = factory(store=store)
     if not isinstance(operator, MissionOperator):
         raise CLIInputError("factory must return MissionOperator")
+    if execution_handles is not None:
+        operator.configure_execution_handles(execution_handles)
     if ledger is None:
         return operator
     return ObservableMissionOperator(operator, ledger)
@@ -250,6 +256,35 @@ def _event_view(event: MissionEvent) -> dict[str, Any]:
     }
 
 
+def _active_status(handle: ActiveExecutionHandle) -> MissionStatus:
+    if handle.status is ExecutionHandleStatus.ACTIVE:
+        return MissionStatus.RUNNING
+    if handle.execution_status is ExecutionStatus.CANCELLED:
+        return MissionStatus.CANCELLED
+    if handle.execution_status is ExecutionStatus.FAILED:
+        return MissionStatus.FAILED
+    return MissionStatus.VERIFYING
+
+
+def _active_view(handle: ActiveExecutionHandle) -> dict[str, Any]:
+    return {
+        "mission_id": handle.mission_id,
+        "status": _active_status(handle).value,
+        "active_execution": {
+            "execution_id": handle.execution_id,
+            "orchestrator_id": handle.orchestrator_id,
+            "attempt_number": handle.attempt_number,
+            "started_at_epoch": handle.started_at_epoch,
+            "ended_at_epoch": handle.ended_at_epoch,
+            "cost": handle.cost,
+            "handle_status": handle.status.value,
+            "execution_status": None if handle.execution_status is None else handle.execution_status.value,
+            "cancel_requested": handle.cancel_requested,
+            "cancel_delegated": handle.cancel_delegated,
+        },
+    }
+
+
 def _write_json(value: Any, stream: TextIO) -> None:
     stream.write(json.dumps(value, sort_keys=True, separators=(",", ":"), default=str))
     stream.write("\n")
@@ -267,7 +302,7 @@ def _parser() -> argparse.ArgumentParser:
     status_parser = sub.add_parser("status", help="show mission status")
     status_parser.add_argument("mission_id")
 
-    inspect_parser = sub.add_parser("inspect", help="show auditable mission record")
+    inspect_parser = sub.add_parser("inspect", help="show auditable mission record or active execution")
     inspect_parser.add_argument("mission_id")
 
     sub.add_parser("list", help="list persisted missions")
@@ -287,6 +322,11 @@ def _parser() -> argparse.ArgumentParser:
     resume_parser.add_argument("mission_id")
     resume_parser.add_argument("--factory", required=True, help="configured operator factory module:function")
     resume_parser.add_argument("--now-epoch", type=float, default=0.0)
+
+    cancel_parser = sub.add_parser("cancel", help="request cancellation of a running or waiting mission")
+    cancel_parser.add_argument("mission_id")
+    cancel_parser.add_argument("--factory", required=True, help="configured operator factory module:function")
+    cancel_parser.add_argument("--now-epoch", type=float, default=0.0)
     return parser
 
 
@@ -298,18 +338,27 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
     try:
         store = SQLiteMissionStore(args.db)
         ledger = SQLiteEventLedger(args.db)
+        handles = SQLiteExecutionHandleStore(args.db)
         if args.command == "run":
-            operator = _load_operator(args.factory, store, ledger)
+            operator = _load_operator(args.factory, store, ledger, handles)
             spec = _load_run_spec(args.mission_file)
             outcome = operator.run(**spec)
             _write_json(_record_view(operator.inspect(outcome.mission_id), detailed=False), out)
             return 0
         if args.command == "status":
-            record = store.get(args.mission_id)
-            _write_json({"mission_id": record.mission_id, "status": record.status.value, "revision": record.revision}, out)
+            try:
+                record = store.get(args.mission_id)
+                value = {"mission_id": record.mission_id, "status": record.status.value, "revision": record.revision}
+            except MissionNotFound:
+                value = _active_view(handles.get(args.mission_id))
+            _write_json(value, out)
             return 0
         if args.command == "inspect":
-            _write_json(_record_view(store.get(args.mission_id), detailed=True), out)
+            try:
+                value = _record_view(store.get(args.mission_id), detailed=True)
+            except MissionNotFound:
+                value = _active_view(handles.get(args.mission_id))
+            _write_json(value, out)
             return 0
         if args.command == "list":
             _write_json([_record_view(record, detailed=False) for record in store.list()], out)
@@ -317,14 +366,17 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
         if args.command == "events":
             items = ledger.list(args.mission_id)
             if not items:
-                store.get(args.mission_id)
+                try:
+                    store.get(args.mission_id)
+                except MissionNotFound:
+                    handles.get(args.mission_id)
             if args.kind is not None:
                 requested = MissionEventKind(args.kind)
                 items = tuple(event for event in items if event.kind is requested)
             _write_json([_event_view(event) for event in items], out)
             return 0
         if args.command == "approve":
-            operator = _load_operator(args.factory, store, ledger)
+            operator = _load_operator(args.factory, store, ledger, handles)
             record = operator.approve(
                 args.mission_id,
                 approver_id=args.approver,
@@ -334,9 +386,15 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
             _write_json(_record_view(record, detailed=False), out)
             return 0
         if args.command == "resume":
-            operator = _load_operator(args.factory, store, ledger)
+            operator = _load_operator(args.factory, store, ledger, handles)
             operator.resume(args.mission_id, now_epoch=args.now_epoch)
             _write_json(_record_view(operator.inspect(args.mission_id), detailed=False), out)
+            return 0
+        if args.command == "cancel":
+            operator = _load_operator(args.factory, store, ledger, handles)
+            result = operator.cancel(args.mission_id, now_epoch=args.now_epoch)
+            value = _record_view(result, detailed=False) if isinstance(result, MissionRecord) else _active_view(result)
+            _write_json(value, out)
             return 0
         raise CLIInputError(f"unsupported command: {args.command}")
     except (
@@ -344,7 +402,10 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
         MissionNotFound,
         MissionAlreadyExists,
         MissionApprovalError,
+        MissionCancellationError,
+        ActiveExecutionNotFound,
         EventLedgerCorrupt,
+        ExecutionHandleCorrupt,
         ImportError,
         AttributeError,
         KeyError,
