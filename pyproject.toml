@@ -9,5 +9,8 @@ description = "Framework-neutral meta-orchestrator control plane"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.scripts]
+metao = "metao.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
