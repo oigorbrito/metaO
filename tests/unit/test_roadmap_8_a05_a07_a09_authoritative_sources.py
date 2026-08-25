@@ -72,6 +72,14 @@ class AuthoritativeSourcePrimitiveTests(unittest.TestCase):
         self.assertEqual(bundle.version, "v1")
         self.assertEqual(bundle.rules["require"], "quality")
 
+    def test_policy_bundle_is_snapshot_not_caller_mutable(self) -> None:
+        rules = {"require": "quality"}
+        bundle = PolicyBundle("policy-1", "v1", rules)
+        rules["require"] = "hostile-change"
+        self.assertEqual(bundle.rules["require"], "quality")
+        with self.assertRaises(TypeError):
+            bundle.rules["require"] = "mutation"
+
     def test_missing_policy_fails_closed(self) -> None:
         with self.assertRaises(AuthoritativeSourceNotFound):
             InMemoryPolicyRegistry().get("missing")
