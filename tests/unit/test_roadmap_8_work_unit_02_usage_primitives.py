@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import unittest
 
 from metao.acceptance_usage import (
@@ -56,12 +57,24 @@ class AcceptanceUsagePrimitiveTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     self.usage(**{field: -1})
 
+    def test_non_finite_usage_is_rejected(self) -> None:
+        for field in ("started_at_epoch", "ended_at_epoch", "money", "wall_time_s"):
+            for value in (math.nan, math.inf, -math.inf):
+                with self.subTest(field=field, value=value):
+                    with self.assertRaises(ValueError):
+                        self.usage(**{field: value})
+
+    def test_tokens_must_be_non_boolean_integer(self) -> None:
+        for value in (True, 1.5):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                self.usage(tokens=value)
+
     def test_end_before_start_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             self.usage(started_at_epoch=10.0, ended_at_epoch=9.0)
 
     def test_one_record_represents_exactly_one_started_attempt(self) -> None:
-        for attempts in (0, 2):
+        for attempts in (0, 2, True):
             with self.subTest(attempts=attempts):
                 with self.assertRaises(ValueError):
                     self.usage(verifier_attempts=attempts)
@@ -84,11 +97,18 @@ class AcceptanceUsagePrimitiveTests(unittest.TestCase):
         with self.assertRaises(DuplicateUsage):
             store.append(item)
 
+    def test_same_bound_attempt_cannot_be_appended_under_new_usage_id(self) -> None:
+        store = InMemoryAcceptanceUsageStore()
+        store.append(self.usage())
+        with self.assertRaises(DuplicateUsage):
+            store.append(self.usage(usage_id="usage-forged-duplicate"))
+
     def test_queries_are_bound_and_deterministic(self) -> None:
         store = InMemoryAcceptanceUsageStore()
         second = self.usage(
             usage_id="usage-2",
             mission_id="mission-1",
+            attempt_id="attempt-2",
             verification_request_id="request-2",
             started_at_epoch=20.0,
             ended_at_epoch=21.0,
