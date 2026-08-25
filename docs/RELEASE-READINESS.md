@@ -286,3 +286,12 @@ Until then:
 - do not declare PASS without real output;
 - do not weaken assertions or architectural gates;
 - do not add another framework merely to keep feature count moving.
+
+## Production release requirements
+
+Production release requires a verified executable gate on the exact candidate
+SHA, a clean worktree, `phase = complete`, `fatal_error = null`,
+`failure_count = 0`, and explicit merge authorization.
+
+Hosted GitHub Actions pre-step infrastructure failures remain separate from
+metaO functional validation and must not be represented as product PASS.

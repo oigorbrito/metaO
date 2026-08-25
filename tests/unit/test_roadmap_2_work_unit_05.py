@@ -380,11 +380,13 @@ class DeterministicRuntimeFeedbackV1Tests(unittest.TestCase):
                 )
             self.assertEqual(second_code, 0, stderr.getvalue())
             second = json.loads(stdout.getvalue())
+            persisted = SQLiteRuntimeFeedbackStore(db)
+            primary_samples = persisted.score("primary").samples
+            fallback_samples = persisted.score("fallback").samples
         self.assertEqual(second["orchestrator_id"], "fallback")
         self.assertEqual((primary.calls, fallback.calls), (1, 2))
-        persisted = SQLiteRuntimeFeedbackStore(db)
-        self.assertEqual(persisted.score("primary").samples, 1)
-        self.assertEqual(persisted.score("fallback").samples, 2)
+        self.assertEqual(primary_samples, 1)
+        self.assertEqual(fallback_samples, 2)
 
     def test_feedback_modules_remain_sdk_neutral_and_no_learned_router_is_added(self):
         root = Path(__file__).resolve().parents[2]

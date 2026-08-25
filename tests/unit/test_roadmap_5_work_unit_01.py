@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -258,7 +259,7 @@ class CertificateFreshnessV1Tests(unittest.TestCase):
     def test_sqlite_migrates_legacy_schema_without_rewriting_old_certificate(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "legacy.db"
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection, connection:
                 connection.execute(
                     """
                     CREATE TABLE runtime_certifications (

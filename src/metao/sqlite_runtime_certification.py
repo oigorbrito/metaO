@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -29,7 +30,7 @@ class SQLiteRuntimeCertificationStore:
         return sqlite3.connect(self._path, timeout=5.0)
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS runtime_certifications (
@@ -82,7 +83,7 @@ class SQLiteRuntimeCertificationStore:
             raise RuntimeCertificationCorrupt("invalid runtime certification row") from exc
 
     def record(self, certificate: RuntimeCertification) -> RuntimeCertification:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,runtime_version,probe_execution_id,
@@ -118,7 +119,7 @@ class SQLiteRuntimeCertificationStore:
         return certificate
 
     def get(self, certificate_id: str) -> RuntimeCertification | None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,runtime_version,probe_execution_id,
@@ -130,7 +131,7 @@ class SQLiteRuntimeCertificationStore:
         return None if row is None else self._decode(row)
 
     def history(self, orchestrator_id: str) -> tuple[RuntimeCertification, ...]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,runtime_version,probe_execution_id,

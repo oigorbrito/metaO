@@ -206,6 +206,11 @@ try {
     }
 
     $script:PythonExe = $VenvPython
+    $VenvScripts = Split-Path -Parent $VenvPython
+    if (($env:PATH -split ';') -notcontains $VenvScripts) {
+        $env:PATH = "$VenvScripts;$env:PATH"
+    }
+
     Invoke-NativeChecked -FilePath $script:PythonExe -ArgumentList @(
         "-c",
         "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"

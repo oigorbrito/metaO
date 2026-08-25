@@ -317,6 +317,10 @@ class ThreeRealRuntimesV1Tests(unittest.TestCase):
             self.reset_runtime_calls()
             restarted = self.load(path, db, 120.0)
             certifications, _ = self.stores(db)
+            histories = {
+                runtime_id: certifications.history(runtime_id)
+                for runtime_id in ("openai-agents-real", "crewai-real", "langgraph-real")
+            }
 
         self.assertEqual(
             {entry.orchestrator_id for entry in restarted.runtime_entries()},
@@ -326,9 +330,9 @@ class ThreeRealRuntimesV1Tests(unittest.TestCase):
         self.assertEqual(SandboxLLM.calls, 0)
         self.assertEqual(len(self.openai_models), 1)
         self.assertEqual(len(self.openai_models[0].calls), 0)
-        self.assertEqual(len(certifications.history("openai-agents-real")), 1)
-        self.assertEqual(len(certifications.history("crewai-real")), 1)
-        self.assertEqual(len(certifications.history("langgraph-real")), 1)
+        self.assertEqual(len(histories["openai-agents-real"]), 1)
+        self.assertEqual(len(histories["crewai-real"]), 1)
+        self.assertEqual(len(histories["langgraph-real"]), 1)
 
     def test_04_expiry_recetifies_all_three_as_new_generations(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -340,13 +344,17 @@ class ThreeRealRuntimesV1Tests(unittest.TestCase):
             self.reset_runtime_calls()
             self.load(path, db, 161.0)
             certifications, _ = self.stores(db)
+            histories = {
+                runtime_id: certifications.history(runtime_id)
+                for runtime_id in ("openai-agents-real", "crewai-real", "langgraph-real")
+            }
 
         self.assertEqual(self.graph_calls["count"], 1)
         self.assertGreaterEqual(SandboxLLM.calls, 1)
         self.assertEqual(len(self.openai_models[0].calls), 1)
         for runtime_id in ("openai-agents-real", "crewai-real", "langgraph-real"):
             self.assertEqual(
-                [item.certified_at_epoch for item in certifications.history(runtime_id)],
+                [item.certified_at_epoch for item in histories[runtime_id]],
                 [100.0, 161.0],
             )
 
@@ -370,13 +378,17 @@ class ThreeRealRuntimesV1Tests(unittest.TestCase):
             self.reset_runtime_calls()
             self.load(path, db, 120.0)
             certifications, _ = self.stores(db)
+            histories = {
+                runtime_id: certifications.history(runtime_id)
+                for runtime_id in ("openai-agents-real", "crewai-real", "langgraph-real")
+            }
 
         self.assertEqual(len(self.openai_models[0].calls), 1)
         self.assertEqual(SandboxLLM.calls, 0)
         self.assertEqual(self.graph_calls["count"], 0)
-        self.assertEqual(len(certifications.history("openai-agents-real")), 2)
-        self.assertEqual(len(certifications.history("crewai-real")), 1)
-        self.assertEqual(len(certifications.history("langgraph-real")), 1)
+        self.assertEqual(len(histories["openai-agents-real"]), 2)
+        self.assertEqual(len(histories["crewai-real"]), 1)
+        self.assertEqual(len(histories["langgraph-real"]), 1)
 
     def test_06_deterministic_selection_prefers_openai_agents_across_three_runtimes(self):
         with tempfile.TemporaryDirectory() as temp:

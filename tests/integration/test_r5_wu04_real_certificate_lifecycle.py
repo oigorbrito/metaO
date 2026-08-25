@@ -208,11 +208,13 @@ class RealCertificateLifecycleV1Tests(unittest.TestCase):
             self.reset_runtime_calls()
             second = self.load(path, db, 120.0)
             certifications, _ = self.stores(db)
+            langgraph_history = certifications.history("langgraph-real")
+            crewai_history = certifications.history("crewai-real")
             self.assertEqual({item.orchestrator_id for item in second.runtime_entries()}, {"langgraph-real", "crewai-real"})
         self.assertEqual(self.graph_calls["count"], 0)
         self.assertEqual(SandboxLLM.calls, 0)
-        self.assertEqual(len(certifications.history("langgraph-real")), 1)
-        self.assertEqual(len(certifications.history("crewai-real")), 1)
+        self.assertEqual(len(langgraph_history), 1)
+        self.assertEqual(len(crewai_history), 1)
 
     def test_03_expiry_recertifies_both_real_runtimes_with_new_generations(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -252,12 +254,14 @@ class RealCertificateLifecycleV1Tests(unittest.TestCase):
             certifications, revocations = self.stores(db)
             graph_history = certifications.history("langgraph-real")
             crew_history = certifications.history("crewai-real")
+            old_revocation = revocations.get(old_graph.certificate_id)
+            new_revocation = revocations.get(graph_history[-1].certificate_id)
         self.assertEqual(self.graph_calls["count"], 1)
         self.assertEqual(SandboxLLM.calls, 0)
         self.assertEqual(len(graph_history), 2)
         self.assertEqual(len(crew_history), 1)
-        self.assertIsNotNone(revocations.get(old_graph.certificate_id))
-        self.assertIsNone(revocations.get(graph_history[-1].certificate_id))
+        self.assertIsNotNone(old_revocation)
+        self.assertIsNone(new_revocation)
 
     def test_05_new_generation_after_revoke_is_reused_without_sdk_execution(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -283,11 +287,13 @@ class RealCertificateLifecycleV1Tests(unittest.TestCase):
             self.reset_runtime_calls()
             operator = self.load(path, db, 130.0)
             certifications, _ = self.stores(db)
+            graph_history = certifications.history("langgraph-real")
+            crew_history = certifications.history("crewai-real")
         self.assertEqual(self.graph_calls["count"], 0)
         self.assertEqual(SandboxLLM.calls, 0)
         self.assertEqual({item.orchestrator_id for item in operator.runtime_entries()}, {"langgraph-real", "crewai-real"})
-        self.assertEqual(len(certifications.history("langgraph-real")), 2)
-        self.assertEqual(len(certifications.history("crewai-real")), 1)
+        self.assertEqual(len(graph_history), 2)
+        self.assertEqual(len(crew_history), 1)
 
 
 if __name__ == "__main__":

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -30,7 +31,7 @@ class SQLiteRuntimeFeedbackStore:
         return sqlite3.connect(self._path, timeout=5.0)
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS runtime_feedback_observations (
@@ -70,7 +71,7 @@ class SQLiteRuntimeFeedbackStore:
 
     def record(self, observation: RuntimeObservation) -> RuntimeObservation:
         # Dataclass validation occurs before touching durable state.
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             existing_row = connection.execute(
                 """
                 SELECT observation_id,mission_id,execution_id,orchestrator_id,
@@ -106,7 +107,7 @@ class SQLiteRuntimeFeedbackStore:
         return observation
 
     def history(self, orchestrator_id: str) -> tuple[RuntimeObservation, ...]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT observation_id,mission_id,execution_id,orchestrator_id,
