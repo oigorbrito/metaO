@@ -36,6 +36,14 @@ class BoundConfidenceTests(unittest.TestCase):
         )
         self.assertEqual(action, ConfidenceAction.REJECT)
 
+    def test_non_boolean_hard_gate_observation_fails_closed(self) -> None:
+        with self.assertRaises(TypeError):
+            advise_from_confidence(
+                self.confidence(score=1.0),
+                hard_gates_passed="yes",  # type: ignore[arg-type]
+                policy=ConfidencePolicy(minimum_continue=0.8, minimum_escalate=0.5),
+            )
+
     def test_high_bound_confidence_can_continue_only_after_hard_gates(self) -> None:
         action = advise_from_confidence(
             self.confidence(score=0.9),
