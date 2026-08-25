@@ -1,0 +1,15 @@
+name: Actions Ubuntu Slim Diagnostic
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/actions-ubuntu-slim-diagnostic.yml'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-slim
+    steps:
+      - name: Prove configured step execution
+        run: |
+          echo "ACTIONS_UBUNTU_SLIM = STEP_REACHED"
+          uname -a
