@@ -1,35 +1,83 @@
 # metaO Local Release Gate
 
-Status: OPERATIONAL FALLBACK FOR HOSTED-RUNNER OUTAGE — PENDING RERUN AFTER DEPENDENCY COMPATIBILITY FIX.
+Status: OPERATIONAL AND EXECUTED SUCCESSFULLY FOR THE ROADMAPS 2-7 CANONICAL CANDIDATE — HOSTED RUNNERS REMAIN EXTERNALLY BLOCKED.
 
-This gate exists to produce executable evidence while GitHub-hosted Actions fails before the first job step. It does **not** weaken the normal remote merge gate and it does not convert local execution into a production-readiness claim.
+The local release gate exists to produce reproducible executable evidence when GitHub-hosted Actions cannot reach repository execution. It does not convert local execution into a production-readiness claim and it does not turn an external hosted-runner failure into a metaO functional failure.
+
+## Validated Roadmaps 2-7 run
+
+The canonical candidate completed the full gate successfully:
+
+```text
+branch = roadmap7/integration-candidate-v1
+commit = aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea
+phase = complete
+clean_worktree = true
+results = 21
+failure_count = 0
+fatal_error = null
+overall = PASS
+LOCAL_RELEASE_GATE = PASS
+```
+
+The same candidate recorded:
+
+```text
+FULL_UNIT_SUITE = PASS 279/279
+R2_REAL_SANDBOX = PASS 13/13
+R4 = PASS
+R5 = PASS
+R6 = PASS 8/8
+R7_REAL_RECOVERY = PASS 4/4
+```
+
+The tested SHA matched PR #68 head. After explicit authorization, PR #68 was merged into `main` as:
+
+```text
+58feb12531982342bf3c12b9e8b8c61a5e819c5f
+```
+
+## Evidence location
+
+Release-gate evidence is written outside the repository:
+
+```text
+%LOCALAPPDATA%\metaO\release-gate-evidence\gate-<timestamp>.json
+```
+
+The successful Roadmaps 2-7 run reported:
+
+```text
+C:\Users\Igor B\AppData\Local\metaO\release-gate-evidence\gate-20260825-103527.json
+```
+
+That exact JSON remains subject to the independent fail-closed validator tracked by Issue #73 / PR #69. Console PASS must not be silently substituted for independent JSON re-validation.
 
 ## Hosted-runner evidence
 
-Repeated GitHub Actions runs fail with the same pre-step fingerprint:
+Repeated GitHub Actions runs fail with a pre-step fingerprint:
 
 ```text
 job conclusion = failure
 steps = null / []
-logs = BlobNotFound
+runner_id = 0 on representative runs
+logs = BlobNotFound / unavailable on several runs
+checkout = NOT REACHED
+setup = NOT REACHED
+tests = NOT REACHED
 ```
 
-Minimal diagnostics removed metaO test complexity and reproduced the failure:
+Minimal diagnostics reproduced the problem on standard Ubuntu, Windows, and macOS hosted pools.
+
+On the final validated candidate SHA, representative CI evidence includes:
 
 ```text
-PR #65 / Ubuntu
-run 32736704068
-job 97461133603
-steps = null
-logs = BlobNotFound
-
-PR #67 / cross-OS
-macOS  job 97463231179 -> steps = null
-Windows job 97463231312 -> steps = null
-Ubuntu  job 97463231320 -> steps = null
+run = 32854214991
+job = 97822118499
+head_sha = aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea
+steps = []
+runner_id = 0
 ```
-
-Both diagnostics were closed unmerged.
 
 Therefore:
 
@@ -38,93 +86,72 @@ METAO_TEST_LOGIC_CAUSE = NO
 WORKFLOW_COMPLEXITY_CAUSE = NO
 HOSTED_OS_SPECIFIC = NO
 HOSTED_OS_SWITCH_WORKAROUND = NO
+HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
 ```
 
-The hosted blocker remains upstream of repository execution.
+See Issue #71 and `docs/GITHUB-ACTIONS-SUPPORT-PACKET.md`.
 
-## Canonical gate branch
+## Active runtime pins
 
-Run only from the canonical integration candidate:
+The executed gate uses:
 
 ```text
-roadmap7/integration-candidate-v1
+Python        = 3.12.x
+openai-agents = 0.20.0
+crewai        = 1.15.16
+langgraph     = 1.2.11
 ```
 
-Historical branch `ops/local-release-gate-v1` is superseded for release evidence.
+The originally prepared OpenAI Agents `0.21.1` pin was rejected after real pip resolution proved its OpenAI client range incompatible with CrewAI `1.15.16`.
 
-## Prerequisites
+The active shared client range is compatible:
+
+```text
+openai-agents 0.20.0 -> openai >=2.45,<3
+crewai 1.15.16       -> openai >=2.30,<3
+shared range          -> openai >=2.45,<3
+```
+
+No Core or `OrchestratorContract` change was required.
+
+## Provider-free deterministic runtime seams
+
+The real-runtime gate does not require a paid provider call:
+
+- OpenAI Agents `0.20.0` uses the test-only deterministic implementation in `tests/integration/_openai_agents_model.py`, built against the SDK public `Model` interface;
+- CrewAI uses a deterministic local `BaseLLM`;
+- LangGraph uses local deterministic graphs.
+
+These seams are test infrastructure only and do not move framework SDK types or authority into Core.
+
+## Prerequisites for future runs
 
 - Windows PowerShell;
 - Git;
 - Python 3.12 available as `py -3.12` or `python`;
-- network access for dependency installation;
-- clean checkout by default.
+- network access when dependency installation is required;
+- clean checkout unless running an explicitly diagnostic `-AllowDirty` invocation.
 
-The isolated environment is outside the repository:
+The isolated gate environment lives outside the repository:
 
 ```text
 %LOCALAPPDATA%\metaO\release-gate-venv
 ```
 
-Evidence is written outside the repository:
+## Running the gate for a future candidate
 
-```text
-%LOCALAPPDATA%\metaO\release-gate-evidence\gate-<timestamp>.json
-```
+Run the gate from the exact candidate checkout that is intended to receive release authority. Do not reuse the historical Roadmap 7 SHA for a later release claim.
 
-## Dependency compatibility correction
-
-The first real Windows dependency-resolution attempt exposed an incompatible prepared set before any functional test ran:
-
-```text
-openai-agents 0.21.1 -> openai >=3,<4
-crewai 1.15.16       -> openai >=2.30,<3
-result                -> ResolutionImpossible
-```
-
-The evidence-based active set is now:
-
-```text
-openai-agents == 0.20.0   # requires openai >=2.45,<3
-crewai        == 1.15.16  # requires openai >=2.30,<3
-langgraph     == 1.2.11
-Python        == 3.12.x
-```
-
-The compatible shared OpenAI client range is therefore:
-
-```text
-openai >=2.45,<3
-```
-
-The third runtime remains OpenAI Agents SDK. No Core or `OrchestratorContract` change was required. See `docs/OPENAI-AGENTS-COMPATIBILITY-CORRECTION.md`.
-
-## Provider-free deterministic runtime seams
-
-No paid provider call is required by the prepared real-runtime tests:
-
-- OpenAI Agents 0.20.0 uses `tests/integration/_openai_agents_model.py`, a small test-only deterministic implementation of the SDK public `Model` interface;
-- CrewAI uses a deterministic local `BaseLLM`;
-- LangGraph uses local deterministic graphs.
-
-The OpenAI test helper is not production code and does not change the SDK-neutral Core boundary.
-
-## Execute
-
-For a clean rerun after the earlier failed resolver attempt, remove the old gate venv once, then run the canonical candidate:
+Example:
 
 ```powershell
-cd C:\Projetos\metao-gate
-git fetch origin
-git switch roadmap7/integration-candidate-v1
-git pull --ff-only
-Remove-Item -Recurse -Force "$env:LOCALAPPDATA\metaO\release-gate-venv" -ErrorAction SilentlyContinue
+cd C:\path\to\candidate-checkout
 git status --short
 git rev-parse HEAD
 powershell -ExecutionPolicy Bypass -File .\scripts\run-local-release-gate.ps1
 ```
 
-For later diagnostic reruns using an already validated exact dependency environment:
+For a diagnostic rerun with an already validated exact dependency environment:
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\run-local-release-gate.ps1 -SkipInstall
@@ -132,9 +159,9 @@ powershell -ExecutionPolicy Bypass -File .\scripts\run-local-release-gate.ps1 -S
 
 Dirty worktrees fail closed. `-AllowDirty` exists only for diagnosis and records `clean_worktree=false`; such a run is not valid release evidence.
 
-## Executed gates
+## Executed gate set
 
-The local gate records 21 checks:
+The release gate records 21 checks:
 
 1. exact runtime versions;
 2. installed CLI help;
@@ -158,7 +185,7 @@ The local gate records 21 checks:
 20. Block O O5 runtime swap;
 21. SDK-neutral Core/control-plane boundary.
 
-Normal test gates continue after individual test failures so the final evidence contains the complete failing set.
+Normal test gates continue after individual failures so a completed failed run contains the entire failing set rather than stopping at the first red gate.
 
 ## Outcome classification
 
@@ -187,6 +214,18 @@ failure_count = 0
 overall = PASS
 ```
 
+## Historical failed attempts
+
+Failures before the final green run remain audit evidence:
+
+- PowerShell parser defect -> `HARNESS_FAIL` before functional tests;
+- missing Python 3.12 -> `BOOTSTRAP_FAIL` before functional tests;
+- OpenAI Agents `0.21.1` / CrewAI `1.15.16` resolver conflict -> bootstrap failure before functional tests;
+- generated `egg-info` dirty-worktree state -> bootstrap failure before functional tests;
+- first complete candidate `f16bb92cda77ede8299b6238a0561ed362070b71` -> `TEST_FAIL`, 21 results / 8 failures.
+
+Those concrete defects were corrected without weakening architecture or assertions. The later `aa9e4e9a...` run is the authoritative Roadmaps 2-7 local functional result.
+
 ## Evidence semantics
 
 A successful local gate may establish:
@@ -198,24 +237,27 @@ REAL_PROVIDER_FREE_RUNTIME_SANDBOXES = PASS
 SDK_NEUTRAL_BOUNDARY = PASS
 ```
 
-It does **not** establish:
+It does **not** by itself establish:
 
 ```text
 GITHUB_ACTIONS = PASS
 REMOTE_EXECUTION = PASS
 PRODUCTION_READY = YES
+SECURITY_CERTIFIED = YES
+SLO_VALIDATED = YES
 ```
 
-The remote Actions blocker remains separate until a hosted run reaches real steps.
+The external hosted-runner blocker remains separate until a hosted job reaches configured steps.
 
 ## Current status
 
 ```text
-DEPENDENCY_CONFLICT_0_21_1 = CONFIRMED
-ACTIVE_OPENAI_AGENTS_PIN = 0.20.0
-LOCAL_GATE_IMPLEMENTATION = UPDATED
-LOCAL_GATE_RERUN = PENDING
-FUNCTIONAL_PASS = NOT CLAIMED
+LOCAL_GATE_IMPLEMENTATION = OPERATIONAL
+VALIDATED_CANDIDATE = aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea
+LOCAL_RELEASE_GATE = PASS 21/21
+FUNCTIONAL_PASS = CLAIMED_FOR_VALIDATED_SHA
+PR_68 = MERGED
+MAIN = 58feb12531982342bf3c12b9e8b8c61a5e819c5f
 HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
-MERGE_GATE = PENDING
+EXACT_JSON_VALIDATION = BLOCKED_EVIDENCE_FILE_UNAVAILABLE
 ```
