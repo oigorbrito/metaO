@@ -6,7 +6,7 @@ Issue: #90
 
 ## Objective
 
-Converge the two divergent framework-neutral `EvidenceEnvelope` dataclasses that existed in `main` into one canonical evidence contract shared by public API, Core typing, runtime normalization and final acceptance.
+Converge the two divergent framework-neutral `EvidenceEnvelope` dataclasses that existed in `main` into one canonical evidence contract shared by public API, Core typing, runtime normalization, durable mission persistence and final acceptance.
 
 ## Architectural reason
 
@@ -22,7 +22,7 @@ orchestrator result
 Before this WU:
 
 ```text
-metao.core.EvidenceEnvelope       != metao.acceptance.EvidenceEnvelope
+metao.core.EvidenceEnvelope != metao.acceptance.EvidenceEnvelope
 ```
 
 The package public API re-exported the Core class, while LangGraph, CrewAI, OpenAI Agents, runtime conformance and control-plane acceptance used the Acceptance class.
@@ -85,6 +85,59 @@ approval_evidence       -> approval_id or ""
 
 The former Core constructor cannot be safely recreated in full because it did not carry acceptance-critical fields such as `evidence_id`, `authority_id` and `passed`. Rather than fabricate those values, ambiguous legacy construction must fail explicitly. This is preferable to silently manufacturing acceptance authority.
 
+## Durable persistence correction
+
+A follow-up static audit found that `src/metao/sqlite_store.py` still encoded and decoded the former Core-only evidence shape.
+
+That was a real compatibility defect: after canonicalization, a mission snapshot containing `ExecutionResult.evidence` could be written using aliases that omitted acceptance-critical canonical fields and could not be reconstructed safely.
+
+The WU therefore also updates durable mission persistence.
+
+Current snapshot schema:
+
+```text
+schema_version = 4
+supported = 1, 2, 3, 4
+```
+
+New evidence snapshots persist the canonical fields directly, including:
+
+```text
+evidence_id
+obligation_id
+mission_id
+execution_id
+orchestrator_id
+adapter_id
+adapter_version
+attempt_id
+subject_id
+subject_state_id
+verification_context_id
+policy_bundle_id
+verifier_id
+payload_digest
+provenance_root
+authority_id
+passed
+created_at_epoch
+expires_at_epoch
+approval_id
+confidence
+verification_cost_units
+```
+
+Legacy evidence-bearing snapshots from the former Core envelope are **not** silently upgraded. They lacked `evidence_id`, `authority_id` and `passed`, so synthesizing those values would fabricate acceptance-critical state.
+
+Rule:
+
+```text
+legacy mission snapshot without unsafe evidence reconstruction -> existing supported decode path
+legacy evidence envelope missing canonical authority bindings   -> MissionStoreCorrupt / fail closed
+```
+
+This is intentional evidence safety, not a best-effort migration.
+
 ## Acceptance semantics
 
 Unchanged:
@@ -118,9 +171,11 @@ It locks:
 2. deterministic legacy read aliases;
 3. LangGraph, CrewAI and OpenAI Agents normalizers returning the canonical class;
 4. `ExecutionResult.evidence` carrying canonical values;
-5. no orchestrator-specific SDK import in evidence/Core/acceptance.
+5. canonical SQLite encode/decode round-trip preserving acceptance-critical bindings;
+6. former evidence persistence failing closed instead of fabricating missing authority;
+7. no orchestrator-specific SDK import in evidence/Core/acceptance.
 
-Existing Block J and Block L tests remain required regressions before merge.
+Existing Block J and Block L tests remain required regressions before merge, plus the full unit suite because durable mission persistence changed.
 
 ## Composition / measurement
 
@@ -130,6 +185,8 @@ NEW_RUNTIME_DEPENDENCY = NO
 ORCHESTRATOR_SDK_IN_CORE = NO
 NEW_METAO_SPECIFIC_MODULE = src/metao/evidence.py
 DUPLICATE_EVIDENCE_DATACLASS_DEFINITIONS_TARGET = 0
+MISSION_SNAPSHOT_SCHEMA = 4
+LEGACY_MISSING_AUTHORITY_FABRICATED = NO
 ```
 
 This is consolidation of an already-approved metaO-specific BUILD boundary, not a new capability.
@@ -161,6 +218,7 @@ src/inspect_ai/util/_limit.py
 
 ```text
 IMPLEMENTATION = COMPLETE
+PERSISTENCE_COMPATIBILITY_DEFECT = FOUND_AND_CORRECTED
 FOCUSED_TESTS = NOT_EXECUTED_IN_THIS_CONNECTED_ENVIRONMENT
 FULL_REGRESSION = NOT_EXECUTED_IN_THIS_CONNECTED_ENVIRONMENT
 HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
