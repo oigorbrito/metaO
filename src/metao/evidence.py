@@ -51,6 +51,29 @@ class EvidenceEnvelope:
         # Core schema change.
         if not self.adapter_id:
             object.__setattr__(self, "adapter_id", self.orchestrator_id)
+
+        required = (
+            self.evidence_id,
+            self.obligation_id,
+            self.mission_id,
+            self.execution_id,
+            self.orchestrator_id,
+            self.adapter_id,
+            self.adapter_version,
+            self.attempt_id,
+            self.subject_id,
+            self.subject_state_id,
+            self.verification_context_id,
+            self.policy_bundle_id,
+            self.verifier_id,
+            self.payload_digest,
+            self.provenance_root,
+            self.authority_id,
+        )
+        if not all(required):
+            raise ValueError("evidence envelope contains an empty required binding")
+        if self.confidence is not None and not 0.0 <= self.confidence <= 1.0:
+            raise ValueError("confidence must be within [0, 1]")
         if self.verification_cost_units < 0:
             raise ValueError("verification_cost_units must be non-negative")
 
