@@ -14,14 +14,14 @@ if SPEC is None or SPEC.loader is None:  # pragma: no cover
 validator = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(validator)
 
-EXPECTED_COMMIT = "8d5cd2b3d2d06643c8fcb5f404b2399b78948c68"
+EXPECTED_COMMIT = "aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea"
 EXPECTED_BRANCH = "roadmap7/integration-candidate-v1"
 
 
 def valid_evidence() -> dict:
     return {
         "schema_version": 1,
-        "generated_at_utc": "2026-08-24T18:00:00+00:00",
+        "generated_at_utc": "2026-08-25T13:35:27+00:00",
         "branch": EXPECTED_BRANCH,
         "commit": EXPECTED_COMMIT,
         "clean_worktree": True,
