@@ -13,11 +13,13 @@ The final decision is deterministic over recorded evidence.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass
 from enum import Enum
 from hashlib import sha256
 import json
 from typing import Iterable, Optional, Sequence, Tuple
+
+from .evidence import EvidenceEnvelope
 
 
 class AcceptanceDecision(str, Enum):
@@ -33,30 +35,6 @@ class ConflictDecision(str, Enum):
     DUPLICATE = "DUPLICATE"
     CONFLICT = "CONFLICT"
     UNEXPECTED = "UNEXPECTED"
-
-
-@dataclass(frozen=True)
-class EvidenceEnvelope:
-    evidence_id: str
-    obligation_id: str
-    mission_id: str
-    execution_id: str
-    orchestrator_id: str
-    adapter_version: str
-    attempt_id: str
-    subject_id: str
-    subject_state_id: str
-    verification_context_id: str
-    policy_bundle_id: str
-    verifier_id: str
-    payload_digest: str
-    provenance_root: str
-    authority_id: str
-    passed: bool
-    created_at_epoch: float = 0.0
-    expires_at_epoch: Optional[float] = None
-    approval_id: Optional[str] = None
-    confidence: Optional[float] = None
 
 
 @dataclass(frozen=True)
