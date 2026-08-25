@@ -4,6 +4,35 @@ metaO is a meta-orchestrator / control plane for selecting, governing, supervisi
 
 Architecture and implementation decisions are evidence-driven and documented under `docs/`.
 
+## Engineering workflow
+
+metaO uses GitHub as the persistent engineering ledger and follows an **Issue-first** workflow:
+
+```text
+Project / Roadmap
+-> Issue
+-> Branch
+-> Pull Request
+-> Tests / Evidence
+-> PASS / FAIL / BLOCKED
+-> Merge
+-> Close Issue
+```
+
+Operational rules and evidence discipline are documented in:
+
+- [`docs/GITHUB-WORKFLOW.md`](docs/GITHUB-WORKFLOW.md) — Issue/branch/PR lifecycle, merge gates, failure classification, and architecture guardrails.
+- [`docs/GITHUB-LABEL-TAXONOMY.md`](docs/GITHUB-LABEL-TAXONOMY.md) — canonical status/type/priority/area labels.
+- [`docs/GITHUB-ACTIONS-SUPPORT-PACKET.md`](docs/GITHUB-ACTIONS-SUPPORT-PACKET.md) — current hosted-runner pre-step blocker evidence and escalation packet.
+
+Evidence remains fail-closed:
+
+```text
+IMPLEMENTED != EXECUTED
+EXECUTED != ACCEPTED
+ORCHESTRATOR_DONE != METAO_ACCEPTED
+```
+
 ## Quickstart
 
 The public operator API takes an explicit durable-execution port. With a running Conductor instance:
