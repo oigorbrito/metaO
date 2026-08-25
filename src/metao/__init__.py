@@ -1,6 +1,5 @@
 from .catalog import CatalogEntryAlreadyExists, OrchestratorCatalog, OrchestratorCatalogEntry
 from .core import (
-    EvidenceEnvelope,
     ExecutionRequest,
     ExecutionResult,
     ExecutionStatus,
@@ -11,6 +10,7 @@ from .core import (
     OrchestratorDescriptor,
     OrchestratorRegistry,
 )
+from .evidence import EvidenceEnvelope
 from .execution_handle import (
     ActiveExecutionHandle,
     ActiveExecutionNotFound,
