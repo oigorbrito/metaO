@@ -17,6 +17,12 @@ from metao.core import (
     Mission,
 )
 from metao.evidence import EvidenceEnvelope as CanonicalEvidenceEnvelope
+from metao.sqlite_store import (
+    MissionStoreCorrupt,
+    _SCHEMA_VERSION,
+    _decode_core_evidence,
+    _encode_core_evidence,
+)
 
 
 class Roadmap8WorkUnit01CanonicalEvidenceEnvelopeTests(unittest.TestCase):
@@ -36,18 +42,14 @@ class Roadmap8WorkUnit01CanonicalEvidenceEnvelopeTests(unittest.TestCase):
             },
         )
 
-    def test_public_core_and_acceptance_exports_are_same_class(self):
-        self.assertIs(metao.EvidenceEnvelope, CanonicalEvidenceEnvelope)
-        self.assertIs(CoreEvidenceEnvelope, CanonicalEvidenceEnvelope)
-        self.assertIs(AcceptanceEvidenceEnvelope, CanonicalEvidenceEnvelope)
-
-    def test_legacy_read_aliases_are_deterministic(self):
-        item = CanonicalEvidenceEnvelope(
+    def _canonical_item(self) -> CanonicalEvidenceEnvelope:
+        return CanonicalEvidenceEnvelope(
             evidence_id="e1",
             obligation_id="result",
             mission_id="mission-1",
             execution_id="exec-1",
             orchestrator_id="orch-1",
+            adapter_id="adapter-1",
             adapter_version="1",
             attempt_id="attempt-1",
             subject_id="subject-1",
@@ -59,9 +61,21 @@ class Roadmap8WorkUnit01CanonicalEvidenceEnvelopeTests(unittest.TestCase):
             provenance_root="root-1",
             authority_id="authority-1",
             passed=True,
+            created_at_epoch=10.0,
+            expires_at_epoch=20.0,
             approval_id="approval-1",
+            confidence=0.9,
+            verification_cost_units=3,
         )
-        self.assertEqual(item.adapter_id, "orch-1")
+
+    def test_public_core_and_acceptance_exports_are_same_class(self):
+        self.assertIs(metao.EvidenceEnvelope, CanonicalEvidenceEnvelope)
+        self.assertIs(CoreEvidenceEnvelope, CanonicalEvidenceEnvelope)
+        self.assertIs(AcceptanceEvidenceEnvelope, CanonicalEvidenceEnvelope)
+
+    def test_legacy_read_aliases_are_deterministic(self):
+        item = self._canonical_item()
+        self.assertEqual(item.adapter_id, "adapter-1")
         self.assertEqual(item.obligation_ids, frozenset({"result"}))
         self.assertEqual(item.evidence_payload_digest, "digest-1")
         self.assertEqual(item.provenance, "root-1")
@@ -99,6 +113,41 @@ class Roadmap8WorkUnit01CanonicalEvidenceEnvelopeTests(unittest.TestCase):
         )
         self.assertIs(result.evidence[0], item)
         self.assertIsInstance(result.evidence[0], CanonicalEvidenceEnvelope)
+
+    def test_sqlite_evidence_round_trip_preserves_all_acceptance_bindings(self):
+        item = self._canonical_item()
+        encoded = _encode_core_evidence(item)
+        decoded = _decode_core_evidence(encoded)
+        self.assertEqual(_SCHEMA_VERSION, 4)
+        self.assertEqual(decoded, item)
+        self.assertEqual(encoded["evidence_id"], "e1")
+        self.assertEqual(encoded["authority_id"], "authority-1")
+        self.assertIs(encoded["passed"], True)
+        self.assertEqual(encoded["payload_digest"], "digest-1")
+        self.assertEqual(encoded["provenance_root"], "root-1")
+
+    def test_legacy_persisted_evidence_fails_closed_instead_of_fabricating_authority(self):
+        legacy = {
+            "mission_id": "mission-1",
+            "execution_id": "exec-1",
+            "orchestrator_id": "orch-1",
+            "adapter_id": "adapter-1",
+            "adapter_version": "1",
+            "attempt_id": "attempt-1",
+            "subject_id": "subject-1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "verify-1",
+            "policy_bundle_id": "policy-1",
+            "obligation_ids": ["result"],
+            "evidence_payload_digest": "digest-1",
+            "provenance": "root-1",
+            "verifier_id": "verifier-1",
+        }
+        with self.assertRaisesRegex(
+            MissionStoreCorrupt,
+            "legacy evidence envelope cannot be safely upgraded",
+        ):
+            _decode_core_evidence(legacy)
 
     def test_canonical_boundary_has_no_orchestrator_sdk_imports(self):
         root = Path(__file__).parents[2] / "src" / "metao"
