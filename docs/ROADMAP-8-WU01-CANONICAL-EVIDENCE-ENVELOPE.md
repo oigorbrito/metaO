@@ -153,11 +153,9 @@ The approved donor pattern is Inspect AI at the frozen pin:
 
 ```text
 UKGovernmentBEIS/inspect_ai
-eb f4815ee260afcc8c34ad9d66e6f8d98a89e905
+ebf4815ee260afcc8c34ad9d66e6f8d98a89e905
 src/inspect_ai/util/_limit.py
 ```
-
-(Commit shown without spaces in repository metadata: `ebf4815ee260afcc8c34ad9d66e6f8d98a89e905`.)
 
 ## Current evidence status
 
