@@ -218,11 +218,13 @@ class RealDeclarativeCertifiedRuntimesV1Tests(unittest.TestCase):
             )
             ids = {item.orchestrator_id for item in restarted.runtime_entries()}
             certificates = SQLiteRuntimeCertificationStore(db)
+            langgraph_history = certificates.history("langgraph-real")
+            crewai_history = certificates.history("crewai-real")
         self.assertEqual(ids, {"langgraph-real", "crewai-real"})
         self.assertEqual(self.graph_calls["count"], 0)
         self.assertEqual(SandboxLLM.calls, 0)
-        self.assertEqual(len(certificates.history("langgraph-real")), 1)
-        self.assertEqual(len(certificates.history("crewai-real")), 1)
+        self.assertEqual(len(langgraph_history), 1)
+        self.assertEqual(len(crewai_history), 1)
 
 
 if __name__ == "__main__":

@@ -18,6 +18,7 @@ from .core import ExecutionRequest, OrchestratorContract, OrchestratorRegistry
 from .runtime_certification import (
     RuntimeCertification,
     RuntimeCertificationStorePort,
+    certificate_identity,
     is_certificate_fresh,
     record_report,
 )
@@ -124,10 +125,22 @@ class RuntimeAdmissionGate:
         report = evaluate_runtime_conformance(orchestrator, normalizer, probe_request)
         certification = None
         if self._certifications is not None:
+            runtime_version = _runtime_version(orchestrator)
+            certificate_id = certificate_identity(
+                report.orchestrator_id,
+                runtime_version,
+                probe_request.execution_id,
+                certified_at_epoch=certified_at_epoch,
+            )
+            if is_certificate_revoked(self._revocations, certificate_id):
+                raise RuntimeCertificateAdmissionError(
+                    "active probe resolved to a revoked certificate generation"
+                )
+
             certification = record_report(
                 self._certifications,
                 report,
-                runtime_version=_runtime_version(orchestrator),
+                runtime_version=runtime_version,
                 probe_execution_id=probe_request.execution_id,
                 certified_at_epoch=certified_at_epoch,
             )

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -30,7 +31,7 @@ class SQLiteRuntimeCertificationRevocationStore:
         return sqlite3.connect(self._path, timeout=5.0)
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS runtime_certification_revocations (
@@ -65,7 +66,7 @@ class SQLiteRuntimeCertificationRevocationStore:
     def record(
         self, revocation: RuntimeCertificationRevocation
     ) -> RuntimeCertificationRevocation:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,reason,actor_id,revoked_at_epoch
@@ -95,7 +96,7 @@ class SQLiteRuntimeCertificationRevocationStore:
         return revocation
 
     def get(self, certificate_id: str) -> RuntimeCertificationRevocation | None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,reason,actor_id,revoked_at_epoch
@@ -106,7 +107,7 @@ class SQLiteRuntimeCertificationRevocationStore:
         return None if row is None else self._decode(row)
 
     def history(self, orchestrator_id: str) -> tuple[RuntimeCertificationRevocation, ...]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT certificate_id,orchestrator_id,reason,actor_id,revoked_at_epoch

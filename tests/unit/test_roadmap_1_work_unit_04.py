@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -179,7 +180,7 @@ class SQLiteMissionStoreV1Tests(unittest.TestCase):
     def test_cross_column_corruption_is_detected(self):
         store = SQLiteMissionStore(self.db_path)
         store.create(make_record())
-        with sqlite3.connect(self.db_path) as connection:
+        with closing(sqlite3.connect(self.db_path)) as connection, connection:
             connection.execute("UPDATE mission_records SET status='FAILED' WHERE mission_id='m-1'")
         with self.assertRaises(MissionStoreCorrupt):
             store.get("m-1")
