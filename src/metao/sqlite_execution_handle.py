@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -32,7 +33,7 @@ class SQLiteExecutionHandleStore:
         return sqlite3.connect(self._path, timeout=5.0)
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS active_mission_executions (
@@ -84,7 +85,7 @@ class SQLiteExecutionHandleStore:
             raise ExecutionHandleCorrupt("invalid active execution handle row") from exc
 
     def get(self, mission_id: str) -> ActiveExecutionHandle:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """SELECT mission_id,execution_id,orchestrator_id,attempt_number,
                           started_at_epoch,cost,status,cancel_requested,cancel_delegated,
@@ -97,7 +98,7 @@ class SQLiteExecutionHandleStore:
         return self._decode(row)
 
     def activate(self, handle: ActiveExecutionHandle) -> ActiveExecutionHandle:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             previous = connection.execute(
                 "SELECT cancel_requested,cancel_delegated FROM active_mission_executions WHERE mission_id=?",
@@ -140,7 +141,7 @@ class SQLiteExecutionHandleStore:
         return self.get(handle.mission_id)
 
     def request_cancel(self, mission_id: str) -> ActiveExecutionHandle:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             cursor = connection.execute(
                 "UPDATE active_mission_executions SET cancel_requested=1 WHERE mission_id=?",
@@ -151,7 +152,7 @@ class SQLiteExecutionHandleStore:
         return self.get(mission_id)
 
     def mark_cancel_delegated(self, mission_id: str) -> ActiveExecutionHandle:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             cursor = connection.execute(
                 "UPDATE active_mission_executions SET cancel_requested=1,cancel_delegated=1 WHERE mission_id=?",
@@ -168,7 +169,7 @@ class SQLiteExecutionHandleStore:
         ended_at_epoch: float,
         execution_status: ExecutionStatus,
     ) -> ActiveExecutionHandle:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             cursor = connection.execute(
                 """UPDATE active_mission_executions

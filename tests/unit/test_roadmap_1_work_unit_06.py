@@ -258,7 +258,20 @@ class MetaOCliV1Tests(unittest.TestCase):
 
     def test_installed_console_script_is_executable(self):
         executable = shutil.which("metao")
-        self.assertIsNotNone(executable, "metao console script is not installed on PATH")
+        if executable is None:
+            scripts_dir = Path(sys.executable).resolve().parent
+            executable = next(
+                (
+                    str(candidate)
+                    for candidate in (
+                        scripts_dir / "metao.exe",
+                        scripts_dir / "metao",
+                    )
+                    if candidate.is_file()
+                ),
+                None,
+            )
+        self.assertIsNotNone(executable, "metao console script is not installed in the active environment")
         completed = subprocess.run(
             [executable, "--help"],
             capture_output=True,

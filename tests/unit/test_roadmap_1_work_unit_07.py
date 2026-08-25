@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from dataclasses import FrozenInstanceError
 from pathlib import Path
 import sqlite3
@@ -301,7 +302,7 @@ class ObservabilityEventLedgerV1Tests(unittest.TestCase):
             with self.assertRaises(TypeError):
                 ledger.append("m1", MissionEventKind.MISSION_CREATED, payload={"bad": {1, 2}})
             ledger.append("m1", MissionEventKind.MISSION_CREATED)
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection, connection:
                 connection.execute("UPDATE mission_events SET event_id='forged' WHERE mission_id='m1'")
             with self.assertRaises(EventLedgerCorrupt):
                 SQLiteEventLedger(path).list("m1")

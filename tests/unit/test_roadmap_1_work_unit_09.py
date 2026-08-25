@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from io import StringIO
 import json
 from pathlib import Path
@@ -205,7 +206,7 @@ class DetailedAttemptTelemetryV1Tests(unittest.TestCase):
             path = Path(temp) / "metao.db"
             store = SQLiteMissionStore(path)
             store.create(MissionRecord(mission, outcome))
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection, connection:
                 raw = connection.execute(
                     "SELECT record_json FROM mission_records WHERE mission_id='telemetry-mission'"
                 ).fetchone()[0]

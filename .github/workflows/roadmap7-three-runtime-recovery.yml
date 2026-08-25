@@ -1,0 +1,49 @@
+name: Roadmap 7 Three Runtime Recovery
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/roadmap7-three-runtime-recovery.yml'
+      - 'src/metao/control_plane.py'
+      - 'src/metao/operator.py'
+      - 'src/metao/adapters/**'
+      - 'tests/integration/_openai_agents_model.py'
+      - 'tests/integration/test_r7_wu03_three_runtime_recovery.py'
+      - 'tests/integration/test_r6_wu05_three_real_runtimes.py'
+      - 'tests/unit/test_roadmap_7_work_unit_01.py'
+      - 'tests/unit/test_roadmap_7_work_unit_02.py'
+      - 'docs/ROADMAP-7-WU03-THREE-RUNTIME-RECOVERY-REGRESSION.md'
+
+jobs:
+  three-runtime-recovery:
+    runs-on: ubuntu-24.04
+    env:
+      CREWAI_DISABLE_TELEMETRY: 'true'
+      CREWAI_TRACING_ENABLED: 'false'
+      OTEL_SDK_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install metaO and pinned runtimes
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install 'openai-agents==0.20.0' 'crewai==1.15.16' 'langgraph==1.2.11'
+      - name: Confirm exact runtime versions
+        run: |
+          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'; assert version('crewai') == '1.15.16'; assert version('langgraph') == '1.2.11'; print('OpenAI Agents', version('openai-agents')); print('CrewAI', version('crewai')); print('LangGraph', version('langgraph'))"
+      - name: Roadmap 7 real three-runtime recovery
+        run: python tests/integration/test_r7_wu03_three_runtime_recovery.py
+      - name: Roadmap 7 focused unit regressions
+        run: |
+          python tests/unit/test_roadmap_7_work_unit_01.py
+          python tests/unit/test_roadmap_7_work_unit_02.py
+      - name: Roadmap 6 three-runtime regression
+        run: python tests/integration/test_r6_wu05_three_real_runtimes.py
+      - name: Full unit suite regression
+        run: python -m unittest discover -s tests/unit -p 'test_*.py' -v
+      - name: Preserve SDK-neutral Core/control-plane boundary
+        run: |
+          ! grep -R -E '^(from|import) (langgraph|crewai|agents|openai)' src/metao --exclude-dir=adapters

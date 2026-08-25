@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 from typing import Any
@@ -27,7 +28,7 @@ class SQLiteRuntimeControlStore:
         return sqlite3.connect(self._path, timeout=5.0)
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS runtime_control_history (
@@ -77,7 +78,7 @@ class SQLiteRuntimeControlStore:
             updated_at_epoch,
             1,
         )
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT MAX(revision) FROM runtime_control_history WHERE orchestrator_id=?",
@@ -104,7 +105,7 @@ class SQLiteRuntimeControlStore:
         return current
 
     def current(self, orchestrator_id: str) -> RuntimeControlRecord | None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 """
                 SELECT orchestrator_id,revision,disposition,reason,actor_id,updated_at_epoch
@@ -118,7 +119,7 @@ class SQLiteRuntimeControlStore:
         return None if row is None else self._decode(row)
 
     def list_current(self) -> tuple[RuntimeControlRecord, ...]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT h.orchestrator_id,h.revision,h.disposition,h.reason,h.actor_id,h.updated_at_epoch
@@ -136,7 +137,7 @@ class SQLiteRuntimeControlStore:
         return tuple(self._decode(row) for row in rows)
 
     def history(self, orchestrator_id: str) -> tuple[RuntimeControlRecord, ...]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
                 SELECT orchestrator_id,revision,disposition,reason,actor_id,updated_at_epoch

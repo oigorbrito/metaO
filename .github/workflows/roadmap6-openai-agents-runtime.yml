@@ -1,0 +1,43 @@
+name: Roadmap 6 OpenAI Agents Runtime
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/roadmap6-openai-agents-runtime.yml'
+      - 'src/metao/adapters/openai_agents.py'
+      - 'src/metao/runtime_conformance.py'
+      - 'tests/unit/test_roadmap_6_work_unit_04.py'
+      - 'tests/integration/_openai_agents_model.py'
+      - 'tests/integration/test_r6_wu04_openai_agents_real.py'
+      - 'docs/ROADMAP-6-WU04-OPENAI-AGENTS-RUNTIME-ADAPTER.md'
+
+jobs:
+  openai-agents-runtime:
+    runs-on: ubuntu-24.04
+    env:
+      OPENAI_API_KEY: ''
+      OTEL_SDK_DISABLED: 'true'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install metaO and pinned third runtime
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install 'openai-agents==0.20.0'
+      - name: Confirm pinned runtime version
+        run: |
+          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'; print('OpenAI Agents', version('openai-agents'))"
+      - name: WU04 SDK-neutral adapter unit evidence
+        run: python tests/unit/test_roadmap_6_work_unit_04.py
+      - name: WU04 real deterministic runtime conformance evidence
+        run: python tests/integration/test_r6_wu04_openai_agents_real.py
+      - name: Existing runtime conformance regression
+        run: python tests/unit/test_roadmap_3_work_unit_01.py
+      - name: Full unit suite regression
+        run: python -m unittest discover -s tests/unit -p 'test_*.py' -v
+      - name: Enforce SDK-neutral production boundary
+        run: |
+          ! grep -R -E '^[[:space:]]*(from|import)[[:space:]]+(agents|openai)([[:space:].]|$)' src/metao
