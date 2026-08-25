@@ -8,6 +8,7 @@ policy truth before issuing a metaO decision.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Mapping, Protocol, runtime_checkable
 
 
@@ -67,7 +68,7 @@ class PolicyBundle:
     def __post_init__(self) -> None:
         if not self.policy_bundle_id or not self.version:
             raise ValueError("policy bundle requires id and version")
-        object.__setattr__(self, "rules", dict(self.rules))
+        object.__setattr__(self, "rules", MappingProxyType(dict(self.rules)))
 
 
 @runtime_checkable
