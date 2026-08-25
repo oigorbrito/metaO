@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from io import StringIO
 import json
 from pathlib import Path
@@ -245,7 +246,7 @@ class CliObservabilitySurfaceV1Tests(unittest.TestCase):
 
     def test_mission_and_event_tables_share_one_sqlite_database(self):
         self._call("run", str(self._mission_file("cli-one-db")), "--factory", self.factory)
-        with sqlite3.connect(self.db) as connection:
+        with closing(sqlite3.connect(self.db)) as connection, connection:
             tables = {
                 row[0]
                 for row in connection.execute(

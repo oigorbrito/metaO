@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -30,7 +31,7 @@ class SQLiteEventLedger:
         return connection
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS mission_events (
@@ -92,7 +93,7 @@ class SQLiteEventLedger:
             raise ValueError("mission_id is required")
         if occurred_at_epoch < 0:
             raise ValueError("event timestamp must be non-negative")
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT COALESCE(MAX(sequence), 0) FROM mission_events WHERE mission_id = ?",
@@ -122,7 +123,7 @@ class SQLiteEventLedger:
         return event
 
     def list(self, mission_id: str) -> tuple[MissionEvent, ...]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 "SELECT event_id,mission_id,sequence,kind,occurred_at_epoch,payload_json FROM mission_events WHERE mission_id = ? ORDER BY sequence",
                 (mission_id,),
@@ -130,7 +131,7 @@ class SQLiteEventLedger:
         return tuple(self._decode(row) for row in rows)
 
     def all(self) -> tuple[MissionEvent, ...]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 "SELECT event_id,mission_id,sequence,kind,occurred_at_epoch,payload_json FROM mission_events ORDER BY mission_id, sequence"
             ).fetchall()

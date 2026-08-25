@@ -10,7 +10,13 @@ from typing import Callable, Mapping
 from .acceptance import AcceptanceContext, AcceptanceDecision, AcceptanceResult, evaluate_acceptance
 from .core import ExecutionRequest, ExecutionResult, ExecutionStatus, Mission, OrchestratorRegistry
 from .governance import AcceptanceBudget, PolicyDecision, PolicyEffect
-from .replan import FailureClass, classify_failure
+from .replan import (
+    ControlAction,
+    FailureClass,
+    ReplanLimit,
+    classify_failure,
+    evaluate as evaluate_replan,
+)
 from .strategy import OrchestratorPoolState, select_orchestrator
 
 EvidenceNormalizer = Callable[..., object]
@@ -152,10 +158,28 @@ def _attempt_from_outcome(outcome: MissionOutcome, attempt_number: int, executio
     )
 
 
+_RUNTIME_ADVISORY_FAILURE_CLASSES = frozenset(
+    {
+        FailureClass.TRANSIENT,
+        FailureClass.TIMEOUT,
+        FailureClass.RUNTIME,
+    }
+)
+
+
 def _failure_class_for_execution(execution: ExecutionResult) -> FailureClass:
+    """Classify runtime failure without delegating metaO hard-gate authority.
+
+    Adapter/runtime error text is advisory. It may identify runtime, timeout or
+    transient failures for replanning, but it cannot manufacture authoritative
+    metaO POLICY/BUDGET/ACCEPTANCE gates merely by returning matching words.
+    """
+
+    if execution.status is ExecutionStatus.CANCELLED:
+        return FailureClass.CANCELLED
     if execution.error:
         classified = classify_failure(execution.error)
-        if classified is not FailureClass.UNKNOWN:
+        if classified in _RUNTIME_ADVISORY_FAILURE_CLASSES:
             return classified
     return FailureClass.RUNTIME
 
@@ -326,7 +350,7 @@ def execute_mission_once(
             acceptance.reasons,
             started_at_epoch=started_at_epoch,
             ended_at_epoch=ended_at_epoch,
-            failure_class=FailureClass.RUNTIME if not runtime_cancelled else FailureClass.UNKNOWN,
+            failure_class=FailureClass.RUNTIME if not runtime_cancelled else FailureClass.CANCELLED,
             cost=selected_pool.cost,
         )
         state = _state(
@@ -390,6 +414,14 @@ def execute_mission_once(
     return MissionOutcome(mission.mission_id, selected, execution, acceptance, budget_after, (selected,), state)
 
 
+def _terminal_from_failed_outcome(outcome: MissionOutcome) -> MissionStatus:
+    if outcome.execution is not None and outcome.execution.status is ExecutionStatus.CANCELLED:
+        return MissionStatus.CANCELLED
+    if outcome.execution is not None and outcome.execution.status is ExecutionStatus.SUCCEEDED:
+        return MissionStatus.BLOCKED
+    return MissionStatus.FAILED
+
+
 def execute_mission(
     *,
     mission: Mission,
@@ -407,7 +439,7 @@ def execute_mission(
     on_attempt_started: AttemptStarted | None = None,
     on_attempt_finished: AttemptFinished | None = None,
 ) -> MissionOutcome:
-    """Run a mission with auditable, bounded orchestrator failover."""
+    """Run a mission with failure-aware, auditable, bounded failover."""
 
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
@@ -417,6 +449,7 @@ def execute_mission(
     current_budget = budget
     last: MissionOutcome | None = None
     history: list[MissionStatus] = [MissionStatus.CREATED, MissionStatus.PLANNING]
+    replan_limit = ReplanLimit(max_attempts=max_attempts)
 
     for attempt_index in range(max_attempts):
         history.append(MissionStatus.SELECTING)
@@ -477,11 +510,46 @@ def execute_mission(
             return replace(outcome, attempted_orchestrators=tuple(attempted), state=state)
 
         last = outcome
-        if attempt_index + 1 < max_attempts:
+        failure_class = record.failure_class if record is not None else FailureClass.UNKNOWN
+        decision = evaluate_replan(
+            failure_class,
+            attempts=attempt_index + 1,
+            limit=replan_limit,
+        )
+
+        if decision.action is ControlAction.REPLAN:
             history.append(MissionStatus.REPLANNING)
+            continue
+
+        terminal = _terminal_from_failed_outcome(outcome)
+        if decision.action is ControlAction.HALT:
+            reason = f"replan_halt:{failure_class.value}"
+        elif decision.action is ControlAction.ESCALATE:
+            reason = "replan_limit_reached"
+        else:
+            reason = f"replan_unexpected_action:{decision.action.value}"
+
+        acceptance = AcceptanceResult(
+            AcceptanceDecision.BLOCK if decision.action is ControlAction.HALT else outcome.acceptance.decision,
+            outcome.acceptance.reasons + (reason,),
+            outcome.acceptance.proof,
+        )
+        history.append(terminal)
+        state = _state(
+            mission.mission_id,
+            terminal,
+            attempts=tuple(attempt_records),
+            history=tuple(history),
+        )
+        return replace(
+            outcome,
+            acceptance=acceptance,
+            attempted_orchestrators=tuple(attempted),
+            state=state,
+        )
 
     assert last is not None
-    terminal = MissionStatus.BLOCKED if last.execution is not None and last.execution.status is ExecutionStatus.SUCCEEDED else MissionStatus.FAILED
+    terminal = _terminal_from_failed_outcome(last)
     acceptance = AcceptanceResult(
         last.acceptance.decision,
         last.acceptance.reasons + ("replan_limit_reached",),

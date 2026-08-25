@@ -1,0 +1,47 @@
+name: Roadmap 5 Real Certificate Lifecycle
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/roadmap5-real-certificate-lifecycle.yml'
+      - 'src/metao/**'
+      - 'tests/integration/test_r5_wu04_real_certificate_lifecycle.py'
+      - 'docs/ROADMAP-5-WU04-REAL-CERTIFICATE-LIFECYCLE.md'
+  workflow_dispatch:
+
+jobs:
+  real-certificate-lifecycle:
+    runs-on: ubuntu-24.04
+    env:
+      CREWAI_DISABLE_TELEMETRY: 'true'
+      OTEL_SDK_DISABLED: 'true'
+      CREWAI_TRACING_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install metaO and pinned real runtimes
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install 'langgraph==1.2.11' 'crewai==1.15.16'
+      - name: Confirm pinned runtime versions
+        run: |
+          python -c "from importlib.metadata import version; assert version('langgraph') == '1.2.11'; assert version('crewai') == '1.15.16'; print('LangGraph', version('langgraph')); print('CrewAI', version('crewai'))"
+      - name: Roadmap 5 WU04 real lifecycle evidence
+        run: python tests/integration/test_r5_wu04_real_certificate_lifecycle.py
+      - name: Roadmap 4 real certified runtimes regression
+        run: python tests/integration/test_r4_wu03_real_declarative_certified_runtimes.py
+      - name: Roadmap 2 real runtime regression
+        run: python tests/integration/test_r2_wu01_second_real_runtime.py
+      - name: Roadmap 5 unit regressions
+        run: |
+          python -m unittest tests.unit.test_roadmap_5_work_unit_01 -v
+          python -m unittest tests.unit.test_roadmap_5_work_unit_02 -v
+          python -m unittest tests.unit.test_roadmap_5_work_unit_03 -v
+      - name: Full unit suite regression
+        run: python -m unittest discover -s tests/unit -p 'test_*.py' -v
+      - name: Enforce SDK-neutral metaO boundary
+        run: |
+          ! grep -R -E '^(from|import) (langgraph|crewai)' src/metao --exclude-dir=adapters

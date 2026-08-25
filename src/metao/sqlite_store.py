@@ -10,6 +10,7 @@ coercion are intentionally avoided.
 
 from __future__ import annotations
 
+from contextlib import closing
 from collections.abc import Mapping
 from dataclasses import replace
 import json
@@ -439,7 +440,7 @@ class SQLiteMissionStore:
         return connection
 
     def _initialize(self) -> None:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute(
                 """
                 CREATE TABLE IF NOT EXISTS mission_records (
@@ -470,7 +471,7 @@ class SQLiteMissionStore:
         return record
 
     def contains(self, mission_id: str) -> bool:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 "SELECT 1 FROM mission_records WHERE mission_id = ?", (mission_id,)
             ).fetchone()
@@ -479,7 +480,7 @@ class SQLiteMissionStore:
     def create(self, record: MissionRecord) -> None:
         raw = _record_to_json(record)
         try:
-            with self._connect() as connection:
+            with closing(self._connect()) as connection, connection:
                 connection.execute(
                     "INSERT INTO mission_records(mission_id,status,revision,schema_version,record_json) VALUES(?,?,?,?,?)",
                     (record.mission_id, record.status.value, record.revision, _SCHEMA_VERSION, raw),
@@ -488,7 +489,7 @@ class SQLiteMissionStore:
             raise MissionAlreadyExists(record.mission_id) from exc
 
     def get(self, mission_id: str) -> MissionRecord:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             row = connection.execute(
                 "SELECT mission_id,status,revision,schema_version,record_json FROM mission_records WHERE mission_id = ?",
                 (mission_id,),
@@ -498,7 +499,7 @@ class SQLiteMissionStore:
         return self._validated(row)
 
     def replace(self, record: MissionRecord) -> MissionRecord:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 "SELECT revision FROM mission_records WHERE mission_id = ?", (record.mission_id,)
@@ -514,7 +515,7 @@ class SQLiteMissionStore:
         return updated
 
     def list(self) -> tuple[MissionRecord, ...]:
-        with self._connect() as connection:
+        with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 "SELECT mission_id,status,revision,schema_version,record_json FROM mission_records ORDER BY mission_id"
             ).fetchall()
