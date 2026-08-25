@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from math import isfinite
 from typing import Protocol, runtime_checkable
 
 
@@ -67,13 +68,23 @@ class VerificationUsage:
         )
         if not all(required_ids):
             raise ValueError("verification usage requires all identity bindings")
+        finite_values = (
+            self.started_at_epoch,
+            self.ended_at_epoch,
+            self.money,
+            self.wall_time_s,
+        )
+        if not all(isfinite(value) for value in finite_values):
+            raise ValueError("verification usage numeric values must be finite")
         if self.started_at_epoch < 0 or self.ended_at_epoch < 0:
             raise ValueError("verification usage timestamps must be non-negative")
         if self.ended_at_epoch < self.started_at_epoch:
             raise ValueError("verification usage end timestamp cannot precede start")
         if self.money < 0 or self.tokens < 0 or self.wall_time_s < 0:
             raise ValueError("verification resource usage cannot be negative")
-        if self.verifier_attempts != 1:
+        if isinstance(self.tokens, bool) or not isinstance(self.tokens, int):
+            raise ValueError("verification token usage must be an integer")
+        if self.verifier_attempts != 1 or isinstance(self.verifier_attempts, bool):
             raise ValueError("one VerificationUsage record must represent exactly one attempt")
 
 
@@ -95,11 +106,21 @@ class InMemoryAcceptanceUsageStore:
 
     def __init__(self) -> None:
         self._by_id: dict[str, VerificationUsage] = {}
+        self._attempt_keys: set[tuple[str, str, str, str]] = set()
 
     def append(self, usage: VerificationUsage) -> None:
         if usage.usage_id in self._by_id:
             raise DuplicateUsage(usage.usage_id)
+        attempt_key = (
+            usage.mission_id,
+            usage.execution_id,
+            usage.verification_request_id,
+            usage.attempt_id,
+        )
+        if attempt_key in self._attempt_keys:
+            raise DuplicateUsage(":".join(attempt_key))
         self._by_id[usage.usage_id] = usage
+        self._attempt_keys.add(attempt_key)
 
     def for_mission(self, mission_id: str) -> tuple[VerificationUsage, ...]:
         return tuple(
