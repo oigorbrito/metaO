@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+from dataclasses import replace
 from pathlib import Path
 import unittest
 
@@ -80,6 +81,44 @@ class Roadmap8WorkUnit01CanonicalEvidenceEnvelopeTests(unittest.TestCase):
         self.assertEqual(item.evidence_payload_digest, "digest-1")
         self.assertEqual(item.provenance, "root-1")
         self.assertEqual(item.approval_evidence, "approval-1")
+
+    def test_canonical_boundary_rejects_empty_required_bindings(self):
+        item = self._canonical_item()
+        for field in (
+            "evidence_id",
+            "obligation_id",
+            "mission_id",
+            "execution_id",
+            "orchestrator_id",
+            "adapter_version",
+            "attempt_id",
+            "subject_id",
+            "subject_state_id",
+            "verification_context_id",
+            "policy_bundle_id",
+            "verifier_id",
+            "payload_digest",
+            "provenance_root",
+            "authority_id",
+        ):
+            with self.subTest(field=field), self.assertRaisesRegex(
+                ValueError, "empty required binding"
+            ):
+                replace(item, **{field: ""})
+
+    def test_adapter_id_fallback_remains_nonempty_and_deterministic(self):
+        item = replace(self._canonical_item(), adapter_id="")
+        self.assertEqual(item.adapter_id, item.orchestrator_id)
+
+    def test_confidence_and_opaque_cost_validation_survive_consolidation(self):
+        item = self._canonical_item()
+        for confidence in (-0.01, 1.01):
+            with self.subTest(confidence=confidence), self.assertRaisesRegex(
+                ValueError, "confidence must be within"
+            ):
+                replace(item, confidence=confidence)
+        with self.assertRaisesRegex(ValueError, "verification_cost_units"):
+            replace(item, verification_cost_units=-1)
 
     def test_all_current_normalizers_return_canonical_envelope(self):
         normalizers = (
