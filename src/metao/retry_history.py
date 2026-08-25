@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from math import isfinite
 from typing import Protocol, runtime_checkable
 
 
@@ -36,8 +37,10 @@ class RetryHistoryEntry:
     def __post_init__(self) -> None:
         if not all((self.history_id, self.mission_id, self.execution_id, self.orchestrator_id)):
             raise ValueError("retry history entry requires identity bindings")
-        if self.attempt_number < 1:
-            raise ValueError("retry history attempt number must be positive")
+        if isinstance(self.attempt_number, bool) or not isinstance(self.attempt_number, int) or self.attempt_number < 1:
+            raise ValueError("retry history attempt number must be a positive integer")
+        if not all(isfinite(value) for value in (self.started_at_epoch, self.ended_at_epoch, self.execution_cost)):
+            raise ValueError("retry history numeric values must be finite")
         if self.started_at_epoch < 0 or self.ended_at_epoch < 0:
             raise ValueError("retry history timestamps must be non-negative")
         if self.ended_at_epoch < self.started_at_epoch:
@@ -61,11 +64,18 @@ class InMemoryRetryHistoryStore:
     def __init__(self) -> None:
         self._entries: list[RetryHistoryEntry] = []
         self._ids: set[str] = set()
+        self._attempt_keys: set[tuple[str, int, str]] = set()
 
     def append(self, entry: RetryHistoryEntry) -> None:
         if entry.history_id in self._ids:
             raise RetryHistoryDuplicate(entry.history_id)
+        attempt_key = (entry.mission_id, entry.attempt_number, entry.execution_id)
+        if attempt_key in self._attempt_keys:
+            raise RetryHistoryDuplicate(
+                f"{entry.mission_id}:{entry.attempt_number}:{entry.execution_id}"
+            )
         self._ids.add(entry.history_id)
+        self._attempt_keys.add(attempt_key)
         self._entries.append(entry)
 
     def for_mission(self, mission_id: str) -> tuple[RetryHistoryEntry, ...]:
