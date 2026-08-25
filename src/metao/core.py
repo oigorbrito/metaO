@@ -5,6 +5,8 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Any, Mapping, Protocol, runtime_checkable
 
+from .evidence import EvidenceEnvelope
+
 
 class HealthStatus(StrEnum):
     HEALTHY = "HEALTHY"
@@ -58,42 +60,6 @@ class ExecutionRequest:
         if not self.execution_id:
             raise ValueError("execution_id is required")
         object.__setattr__(self, "context", MappingProxyType(dict(self.context)))
-
-
-@dataclass(frozen=True, slots=True)
-class EvidenceEnvelope:
-    mission_id: str
-    execution_id: str
-    orchestrator_id: str
-    adapter_id: str
-    adapter_version: str
-    attempt_id: str
-    subject_id: str
-    subject_state_id: str
-    verification_context_id: str
-    policy_bundle_id: str
-    obligation_ids: frozenset[str]
-    evidence_payload_digest: str
-    provenance: str
-    verifier_id: str
-    approval_evidence: str = ""
-    confidence: float | None = None
-    verification_cost_units: int = 0
-
-    def __post_init__(self) -> None:
-        required = (
-            self.mission_id, self.execution_id, self.orchestrator_id,
-            self.adapter_id, self.adapter_version, self.attempt_id,
-            self.subject_id, self.subject_state_id, self.verification_context_id,
-            self.policy_bundle_id, self.evidence_payload_digest,
-            self.provenance, self.verifier_id,
-        )
-        if not all(required):
-            raise ValueError("evidence envelope contains an empty required binding")
-        if self.confidence is not None and not 0.0 <= self.confidence <= 1.0:
-            raise ValueError("confidence must be within [0, 1]")
-        if self.verification_cost_units < 0:
-            raise ValueError("verification_cost_units must be non-negative")
 
 
 @dataclass(frozen=True, slots=True)
