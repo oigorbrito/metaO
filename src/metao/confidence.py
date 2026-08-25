@@ -79,6 +79,8 @@ def advise_from_confidence(
 ) -> ConfidenceAction:
     """Return an advisory action without creating terminal acceptance authority."""
 
+    if not isinstance(hard_gates_passed, bool):
+        raise TypeError("hard_gates_passed must be bool")
     if not hard_gates_passed:
         return ConfidenceAction.REJECT
     if confidence.score >= policy.minimum_continue:
