@@ -1,10 +1,10 @@
 # Release Evidence Validator
 
-Status: PREPARED INDEPENDENTLY OF THE LOCAL RELEASE-GATE RESULT.
+Status: PREPARED AS INDEPENDENT RELEASE-HARNESS TOOLING.
 
 ## Purpose
 
-The local release gate writes machine-readable JSON, but merge authority must not depend on manually reading a console summary or trusting only the top-level `overall` field.
+The local release gate writes machine-readable JSON, but release authority must not depend on manually reading a console summary or trusting only the top-level `overall` field.
 
 This validator provides a separate fail-closed check for release evidence produced by `scripts/run-local-release-gate.ps1`.
 
@@ -56,18 +56,25 @@ A JSON file is accepted as `VALID_PASS` only when all of the following are true:
 
 Therefore a forged/inconsistent top-level PASS cannot hide a failed, missing, duplicated or unexpected gate.
 
-## Current canonical candidate
+## Validated Roadmap 7 candidate
 
-The currently frozen Roadmap 7 candidate remains:
+The Roadmap 7 candidate that completed the local functional gate was:
 
 ```text
 branch = roadmap7/integration-candidate-v1
-commit = 8d5cd2b3d2d06643c8fcb5f404b2399b78948c68
+commit = aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea
+local_release_gate = PASS 21/21
 ```
 
-This validator is developed on a separate branch so the frozen candidate SHA does not move while local execution may be in progress.
+PR #68 was subsequently merged into `main` as:
 
-## Usage after the gate produces evidence
+```text
+merge_commit = 58feb12531982342bf3c12b9e8b8c61a5e819c5f
+```
+
+The validator remains useful for independently checking the machine-readable evidence from that run and for future release candidates. The actual JSON evidence file is external to the repository, so its validation is a separate operation from merging this tooling.
+
+## Usage
 
 Find the most recent evidence file:
 
@@ -77,12 +84,12 @@ $Evidence = Get-ChildItem "$env:LOCALAPPDATA\metaO\release-gate-evidence\gate-*.
     Select-Object -First 1
 ```
 
-Validate it against the exact candidate:
+Validate it against the exact candidate that produced it:
 
 ```powershell
 py -3.12 .\scripts\validate_release_evidence.py `
     $Evidence.FullName `
-    --expected-commit 8d5cd2b3d2d06643c8fcb5f404b2399b78948c68 `
+    --expected-commit aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea `
     --expected-branch roadmap7/integration-candidate-v1
 ```
 
@@ -91,10 +98,12 @@ Valid output:
 ```text
 RELEASE_EVIDENCE = VALID_PASS
 BRANCH = roadmap7/integration-candidate-v1
-COMMIT = 8d5cd2b3d2d06643c8fcb5f404b2399b78948c68
+COMMIT = aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea
 GATES = 21
 FAILURES = 0
 ```
+
+For later release candidates, always pass the exact branch and commit recorded in the evidence being checked.
 
 ## Exit codes
 
@@ -104,7 +113,7 @@ FAILURES = 0
 2 = evidence file could not be read or parsed
 ```
 
-Any nonzero result is fail-closed and must not be used to promote PR #68.
+Any nonzero result is fail-closed and must not be used as release evidence.
 
 ## Tests
 
