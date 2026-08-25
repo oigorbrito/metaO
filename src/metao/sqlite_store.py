@@ -33,8 +33,8 @@ from .mission_store import MissionAlreadyExists, MissionNotFound, MissionRecord,
 from .replan import FailureClass
 
 
-_SCHEMA_VERSION = 3
-_SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2, 3})
+_SCHEMA_VERSION = 4
+_SUPPORTED_SCHEMA_VERSIONS = frozenset({1, 2, 3, 4})
 
 
 class MissionStoreCorrupt(RuntimeError):
@@ -61,7 +61,11 @@ def _json_value(value: Any) -> Any:
 
 
 def _encode_core_evidence(item: CoreEvidenceEnvelope) -> dict[str, Any]:
+    """Encode the canonical evidence contract without dropping trust bindings."""
+
     return {
+        "evidence_id": item.evidence_id,
+        "obligation_id": item.obligation_id,
         "mission_id": item.mission_id,
         "execution_id": item.execution_id,
         "orchestrator_id": item.orchestrator_id,
@@ -72,34 +76,66 @@ def _encode_core_evidence(item: CoreEvidenceEnvelope) -> dict[str, Any]:
         "subject_state_id": item.subject_state_id,
         "verification_context_id": item.verification_context_id,
         "policy_bundle_id": item.policy_bundle_id,
-        "obligation_ids": sorted(item.obligation_ids),
-        "evidence_payload_digest": item.evidence_payload_digest,
-        "provenance": item.provenance,
         "verifier_id": item.verifier_id,
-        "approval_evidence": item.approval_evidence,
+        "payload_digest": item.payload_digest,
+        "provenance_root": item.provenance_root,
+        "authority_id": item.authority_id,
+        "passed": item.passed,
+        "created_at_epoch": item.created_at_epoch,
+        "expires_at_epoch": item.expires_at_epoch,
+        "approval_id": item.approval_id,
         "confidence": item.confidence,
         "verification_cost_units": item.verification_cost_units,
     }
 
 
 def _decode_core_evidence(data: Mapping[str, Any]) -> CoreEvidenceEnvelope:
+    """Decode canonical evidence and reject unsafe legacy reconstruction.
+
+    Mission snapshot schemas <=3 could persist the former Core-only envelope,
+    which did not contain acceptance-critical ``evidence_id``, ``authority_id``
+    or ``passed`` bindings. Those values cannot be manufactured safely during a
+    migration, so legacy evidence-bearing snapshots fail closed instead.
+    """
+
+    if "evidence_id" not in data:
+        raise MissionStoreCorrupt(
+            "legacy evidence envelope cannot be safely upgraded to canonical evidence"
+        )
+    passed = data.get("passed")
+    if not isinstance(passed, bool):
+        raise MissionStoreCorrupt("canonical evidence passed flag must be boolean")
+    confidence = data.get("confidence")
+    if confidence is not None:
+        confidence = float(confidence)
+    expires_at_epoch = data.get("expires_at_epoch")
+    if expires_at_epoch is not None:
+        expires_at_epoch = float(expires_at_epoch)
+    approval_id = data.get("approval_id")
+    if approval_id is not None:
+        approval_id = str(approval_id)
     return CoreEvidenceEnvelope(
+        evidence_id=str(data["evidence_id"]),
+        obligation_id=str(data["obligation_id"]),
         mission_id=str(data["mission_id"]),
         execution_id=str(data["execution_id"]),
         orchestrator_id=str(data["orchestrator_id"]),
-        adapter_id=str(data["adapter_id"]),
+        adapter_id=str(data.get("adapter_id", "")),
         adapter_version=str(data["adapter_version"]),
         attempt_id=str(data["attempt_id"]),
         subject_id=str(data["subject_id"]),
         subject_state_id=str(data["subject_state_id"]),
         verification_context_id=str(data["verification_context_id"]),
         policy_bundle_id=str(data["policy_bundle_id"]),
-        obligation_ids=frozenset(str(item) for item in data["obligation_ids"]),
-        evidence_payload_digest=str(data["evidence_payload_digest"]),
-        provenance=str(data["provenance"]),
         verifier_id=str(data["verifier_id"]),
-        approval_evidence=str(data.get("approval_evidence", "")),
-        confidence=data.get("confidence"),
+        payload_digest=str(data["payload_digest"]),
+        provenance_root=str(data["provenance_root"]),
+        authority_id=str(data["authority_id"]),
+        passed=passed,
+        created_at_epoch=float(data.get("created_at_epoch", 0.0)),
+        expires_at_epoch=expires_at_epoch,
+        approval_id=approval_id,
+        confidence=confidence,
         verification_cost_units=int(data.get("verification_cost_units", 0)),
     )
 
