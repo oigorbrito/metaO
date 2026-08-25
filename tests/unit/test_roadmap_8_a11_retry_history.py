@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import unittest
 
 from metao.retry_history import (
@@ -11,12 +12,20 @@ from metao.retry_history import (
 
 
 class RetryHistoryPrimitiveTests(unittest.TestCase):
-    def _entry(self, *, history_id: str = "h-1", mission_id: str = "m-1", attempt: int = 1, started: float = 10.0) -> RetryHistoryEntry:
+    def _entry(
+        self,
+        *,
+        history_id: str = "h-1",
+        mission_id: str = "m-1",
+        attempt: int = 1,
+        started: float = 10.0,
+        execution_id: str | None = None,
+    ) -> RetryHistoryEntry:
         return RetryHistoryEntry(
             history_id=history_id,
             mission_id=mission_id,
             attempt_number=attempt,
-            execution_id=f"exec-{attempt}",
+            execution_id=execution_id or f"exec-{attempt}",
             orchestrator_id="runtime-1",
             started_at_epoch=started,
             ended_at_epoch=started + 1.0,
@@ -32,6 +41,12 @@ class RetryHistoryPrimitiveTests(unittest.TestCase):
         self.assertEqual(store.all(), (entry,))
         with self.assertRaises(RetryHistoryDuplicate):
             store.append(entry)
+
+    def test_same_factual_attempt_cannot_use_new_history_id(self) -> None:
+        store = InMemoryRetryHistoryStore()
+        store.append(self._entry(history_id="h-1"))
+        with self.assertRaises(RetryHistoryDuplicate):
+            store.append(self._entry(history_id="h-forged"))
 
     def test_history_is_not_replaceable_operational_snapshot(self) -> None:
         store = InMemoryRetryHistoryStore()
@@ -53,10 +68,20 @@ class RetryHistoryPrimitiveTests(unittest.TestCase):
         self.assertEqual(InMemoryRetryHistoryStore().for_mission("missing"), ())
 
     def test_invalid_attempt_and_timestamps_are_rejected(self) -> None:
-        with self.assertRaises(ValueError):
-            RetryHistoryEntry("h", "m", 0, "e", "o", 0.0, 1.0, RetryOutcome.FAILED)
+        for attempt in (0, True, 1.5):
+            with self.subTest(attempt=attempt), self.assertRaises(ValueError):
+                RetryHistoryEntry("h", "m", attempt, "e", "o", 0.0, 1.0, RetryOutcome.FAILED)  # type: ignore[arg-type]
         with self.assertRaises(ValueError):
             RetryHistoryEntry("h", "m", 1, "e", "o", 2.0, 1.0, RetryOutcome.FAILED)
+
+    def test_non_finite_numeric_values_are_rejected(self) -> None:
+        for value in (math.nan, math.inf, -math.inf):
+            with self.subTest(field="started", value=value), self.assertRaises(ValueError):
+                RetryHistoryEntry("h", "m", 1, "e", "o", value, 1.0, RetryOutcome.FAILED)
+            with self.subTest(field="ended", value=value), self.assertRaises(ValueError):
+                RetryHistoryEntry("h", "m", 1, "e", "o", 0.0, value, RetryOutcome.FAILED)
+            with self.subTest(field="cost", value=value), self.assertRaises(ValueError):
+                RetryHistoryEntry("h", "m", 1, "e", "o", 0.0, 1.0, RetryOutcome.FAILED, execution_cost=value)
 
     def test_negative_execution_cost_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
