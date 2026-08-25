@@ -1,0 +1,92 @@
+name: Bug / regression
+
+description: Report a reproducible defect or regression with evidence and a fail-closed acceptance target.
+title: "[BUG] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Report observed behavior and evidence separately from assumptions. A failing or missing GitHub runner step is infrastructure evidence, not automatically a product defect.
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      placeholder: What happened? Include exact error/output when possible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      placeholder: What should have happened instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      placeholder: |
+        1. branch / SHA
+        2. command or workflow
+        3. input / setup
+        4. observed output
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: Include commit SHA, workflow/run/job IDs, logs, local command output, or failing test names.
+      placeholder: Exact evidence only; distinguish executed evidence from inference.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Impact
+      options:
+        - Release blocker
+        - Functional regression
+        - Architecture / contract risk
+        - Test / harness defect
+        - Infrastructure blocker
+        - Documentation / workflow defect
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Fix scope / guardrails
+      description: State the smallest acceptable correction and what must not change.
+      placeholder: Prefer adapter/plugin/harness correction; do not weaken Core invariants to make a test pass.
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: |
+        - [ ] failing case reproduced
+        - [ ] concrete root cause identified
+        - [ ] focused regression executes and passes
+        - [ ] broader regression executes and passes
+        - [ ] evidence recorded with exact fixed SHA
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: classification
+    attributes:
+      label: Classification discipline
+      options:
+        - label: The report distinguishes product failure from harness/bootstrap/external infrastructure failure.
+          required: true
+        - label: PASS will not be claimed until the relevant executable regression actually runs.
+          required: true
