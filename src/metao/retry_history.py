@@ -39,8 +39,15 @@ class RetryHistoryEntry:
             raise ValueError("retry history entry requires identity bindings")
         if isinstance(self.attempt_number, bool) or not isinstance(self.attempt_number, int) or self.attempt_number < 1:
             raise ValueError("retry history attempt number must be a positive integer")
-        if not all(isfinite(value) for value in (self.started_at_epoch, self.ended_at_epoch, self.execution_cost)):
-            raise ValueError("retry history numeric values must be finite")
+        for name, value in (
+            ("started_at_epoch", self.started_at_epoch),
+            ("ended_at_epoch", self.ended_at_epoch),
+            ("execution_cost", self.execution_cost),
+        ):
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise ValueError(f"{name} must be numeric and non-boolean")
+            if not isfinite(float(value)):
+                raise ValueError(f"{name} must be finite")
         if self.started_at_epoch < 0 or self.ended_at_epoch < 0:
             raise ValueError("retry history timestamps must be non-negative")
         if self.ended_at_epoch < self.started_at_epoch:
