@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import unittest
 
 from metao.approval_authority import (
@@ -102,6 +103,39 @@ class Roadmap8A08ApproverAuthorityTests(unittest.TestCase):
             ApproverCapability(
                 "cap", "approver", "approve", "mission", "policy", 1, 10.0, 9.0
             )
+
+    def test_boolean_authority_epoch_is_rejected(self) -> None:
+        with self.assertRaises(TypeError):
+            ApprovalAuthorityContext("ctx", True, 1.0)  # type: ignore[arg-type]
+        with self.assertRaises(TypeError):
+            ApproverCapability(
+                "cap", "approver", "approve", "mission", "policy", True, 1.0, 2.0
+            )  # type: ignore[arg-type]
+
+    def test_non_finite_authority_times_are_rejected(self) -> None:
+        for value in (math.nan, math.inf, -math.inf):
+            with self.subTest(field="context_now", value=value), self.assertRaises(ValueError):
+                ApprovalAuthorityContext("ctx", 1, value)
+            with self.subTest(field="not_before", value=value), self.assertRaises(ValueError):
+                ApproverCapability(
+                    "cap", "approver", "approve", "mission", "policy", 1, value, 2.0
+                )
+            with self.subTest(field="expires", value=value), self.assertRaises(ValueError):
+                ApproverCapability(
+                    "cap", "approver", "approve", "mission", "policy", 1, 1.0, value
+                )
+
+    def test_boolean_authority_times_are_rejected(self) -> None:
+        with self.assertRaises(TypeError):
+            ApprovalAuthorityContext("ctx", 1, True)  # type: ignore[arg-type]
+        with self.assertRaises(TypeError):
+            ApproverCapability(
+                "cap", "approver", "approve", "mission", "policy", 1, True, 2.0
+            )  # type: ignore[arg-type]
+        with self.assertRaises(TypeError):
+            ApproverCapability(
+                "cap", "approver", "approve", "mission", "policy", 1, 1.0, True
+            )  # type: ignore[arg-type]
 
 
 if __name__ == "__main__":
