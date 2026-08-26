@@ -58,7 +58,7 @@ class VerificationResourceMeterPort(Protocol):
         request: VerificationRequest,
         verifier_id: str,
         result: VerifierResult | None,
-        error: BaseException | None,
+        error: Exception | None,
     ) -> VerificationResourceFacts: ...
 
 
@@ -74,7 +74,7 @@ class AccountedVerificationResult:
 VerificationClock = Callable[[], float]
 
 
-def _outcome_for_result(result: VerifierResult | None, error: BaseException | None) -> VerificationOutcome:
+def _outcome_for_result(result: VerifierResult | None, error: Exception | None) -> VerificationOutcome:
     if error is not None:
         return VerificationOutcome.ERROR
     assert result is not None
@@ -100,8 +100,13 @@ def execute_accounted_verification(
     """Execute one metaO-selected verifier attempt and record factual usage.
 
     Missing verifier blocks before an attempt begins. Once verification begins,
-    success, failure, or raised verifier error is accounted. Result identity is
+    success, failure, or verifier `Exception` is accounted. Result identity is
     checked before it can proceed toward later evidence normalization.
+
+    If authoritative money/token telemetry is unavailable after execution, this
+    function blocks rather than fabricating zero usage. That state is explicitly
+    not an accounting PASS and remains a composition edge for later durable
+    attempt-start evidence.
     """
 
     if not usage_id or not attempt_id:
@@ -120,10 +125,10 @@ def execute_accounted_verification(
     tick = clock or time
     started = tick()
     result: VerifierResult | None = None
-    error: BaseException | None = None
+    error: Exception | None = None
     try:
         result = verifier.verify(request)
-    except BaseException as exc:  # verifier boundary must fail closed
+    except Exception as exc:
         error = exc
     ended = tick()
 
@@ -134,7 +139,7 @@ def execute_accounted_verification(
             result=result,
             error=error,
         )
-    except BaseException:
+    except Exception:
         return AccountedVerificationResult(
             AccountedVerificationDecision.BLOCK,
             None,
