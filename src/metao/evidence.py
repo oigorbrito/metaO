@@ -8,6 +8,7 @@ and contains no acceptance authority of its own.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 from typing import Optional
 
 
@@ -72,8 +73,37 @@ class EvidenceEnvelope:
         )
         if not all(required):
             raise ValueError("evidence envelope contains an empty required binding")
-        if self.confidence is not None and not 0.0 <= self.confidence <= 1.0:
-            raise ValueError("confidence must be within [0, 1]")
+        if not isinstance(self.passed, bool):
+            raise TypeError("passed must be a boolean")
+
+        for name, value in (
+            ("created_at_epoch", self.created_at_epoch),
+            ("expires_at_epoch", self.expires_at_epoch),
+        ):
+            if value is None:
+                continue
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise TypeError(f"{name} must be numeric and non-boolean")
+            if not isfinite(float(value)) or value < 0:
+                raise ValueError(f"{name} must be finite and non-negative")
+        if (
+            self.expires_at_epoch is not None
+            and self.expires_at_epoch < self.created_at_epoch
+        ):
+            raise ValueError("expires_at_epoch cannot precede created_at_epoch")
+
+        if self.confidence is not None:
+            if isinstance(self.confidence, bool) or not isinstance(
+                self.confidence, (int, float)
+            ):
+                raise TypeError("confidence must be numeric and non-boolean")
+            if not isfinite(float(self.confidence)) or not 0.0 <= self.confidence <= 1.0:
+                raise ValueError("confidence must be finite and within [0, 1]")
+
+        if isinstance(self.verification_cost_units, bool) or not isinstance(
+            self.verification_cost_units, int
+        ):
+            raise TypeError("verification_cost_units must be a non-boolean integer")
         if self.verification_cost_units < 0:
             raise ValueError("verification_cost_units must be non-negative")
 
