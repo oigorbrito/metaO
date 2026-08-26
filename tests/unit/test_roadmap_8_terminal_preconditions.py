@@ -68,7 +68,7 @@ class TerminalPreconditionTests(unittest.TestCase):
                 "authority-context-1",
                 "authority-1",
                 True,
-                request=self.request,
+                self.request,
             ),
             PolicyBundle("policy-1", "v1", {}),
         )
