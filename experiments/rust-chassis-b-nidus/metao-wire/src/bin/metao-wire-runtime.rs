@@ -8,11 +8,18 @@ fn main() {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     for line in stdin.lock().lines() {
-        let line = match line { Ok(line) => line, Err(_) => break };
+        let line = match line {
+            Ok(line) => line,
+            Err(_) => break,
+        };
         let request = match decode_request(&line) {
             Ok(request) => request,
             Err(error) => {
-                let _ = writeln!(stdout, "{{\"error\":{}}}", serde_json::to_string(&error).unwrap());
+                let _ = writeln!(
+                    stdout,
+                    "{{\"error\":{}}}",
+                    serde_json::to_string(&error).unwrap()
+                );
                 let _ = stdout.flush();
                 continue;
             }
@@ -28,7 +35,10 @@ fn main() {
             result: format!("completed:{}", request.objective),
         };
         match encode_response(&response) {
-            Ok(payload) => { let _ = writeln!(stdout, "{payload}"); let _ = stdout.flush(); }
+            Ok(payload) => {
+                let _ = writeln!(stdout, "{payload}");
+                let _ = stdout.flush();
+            }
             Err(_) => break,
         }
     }

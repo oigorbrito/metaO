@@ -26,7 +26,10 @@ pub fn encode_request(request: &WireRequest) -> Result<String, String> {
 pub fn decode_request(payload: &str) -> Result<WireRequest, String> {
     let request: WireRequest = serde_json::from_str(payload).map_err(|error| error.to_string())?;
     if request.protocol_version != PROTOCOL_VERSION {
-        return Err(format!("unsupported protocol version: {}", request.protocol_version));
+        return Err(format!(
+            "unsupported protocol version: {}",
+            request.protocol_version
+        ));
     }
     Ok(request)
 }
@@ -36,9 +39,13 @@ pub fn encode_response(response: &WireResponse) -> Result<String, String> {
 }
 
 pub fn decode_response(payload: &str) -> Result<WireResponse, String> {
-    let response: WireResponse = serde_json::from_str(payload).map_err(|error| error.to_string())?;
+    let response: WireResponse =
+        serde_json::from_str(payload).map_err(|error| error.to_string())?;
     if response.protocol_version != PROTOCOL_VERSION {
-        return Err(format!("unsupported protocol version: {}", response.protocol_version));
+        return Err(format!(
+            "unsupported protocol version: {}",
+            response.protocol_version
+        ));
     }
     Ok(response)
 }

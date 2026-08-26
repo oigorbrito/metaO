@@ -90,5 +90,8 @@ fn canonical_request_encoding_is_deterministic() {
         mission_id: "m".into(),
         objective: "o".into(),
     };
-    assert_eq!(encode_request(&request).unwrap(), encode_request(&request).unwrap());
+    assert_eq!(
+        encode_request(&request).unwrap(),
+        encode_request(&request).unwrap()
+    );
 }
