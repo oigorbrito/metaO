@@ -1,15 +1,21 @@
 use std::io::{BufRead, BufReader, Write};
 use std::process::{Command, Stdio};
+use std::thread;
+use std::time::{Duration, Instant};
 
 use metao_wire::{decode_request, decode_response, encode_request, WireRequest, PROTOCOL_VERSION};
 
-#[test]
-fn external_runtime_process_round_trip_preserves_execution_binding() {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_metao-wire-runtime"))
+fn spawn_runtime() -> std::process::Child {
+    Command::new(env!("CARGO_BIN_EXE_metao-wire-runtime"))
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .spawn()
-        .expect("spawn external fake runtime");
+        .expect("spawn external fake runtime")
+}
+
+#[test]
+fn external_runtime_process_round_trip_preserves_execution_binding() {
+    let mut child = spawn_runtime();
     let request = WireRequest {
         protocol_version: PROTOCOL_VERSION,
         execution_id: "wire-exec-1".into(),
@@ -30,6 +36,37 @@ fn external_runtime_process_round_trip_preserves_execution_binding() {
     assert_eq!(response.status, "SUCCEEDED");
     assert_eq!(response.result, "completed:prove out-of-process seam");
     assert!(child.wait().expect("wait child").success());
+}
+
+#[test]
+fn hanging_external_runtime_can_be_contained_by_process_boundary() {
+    let mut child = spawn_runtime();
+    let request = WireRequest {
+        protocol_version: PROTOCOL_VERSION,
+        execution_id: "wire-timeout-1".into(),
+        mission_id: "wire-timeout-mission".into(),
+        objective: "__hang__".into(),
+    };
+    writeln!(
+        child.stdin.as_mut().expect("child stdin"),
+        "{}",
+        encode_request(&request).unwrap()
+    )
+    .expect("send hanging request");
+    child.stdin.take();
+
+    let deadline = Instant::now() + Duration::from_millis(200);
+    loop {
+        if let Some(status) = child.try_wait().expect("poll child") {
+            panic!("hanging fixture exited unexpectedly before timeout: {status}");
+        }
+        if Instant::now() >= deadline {
+            child.kill().expect("kill timed-out runtime");
+            let _ = child.wait();
+            break;
+        }
+        thread::sleep(Duration::from_millis(10));
+    }
 }
 
 #[test]
