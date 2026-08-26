@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from math import isfinite
 from types import MappingProxyType
 from typing import Mapping, Protocol, runtime_checkable
 
@@ -77,8 +78,11 @@ class VerifierResult:
             raise ValueError("verifier result requires request/verifier identity")
         if not self.result_digest:
             raise ValueError("verifier result requires result_digest")
-        if self.confidence is not None and not 0.0 <= self.confidence <= 1.0:
-            raise ValueError("verifier confidence must be in [0, 1]")
+        if self.confidence is not None:
+            if isinstance(self.confidence, bool) or not isinstance(self.confidence, (int, float)):
+                raise ValueError("verifier confidence must be numeric and non-boolean")
+            if not isfinite(float(self.confidence)) or not 0.0 <= self.confidence <= 1.0:
+                raise ValueError("verifier confidence must be finite and in [0, 1]")
         if self.metadata is not None:
             object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
