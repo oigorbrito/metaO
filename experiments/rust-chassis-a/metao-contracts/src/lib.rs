@@ -39,6 +39,8 @@ pub struct Evidence {
     pub runtime_id: RuntimeId,
     pub policy_version: String,
     pub verified: bool,
+    pub created_at_epoch: i64,
+    pub expires_at_epoch: i64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -46,6 +48,7 @@ pub enum AcceptanceDecision {
     Accept,
     Block,
     NotDone,
+    Stale,
 }
 
 pub trait Orchestrator: Send + Sync {
