@@ -68,23 +68,28 @@ class VerificationUsage:
         )
         if not all(required_ids):
             raise ValueError("verification usage requires all identity bindings")
-        finite_values = (
-            self.started_at_epoch,
-            self.ended_at_epoch,
-            self.money,
-            self.wall_time_s,
+        numeric_fields = (
+            ("started_at_epoch", self.started_at_epoch),
+            ("ended_at_epoch", self.ended_at_epoch),
+            ("money", self.money),
+            ("wall_time_s", self.wall_time_s),
         )
-        if not all(isfinite(value) for value in finite_values):
-            raise ValueError("verification usage numeric values must be finite")
+        for name, value in numeric_fields:
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
+                raise TypeError(f"verification usage {name} must be numeric")
+            if not isfinite(float(value)):
+                raise ValueError(f"verification usage {name} must be finite")
         if self.started_at_epoch < 0 or self.ended_at_epoch < 0:
             raise ValueError("verification usage timestamps must be non-negative")
         if self.ended_at_epoch < self.started_at_epoch:
             raise ValueError("verification usage end timestamp cannot precede start")
+        if isinstance(self.tokens, bool) or not isinstance(self.tokens, int):
+            raise TypeError("verification token usage must be a non-boolean integer")
         if self.money < 0 or self.tokens < 0 or self.wall_time_s < 0:
             raise ValueError("verification resource usage cannot be negative")
-        if isinstance(self.tokens, bool) or not isinstance(self.tokens, int):
-            raise ValueError("verification token usage must be an integer")
-        if self.verifier_attempts != 1 or isinstance(self.verifier_attempts, bool):
+        if isinstance(self.verifier_attempts, bool) or not isinstance(self.verifier_attempts, int):
+            raise TypeError("verifier_attempts must be a non-boolean integer")
+        if self.verifier_attempts != 1:
             raise ValueError("one VerificationUsage record must represent exactly one attempt")
 
 
@@ -123,11 +128,7 @@ class InMemoryAcceptanceUsageStore:
         self._attempt_keys.add(attempt_key)
 
     def for_mission(self, mission_id: str) -> tuple[VerificationUsage, ...]:
-        return tuple(
-            item
-            for item in self._ordered()
-            if item.mission_id == mission_id
-        )
+        return tuple(item for item in self._ordered() if item.mission_id == mission_id)
 
     def for_verification_request(
         self, verification_request_id: str
