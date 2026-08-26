@@ -83,6 +83,14 @@ class RetryHistoryPrimitiveTests(unittest.TestCase):
             with self.subTest(field="cost", value=value), self.assertRaises(ValueError):
                 RetryHistoryEntry("h", "m", 1, "e", "o", 0.0, 1.0, RetryOutcome.FAILED, execution_cost=value)
 
+    def test_boolean_numeric_values_are_rejected(self) -> None:
+        with self.assertRaises(ValueError):
+            RetryHistoryEntry("h", "m", 1, "e", "o", True, 1.0, RetryOutcome.FAILED)
+        with self.assertRaises(ValueError):
+            RetryHistoryEntry("h", "m", 1, "e", "o", 0.0, True, RetryOutcome.FAILED)
+        with self.assertRaises(ValueError):
+            RetryHistoryEntry("h", "m", 1, "e", "o", 0.0, 1.0, RetryOutcome.FAILED, execution_cost=True)
+
     def test_negative_execution_cost_is_rejected(self) -> None:
         with self.assertRaises(ValueError):
             RetryHistoryEntry("h", "m", 1, "e", "o", 0.0, 1.0, RetryOutcome.FAILED, execution_cost=-0.01)
