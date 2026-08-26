@@ -1,0 +1,46 @@
+name: Chassis Python golden baseline
+
+on:
+  push:
+    branches:
+      - test/chassis-python-golden-v1
+  pull_request:
+    branches:
+      - main
+    paths:
+      - tests/golden/**
+      - tests/unit/test_chassis_golden_v1.py
+      - .github/workflows/chassis-python-golden.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  golden:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install
+        run: python -m pip install -e .
+      - name: Core replacement
+        run: python -m unittest tests.unit.test_core -v
+      - name: Acceptance trust
+        run: python -m unittest tests.unit.test_block_j_acceptance_trust -v
+      - name: Governance budget approval
+        run: python -m unittest tests.unit.test_block_k_governance_budget_approval -v
+      - name: Multi-orchestrator
+        run: python -m unittest tests.unit.test_block_l_multi_orchestrator -v
+      - name: Hostile trust
+        run: python -m unittest tests.unit.test_block_m_hostile_trust -v
+      - name: Replan failover
+        run: python -m unittest tests.unit.test_block_i_replan_failover -v
+      - name: Golden replay
+        run: python -m unittest tests.unit.test_chassis_golden_v1 -v
