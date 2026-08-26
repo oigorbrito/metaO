@@ -54,6 +54,30 @@ class AcceptanceBudget:
     wall_time_used_s: float = 0.0
     verifier_attempts_used: int = 0
 
+    def __post_init__(self) -> None:
+        if (
+            self.money_limit < 0
+            or self.token_limit < 0
+            or self.wall_time_limit_s < 0
+            or self.verifier_attempt_limit < 0
+        ):
+            raise ValueError("budget limits cannot be negative")
+        if (
+            self.money_used < 0
+            or self.tokens_used < 0
+            or self.wall_time_used_s < 0
+            or self.verifier_attempts_used < 0
+        ):
+            raise ValueError("budget usage cannot be negative")
+        if self.money_used > self.money_limit:
+            raise ValueError("initial money usage cannot exceed limit")
+        if self.tokens_used > self.token_limit:
+            raise ValueError("initial token usage cannot exceed limit")
+        if self.wall_time_used_s > self.wall_time_limit_s:
+            raise ValueError("initial wall-time usage cannot exceed limit")
+        if self.verifier_attempts_used > self.verifier_attempt_limit:
+            raise ValueError("initial verifier-attempt usage cannot exceed limit")
+
     def remaining_money(self) -> float:
         return self.money_limit - self.money_used
 
@@ -67,21 +91,25 @@ class AcceptanceBudget:
     ) -> "AcceptanceBudget":
         if min(money, tokens, wall_time_s, verifier_attempts) < 0:
             raise ValueError("budget consumption cannot be negative")
+        money_used = self.money_used + money
+        tokens_used = self.tokens_used + tokens
+        wall_time_used_s = self.wall_time_used_s + wall_time_s
+        verifier_attempts_used = self.verifier_attempts_used + verifier_attempts
+        if money_used > self.money_limit:
+            raise BudgetExhausted("acceptance money budget exhausted")
+        if tokens_used > self.token_limit:
+            raise BudgetExhausted("acceptance token budget exhausted")
+        if wall_time_used_s > self.wall_time_limit_s:
+            raise BudgetExhausted("acceptance wall-time budget exhausted")
+        if verifier_attempts_used > self.verifier_attempt_limit:
+            raise BudgetExhausted("acceptance verifier-attempt budget exhausted")
         updated = replace(
             self,
-            money_used=self.money_used + money,
-            tokens_used=self.tokens_used + tokens,
-            wall_time_used_s=self.wall_time_used_s + wall_time_s,
-            verifier_attempts_used=self.verifier_attempts_used + verifier_attempts,
+            money_used=money_used,
+            tokens_used=tokens_used,
+            wall_time_used_s=wall_time_used_s,
+            verifier_attempts_used=verifier_attempts_used,
         )
-        if updated.money_used > updated.money_limit:
-            raise BudgetExhausted("acceptance money budget exhausted")
-        if updated.tokens_used > updated.token_limit:
-            raise BudgetExhausted("acceptance token budget exhausted")
-        if updated.wall_time_used_s > updated.wall_time_limit_s:
-            raise BudgetExhausted("acceptance wall-time budget exhausted")
-        if updated.verifier_attempts_used > updated.verifier_attempt_limit:
-            raise BudgetExhausted("acceptance verifier-attempt budget exhausted")
         return updated
 
 
