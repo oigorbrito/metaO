@@ -52,11 +52,16 @@ class AuthorityResolution:
     authority_context_id: str
     authority_id: str
     authorized: bool
+    request: AuthorityResolutionRequest
     reason: str = ""
 
     def __post_init__(self) -> None:
         if not self.authority_context_id or not self.authority_id:
             raise ValueError("authority resolution requires context and authority ids")
+        if not isinstance(self.authorized, bool):
+            raise TypeError("authority resolution authorized must be boolean")
+        if not isinstance(self.request, AuthorityResolutionRequest):
+            raise TypeError("authority resolution requires the exact bound request")
 
 
 @dataclass(frozen=True)
@@ -109,18 +114,43 @@ class InMemorySubjectStateStore:
 
 
 class InMemoryAuthorityRegistry:
+    """Exact-request authority store used to prove caller claims cannot be reused."""
+
     def __init__(self) -> None:
-        self._entries: dict[tuple[str, str], AuthorityResolution] = {}
+        self._entries: dict[
+            tuple[str, AuthorityResolutionRequest], AuthorityResolution
+        ] = {}
 
-    def put(self, *, authority_context_id: str, verifier_id: str, authority_id: str, authorized: bool, reason: str = "") -> None:
-        resolution = AuthorityResolution(authority_context_id, authority_id, authorized, reason)
-        self._entries[(authority_context_id, verifier_id)] = resolution
+    def put(
+        self,
+        *,
+        authority_context_id: str,
+        request: AuthorityResolutionRequest,
+        authority_id: str,
+        authorized: bool,
+        reason: str = "",
+    ) -> None:
+        resolution = AuthorityResolution(
+            authority_context_id,
+            authority_id,
+            authorized,
+            request,
+            reason,
+        )
+        self._entries[(authority_context_id, request)] = resolution
 
-    def resolve(self, authority_context_id: str, request: AuthorityResolutionRequest) -> AuthorityResolution:
+    def resolve(
+        self,
+        authority_context_id: str,
+        request: AuthorityResolutionRequest,
+    ) -> AuthorityResolution:
         try:
-            return self._entries[(authority_context_id, request.verifier_id)]
+            return self._entries[(authority_context_id, request)]
         except KeyError as exc:
-            raise AuthoritativeSourceNotFound(f"{authority_context_id}:{request.verifier_id}") from exc
+            raise AuthoritativeSourceNotFound(
+                f"{authority_context_id}:{request.verifier_id}:{request.subject_id}:"
+                f"{request.subject_state_id}:{request.policy_bundle_id}"
+            ) from exc
 
 
 class InMemoryPolicyRegistry:
