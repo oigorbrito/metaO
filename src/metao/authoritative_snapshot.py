@@ -1,8 +1,9 @@
 """Coordinator for A05/A07/A09 authoritative terminal observations.
 
 This module does not issue metaO acceptance. It resolves one exact, coherent
-snapshot from the authoritative subject-state, authority and policy sources that
-future terminal acceptance may consume as precondition input.
+snapshot from authoritative subject-state, authority and policy sources. The
+snapshot is consumed by the Roadmap 8 terminal-precondition coordinator before
+any final acceptance decision.
 """
 
 from __future__ import annotations
