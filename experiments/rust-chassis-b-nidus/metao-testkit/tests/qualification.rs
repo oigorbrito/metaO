@@ -36,6 +36,19 @@ fn duplicate_version_conflict_and_panic_are_deterministic(){
 fn reconciliation_matches_spike_a_semantics(){let desired=vec![RuntimeId("alpha".into()),RuntimeId("beta".into())];let mut observed=vec![RuntimeId("alpha".into())];let missing=reconcile_missing(&desired,&observed);assert_eq!(missing,vec![RuntimeId("beta".into())]);observed.extend(missing);assert!(reconcile_missing(&desired,&observed).is_empty());assert!(reconcile_missing(&desired,&observed).is_empty());}
 
 #[test]
+fn exhaustive_small_reconcile_state_space_satisfies_laws(){
+ let universe=[RuntimeId("alpha".into()),RuntimeId("beta".into()),RuntimeId("gamma".into())];
+ for desired_mask in 0u8..8{for observed_mask in 0u8..8{
+  let desired:Vec<_>=universe.iter().enumerate().filter(|(i,_)|desired_mask&(1<<i)!=0).map(|(_,r)|r.clone()).collect();
+  let observed:Vec<_>=universe.iter().enumerate().filter(|(i,_)|observed_mask&(1<<i)!=0).map(|(_,r)|r.clone()).collect();
+  let first=reconcile_missing(&desired,&observed);let second=reconcile_missing(&desired,&observed);assert_eq!(first,second,"reconcile must be deterministic");
+  assert!(first.windows(2).all(|w|w[0]<w[1]),"missing must be sorted and deduplicated");
+  assert!(first.iter().all(|r|desired.contains(r)&&!observed.contains(r)));
+  let mut converged=observed.clone();converged.extend(first);assert!(reconcile_missing(&desired,&converged).is_empty(),"one application must converge for this model");
+ }}
+}
+
+#[test]
 fn kernel_has_no_nidus_or_platform_dependency(){let manifest=include_str!("../../metao-kernel/Cargo.toml").to_lowercase();for forbidden in["nidus","axum","tokio","tower","sqlx","kube","windows","libc"]{assert!(!manifest.contains(forbidden),"framework leaked into kernel: {forbidden}");}let source=include_str!("../../metao-kernel/src/lib.rs").to_lowercase();for forbidden in["nidus","unsafe","cfg(target_os","cfg(windows","cfg(unix"]{assert!(!source.contains(forbidden),"kernel leak: {forbidden}");}}
 
 #[test]
