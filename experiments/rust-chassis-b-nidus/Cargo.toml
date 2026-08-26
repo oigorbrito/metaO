@@ -1,0 +1,7 @@
+[workspace]
+members = ["metao-kernel", "metao-nidus-host", "metao-testkit"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
