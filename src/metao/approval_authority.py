@@ -8,12 +8,27 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from math import isfinite
 
 
 class ApprovalAuthorityDecision(StrEnum):
     ALLOW = "ALLOW"
     STALE = "STALE"
     BLOCK = "BLOCK"
+
+
+def _validate_epoch(name: str, value: int) -> None:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError(f"{name} must be an integer")
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative")
+
+
+def _validate_time(name: str, value: float) -> None:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError(f"{name} must be numeric")
+    if not isfinite(float(value)) or value < 0:
+        raise ValueError(f"{name} must be finite and non-negative")
 
 
 @dataclass(frozen=True)
@@ -25,8 +40,8 @@ class ApprovalAuthorityContext:
     def __post_init__(self) -> None:
         if not self.authority_context_id:
             raise ValueError("approval authority context requires id")
-        if self.authority_epoch < 0 or self.now_epoch < 0:
-            raise ValueError("approval authority context values must be non-negative")
+        _validate_epoch("authority_epoch", self.authority_epoch)
+        _validate_time("now_epoch", self.now_epoch)
 
 
 @dataclass(frozen=True)
@@ -51,8 +66,9 @@ class ApproverCapability:
             )
         ):
             raise ValueError("approver capability requires all bindings")
-        if self.authority_epoch < 0 or self.not_before_epoch < 0 or self.expires_epoch < 0:
-            raise ValueError("approver capability time/epoch values must be non-negative")
+        _validate_epoch("authority_epoch", self.authority_epoch)
+        _validate_time("not_before_epoch", self.not_before_epoch)
+        _validate_time("expires_epoch", self.expires_epoch)
         if self.expires_epoch < self.not_before_epoch:
             raise ValueError("approver capability expiry cannot precede activation")
 
