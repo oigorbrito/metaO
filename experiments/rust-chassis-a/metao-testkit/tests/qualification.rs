@@ -67,6 +67,25 @@ fn reconciliation_is_idempotent_and_deterministic() {
 }
 
 #[test]
+fn exhaustive_small_reconcile_state_space_satisfies_laws() {
+    let universe = [RuntimeId("alpha".into()), RuntimeId("beta".into()), RuntimeId("gamma".into())];
+    for desired_mask in 0u8..8 {
+        for observed_mask in 0u8..8 {
+            let desired: Vec<_> = universe.iter().enumerate().filter(|(i, _)| desired_mask & (1 << i) != 0).map(|(_, r)| r.clone()).collect();
+            let observed: Vec<_> = universe.iter().enumerate().filter(|(i, _)| observed_mask & (1 << i) != 0).map(|(_, r)| r.clone()).collect();
+            let first = reconcile_missing(&desired, &observed);
+            let second = reconcile_missing(&desired, &observed);
+            assert_eq!(first, second, "reconcile must be deterministic");
+            assert!(first.windows(2).all(|w| w[0] < w[1]), "missing must be sorted and deduplicated");
+            assert!(first.iter().all(|r| desired.contains(r) && !observed.contains(r)));
+            let mut converged = observed.clone();
+            converged.extend(first);
+            assert!(reconcile_missing(&desired, &converged).is_empty(), "one application must converge for this model");
+        }
+    }
+}
+
+#[test]
 fn kernel_is_platform_framework_and_unsafe_free() {
     let manifest=include_str!("../../metao-kernel/Cargo.toml").to_lowercase();
     for forbidden in ["axum","tokio","kube","openai","langgraph","crewai","sqlx","windows","libc"] { assert!(!manifest.contains(forbidden),"forbidden kernel dependency: {forbidden}"); }
