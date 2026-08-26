@@ -3,6 +3,7 @@ members = [
   "metao-contracts",
   "metao-kernel",
   "metao-registry",
+  "metao-wire",
   "metao-testkit",
 ]
 resolver = "2"
