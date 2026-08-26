@@ -66,6 +66,9 @@ def evaluate_terminal_preconditions(
 ) -> TerminalPreconditionResult:
     """Evaluate current terminal preconditions in fail-closed order."""
 
+    if not isinstance(approval_required, bool):
+        raise TypeError("approval_required must be bool")
+
     if authoritative_snapshot.decision is AuthoritativeSnapshotDecision.STALE:
         return TerminalPreconditionResult(
             TerminalPreconditionDecision.STALE,
@@ -180,6 +183,22 @@ def evaluate_terminal_preconditions(
                 TerminalPreconditionDecision.BLOCK,
                 authoritative_snapshot,
                 "approval_authority_inputs_missing",
+                observed_now_epoch=freshness.observed_now_epoch,
+                attestation_digest=attestation.attestation_digest,
+            )
+        if approval_context.authority_context_id != authoritative_snapshot.authority.authority_context_id:
+            return TerminalPreconditionResult(
+                TerminalPreconditionDecision.BLOCK,
+                authoritative_snapshot,
+                "approval_authority_context_mismatch",
+                observed_now_epoch=freshness.observed_now_epoch,
+                attestation_digest=attestation.attestation_digest,
+            )
+        if approval_request.target != request.mission_id or approval_request.scope != request.policy_bundle_id:
+            return TerminalPreconditionResult(
+                TerminalPreconditionDecision.BLOCK,
+                authoritative_snapshot,
+                "approval_request_binding_mismatch",
                 observed_now_epoch=freshness.observed_now_epoch,
                 attestation_digest=attestation.attestation_digest,
             )
