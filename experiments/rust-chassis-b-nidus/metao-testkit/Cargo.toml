@@ -5,6 +5,8 @@ edition.workspace = true
 license.workspace = true
 
 [dependencies]
+metao-contracts = { path = "../metao-contracts" }
 metao-kernel = { path = "../metao-kernel" }
+metao-registry = { path = "../metao-registry" }
 metao-nidus-host = { path = "../metao-nidus-host" }
 nidus-core = "=1.0.17"
