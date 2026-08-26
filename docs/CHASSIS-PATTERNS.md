@@ -1,0 +1,1 @@
+Crossplane: core/provider separation + conformance. controller-runtime: reconcile loop. pluggy: Python hookspec registry. WASM Component Model: typed isolated future seam. agent-hooks: framework-neutral control boundary.
