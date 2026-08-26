@@ -147,6 +147,56 @@ fn mismatched_runtime_evidence_blocks() {
 }
 
 #[test]
+fn adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding() {
+    for verified in [false, true] {
+        for mission_matches in [false, true] {
+            for execution_matches in [false, true] {
+                for runtime_matches in [false, true] {
+                    let mut item = evidence(if runtime_matches { "alpha" } else { "beta" });
+                    item.verified = verified;
+                    if !mission_matches {
+                        item.mission_id = MissionId("wrong-mission".into());
+                    }
+                    if !execution_matches {
+                        item.execution_id = ExecutionId("wrong-exec".into());
+                    }
+
+                    let decision = evaluate_acceptance(
+                        &request(),
+                        &success("alpha"),
+                        Some(&item),
+                        PolicyEffect::Allow,
+                    );
+                    let should_accept = verified
+                        && mission_matches
+                        && execution_matches
+                        && runtime_matches;
+                    assert_eq!(decision == AcceptanceDecision::Accept, should_accept);
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn failed_execution_never_accepts_even_with_valid_evidence() {
+    let failed = ExecutionResult {
+        execution_id: ExecutionId("exec-1".into()),
+        runtime_id: RuntimeId("alpha".into()),
+        status: ExecutionStatus::Failed,
+    };
+    assert_ne!(
+        evaluate_acceptance(
+            &request(),
+            &failed,
+            Some(&evidence("alpha")),
+            PolicyEffect::Allow,
+        ),
+        AcceptanceDecision::Accept
+    );
+}
+
+#[test]
 fn adapter_panic_is_contained() {
     let mut registry = Registry::default();
     registry.register(Box::new(PanicRuntime)).unwrap();
@@ -168,15 +218,34 @@ fn reconciliation_is_idempotent_after_convergence() {
 }
 
 #[test]
+fn reconciliation_is_deterministic_and_deduplicates_desired_state() {
+    let desired = vec![
+        RuntimeId("beta".into()),
+        RuntimeId("alpha".into()),
+        RuntimeId("beta".into()),
+    ];
+    let observed = vec![];
+    assert_eq!(
+        reconcile_missing(&desired, &observed),
+        vec![RuntimeId("alpha".into()), RuntimeId("beta".into())]
+    );
+}
+
+#[test]
 fn kernel_manifest_has_no_platform_or_framework_dependencies() {
     let manifest = include_str!("../../metao-kernel/Cargo.toml").to_lowercase();
-    for forbidden in ["axum", "tokio", "kube", "openai", "langgraph", "crewai", "sqlx"] {
+    for forbidden in [
+        "axum", "tokio", "kube", "openai", "langgraph", "crewai", "sqlx", "windows", "libc",
+    ] {
         assert!(!manifest.contains(forbidden), "forbidden kernel dependency: {forbidden}");
     }
 }
 
 #[test]
-fn kernel_owned_source_has_no_unsafe_block() {
-    let source = include_str!("../../metao-kernel/src/lib.rs");
+fn kernel_owned_source_has_no_unsafe_block_or_platform_cfg() {
+    let source = include_str!("../../metao-kernel/src/lib.rs").to_lowercase();
     assert!(!source.contains("unsafe"));
+    assert!(!source.contains("cfg(target_os"));
+    assert!(!source.contains("cfg(windows"));
+    assert!(!source.contains("cfg(unix"));
 }
