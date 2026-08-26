@@ -8,6 +8,7 @@ pub fn evaluate_acceptance(
     result: &ExecutionResult,
     evidence: Option<&Evidence>,
     policy: PolicyEffect,
+    now_epoch: i64,
 ) -> AcceptanceDecision {
     if matches!(policy, PolicyEffect::Deny) {
         return AcceptanceDecision::Block;
@@ -25,6 +26,9 @@ pub fn evaluate_acceptance(
         || evidence.runtime_id != result.runtime_id
     {
         return AcceptanceDecision::Block;
+    }
+    if now_epoch < evidence.created_at_epoch || now_epoch > evidence.expires_at_epoch {
+        return AcceptanceDecision::Stale;
     }
     AcceptanceDecision::Accept
 }
