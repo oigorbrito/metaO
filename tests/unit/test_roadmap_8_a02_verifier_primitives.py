@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 import unittest
 
 from metao.verifier import (
@@ -68,9 +69,10 @@ class VerifierPrimitiveTests(unittest.TestCase):
         with self.assertRaises(TypeError):
             request.payload["value"] = 3
 
-    def test_confidence_is_bounded(self) -> None:
-        with self.assertRaises(ValueError):
-            VerifierResult("r", "v", "1", VerificationStatus.PASS, "d", confidence=1.01)
+    def test_confidence_is_bounded_and_non_boolean(self) -> None:
+        for value in (1.01, -0.01, True, math.nan, math.inf, -math.inf):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                VerifierResult("r", "v", "1", VerificationStatus.PASS, "d", confidence=value)  # type: ignore[arg-type]
 
     def test_pass_is_not_acceptance_decision(self) -> None:
         result = VerifierResult("r", "v", "1", VerificationStatus.PASS, "d")
