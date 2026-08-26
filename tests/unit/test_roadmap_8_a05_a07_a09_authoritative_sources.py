@@ -14,6 +14,19 @@ from metao.authoritative_sources import (
 
 
 class AuthoritativeSourcePrimitiveTests(unittest.TestCase):
+    def request(self, **overrides: str) -> AuthorityResolutionRequest:
+        values = {
+            "mission_id": "mission-1",
+            "execution_id": "execution-1",
+            "subject_id": "subject-1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "verification-context-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+        }
+        values.update(overrides)
+        return AuthorityResolutionRequest(**values)
+
     def test_subject_state_returns_current_authoritative_state(self) -> None:
         store = InMemorySubjectStateStore()
         store.put(SubjectState("subject-1", "state-1"))
@@ -24,46 +37,43 @@ class AuthoritativeSourcePrimitiveTests(unittest.TestCase):
         with self.assertRaises(AuthoritativeSourceNotFound):
             InMemorySubjectStateStore().current("missing")
 
-    def test_authority_resolution_is_bound_to_context_and_verifier(self) -> None:
+    def test_authority_resolution_is_bound_to_exact_request(self) -> None:
         registry = InMemoryAuthorityRegistry()
+        request = self.request()
         registry.put(
             authority_context_id="authority-context-1",
-            verifier_id="verifier-1",
+            request=request,
             authority_id="authority-1",
             authorized=True,
-        )
-        request = AuthorityResolutionRequest(
-            "mission-1",
-            "execution-1",
-            "subject-1",
-            "state-1",
-            "verification-context-1",
-            "policy-1",
-            "verifier-1",
         )
         result = registry.resolve("authority-context-1", request)
         self.assertTrue(result.authorized)
         self.assertEqual(result.authority_id, "authority-1")
+        self.assertEqual(result.request, request)
 
-    def test_caller_cannot_change_verifier_claim_to_reuse_authority(self) -> None:
-        registry = InMemoryAuthorityRegistry()
-        registry.put(
-            authority_context_id="authority-context-1",
-            verifier_id="trusted",
-            authority_id="authority-1",
-            authorized=True,
-        )
-        hostile = AuthorityResolutionRequest(
-            "mission-1",
-            "execution-1",
-            "subject-1",
-            "state-1",
-            "verification-context-1",
-            "policy-1",
-            "untrusted",
-        )
-        with self.assertRaises(AuthoritativeSourceNotFound):
-            registry.resolve("authority-context-1", hostile)
+    def test_caller_cannot_change_any_bound_claim_to_reuse_authority(self) -> None:
+        variants = {
+            "mission_id": "mission-2",
+            "execution_id": "execution-2",
+            "subject_id": "subject-2",
+            "subject_state_id": "state-2",
+            "verification_context_id": "verification-context-2",
+            "policy_bundle_id": "policy-2",
+            "verifier_id": "untrusted",
+        }
+        for field, hostile_value in variants.items():
+            with self.subTest(field=field):
+                registry = InMemoryAuthorityRegistry()
+                trusted = self.request()
+                registry.put(
+                    authority_context_id="authority-context-1",
+                    request=trusted,
+                    authority_id="authority-1",
+                    authorized=True,
+                )
+                hostile = self.request(**{field: hostile_value})
+                with self.assertRaises(AuthoritativeSourceNotFound):
+                    registry.resolve("authority-context-1", hostile)
 
     def test_policy_registry_returns_registered_bundle(self) -> None:
         registry = InMemoryPolicyRegistry()
@@ -85,20 +95,20 @@ class AuthoritativeSourcePrimitiveTests(unittest.TestCase):
             InMemoryPolicyRegistry().get("missing")
 
     def test_authority_request_requires_all_bindings(self) -> None:
-        args = [
-            "mission-1",
-            "execution-1",
-            "subject-1",
-            "state-1",
-            "verification-context-1",
-            "policy-1",
-            "verifier-1",
-        ]
-        for index in range(len(args)):
-            values = list(args)
-            values[index] = ""
-            with self.subTest(index=index), self.assertRaises(ValueError):
-                AuthorityResolutionRequest(*values)
+        values = {
+            "mission_id": "mission-1",
+            "execution_id": "execution-1",
+            "subject_id": "subject-1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "verification-context-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+        }
+        for field in tuple(values):
+            hostile = dict(values)
+            hostile[field] = ""
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                AuthorityResolutionRequest(**hostile)
 
 
 if __name__ == "__main__":
