@@ -4,6 +4,12 @@ on:
   push:
     branches:
       - test/rust-chassis-spike-a-v1
+  pull_request:
+    branches:
+      - main
+    paths:
+      - experiments/rust-chassis-a/**
+      - .github/workflows/rust-chassis-spike-a.yml
   workflow_dispatch:
 
 permissions:
