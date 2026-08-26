@@ -1,4 +1,6 @@
 use std::io::{self, BufRead, Write};
+use std::thread;
+use std::time::Duration;
 
 use metao_wire::{decode_request, encode_response, WireResponse, PROTOCOL_VERSION};
 
@@ -19,6 +21,10 @@ fn main() {
                 continue;
             }
         };
+
+        if request.objective == "__hang__" {
+            thread::sleep(Duration::from_secs(5));
+        }
 
         let response = WireResponse {
             protocol_version: PROTOCOL_VERSION,
