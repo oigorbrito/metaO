@@ -77,6 +77,21 @@ class ExplodingRuntime:
         return None
 
 
+class TimeoutRuntime:
+    @property
+    def descriptor(self):
+        return OrchestratorDescriptor("timeout-runtime", "1", frozenset({"workflow"}))
+
+    def health(self):
+        return HealthReport(HealthStatus.HEALTHY)
+
+    def execute(self, request):
+        raise TimeoutError("simulated runtime timeout")
+
+    def cancel(self, execution_id: str):
+        return None
+
+
 class ChassisGoldenV1(unittest.TestCase):
     def test_replay_golden_cases(self):
         fixture = json.loads(FIXTURE.read_text(encoding="utf-8"))
@@ -105,13 +120,17 @@ class ChassisGoldenV1(unittest.TestCase):
                 )
                 self.assertEqual(result.decision, AcceptanceDecision[case["expected"]])
 
-    def test_c5_unexpected_runtime_exception_is_contained_by_control_plane(self):
+    def _assert_runtime_exception_contained(self, runtime, runtime_id: str, execution_id: str):
         registry = OrchestratorRegistry()
-        registry.register(ExplodingRuntime())
-        mission = Mission("c5-mission", "exercise failure containment", frozenset({"workflow"}))
+        registry.register(runtime)
+        mission = Mission(
+            f"{runtime_id}-mission",
+            "exercise failure containment",
+            frozenset({"workflow"}),
+        )
         pools = (
             OrchestratorPoolState(
-                "exploder",
+                runtime_id,
                 OrchestratorStatus.HEALTHY,
                 frozenset({"workflow"}),
             ),
@@ -122,20 +141,30 @@ class ChassisGoldenV1(unittest.TestCase):
                 mission=mission,
                 registry=registry,
                 pools=pools,
-                normalizers={"exploder": lambda **_: evidence()},
+                normalizers={runtime_id: lambda **_: evidence()},
                 policy=evaluate_policy(policy_bundle_id="policy-1", allowed=True),
                 budget=AcceptanceBudget(1.0, 1000, 60.0, 2),
                 acceptance_context=context(),
-                execution_id="c5-exec",
+                execution_id=execution_id,
                 now_epoch=15.0,
             )
         except Exception as exc:
             self.fail(
-                "C5 failure containment violated: unexpected runtime exception escaped "
+                "C5 failure containment violated: runtime exception escaped "
                 f"the control-plane boundary: {type(exc).__name__}: {exc}"
             )
 
         self.assertNotEqual(outcome.acceptance.decision, AcceptanceDecision.ACCEPT)
+
+    def test_c5_unexpected_runtime_exception_is_contained_by_control_plane(self):
+        self._assert_runtime_exception_contained(ExplodingRuntime(), "exploder", "c5-exec")
+
+    def test_c5_timeout_exception_is_contained_by_control_plane(self):
+        self._assert_runtime_exception_contained(
+            TimeoutRuntime(),
+            "timeout-runtime",
+            "c5-timeout-exec",
+        )
 
 
 if __name__ == "__main__":
