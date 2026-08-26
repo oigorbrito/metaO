@@ -1,5 +1,11 @@
 [workspace]
-members = ["metao-kernel", "metao-nidus-host", "metao-testkit"]
+members = [
+  "metao-contracts",
+  "metao-kernel",
+  "metao-registry",
+  "metao-nidus-host",
+  "metao-testkit",
+]
 resolver = "2"
 
 [workspace.package]
