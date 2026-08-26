@@ -39,7 +39,8 @@ pub fn encode_response(response: &WireResponse) -> Result<String, String> {
 }
 
 pub fn decode_response(payload: &str) -> Result<WireResponse, String> {
-    let response: WireResponse = serde_json::from_str(payload).map_err(|error| error.to_string())?;
+    let response: WireResponse =
+        serde_json::from_str(payload).map_err(|error| error.to_string())?;
     if response.protocol_version != PROTOCOL_VERSION {
         return Err(format!(
             "unsupported protocol version: {}",

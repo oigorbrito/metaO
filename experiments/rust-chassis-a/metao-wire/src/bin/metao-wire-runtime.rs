@@ -16,7 +16,11 @@ fn main() {
         let request = match decode_request(&line) {
             Ok(request) => request,
             Err(error) => {
-                let _ = writeln!(stdout, "{{\"error\":{}}}", serde_json::to_string(&error).unwrap());
+                let _ = writeln!(
+                    stdout,
+                    "{{\"error\":{}}}",
+                    serde_json::to_string(&error).unwrap()
+                );
                 let _ = stdout.flush();
                 continue;
             }

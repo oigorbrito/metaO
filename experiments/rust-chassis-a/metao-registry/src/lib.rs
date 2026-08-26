@@ -6,7 +6,11 @@ use metao_contracts::{ExecutionRequest, ExecutionResult, Orchestrator, RuntimeId
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RegistryError {
     Duplicate(RuntimeId),
-    VersionConflict { id: RuntimeId, existing: String, incoming: String },
+    VersionConflict {
+        id: RuntimeId,
+        existing: String,
+        incoming: String,
+    },
     NotFound(RuntimeId),
     Panicked(RuntimeId),
 }
@@ -35,7 +39,8 @@ impl Registry {
                 incoming: version,
             });
         }
-        self.runtimes.insert(id, RegisteredRuntime { version, runtime });
+        self.runtimes
+            .insert(id, RegisteredRuntime { version, runtime });
         Ok(())
     }
 
@@ -43,7 +48,11 @@ impl Registry {
         self.runtimes.remove(id).is_some()
     }
 
-    pub fn execute_contained(&self, id: &RuntimeId, request: &ExecutionRequest) -> Result<ExecutionResult, RegistryError> {
+    pub fn execute_contained(
+        &self,
+        id: &RuntimeId,
+        request: &ExecutionRequest,
+    ) -> Result<ExecutionResult, RegistryError> {
         let Some(registered) = self.runtimes.get(id) else {
             return Err(RegistryError::NotFound(id.clone()));
         };

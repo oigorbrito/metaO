@@ -1,11 +1,53 @@
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct MissionId(pub String);
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum ContractError {
+    EmptyIdentity(&'static str),
+}
+
+fn validate_identity(kind: &'static str, value: String) -> Result<String, ContractError> {
+    if value.trim().is_empty() {
+        return Err(ContractError::EmptyIdentity(kind));
+    }
+    Ok(value)
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ExecutionId(pub String);
+pub struct MissionId(String);
+
+impl MissionId {
+    pub fn new(value: impl Into<String>) -> Result<Self, ContractError> {
+        validate_identity("mission_id", value.into()).map(Self)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct RuntimeId(pub String);
+pub struct ExecutionId(String);
+
+impl ExecutionId {
+    pub fn new(value: impl Into<String>) -> Result<Self, ContractError> {
+        validate_identity("execution_id", value.into()).map(Self)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct RuntimeId(String);
+
+impl RuntimeId {
+    pub fn new(value: impl Into<String>) -> Result<Self, ContractError> {
+        validate_identity("runtime_id", value.into()).map(Self)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExecutionRequest {
@@ -14,7 +56,10 @@ pub struct ExecutionRequest {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ExecutionStatus { Succeeded, Failed }
+pub enum ExecutionStatus {
+    Succeeded,
+    Failed,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExecutionResult {
@@ -24,7 +69,10 @@ pub struct ExecutionResult {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PolicyEffect { Allow, Deny }
+pub enum PolicyEffect {
+    Allow,
+    Deny,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Evidence {
@@ -38,7 +86,12 @@ pub struct Evidence {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AcceptanceDecision { Accept, Block, NotDone, Stale }
+pub enum AcceptanceDecision {
+    Accept,
+    Block,
+    NotDone,
+    Stale,
+}
 
 pub trait Orchestrator: Send + Sync {
     fn id(&self) -> RuntimeId;
