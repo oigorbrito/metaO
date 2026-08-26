@@ -1,38 +1,41 @@
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct MissionId(pub String);
+use metao_contracts::{
+    AcceptanceDecision, Evidence, ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyEffect,
+    RuntimeId,
+};
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RuntimeId(pub String);
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ExecutionStatus {
-    Succeeded,
-    Failed,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PolicyEffect {
-    Allow,
-    Deny,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AcceptanceDecision {
-    Accept,
-    Block,
-    NotDone,
-}
-
-pub fn acceptance(
-    status: ExecutionStatus,
-    evidence_bound: bool,
+pub fn evaluate_acceptance(
+    request: &ExecutionRequest,
+    result: &ExecutionResult,
+    evidence: Option<&Evidence>,
     policy: PolicyEffect,
 ) -> AcceptanceDecision {
     if matches!(policy, PolicyEffect::Deny) {
         return AcceptanceDecision::Block;
     }
-    if !matches!(status, ExecutionStatus::Succeeded) || !evidence_bound {
+    if !matches!(result.status, ExecutionStatus::Succeeded) {
         return AcceptanceDecision::NotDone;
     }
+    let Some(evidence) = evidence else {
+        return AcceptanceDecision::NotDone;
+    };
+    if !evidence.verified
+        || evidence.mission_id != request.mission_id
+        || evidence.execution_id != request.execution_id
+        || evidence.execution_id != result.execution_id
+        || evidence.runtime_id != result.runtime_id
+    {
+        return AcceptanceDecision::Block;
+    }
     AcceptanceDecision::Accept
+}
+
+pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {
+    let mut missing: Vec<_> = desired
+        .iter()
+        .filter(|runtime| !observed.contains(runtime))
+        .cloned()
+        .collect();
+    missing.sort();
+    missing.dedup();
+    missing
 }
