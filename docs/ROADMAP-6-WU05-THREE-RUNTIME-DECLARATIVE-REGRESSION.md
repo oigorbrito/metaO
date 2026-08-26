@@ -137,3 +137,7 @@ WU05_MERGE_GATE = PENDING
 ```
 
 Roadmap 6 is assembled, not validated. The next legitimate gate is the complete local release-gate execution from PR #68.
+
+---
+
+Qualification trigger note (2026-08-26): this documentation-only change intentionally re-runs the existing Roadmap 6 three-runtime workflow for chassis qualification issue #197. It changes no product semantics or CI commands.
