@@ -6,6 +6,7 @@ members = [
   "metao-wire",
   "metao-testkit",
 ]
+exclude = ["fuzz"]
 resolver = "2"
 
 [workspace.package]
