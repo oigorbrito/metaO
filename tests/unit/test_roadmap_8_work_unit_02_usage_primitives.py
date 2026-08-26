@@ -64,9 +64,16 @@ class AcceptanceUsagePrimitiveTests(unittest.TestCase):
                     with self.assertRaises(ValueError):
                         self.usage(**{field: value})
 
+    def test_boolean_or_non_numeric_factual_usage_is_rejected(self) -> None:
+        for field in ("started_at_epoch", "ended_at_epoch", "money", "wall_time_s"):
+            for value in (True, False, "1"):
+                with self.subTest(field=field, value=value):
+                    with self.assertRaises((TypeError, ValueError)):
+                        self.usage(**{field: value})
+
     def test_tokens_must_be_non_boolean_integer(self) -> None:
         for value in (True, 1.5):
-            with self.subTest(value=value), self.assertRaises(ValueError):
+            with self.subTest(value=value), self.assertRaises((TypeError, ValueError)):
                 self.usage(tokens=value)
 
     def test_end_before_start_is_rejected(self) -> None:
@@ -74,9 +81,9 @@ class AcceptanceUsagePrimitiveTests(unittest.TestCase):
             self.usage(started_at_epoch=10.0, ended_at_epoch=9.0)
 
     def test_one_record_represents_exactly_one_started_attempt(self) -> None:
-        for attempts in (0, 2, True):
+        for attempts in (0, 2, True, 1.0):
             with self.subTest(attempts=attempts):
-                with self.assertRaises(ValueError):
+                with self.assertRaises((TypeError, ValueError)):
                     self.usage(verifier_attempts=attempts)
 
     def test_failed_attempt_still_carries_resource_usage(self) -> None:
