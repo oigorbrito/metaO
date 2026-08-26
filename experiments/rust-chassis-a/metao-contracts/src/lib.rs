@@ -14,10 +14,7 @@ pub struct ExecutionRequest {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum ExecutionStatus {
-    Succeeded,
-    Failed,
-}
+pub enum ExecutionStatus { Succeeded, Failed }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExecutionResult {
@@ -27,10 +24,7 @@ pub struct ExecutionResult {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum PolicyEffect {
-    Allow,
-    Deny,
-}
+pub enum PolicyEffect { Allow, Deny }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Evidence {
@@ -44,14 +38,10 @@ pub struct Evidence {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum AcceptanceDecision {
-    Accept,
-    Block,
-    NotDone,
-    Stale,
-}
+pub enum AcceptanceDecision { Accept, Block, NotDone, Stale }
 
 pub trait Orchestrator: Send + Sync {
     fn id(&self) -> RuntimeId;
+    fn version(&self) -> String;
     fn execute(&self, request: &ExecutionRequest) -> ExecutionResult;
 }
