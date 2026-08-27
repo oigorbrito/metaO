@@ -40,35 +40,35 @@ internal static class AssertEx
 sealed class FakeA : IOrchestrator
 {
     public OrchestratorId Id => OrchestratorId.Create("alpha");
-    public VersionId Version => VersionId.Create("1");
-    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, Id, true);
+    public VersionId Version => VersionId.Create("v1");
+    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, request.ExecutionId, Id, Version, true);
 }
 
 sealed class FakeB : IOrchestrator
 {
     public OrchestratorId Id => OrchestratorId.Create("beta");
-    public VersionId Version => VersionId.Create("1");
-    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, Id, true);
+    public VersionId Version => VersionId.Create("v1");
+    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, request.ExecutionId, Id, Version, true);
 }
 
 sealed class DegradedFake : IOrchestrator
 {
     public OrchestratorId Id => OrchestratorId.Create("gamma");
-    public VersionId Version => VersionId.Create("1");
-    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, Id, true);
+    public VersionId Version => VersionId.Create("v1");
+    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, request.ExecutionId, Id, Version, true);
 }
 
 sealed class VersionedFake : IOrchestrator
 {
     public OrchestratorId Id => OrchestratorId.Create("alpha");
-    public VersionId Version => VersionId.Create("2");
-    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, Id, true);
+    public VersionId Version => VersionId.Create("v2");
+    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, request.ExecutionId, Id, Version, true);
 }
 
 sealed class ThrowingOrchestrator : IOrchestrator
 {
     public OrchestratorId Id => OrchestratorId.Create("panic");
-    public VersionId Version => VersionId.Create("1");
+    public VersionId Version => VersionId.Create("v1");
     public ExecutionResult Execute(ExecutionRequest request) => throw new InvalidOperationException("panic");
 }
 
@@ -76,6 +76,7 @@ internal static class Program
 {
     private static ExecutionRequest Request(string orchestrator = "alpha") => new(
         MissionId.Create("mission-1"),
+        ExecutionId.Create("exec-1"),
         OrchestratorId.Create(orchestrator),
         VersionId.Create("v1"),
         "evidence-1");
@@ -87,10 +88,12 @@ internal static class Program
         string verifier = "trusted-verifier",
         string provenance = "trusted-root",
         string authority = "trusted-authority",
+        string execution = "exec-1",
         long created = 10,
         long expires = 20) =>
         new(
             MissionId.Create("mission-1"),
+            ExecutionId.Create(execution),
             OrchestratorId.Create(orchestrator),
             VersionId.Create("v1"),
             VerifierId.Create(verifier),
@@ -112,6 +115,9 @@ internal static class Program
             VerifierId.Create(verifier),
             ProvenanceRootId.Create(provenance),
             AuthorityId.Create(authority));
+
+    private static AcceptanceBindingContext Binding(string policy = "policy-1", string subject = "state-1") =>
+        new(VersionId.Create(policy), subject);
 
     private static RuntimeHealthObservation Health(string orchestrator, RuntimeHealthState state, long version, long observedEpoch = 15) =>
         new(OrchestratorId.Create(orchestrator), state, observedEpoch, version);
@@ -216,6 +222,7 @@ internal static class Program
             fallbackResult,
             Evidence(orchestrator: "beta"),
             Trust(),
+            Binding(),
             PolicyDecision.Allow,
             15);
     }
@@ -225,14 +232,14 @@ internal static class Program
         var tests = new Action[]
         {
             () => AssertEx.Throws<ArgumentException>(() => MissionId.Create(""), "invalid mission"),
-            () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), null, Trust(), PolicyDecision.Allow, 15), "succeeded not accepted without evidence"),
-            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), new EvidenceEnvelope(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), VerifierId.Create("trusted-verifier"), ProvenanceRootId.Create("trusted-root"), AuthorityId.Create("untrusted-authority"), "evidence-1", "state-1", "policy-1", "digest-1", true, 10, 20), Trust(), PolicyDecision.Allow, 15), "self report cannot mint acceptance"),
-            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(), Trust(), PolicyDecision.Deny, 15), "deny overrides success"),
-            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(orchestrator: "beta"), Trust(), PolicyDecision.Allow, 15), "mis-bound evidence"),
-            () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), false, "none"), null, Trust(), PolicyDecision.Allow, 15), "python golden not done"),
-            () => AssertEx.Equal(AcceptanceDecision.Accept, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(), Trust(), PolicyDecision.Allow, 15), "python golden accept"),
-            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(verifier: "evil-verifier"), Trust(), PolicyDecision.Allow, 15), "python golden block"),
-            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(created: 10, expires: 14), Trust(), PolicyDecision.Allow, 15), "python golden stale"),
+            () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), null, Trust(), Binding(), PolicyDecision.Allow, 15), "succeeded not accepted without evidence"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), new EvidenceEnvelope(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), VerifierId.Create("trusted-verifier"), ProvenanceRootId.Create("trusted-root"), AuthorityId.Create("untrusted-authority"), "evidence-1", "state-1", "policy-1", "digest-1", true, 10, 20), Trust(), Binding(), PolicyDecision.Allow, 15), "self report cannot mint acceptance"),
+            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(), Trust(), Binding(), PolicyDecision.Deny, 15), "deny overrides success"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(orchestrator: "beta"), Trust(), Binding(), PolicyDecision.Allow, 15), "mis-bound evidence"),
+            () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), false, "none"), null, Trust(), Binding(), PolicyDecision.Allow, 15), "python golden not done"),
+            () => AssertEx.Equal(AcceptanceDecision.Accept, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(), Trust(), Binding(), PolicyDecision.Allow, 15), "python golden accept"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(verifier: "evil-verifier"), Trust(), Binding(), PolicyDecision.Allow, 15), "python golden block"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(created: 10, expires: 14), Trust(), Binding(), PolicyDecision.Allow, 15), "python golden stale"),
             () =>
             {
                 var registry = new MetaORegistry();
@@ -332,11 +339,11 @@ internal static class Program
                 var trustedEvidence = Evidence(orchestrator: "beta", authority: "trusted-authority");
                 var fallback = new FakeB();
                 var fallbackResult = fallback.Execute(Request("beta"));
-                AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request("beta"), fallbackResult, Evidence(orchestrator: "beta", authority: "untrusted-authority"), Trust(), PolicyDecision.Allow, 15), "failover self-mint blocked");
-                AssertEx.Equal(AcceptanceDecision.Accept, AcceptanceKernel.Evaluate(Request("beta"), fallbackResult, trustedEvidence, Trust(), PolicyDecision.Allow, 15), "failover with trusted evidence accepted");
+                AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request("beta"), fallbackResult, Evidence(orchestrator: "beta", authority: "untrusted-authority"), Trust(), Binding(), PolicyDecision.Allow, 15), "failover self-mint blocked");
+                AssertEx.Equal(AcceptanceDecision.Accept, AcceptanceKernel.Evaluate(Request("beta"), fallbackResult, trustedEvidence, Trust(), Binding(), PolicyDecision.Allow, 15), "failover with trusted evidence accepted");
             },
-            () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), false, "cancelled"), Evidence(), Trust(), PolicyDecision.Allow, 15), "cancellation cannot mint acceptance"),
-            () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), false, "timeout"), Evidence(), Trust(), PolicyDecision.Allow, 15), "timeout cannot mint acceptance"),
+            () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), false, "cancelled"), Evidence(), Trust(), Binding(), PolicyDecision.Allow, 15), "cancellation cannot mint acceptance"),
+            () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), false, "timeout"), Evidence(), Trust(), Binding(), PolicyDecision.Allow, 15), "timeout cannot mint acceptance"),
             () =>
             {
                 var refs = typeof(AcceptanceKernel).Assembly.GetReferencedAssemblies().Select(a => a.Name).ToArray();
@@ -346,7 +353,7 @@ internal static class Program
             () =>
             {
                 var request = Request();
-                var result = new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true, "ok");
+                var result = new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true, "ok");
                 var evidence = Evidence();
                 var trust = Trust();
                 AssertEx.Equal(request, RoundTrip(request), "request round trip");
@@ -354,6 +361,54 @@ internal static class Program
                 AssertEx.Equal(evidence, RoundTrip(evidence), "evidence round trip");
                 AssertEx.Equal(trust, RoundTrip(trust), "trust round trip");
             },
+            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(
+                Request(),
+                new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-2"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true),
+                Evidence(execution: "exec-2"),
+                Trust(),
+                Binding(),
+                PolicyDecision.Allow,
+                15), "execution binding blocks cross-execution evidence"),
+            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(
+                Request(),
+                new ExecutionResult(MissionId.Create("mission-2"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true),
+                Evidence(),
+                Trust(),
+                Binding(),
+                PolicyDecision.Allow,
+                15), "result mission binding blocks mismatch"),
+            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(
+                Request(),
+                new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("beta"), VersionId.Create("v1"), true),
+                Evidence(orchestrator: "beta"),
+                Trust(),
+                Binding(),
+                PolicyDecision.Allow,
+                15), "result runtime binding blocks mismatch"),
+            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(
+                Request(),
+                new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v2"), true),
+                Evidence(),
+                Trust(),
+                Binding(),
+                PolicyDecision.Allow,
+                15), "result adapter binding blocks mismatch"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(
+                Request(),
+                new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true),
+                Evidence(created: 10, expires: 20),
+                Trust(),
+                Binding(policy: "policy-2"),
+                PolicyDecision.Allow,
+                15), "policy version binding blocks mismatch"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(
+                Request(),
+                new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true),
+                Evidence(created: 10, expires: 20),
+                Trust(),
+                Binding(subject: "state-2"),
+                PolicyDecision.Allow,
+                15), "subject state binding forces stale"),
             () =>
             {
                 AssertEx.Equal("AcceptanceKernel", typeof(AcceptanceKernel).Name, "acceptance kernel type");
@@ -378,7 +433,7 @@ internal static class Program
                 var registry = new MetaORegistry();
                 var request = Request("beta");
                 registry.Register(new FakeA());
-                var outcome = MetaOControlPlane.ReplaceAndReconcile(registry, new FakeA(), new FakeB(), request, Evidence(orchestrator: "beta"), Trust(), PolicyDecision.Allow, 15);
+                var outcome = MetaOControlPlane.ReplaceAndReconcile(registry, new FakeA(), new FakeB(), request, Evidence(orchestrator: "beta"), Trust(), Binding(), PolicyDecision.Allow, 15);
                 AssertEx.Equal(AcceptanceDecision.Accept, outcome.Decision, "replacement acceptance");
                 AssertEx.True(outcome.Reconciled, "replacement reconciled");
             },
@@ -401,11 +456,11 @@ internal static class Program
                 AssertEx.True(budget.TryCompleteSettlement("s1"), "complete settlement");
                 AssertEx.True(!budget.TryCompleteSettlement("s1"), "settlement retry idempotent");
             },
-            () => AssertEx.Equal(AcceptanceDecision.Accept, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(), Trust(), PolicyDecision.Allow, 15), "trusted verifier provenance authority accept"),
-            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(), Trust(verifier: "untrusted"), PolicyDecision.Allow, 15), "unknown verifier blocked"),
-            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(), Trust(provenance: "untrusted-root"), PolicyDecision.Allow, 15), "untrusted provenance blocked"),
-            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), Evidence(), Trust(authority: "untrusted-authority"), PolicyDecision.Allow, 15), "unauthorized authority blocked"),
-            () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true), new EvidenceEnvelope(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), VerifierId.Create("trusted-verifier"), ProvenanceRootId.Create("trusted-root"), AuthorityId.Create("untrusted-authority"), "evidence-1", "state-1", "policy-1", "digest-1", true, 10, 20), Trust(), PolicyDecision.Allow, 15), "runtime self-mint blocked"),
+            () => AssertEx.Equal(AcceptanceDecision.Accept, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(), Trust(), Binding(), PolicyDecision.Allow, 15), "trusted verifier provenance authority accept"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(), Trust(verifier: "untrusted"), Binding(), PolicyDecision.Allow, 15), "unknown verifier blocked"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(), Trust(provenance: "untrusted-root"), Binding(), PolicyDecision.Allow, 15), "untrusted provenance blocked"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(), Trust(authority: "untrusted-authority"), Binding(), PolicyDecision.Allow, 15), "unauthorized authority blocked"),
+            () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), new EvidenceEnvelope(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), VerifierId.Create("trusted-verifier"), ProvenanceRootId.Create("trusted-root"), AuthorityId.Create("untrusted-authority"), "evidence-1", "state-1", "policy-1", "digest-1", true, 10, 20), Trust(), Binding(), PolicyDecision.Allow, 15), "runtime self-mint blocked"),
         };
 
         var failures = 0;

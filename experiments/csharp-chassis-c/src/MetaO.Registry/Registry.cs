@@ -25,13 +25,17 @@ public sealed class Registry
     public ExecutionResult ExecuteContained(OrchestratorId id, ExecutionRequest request)
     {
         if (!_items.TryGetValue(id, out var orchestrator)) throw new KeyNotFoundException("Missing");
+        if (orchestrator.Version != request.AdapterVersion)
+        {
+            return new ExecutionResult(request.MissionId, request.ExecutionId, id, request.AdapterVersion, false, "VersionMismatch");
+        }
         try
         {
             return orchestrator.Execute(request);
         }
         catch (Exception ex)
         {
-            return new ExecutionResult(request.MissionId, id, false, ex.Message);
+            return new ExecutionResult(request.MissionId, request.ExecutionId, id, request.AdapterVersion, false, ex.Message);
         }
     }
 }

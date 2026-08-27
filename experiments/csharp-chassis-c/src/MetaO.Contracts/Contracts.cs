@@ -17,6 +17,11 @@ public readonly record struct VersionId(string Value)
     public static VersionId Create(string value) => new(MissionId.Create(value).Value);
 }
 
+public readonly record struct ExecutionId(string Value)
+{
+    public static ExecutionId Create(string value) => new(MissionId.Create(value).Value);
+}
+
 public readonly record struct VerifierId(string Value)
 {
     public static VerifierId Create(string value) => new(MissionId.Create(value).Value);
@@ -32,12 +37,13 @@ public readonly record struct AuthorityId(string Value)
     public static AuthorityId Create(string value) => new(MissionId.Create(value).Value);
 }
 
-public readonly record struct ExecutionRequest(MissionId MissionId, OrchestratorId OrchestratorId, VersionId AdapterVersion, string EvidenceKey);
+public readonly record struct ExecutionRequest(MissionId MissionId, ExecutionId ExecutionId, OrchestratorId OrchestratorId, VersionId AdapterVersion, string EvidenceKey);
 
-public readonly record struct ExecutionResult(MissionId MissionId, OrchestratorId OrchestratorId, bool Succeeded, string? Error = null);
+public readonly record struct ExecutionResult(MissionId MissionId, ExecutionId ExecutionId, OrchestratorId OrchestratorId, VersionId AdapterVersion, bool Succeeded, string? Error = null);
 
 public readonly record struct EvidenceEnvelope(
     MissionId MissionId,
+    ExecutionId ExecutionId,
     OrchestratorId OrchestratorId,
     VersionId AdapterVersion,
     VerifierId VerifierId,
@@ -55,6 +61,8 @@ public readonly record struct AcceptanceTrustContext(
     VerifierId TrustedVerifierId,
     ProvenanceRootId TrustedProvenanceRootId,
     AuthorityId AuthorizedAuthorityId);
+
+public readonly record struct AcceptanceBindingContext(VersionId ExpectedPolicyVersion, string ExpectedSubjectStateVersion);
 
 public enum RuntimeHealthState { Healthy, Degraded, Unhealthy }
 
