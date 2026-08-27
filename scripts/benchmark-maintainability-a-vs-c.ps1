@@ -83,8 +83,9 @@ foreach ($case in $cases) {
                 Invoke-Checked { dotnet restore MetaO.ChassisC.sln | Out-Host } ("dotnet restore " + $case.name)
                 $cycleMs = Measure-Checked {
                     dotnet build MetaO.ChassisC.sln --no-restore -warnaserror | Out-Host
-                    if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+                    if ($LASTEXITCODE -ne 0) { throw "dotnet build failed with exit code $LASTEXITCODE" }
                     dotnet run --project tests/MetaO.TestKit/MetaO.TestKit.csproj --no-build | Out-Host
+                    if ($LASTEXITCODE -ne 0) { throw "dotnet run failed with exit code $LASTEXITCODE" }
                 } ("dotnet build+run " + $case.name)
             }
         }
