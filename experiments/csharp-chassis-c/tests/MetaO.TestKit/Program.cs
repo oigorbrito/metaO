@@ -84,6 +84,31 @@ internal static class Program
             created,
             expires);
 
+    private static AcceptanceDecision FailoverToFallback()
+    {
+        var primary = new ThrowingOrchestrator();
+        var fallback = new FakeB();
+        var registry = new MetaORegistry();
+        registry.Register(primary);
+        var primaryRequest = Request("panic");
+        var primaryResult = registry.ExecuteContained(primary.Id, primaryRequest);
+        if (primaryResult.Succeeded)
+        {
+            return AcceptanceDecision.Block;
+        }
+
+        registry.Unregister(primary.Id);
+        registry.Register(fallback);
+        var fallbackRequest = Request("beta");
+        var fallbackResult = registry.ExecuteContained(fallback.Id, fallbackRequest);
+        return AcceptanceKernel.Evaluate(
+            fallbackRequest,
+            fallbackResult,
+            Evidence(orchestrator: "beta"),
+            PolicyDecision.Allow,
+            15);
+    }
+
     public static int Main()
     {
         var tests = new Action[]
@@ -129,6 +154,7 @@ internal static class Program
                 AssertEx.Equal(AcceptanceDecision.Accept, outcome.Decision, "replacement acceptance");
                 AssertEx.True(outcome.Reconciled, "replacement reconciled");
             },
+            () => AssertEx.Equal(AcceptanceDecision.Accept, FailoverToFallback(), "runtime failure can fail over to fallback runtime"),
             () =>
             {
                 var desired = new[] { OrchestratorId.Create("alpha"), OrchestratorId.Create("beta") };

@@ -22,7 +22,7 @@ Execution evidence:
 
 - `dotnet restore = PASS`
 - `dotnet build --no-restore -warnaserror = PASS`
-- `direct semantic harness = 14/14 PASS`
+- `direct semantic harness = 15/15 PASS`
 - `dotnet test = BLOCKED_ENV`
 
 Root cause:
