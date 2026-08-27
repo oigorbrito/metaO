@@ -1,0 +1,40 @@
+name: Rust chassis spike A
+
+on:
+  push:
+    branches:
+      - test/rust-chassis-spike-a-v1
+  pull_request:
+    branches:
+      - main
+    paths:
+      - experiments/rust-chassis-a/**
+      - .github/workflows/rust-chassis-spike-a.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  qualification:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: experiments/rust-chassis-a
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+      - name: Format gate
+        run: cargo fmt --all --check
+      - name: Clippy gate
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Qualification tests
+        run: cargo test --workspace --all-targets --verbose
+      - name: Dependency graph
+        run: cargo tree --workspace
