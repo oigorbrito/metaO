@@ -4,6 +4,11 @@ Candidate:
 
 - `C = explicit C#/.NET modular chassis`
 
+Objective:
+
+- qualify candidate `C` against the frozen Python golden and the direct semantic harness
+- keep the out-of-process contract seam explicit and fail-closed
+
 Environment:
 
 - `.NET SDK = 10.0.400`
@@ -24,6 +29,12 @@ Execution evidence:
 - `dotnet build --no-restore -warnaserror = PASS`
 - `direct semantic harness = 69/69 PASS`
 - `dotnet test = BLOCKED_ENV`
+
+Method:
+
+- evidence is collected from `dotnet restore`, `dotnet build`, and the direct executable harness
+- `dotnet test` remains blocked because the harness is not a conventional VSTest project in this environment
+- metrics are reported only when they were measured in this checkout
 
 Root cause:
 
@@ -69,6 +80,13 @@ Metrics:
 - `clean build time median ms = 5185`
 - `incremental build time median ms = 4328`
 - `direct harness time median ms = 499`
+
+Interpretation:
+
+- `PASS` means the gate was executed and satisfied in this checkout
+- `PARTIAL` means the current evidence is incomplete for a stronger claim
+- `BLOCKED_ENV` means the gate cannot be completed with the current runner shape in this checkout
+- `NOT_PROVEN` is reserved for claims not demonstrated by the present evidence
 
 Known incomplete evidence:
 

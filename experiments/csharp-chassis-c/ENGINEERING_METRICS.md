@@ -8,6 +8,16 @@ Scope:
 - current branch `test/csharp-chassis-spike-c-v1`
 - direct semantic harness only
 - VSTest remains `BLOCKED_ENV`
+- runtime host = `Microsoft Windows NT 10.0.26200.0`
+- visible logical processors = `8`
+- PowerShell version = `7.6.4`
+
+Method:
+
+- inventory metrics were derived from the checked-in source tree only
+- build and harness timings were measured on this checkout after the current code state was in place
+- each timing metric uses 3 samples and reports the median sample
+- artifact footprint is the sum of the build outputs under `bin/Debug/net10.0`
 
 Inventory:
 
@@ -41,3 +51,20 @@ Notes:
 
 - artifact footprint is the sum of `dll`, `exe`, `pdb`, `deps.json`, and `runtimeconfig.json` under `bin/Debug/net10.0`
 - build timings were taken after the code and test changes in this turn
+
+Definitions:
+
+- `PROJECT_COUNT` counts `.csproj` files in the spike
+- `CSHARP_FILES` counts non-generated `.cs` files in the spike
+- `LOC` counts lines across tracked `.cs` and `.md` files in the spike
+- `PRODUCTION_PACKAGE_REFERENCES` counts package references in production projects
+- `TEST_ONLY_PACKAGE_REFERENCES` counts package references in test projects
+- `PROJECT_REFERENCES` counts project-to-project references across the spike
+- `OWNED_UNSAFE_BLOCKS` counts explicit `unsafe` usages in owned source
+- `OWNED_NATIVE_INTEROP` counts P/Invoke or equivalent native interop markers in owned source
+
+Reading:
+
+- these values are descriptive evidence, not acceptance criteria by themselves
+- timing medians are representative samples, not guarantees of future runtime
+- the visible host facts above are the minimum environment details confirmed locally for these measurements

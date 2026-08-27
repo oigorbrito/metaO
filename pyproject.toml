@@ -12,5 +12,8 @@ dependencies = []
 [project.scripts]
 metao = "metao.entrypoint:main"
 
+[tool.setuptools]
+package-dir = {"" = "src"}
+
 [tool.setuptools.packages.find]
 where = ["src"]

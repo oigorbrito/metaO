@@ -9,6 +9,8 @@ using System.IO;
 
 namespace MetaO.TestKit;
 
+// Direct semantic harness for candidate C.
+// The executable output is the protocol: individual case failures plus TEST_COUNT/FAILURES.
 internal static class AssertEx
 {
     public static void True(bool condition, string name)
@@ -74,6 +76,7 @@ sealed class ThrowingOrchestrator : IOrchestrator
 
 internal static class Program
 {
+    // Identity, trust, and binding inputs are always created through validated factories.
     private static ExecutionRequest Request(string orchestrator = "alpha") => new(
         MissionId.Create("mission-1"),
         ExecutionId.Create("exec-1"),
@@ -172,6 +175,7 @@ internal static class Program
         return IdentityTransport.FromDto(parsed);
     }
 
+    // Domain roundtrip is retained only for non-identity regression cases.
     private static T RoundTrip<T>(T value)
     {
         var json = JsonSerializer.Serialize(value);
@@ -246,6 +250,7 @@ internal static class Program
 
     public static int Main()
     {
+        // The battery is intentionally ordered from identity and contract invariants to broader runtime behaviors.
         var tests = new Action[]
         {
             () => AssertEx.Throws<ArgumentException>(() => MissionId.Create(""), "invalid mission"),
