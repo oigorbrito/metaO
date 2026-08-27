@@ -1,0 +1,10 @@
+{
+  "baseline_commit": "b69a4e502b07ddfa1f5e05399710e335d5edfbc0",
+  "policy_version": "policy-1",
+  "cases": [
+    {"name": "orchestrator_done_without_evidence", "executor_done": true, "evidence": "none", "expected": "NOT_DONE"},
+    {"name": "bound_verified_evidence", "executor_done": false, "evidence": "bound", "expected": "ACCEPT"},
+    {"name": "untrusted_verifier", "executor_done": false, "evidence": "evil_verifier", "expected": "BLOCK"},
+    {"name": "stale_evidence", "executor_done": false, "evidence": "stale", "expected": "STALE"}
+  ]
+}
