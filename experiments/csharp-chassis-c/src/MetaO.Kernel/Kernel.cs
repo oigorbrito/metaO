@@ -34,11 +34,17 @@ public static class AcceptanceKernel
         if (evidence.Value.MissionId != request.MissionId ||
             evidence.Value.ExecutionId != request.ExecutionId ||
             evidence.Value.OrchestratorId != request.OrchestratorId ||
-            evidence.Value.AdapterVersion != request.AdapterVersion ||
-            evidence.Value.VerifierId != trust.TrustedVerifierId ||
+            evidence.Value.AdapterVersion != request.AdapterVersion)
+        {
+            return AcceptanceDecision.Stale;
+        }
+        if (evidence.Value.VerifierId != trust.TrustedVerifierId ||
             evidence.Value.ProvenanceRootId != trust.TrustedProvenanceRootId ||
-            evidence.Value.AuthorityId != trust.AuthorizedAuthorityId ||
-            evidence.Value.EvidenceKey != request.EvidenceKey ||
+            evidence.Value.AuthorityId != trust.AuthorizedAuthorityId)
+        {
+            return AcceptanceDecision.Block;
+        }
+        if (evidence.Value.EvidenceKey != request.EvidenceKey ||
             evidence.Value.EvidenceDigest is null ||
             evidence.Value.SubjectStateVersion != binding.ExpectedSubjectStateVersion ||
             evidence.Value.PolicyVersion != binding.ExpectedPolicyVersion.Value)

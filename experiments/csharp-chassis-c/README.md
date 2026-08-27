@@ -22,7 +22,7 @@ Execution evidence:
 
 - `dotnet restore = PASS`
 - `dotnet build --no-restore -warnaserror = PASS`
-- `direct semantic harness = 33/33 PASS`
+- `direct semantic harness = 69/69 PASS`
 - `dotnet test = BLOCKED_ENV`
 
 Root cause:
@@ -58,9 +58,17 @@ Architecture results:
 Metrics:
 
 - `projects = 7`
+- `C# files = 7`
+- `LOC = 1017`
 - `production PackageReference = 0`
 - `test-only PackageReference = 0`
 - `ProjectReference = 14`
+- `owned unsafe blocks = 0`
+- `owned native interop = 0`
+- `artifact footprint bytes = 723122`
+- `clean build time median ms = 5185`
+- `incremental build time median ms = 4328`
+- `direct harness time median ms = 499`
 
 Known incomplete evidence:
 
