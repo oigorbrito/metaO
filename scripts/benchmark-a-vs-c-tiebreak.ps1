@@ -1,6 +1,6 @@
 param(
     [string]$RustRoot = 'C:\Projetos\metao-rust-a\experiments\rust-chassis-a',
-    [string]$CSharpRoot = 'C:\Projetos\metao-gate\experiments\csharp-chassis-c',
+    [string]$CSharpRoot = 'C:\Projetos\metao-csharp-c\experiments\csharp-chassis-c',
     [string]$Output = "$PSScriptRoot\..\artifacts\a-vs-c-tiebreak.json",
     [int]$Samples = 5
 )
@@ -29,6 +29,13 @@ function Directory-Bytes([string]$Path) {
 
 function Unique-Line-Count([string[]]$Lines) {
     return @($Lines | Where-Object { $_ -and $_.Trim() } | ForEach-Object { $_.Trim() } | Sort-Object -Unique).Count
+}
+
+if (-not (Test-Path (Join-Path $RustRoot 'Cargo.toml'))) {
+    throw "RustRoot does not contain Cargo.toml: $RustRoot"
+}
+if (-not (Test-Path (Join-Path $CSharpRoot 'MetaO.ChassisC.sln'))) {
+    throw "CSharpRoot does not contain MetaO.ChassisC.sln: $CSharpRoot"
 }
 
 $rustClean = @()
