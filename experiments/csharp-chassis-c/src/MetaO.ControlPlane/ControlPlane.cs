@@ -15,13 +15,14 @@ public static class ControlPlane
         IOrchestrator replacement,
         ExecutionRequest request,
         EvidenceEnvelope? evidence,
+        AcceptanceTrustContext trust,
         PolicyDecision policy,
         long nowEpoch)
     {
         registry.Unregister(current.Id);
         registry.Register(replacement);
         var result = registry.ExecuteContained(replacement.Id, request);
-        var decision = AcceptanceKernel.Evaluate(request, result, evidence, policy, nowEpoch);
+        var decision = AcceptanceKernel.Evaluate(request, result, evidence, trust, policy, nowEpoch);
         return new ControlPlaneOutcome(decision, true);
     }
 }

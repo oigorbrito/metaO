@@ -14,7 +14,7 @@ Current qualification:
 - `L0 = PASS`
 - `L1 = PASS`
 - `L2 = PASS`
-- `L3 = PASS`
+- `L3 = PARTIAL`
 - `L4 = PARTIAL`
 - `L5 = PARTIAL`
 
@@ -22,7 +22,7 @@ Execution evidence:
 
 - `dotnet restore = PASS`
 - `dotnet build --no-restore -warnaserror = PASS`
-- `direct semantic harness = 15/15 PASS`
+- `direct semantic harness = 24/24 PASS`
 - `dotnet test = BLOCKED_ENV`
 
 Root cause:
@@ -38,7 +38,7 @@ Architecture results:
 - `SUCCEEDED_NOT_ACCEPTED = PASS`
 - `HARD_DENY = PASS`
 - `EVIDENCE_BINDING = PASS`
-- `RUNTIME_SELF_AUTHORITY = PASS`
+- `RUNTIME_SELF_AUTHORITY = FAIL_BY_CODE`
 - `RECONCILIATION_IDEMPOTENCY = PASS`
 - `BUDGET_CONCURRENCY = PASS`
 - `SETTLEMENT_IDEMPOTENCY = PASS`
@@ -53,7 +53,7 @@ Metrics:
 Known incomplete evidence:
 
 - standard VSTest parity
-- complete Python golden equivalence audit
+- exact Python golden equivalence audit is now pinned but still needs any remaining case-by-case recheck against the experiment copy
 - full L4 multi-runtime/failover
 - full L5 operational/adversarial comparison
 - fully comparable Rust execution

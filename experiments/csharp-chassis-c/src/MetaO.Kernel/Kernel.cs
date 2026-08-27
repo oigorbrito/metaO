@@ -15,6 +15,7 @@ public static class AcceptanceKernel
         ExecutionRequest request,
         ExecutionResult result,
         EvidenceEnvelope? evidence,
+        AcceptanceTrustContext trust,
         PolicyDecision policy,
         long nowEpoch)
     {
@@ -25,6 +26,9 @@ public static class AcceptanceKernel
         if (evidence.Value.MissionId != request.MissionId ||
             evidence.Value.OrchestratorId != request.OrchestratorId ||
             evidence.Value.AdapterVersion != request.AdapterVersion ||
+            evidence.Value.VerifierId != trust.TrustedVerifierId ||
+            evidence.Value.ProvenanceRootId != trust.TrustedProvenanceRootId ||
+            evidence.Value.AuthorityId != trust.AuthorizedAuthorityId ||
             evidence.Value.EvidenceKey != request.EvidenceKey ||
             evidence.Value.EvidenceDigest is null ||
             evidence.Value.SubjectStateVersion is null ||
