@@ -31,7 +31,11 @@ pub fn evaluate_acceptance(
         return AcceptanceDecision::Block;
     }
 
-    if now_epoch < evidence.created_at_epoch || now_epoch > evidence.expires_at_epoch {
+    if now_epoch < evidence.created_at_epoch {
+        return AcceptanceDecision::Block;
+    }
+
+    if now_epoch > evidence.expires_at_epoch {
         return AcceptanceDecision::Stale;
     }
 
@@ -101,7 +105,7 @@ mod tests {
     }
 
     #[test]
-    fn time_before_evidence_creation_is_stale() {
+    fn evidence_from_future_is_blocked_like_python_oracle() {
         assert_eq!(
             evaluate_acceptance(
                 &request(),
@@ -110,7 +114,7 @@ mod tests {
                 PolicyEffect::Allow,
                 9,
             ),
-            AcceptanceDecision::Stale,
+            AcceptanceDecision::Block,
         );
     }
 
