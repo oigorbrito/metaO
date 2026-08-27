@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsTestProject>true</IsTestProject>
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\MetaO.Contracts\MetaO.Contracts.csproj" />
+    <ProjectReference Include="..\..\src\MetaO.Kernel\MetaO.Kernel.csproj" />
+    <ProjectReference Include="..\..\src\MetaO.Registry\MetaO.Registry.csproj" />
+    <ProjectReference Include="..\..\src\MetaO.Reconcile\MetaO.Reconcile.csproj" />
+    <ProjectReference Include="..\..\src\MetaO.ControlPlane\MetaO.ControlPlane.csproj" />
+    <ProjectReference Include="..\..\src\MetaO.Budget\MetaO.Budget.csproj" />
+  </ItemGroup>
+  <Target Name="VSTest" DependsOnTargets="Build">
+    <Exec Command="&quot;$(TargetPath)&quot;" />
+  </Target>
+</Project>
