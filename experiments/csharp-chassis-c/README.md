@@ -4,34 +4,63 @@ Candidate:
 
 - `C = explicit C#/.NET modular chassis`
 
-Environment:
+Environment used for the last local execution:
 
 - `.NET SDK = 10.0.400`
 - branch = `test/csharp-chassis-spike-c-v1`
 
-Current qualification:
+## Evidence discipline
+
+Current branch HEAD adds the remaining targeted L5 checkpoint/resume and runtime-revocation fixtures after the last executed 69-case baseline.
+
+Therefore the current qualification is:
 
 - `L0 = PASS`
 - `L1 = PASS`
 - `L2 = PASS`
 - `L3 = PASS`
 - `L4 = PASS`
-- `L5 = PARTIAL`
+- `L5 = PARTIAL_PENDING_EXECUTION`
 
-Execution evidence:
+Executed evidence preserved from the prior validated head:
 
 - `dotnet restore = PASS`
 - `dotnet build --no-restore -warnaserror = PASS`
 - `direct semantic harness = 69/69 PASS`
-- `dotnet test = BLOCKED_ENV`
+- frozen Python golden = `4/4`
+- `dotnet test = BLOCKED_ENV / standard-runner parity NOT_PROVEN`
 
-Root cause:
+Current-head L5 additions are implemented but must not be promoted to executed PASS until rerun:
 
-- `MetaO.TestKit` is an executable semantic harness rather than a conventional VSTest project.
-- The standard test packages are not present in the local cache.
-- Standard runner parity remains `NOT_PROVEN`.
+- serialized checkpoint round-trip
+- restart/resume using reconstructed state and a fresh registry
+- policy revalidation after resume
+- subject-state revalidation after resume
+- runtime authorization modeled separately from runtime health
+- newer `REVOKED` authorization overriding older `ACTIVE`
+- healthy runtime not selectable when revoked
+- successful runtime execution unable to become accepted after revocation
+- restart against newly revoked runtime requiring replan
 
-Architecture results:
+The current direct harness target is:
+
+```text
+DIRECT_COUNT = 79
+DIRECT_FAILURES = 0 required
+```
+
+On a .NET 10 environment, the narrow current-head validation is:
+
+```powershell
+cd experiments/csharp-chassis-c
+dotnet restore MetaO.ChassisC.sln
+dotnet build MetaO.ChassisC.sln --no-restore -warnaserror
+dotnet run --project tests/MetaO.TestKit/MetaO.TestKit.csproj --no-build
+```
+
+Do not infer current-head PASS from the earlier 69/69 run. Hosted GitHub Actions has failed before configured workflow steps and the repository workflow is Python-oriented, so that failure is infrastructure evidence rather than C# semantic evidence.
+
+## Architecture results already executed/code-backed before the current L5 delta
 
 - `KERNEL_FRAMEWORK_LEAK = NO`
 - `WHOLE_ORCHESTRATOR_REPLACEMENT = PASS`
@@ -55,7 +84,7 @@ Architecture results:
 - `STALE_RUNTIME_STATE = PASS`
 - `FAILOVER_AUTHORITY_BOUNDARY = PASS`
 
-Metrics:
+## Measured engineering snapshot
 
 - `projects = 7`
 - `C# files = 7`
@@ -66,20 +95,29 @@ Metrics:
 - `owned unsafe blocks = 0`
 - `owned native interop = 0`
 - `artifact footprint bytes = 723122`
-- `clean build time median ms = 5185`
-- `incremental build time median ms = 4328`
-- `direct harness time median ms = 499`
+- clean build samples ms = `4464, 5185, 4657`
+- incremental build samples ms = `4328, 3277, 3138`
+- direct harness samples ms = `376, 319, 499`
+- `clean build time median ms = 4657`
+- `incremental build time median ms = 3277`
+- `direct harness time median ms = 376`
 
-Known incomplete evidence:
+The median corrections are arithmetic-only; the original measured samples are unchanged.
 
-- standard VSTest parity
-- full L5 operational/adversarial comparison
-- fully comparable Rust execution
+## Remaining evidence gaps
+
+- execute the current 79-case direct harness on a .NET 10 environment
+- fully comparable Rust executable evidence remains blocked in the recorded Windows host by missing MSVC `link.exe`
+- standard VSTest parity is not required to claim the direct harness result and remains separately `NOT_PROVEN/BLOCKED_ENV`
 
 ABP classification:
 
-- `DEFER`
+- `DEFER` as a host/productivity donor; it is not a second Core or acceptance authority.
 
 Product migration:
 
 - `NOT_AUTHORIZED`
+
+```text
+#199_SCORECARD = FROZEN
+```
