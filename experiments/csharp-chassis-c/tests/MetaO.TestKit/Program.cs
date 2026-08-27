@@ -51,6 +51,13 @@ sealed class FakeB : IOrchestrator
     public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, Id, true);
 }
 
+sealed class DegradedFake : IOrchestrator
+{
+    public OrchestratorId Id => OrchestratorId.Create("gamma");
+    public VersionId Version => VersionId.Create("1");
+    public ExecutionResult Execute(ExecutionRequest request) => new(request.MissionId, Id, true);
+}
+
 sealed class VersionedFake : IOrchestrator
 {
     public OrchestratorId Id => OrchestratorId.Create("alpha");
@@ -106,13 +113,65 @@ internal static class Program
             ProvenanceRootId.Create(provenance),
             AuthorityId.Create(authority));
 
+    private static RuntimeHealthObservation Health(string orchestrator, RuntimeHealthState state, long version, long observedEpoch = 15) =>
+        new(OrchestratorId.Create(orchestrator), state, observedEpoch, version);
+
+    private static bool IsEligible(RuntimeHealthObservation observation, long currentEpoch) =>
+        observation.State == RuntimeHealthState.Healthy && observation.ObservedEpoch == currentEpoch;
+
+    private static OrchestratorId SelectNext(IReadOnlyList<RuntimeHealthObservation> health, long currentEpoch, string? skip = null)
+    {
+        foreach (var item in health.OrderBy(x => x.Version).ThenBy(x => x.OrchestratorId.Value, StringComparer.Ordinal))
+        {
+            if (item.ObservedEpoch != currentEpoch)
+            {
+                continue;
+            }
+
+            if (skip is not null && item.OrchestratorId.Value == skip)
+            {
+                continue;
+            }
+
+            if (item.State == RuntimeHealthState.Unhealthy)
+            {
+                continue;
+            }
+
+            return item.OrchestratorId;
+        }
+
+        return OrchestratorId.Create("none");
+    }
+
+    private static (string Plan, OrchestratorId Selected) ReplanAfterFailure(IReadOnlyList<RuntimeHealthObservation> health, long currentEpoch, string failed)
+    {
+        var selected = SelectNext(health, currentEpoch, failed);
+        var plan = selected.Value == "none" ? "require_replan" : $"select:{selected.Value}";
+        return (plan, selected);
+    }
+
     private static T RoundTrip<T>(T value)
     {
         var json = JsonSerializer.Serialize(value);
         return JsonSerializer.Deserialize<T>(json)!;
     }
 
-    private static string RepoRoot() => Directory.GetCurrentDirectory();
+    private static string RepoRoot()
+    {
+        var current = AppContext.BaseDirectory;
+        while (!File.Exists(Path.Combine(current, "MetaO.ChassisC.sln")))
+        {
+            var parent = Directory.GetParent(current);
+            if (parent is null)
+            {
+                throw new DirectoryNotFoundException("Unable to locate MetaO.ChassisC.sln");
+            }
+            current = parent.FullName;
+        }
+
+        return current;
+    }
 
     private static string ReadRepoFile(params string[] relativeSegments) => File.ReadAllText(Path.Combine(RepoRoot(), Path.Combine(relativeSegments)));
 
@@ -194,6 +253,64 @@ internal static class Program
                 registry.Register(new ThrowingOrchestrator());
                 var result = registry.ExecuteContained(OrchestratorId.Create("panic"), Request("panic"));
                 AssertEx.True(!result.Succeeded, "runtime exception contained");
+            },
+            () =>
+            {
+                AssertEx.True(IsEligible(Health("alpha", RuntimeHealthState.Healthy, 1), 15), "healthy eligible");
+                AssertEx.True(!IsEligible(Health("beta", RuntimeHealthState.Unhealthy, 1), 15), "unhealthy not eligible");
+                AssertEx.True(!IsEligible(Health("gamma", RuntimeHealthState.Degraded, 1), 15), "degraded not healthy");
+            },
+            () =>
+            {
+                var health = new[]
+                {
+                    Health("alpha", RuntimeHealthState.Unhealthy, 1),
+                    Health("beta", RuntimeHealthState.Unhealthy, 2),
+                    Health("gamma", RuntimeHealthState.Healthy, 3),
+                };
+                AssertEx.Equal("gamma", SelectNext(health, 15).Value, "failover picks tertiary");
+            },
+            () =>
+            {
+                var attempt1 = new ThrowingOrchestrator();
+                var secondary = Health("beta", RuntimeHealthState.Unhealthy, 2);
+                var tertiary = Health("gamma", RuntimeHealthState.Healthy, 3);
+                var health = new[] { Health("alpha", RuntimeHealthState.Healthy, 1), secondary, tertiary };
+                var plan = ReplanAfterFailure(health, 15, "alpha");
+                AssertEx.Equal("select:gamma", plan.Plan, "replan after failure");
+                AssertEx.Equal("gamma", plan.Selected.Value, "replan selects healthy tertiary");
+                var registry = new MetaORegistry();
+                registry.Register(attempt1);
+                AssertEx.True(!registry.ExecuteContained(attempt1.Id, Request("panic")).Succeeded, "primary failure contained");
+                AssertEx.True(!IsEligible(secondary, 15), "secondary skipped because unhealthy");
+            },
+            () =>
+            {
+                var health = new[]
+                {
+                    Health("alpha", RuntimeHealthState.Unhealthy, 1),
+                    Health("beta", RuntimeHealthState.Unhealthy, 2),
+                    Health("gamma", RuntimeHealthState.Unhealthy, 3),
+                };
+                var plan = ReplanAfterFailure(health, 15, "alpha");
+                AssertEx.Equal("require_replan", plan.Plan, "all runtimes fail");
+                AssertEx.Equal("none", plan.Selected.Value, "no acceptance when all fail");
+            },
+            () =>
+            {
+                var observed = Health("beta", RuntimeHealthState.Unhealthy, 1, 15);
+                var next = Health("beta", RuntimeHealthState.Healthy, 2, 16);
+                AssertEx.True(!IsEligible(observed, 16), "stale health rejected");
+                AssertEx.True(IsEligible(next, 16), "recovery converges");
+                AssertEx.True(!IsEligible(observed, 16), "recovery is idempotent on stale report");
+            },
+            () =>
+            {
+                var trustedEvidence = Evidence(orchestrator: "beta", authority: "trusted-authority");
+                var fallback = new FakeB();
+                var fallbackResult = fallback.Execute(Request("beta"));
+                AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request("beta"), fallbackResult, Evidence(orchestrator: "beta", authority: "untrusted-authority"), Trust(), PolicyDecision.Allow, 15), "failover self-mint blocked");
+                AssertEx.Equal(AcceptanceDecision.Accept, AcceptanceKernel.Evaluate(Request("beta"), fallbackResult, trustedEvidence, Trust(), PolicyDecision.Allow, 15), "failover with trusted evidence accepted");
             },
             () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), false, "cancelled"), Evidence(), Trust(), PolicyDecision.Allow, 15), "cancellation cannot mint acceptance"),
             () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), false, "timeout"), Evidence(), Trust(), PolicyDecision.Allow, 15), "timeout cannot mint acceptance"),

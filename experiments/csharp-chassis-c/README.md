@@ -15,14 +15,14 @@ Current qualification:
 - `L1 = PASS`
 - `L2 = PASS`
 - `L3 = PASS`
-- `L4 = PARTIAL`
+- `L4 = PASS`
 - `L5 = PARTIAL`
 
 Execution evidence:
 
 - `dotnet restore = PASS`
 - `dotnet build --no-restore -warnaserror = PASS`
-- `direct semantic harness = 27/27 PASS`
+- `direct semantic harness = 33/33 PASS`
 - `dotnet test = BLOCKED_ENV`
 
 Root cause:
@@ -45,6 +45,15 @@ Architecture results:
 - `RECONCILIATION_IDEMPOTENCY = PASS`
 - `BUDGET_CONCURRENCY = PASS`
 - `SETTLEMENT_IDEMPOTENCY = PASS`
+- `THREE_RUNTIME_CONTRACT = PASS`
+- `UNHEALTHY_NOT_SELECTED = PASS`
+- `FAILOVER_ORDER = PASS`
+- `REPLAN_AFTER_FAILURE = PASS`
+- `ALL_RUNTIMES_FAIL_NOT_ACCEPTED = PASS`
+- `RECOVERY_CONVERGENCE = PASS`
+- `RECOVERY_IDEMPOTENT = PASS`
+- `STALE_RUNTIME_STATE = PASS`
+- `FAILOVER_AUTHORITY_BOUNDARY = PASS`
 
 Metrics:
 
@@ -56,7 +65,6 @@ Metrics:
 Known incomplete evidence:
 
 - standard VSTest parity
-- full L4 multi-runtime/failover
 - full L5 operational/adversarial comparison
 - fully comparable Rust execution
 

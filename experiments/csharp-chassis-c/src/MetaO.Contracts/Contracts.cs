@@ -56,5 +56,13 @@ public readonly record struct AcceptanceTrustContext(
     ProvenanceRootId TrustedProvenanceRootId,
     AuthorityId AuthorizedAuthorityId);
 
+public enum RuntimeHealthState { Healthy, Degraded, Unhealthy }
+
+public readonly record struct RuntimeHealthObservation(
+    OrchestratorId OrchestratorId,
+    RuntimeHealthState State,
+    long ObservedEpoch,
+    long Version);
+
 public enum PolicyDecision { Deny, Allow }
 public enum AcceptanceDecision { Accept, NotDone, Stale, Block, RequireHuman }
