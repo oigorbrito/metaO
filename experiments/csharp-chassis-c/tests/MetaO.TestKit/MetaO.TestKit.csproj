@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsTestProject>true</IsTestProject>
     <OutputType>Exe</OutputType>
+    <StartupObject>MetaO.TestKit.L5Program</StartupObject>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\MetaO.Contracts\MetaO.Contracts.csproj" />

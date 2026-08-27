@@ -26,18 +26,19 @@ Timing methodology:
 - `clean build` sample = `dotnet clean MetaO.ChassisC.sln --nologo`, then `dotnet build MetaO.ChassisC.sln --no-restore -warnaserror`
 - `incremental build` sample = repeated `dotnet build MetaO.ChassisC.sln --no-restore -warnaserror`
 - `direct harness` sample = `tests/MetaO.TestKit/bin/Debug/net10.0/MetaO.TestKit.exe`
-- median = middle of 3 measured samples
+- median = middle of 3 measured samples after sorting numerically
 
 Samples:
 
 - `CLEAN_BUILD_TIME_SAMPLES_MS = 4464, 5185, 4657`
-- `CLEAN_BUILD_TIME_MEDIAN_MS = 5185`
+- `CLEAN_BUILD_TIME_MEDIAN_MS = 4657`
 - `INCREMENTAL_BUILD_TIME_SAMPLES_MS = 4328, 3277, 3138`
-- `INCREMENTAL_BUILD_TIME_MEDIAN_MS = 4328`
+- `INCREMENTAL_BUILD_TIME_MEDIAN_MS = 3277`
 - `DIRECT_HARNESS_TIME_SAMPLES_MS = 376, 319, 499`
-- `DIRECT_HARNESS_TIME_MEDIAN_MS = 499`
+- `DIRECT_HARNESS_TIME_MEDIAN_MS = 376`
 
 Notes:
 
 - artifact footprint is the sum of `dll`, `exe`, `pdb`, `deps.json`, and `runtimeconfig.json` under `bin/Debug/net10.0`
-- build timings were taken after the code and test changes in this turn
+- build timings were taken after the code and test changes that produced the recorded samples
+- this correction changes only median arithmetic; the measured samples were not reexecuted
