@@ -155,6 +155,23 @@ internal static class Program
         return (plan, selected);
     }
 
+    private static IdentityTransportDto IdentityDto(
+        string mission = "mission-1",
+        string execution = "exec-1",
+        string orchestrator = "alpha",
+        string version = "v1",
+        string verifier = "trusted-verifier",
+        string provenance = "trusted-root",
+        string authority = "trusted-authority") =>
+        new(mission, execution, orchestrator, version, verifier, provenance, authority);
+
+    private static (MissionId MissionId, ExecutionId ExecutionId, OrchestratorId OrchestratorId, VersionId AdapterVersion, VerifierId VerifierId, ProvenanceRootId ProvenanceRootId, AuthorityId AuthorityId) RoundTripTransport(IdentityTransportDto dto)
+    {
+        var json = JsonSerializer.Serialize(dto);
+        var parsed = JsonSerializer.Deserialize<IdentityTransportDto>(json)!;
+        return IdentityTransport.FromDto(parsed);
+    }
+
     private static T RoundTrip<T>(T value)
     {
         var json = JsonSerializer.Serialize(value);
@@ -232,6 +249,34 @@ internal static class Program
         var tests = new Action[]
         {
             () => AssertEx.Throws<ArgumentException>(() => MissionId.Create(""), "invalid mission"),
+            () => AssertEx.Throws<ArgumentException>(() => MissionId.Create(" "), "mission whitespace"),
+            () => AssertEx.Throws<ArgumentException>(() => ExecutionId.Create(" "), "execution whitespace"),
+            () => AssertEx.Throws<ArgumentException>(() => OrchestratorId.Create(" "), "orchestrator whitespace"),
+            () => AssertEx.Throws<ArgumentException>(() => VersionId.Create(" "), "version whitespace"),
+            () => AssertEx.Throws<ArgumentException>(() => VerifierId.Create(" "), "verifier whitespace"),
+            () => AssertEx.Throws<ArgumentException>(() => ProvenanceRootId.Create(" "), "provenance whitespace"),
+            () => AssertEx.Throws<ArgumentException>(() => AuthorityId.Create(" "), "authority whitespace"),
+            () => AssertEx.True(!default(MissionId).IsValid, "mission default invalid"),
+            () => AssertEx.True(!default(ExecutionId).IsValid, "execution default invalid"),
+            () => AssertEx.True(!default(OrchestratorId).IsValid, "orchestrator default invalid"),
+            () => AssertEx.True(!default(VersionId).IsValid, "version default invalid"),
+            () => AssertEx.True(!default(VerifierId).IsValid, "verifier default invalid"),
+            () => AssertEx.True(!default(ProvenanceRootId).IsValid, "provenance default invalid"),
+            () => AssertEx.True(!default(AuthorityId).IsValid, "authority default invalid"),
+            () =>
+            {
+                var dto = IdentityDto();
+                var round = RoundTripTransport(dto);
+                AssertEx.Equal(dto.MissionId, round.MissionId.Value, "transport mission round trip");
+                AssertEx.Equal(dto.ExecutionId, round.ExecutionId.Value, "transport execution round trip");
+                AssertEx.Equal(dto.OrchestratorId, round.OrchestratorId.Value, "transport orchestrator round trip");
+                AssertEx.Equal(dto.AdapterVersion, round.AdapterVersion.Value, "transport version round trip");
+                AssertEx.Equal(dto.VerifierId, round.VerifierId.Value, "transport verifier round trip");
+                AssertEx.Equal(dto.ProvenanceRootId, round.ProvenanceRootId.Value, "transport provenance round trip");
+                AssertEx.Equal(dto.AuthorityId, round.AuthorityId.Value, "transport authority round trip");
+            },
+            () => AssertEx.Throws<ArgumentException>(() => IdentityTransport.FromDto(IdentityDto(mission: "")), "empty transport rejected"),
+            () => AssertEx.Throws<ArgumentException>(() => IdentityTransport.FromDto(IdentityDto(execution: " ")), "whitespace transport rejected"),
             () => AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), null, Trust(), Binding(), PolicyDecision.Allow, 15), "succeeded not accepted without evidence"),
             () => AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), new EvidenceEnvelope(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), VerifierId.Create("trusted-verifier"), ProvenanceRootId.Create("trusted-root"), AuthorityId.Create("untrusted-authority"), "evidence-1", "state-1", "policy-1", "digest-1", true, 10, 20), Trust(), Binding(), PolicyDecision.Allow, 15), "self report cannot mint acceptance"),
             () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), Evidence(), Trust(), Binding(), PolicyDecision.Deny, 15), "deny overrides success"),
@@ -336,6 +381,61 @@ internal static class Program
             },
             () =>
             {
+                var registry = new MetaORegistry();
+                var active = new FakeA();
+                var revoked = new FakeB();
+                registry.Register(active);
+                registry.Register(revoked);
+                registry.Unregister(revoked.Id);
+                var request = Request("alpha");
+                var selected = registry.ExecuteContained(active.Id, request);
+                AssertEx.True(selected.Succeeded, "restart/resume active runtime succeeds");
+                AssertEx.Equal(AcceptanceDecision.Accept, AcceptanceKernel.Evaluate(request, selected, Evidence(), Trust(), Binding(), PolicyDecision.Allow, 15), "resume revalidates governance");
+            },
+            () =>
+            {
+                var registry = new MetaORegistry();
+                var revoked = new FakeB();
+                registry.Register(revoked);
+                registry.Unregister(revoked.Id);
+                AssertEx.Throws<KeyNotFoundException>(() => registry.ExecuteContained(revoked.Id, Request("beta")), "revoked runtime not selected");
+            },
+            () =>
+            {
+                var budget = new AcceptanceBudget(1);
+                var begin = new[]
+                {
+                    Task.Run(() => budget.TryBeginSettlement("c1")),
+                    Task.Run(() => budget.TryBeginSettlement("c2")),
+                };
+                Task.WaitAll(begin);
+                AssertEx.True(begin.Count(t => t.Result) == 1, "concurrent budget atomicity");
+            },
+            () =>
+            {
+                var budget = new AcceptanceBudget(2);
+                AssertEx.True(budget.TryBeginSettlement("s1"), "first settlement begins");
+                AssertEx.True(budget.TryCompleteSettlement("s1"), "first settlement completes");
+                AssertEx.True(!budget.TryCompleteSettlement("s1"), "same settlement idempotent");
+                AssertEx.True(!budget.TryBeginSettlement("s1"), "same settlement cannot restart after completion");
+            },
+            () =>
+            {
+                var evidence = Evidence(execution: "exec-1", created: 10, expires: 20);
+                var replay = Evidence(execution: "exec-1", created: 10, expires: 20);
+                AssertEx.Equal(AcceptanceDecision.Stale, AcceptanceKernel.Evaluate(Request(), new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true), replay, Trust(), Binding(policy: "policy-2"), PolicyDecision.Allow, 15), "out of order evidence rejected");
+                AssertEx.Equal(evidence, replay, "replay evidence is structurally identical");
+            },
+            () =>
+            {
+                var registry = new MetaORegistry();
+                registry.Register(new ThrowingOrchestrator());
+                var result = registry.ExecuteContained(OrchestratorId.Create("panic"), Request("panic"));
+                AssertEx.True(!result.Succeeded, "malicious runtime reports contained");
+                AssertEx.Equal(AcceptanceDecision.NotDone, AcceptanceKernel.Evaluate(Request("panic"), result, Evidence(orchestrator: "panic", authority: "untrusted-authority"), Trust(), Binding(), PolicyDecision.Allow, 15), "malicious runtime report rejected");
+            },
+            () =>
+            {
                 var trustedEvidence = Evidence(orchestrator: "beta", authority: "trusted-authority");
                 var fallback = new FakeB();
                 var fallbackResult = fallback.Execute(Request("beta"));
@@ -353,13 +453,23 @@ internal static class Program
             () =>
             {
                 var request = Request();
-                var result = new ExecutionResult(MissionId.Create("mission-1"), ExecutionId.Create("exec-1"), OrchestratorId.Create("alpha"), VersionId.Create("v1"), true, "ok");
                 var evidence = Evidence();
-                var trust = Trust();
-                AssertEx.Equal(request, RoundTrip(request), "request round trip");
-                AssertEx.Equal(result, RoundTrip(result), "result round trip");
-                AssertEx.Equal(evidence, RoundTrip(evidence), "evidence round trip");
-                AssertEx.Equal(trust, RoundTrip(trust), "trust round trip");
+                var dto = IdentityTransport.ToDto(
+                    request.MissionId,
+                    request.ExecutionId,
+                    request.OrchestratorId,
+                    request.AdapterVersion,
+                    evidence.VerifierId,
+                    evidence.ProvenanceRootId,
+                    evidence.AuthorityId);
+                var round = RoundTripTransport(dto);
+                AssertEx.Equal(dto.MissionId, round.MissionId.Value, "request mission transport round trip");
+                AssertEx.Equal(dto.ExecutionId, round.ExecutionId.Value, "request execution transport round trip");
+                AssertEx.Equal(dto.OrchestratorId, round.OrchestratorId.Value, "request orchestrator transport round trip");
+                AssertEx.Equal(dto.AdapterVersion, round.AdapterVersion.Value, "request version transport round trip");
+                AssertEx.Equal(dto.VerifierId, round.VerifierId.Value, "trust verifier transport round trip");
+                AssertEx.Equal(dto.ProvenanceRootId, round.ProvenanceRootId.Value, "trust provenance transport round trip");
+                AssertEx.Equal(dto.AuthorityId, round.AuthorityId.Value, "trust authority transport round trip");
             },
             () => AssertEx.Equal(AcceptanceDecision.Block, AcceptanceKernel.Evaluate(
                 Request(),
