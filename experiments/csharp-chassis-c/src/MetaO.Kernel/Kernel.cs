@@ -11,6 +11,9 @@ public interface IOrchestrator
 
 public static class AcceptanceKernel
 {
+    public static RejectionReason? ClassifyRejection(EvidenceEnvelope? evidence) =>
+        evidence is { Valid: false } ? RejectionReason.InvalidEvidence : null;
+
     public static AcceptanceDecision Evaluate(
         ExecutionRequest request,
         ExecutionResult result,
