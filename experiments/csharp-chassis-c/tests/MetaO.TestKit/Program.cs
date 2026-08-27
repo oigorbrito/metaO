@@ -4,6 +4,8 @@ using MetaO.Reconcile;
 using MetaO.Budget;
 using MetaORegistry = MetaO.Registry.Registry;
 using MetaOControlPlane = MetaO.ControlPlane.ControlPlane;
+using System.Text.Json;
+using System.IO;
 
 namespace MetaO.TestKit;
 
@@ -104,6 +106,37 @@ internal static class Program
             ProvenanceRootId.Create(provenance),
             AuthorityId.Create(authority));
 
+    private static T RoundTrip<T>(T value)
+    {
+        var json = JsonSerializer.Serialize(value);
+        return JsonSerializer.Deserialize<T>(json)!;
+    }
+
+    private static string RepoRoot() => Directory.GetCurrentDirectory();
+
+    private static string ReadRepoFile(params string[] relativeSegments) => File.ReadAllText(Path.Combine(RepoRoot(), Path.Combine(relativeSegments)));
+
+    private static void AssertNoForbiddenSource(string relativePath, params string[] forbidden)
+    {
+        var text = ReadRepoFile(relativePath);
+        foreach (var item in forbidden)
+        {
+            AssertEx.True(!text.Contains(item, StringComparison.Ordinal), $"{relativePath} must not contain {item}");
+        }
+    }
+
+    private static void AssertProjectHasNoForbiddenPackages(string relativePath)
+    {
+        var text = ReadRepoFile(relativePath);
+        AssertEx.True(!text.Contains("PackageReference", StringComparison.Ordinal), $"{relativePath} must not add package refs");
+        AssertEx.True(!text.Contains("EF Core", StringComparison.Ordinal), $"{relativePath} must not mention EF Core");
+        AssertEx.True(!text.Contains("ABP", StringComparison.Ordinal), $"{relativePath} must not mention ABP");
+        AssertEx.True(!text.Contains("workflow", StringComparison.OrdinalIgnoreCase), $"{relativePath} must not mention workflow");
+        AssertEx.True(!text.Contains("durable", StringComparison.OrdinalIgnoreCase), $"{relativePath} must not mention durable");
+        AssertEx.True(!text.Contains("event store", StringComparison.OrdinalIgnoreCase), $"{relativePath} must not mention event store");
+        AssertEx.True(!text.Contains("background-job", StringComparison.OrdinalIgnoreCase), $"{relativePath} must not mention background-job");
+    }
+
     private static AcceptanceDecision FailoverToFallback()
     {
         var primary = new ThrowingOrchestrator();
@@ -169,6 +202,36 @@ internal static class Program
                 var refs = typeof(AcceptanceKernel).Assembly.GetReferencedAssemblies().Select(a => a.Name).ToArray();
                 AssertEx.True(!refs.Contains("Microsoft.AspNetCore.App"), "kernel must not reference aspnet");
                 AssertEx.True(!refs.Contains("Microsoft.EntityFrameworkCore"), "kernel must not reference ef");
+            },
+            () =>
+            {
+                var request = Request();
+                var result = new ExecutionResult(MissionId.Create("mission-1"), OrchestratorId.Create("alpha"), true, "ok");
+                var evidence = Evidence();
+                var trust = Trust();
+                AssertEx.Equal(request, RoundTrip(request), "request round trip");
+                AssertEx.Equal(result, RoundTrip(result), "result round trip");
+                AssertEx.Equal(evidence, RoundTrip(evidence), "evidence round trip");
+                AssertEx.Equal(trust, RoundTrip(trust), "trust round trip");
+            },
+            () =>
+            {
+                AssertEx.Equal("AcceptanceKernel", typeof(AcceptanceKernel).Name, "acceptance kernel type");
+                AssertNoForbiddenSource("src/MetaO.Registry/Registry.cs", "AcceptanceDecision", "Evaluate(", "PolicyDecision");
+                AssertNoForbiddenSource("src/MetaO.Reconcile/Reconcile.cs", "AcceptanceDecision", "Evaluate(", "PolicyDecision");
+                AssertNoForbiddenSource("src/MetaO.Budget/Budget.cs", "AcceptanceDecision", "Evaluate(", "PolicyDecision");
+                var controlPlane = ReadRepoFile("src/MetaO.ControlPlane/ControlPlane.cs");
+                AssertEx.True(controlPlane.Contains("AcceptanceKernel.Evaluate", StringComparison.Ordinal), "control plane delegates to kernel");
+                AssertEx.True(!controlPlane.Contains("return AcceptanceDecision", StringComparison.Ordinal), "control plane must not mint acceptance");
+            },
+            () =>
+            {
+                AssertProjectHasNoForbiddenPackages("src/MetaO.Contracts/MetaO.Contracts.csproj");
+                AssertProjectHasNoForbiddenPackages("src/MetaO.Kernel/MetaO.Kernel.csproj");
+                AssertProjectHasNoForbiddenPackages("src/MetaO.Registry/MetaO.Registry.csproj");
+                AssertProjectHasNoForbiddenPackages("src/MetaO.Reconcile/MetaO.Reconcile.csproj");
+                AssertProjectHasNoForbiddenPackages("src/MetaO.ControlPlane/MetaO.ControlPlane.csproj");
+                AssertProjectHasNoForbiddenPackages("src/MetaO.Budget/MetaO.Budget.csproj");
             },
             () =>
             {

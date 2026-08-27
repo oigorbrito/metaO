@@ -27,7 +27,7 @@ Exact frozen Python cases:
 | untrusted_verifier | BLOCK | BLOCK | YES |
 | stale_evidence | STALE | STALE | YES |
 
-C# direct harness cases:
+C# extra conformance cases:
 
 | Case | PYTHON_EXPECTED | CSHARP_ACTUAL | EQUIVALENT |
 |---|---|---|---|
@@ -59,10 +59,11 @@ C# direct harness cases:
 Current audit summary:
 
 - `PYTHON_GOLDEN_CASES = 4`
-- `CSHARP_DIRECT_HARNESS_CASES = 24`
-- `EQUIVALENT = 4`
-- `NON_EQUIVALENT = 0`
-- `NOT_PROVEN = 20`
+- `GOLDEN_EQUIVALENT = 4`
+- `GOLDEN_NON_EQUIVALENT = 0`
+- `GOLDEN_NOT_PROVEN = 0`
+- `CSHARP_EXTRA_CONFORMANCE_CASES = 23`
+- `EXTRA_CSHARP_CASES_OUTSIDE_GOLDEN_SCOPE = 23`
 
 Known Python L5 defects not copied:
 
