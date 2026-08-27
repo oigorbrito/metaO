@@ -133,12 +133,10 @@ internal static class Program
                 continue;
             }
 
-            if (item.State == RuntimeHealthState.Unhealthy)
+            if (IsEligible(item, currentEpoch))
             {
-                continue;
+                return item.OrchestratorId;
             }
-
-            return item.OrchestratorId;
         }
 
         return OrchestratorId.Create("none");
@@ -260,11 +258,15 @@ internal static class Program
                 AssertEx.True(!IsEligible(Health("beta", RuntimeHealthState.Unhealthy, 1), 15), "unhealthy not eligible");
                 AssertEx.True(!IsEligible(Health("gamma", RuntimeHealthState.Degraded, 1), 15), "degraded not healthy");
             },
+            () => AssertEx.True(IsEligible(Health("alpha", RuntimeHealthState.Healthy, 1), 15), "healthy current observation selectable"),
+            () => AssertEx.True(!IsEligible(Health("beta", RuntimeHealthState.Degraded, 1), 15), "degraded current observation not selectable"),
+            () => AssertEx.True(!IsEligible(Health("gamma", RuntimeHealthState.Unhealthy, 1), 15), "unhealthy current observation not selectable"),
+            () => AssertEx.True(!IsEligible(Health("delta", RuntimeHealthState.Healthy, 1, 14), 15), "stale healthy observation not selectable"),
             () =>
             {
                 var health = new[]
                 {
-                    Health("alpha", RuntimeHealthState.Unhealthy, 1),
+                    Health("alpha", RuntimeHealthState.Degraded, 1),
                     Health("beta", RuntimeHealthState.Unhealthy, 2),
                     Health("gamma", RuntimeHealthState.Healthy, 3),
                 };
@@ -288,13 +290,34 @@ internal static class Program
             {
                 var health = new[]
                 {
-                    Health("alpha", RuntimeHealthState.Unhealthy, 1),
+                    Health("alpha", RuntimeHealthState.Degraded, 1),
                     Health("beta", RuntimeHealthState.Unhealthy, 2),
                     Health("gamma", RuntimeHealthState.Unhealthy, 3),
                 };
                 var plan = ReplanAfterFailure(health, 15, "alpha");
                 AssertEx.Equal("require_replan", plan.Plan, "all runtimes fail");
                 AssertEx.Equal("none", plan.Selected.Value, "no acceptance when all fail");
+            },
+            () =>
+            {
+                var health = new[]
+                {
+                    Health("alpha", RuntimeHealthState.Degraded, 1),
+                    Health("beta", RuntimeHealthState.Unhealthy, 2),
+                    Health("gamma", RuntimeHealthState.Healthy, 3),
+                };
+                AssertEx.Equal("gamma", SelectNext(health, 15).Value, "order skips degraded and unhealthy");
+            },
+            () =>
+            {
+                var health = new[]
+                {
+                    Health("alpha", RuntimeHealthState.Degraded, 1),
+                    Health("beta", RuntimeHealthState.Unhealthy, 2),
+                    Health("gamma", RuntimeHealthState.Healthy, 3, 14),
+                };
+                AssertEx.Equal("none", SelectNext(health, 15).Value, "stale healthy requires replan");
+                AssertEx.Equal("require_replan", ReplanAfterFailure(health, 15, "alpha").Plan, "stale healthy replan");
             },
             () =>
             {
