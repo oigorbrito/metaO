@@ -11,6 +11,7 @@ Conductor or any orchestrator SDK.
 
 from __future__ import annotations
 
+import threading
 from dataclasses import dataclass, replace
 from enum import Enum
 from typing import Optional
@@ -114,6 +115,116 @@ class AcceptanceBudget:
 
 
 @dataclass(frozen=True)
+class BudgetReservation:
+    """A stable logical reservation owned by one shared budget authority."""
+
+    reservation_id: str
+    money: float = 0.0
+    tokens: int = 0
+    wall_time_s: float = 0.0
+    verifier_attempts: int = 0
+    settled: bool = False
+
+    def request_tuple(self) -> tuple[float, int, float, int]:
+        return (self.money, self.tokens, self.wall_time_s, self.verifier_attempts)
+
+
+class AcceptanceBudgetAuthority:
+    """Serialize shared reservations and make settlement retries idempotent.
+
+    AcceptanceBudget remains an immutable value object. This authority owns the
+    mutable reservation ledger for one shared budget and is the only place where
+    concurrent reserve/settle transitions are serialized.
+    """
+
+    def __init__(self, budget: AcceptanceBudget) -> None:
+        self._budget = budget
+        self._reservations: dict[str, BudgetReservation] = {}
+        self._lock = threading.RLock()
+
+    def snapshot(self) -> AcceptanceBudget:
+        with self._lock:
+            return self._budget
+
+    def reservation(self, reservation_id: str) -> Optional[BudgetReservation]:
+        with self._lock:
+            return self._reservations.get(reservation_id)
+
+    def _pending_totals(self) -> tuple[float, int, float, int]:
+        pending = [reservation for reservation in self._reservations.values() if not reservation.settled]
+        return (
+            sum(reservation.money for reservation in pending),
+            sum(reservation.tokens for reservation in pending),
+            sum(reservation.wall_time_s for reservation in pending),
+            sum(reservation.verifier_attempts for reservation in pending),
+        )
+
+    def reserve(
+        self,
+        reservation_id: str,
+        *,
+        money: float = 0.0,
+        tokens: int = 0,
+        wall_time_s: float = 0.0,
+        verifier_attempts: int = 0,
+    ) -> BudgetReservation:
+        if not reservation_id:
+            raise ValueError("reservation_id cannot be empty")
+        if min(money, tokens, wall_time_s, verifier_attempts) < 0:
+            raise ValueError("budget reservation cannot be negative")
+
+        requested = (money, tokens, wall_time_s, verifier_attempts)
+        with self._lock:
+            existing = self._reservations.get(reservation_id)
+            if existing is not None:
+                if existing.request_tuple() != requested:
+                    raise ValueError("reservation replay conflicts with existing request")
+                return existing
+
+            pending_money, pending_tokens, pending_wall_time_s, pending_verifier_attempts = self._pending_totals()
+            if self._budget.money_used + pending_money + money > self._budget.money_limit:
+                raise BudgetExhausted("acceptance money budget exhausted")
+            if self._budget.tokens_used + pending_tokens + tokens > self._budget.token_limit:
+                raise BudgetExhausted("acceptance token budget exhausted")
+            if self._budget.wall_time_used_s + pending_wall_time_s + wall_time_s > self._budget.wall_time_limit_s:
+                raise BudgetExhausted("acceptance wall-time budget exhausted")
+            if (
+                self._budget.verifier_attempts_used
+                + pending_verifier_attempts
+                + verifier_attempts
+                > self._budget.verifier_attempt_limit
+            ):
+                raise BudgetExhausted("acceptance verifier-attempt budget exhausted")
+
+            reservation = BudgetReservation(
+                reservation_id=reservation_id,
+                money=money,
+                tokens=tokens,
+                wall_time_s=wall_time_s,
+                verifier_attempts=verifier_attempts,
+            )
+            self._reservations[reservation_id] = reservation
+            return reservation
+
+    def settle(self, reservation_id: str) -> AcceptanceBudget:
+        with self._lock:
+            reservation = self._reservations.get(reservation_id)
+            if reservation is None:
+                raise KeyError(f"unknown reservation: {reservation_id}")
+            if reservation.settled:
+                return self._budget
+
+            self._budget = self._budget.consume(
+                money=reservation.money,
+                tokens=reservation.tokens,
+                wall_time_s=reservation.wall_time_s,
+                verifier_attempts=reservation.verifier_attempts,
+            )
+            self._reservations[reservation_id] = replace(reservation, settled=True)
+            return self._budget
+
+
+@dataclass(frozen=True)
 class ApprovalRequest:
     approval_id: str
     mission_id: str
@@ -189,6 +300,8 @@ __all__ = [
     "evaluate_policy",
     "BudgetExhausted",
     "AcceptanceBudget",
+    "BudgetReservation",
+    "AcceptanceBudgetAuthority",
     "ApprovalRequest",
     "ApprovalRecord",
     "require_human",
