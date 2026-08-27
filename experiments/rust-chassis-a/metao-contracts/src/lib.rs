@@ -37,6 +37,19 @@ impl ExecutionId {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct AttemptId(String);
+
+impl AttemptId {
+    pub fn new(value: impl Into<String>) -> Result<Self, ContractError> {
+        validate_identity("attempt_id", value.into()).map(Self)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct RuntimeId(String);
 
 impl RuntimeId {
