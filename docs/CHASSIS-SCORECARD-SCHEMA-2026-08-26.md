@@ -13,6 +13,7 @@ It is governed by:
 - `docs/COMPOSITION-MAP.md`
 - GitHub Issue #199
 - Python baseline Issue #192 and PR #201
+- C# candidate admission Issue #207
 
 The scorecard must not be changed after observing candidate outcomes unless a new Issue records the reason, affected cells and regression impact before any decision claim.
 
@@ -22,7 +23,10 @@ The scorecard must not be changed after observing candidate outcomes unless a ne
 P = current Python baseline
 A = explicit Rust Cargo workspace
 B = Nidus-based modular Rust host
+C = explicit C#/.NET modular chassis
 ```
+
+Candidate C was admitted later by #207 under the already frozen scorecard. Its addition does not change hard gates, weights, evidence grades, status vocabulary, or award any language/framework-preference bonus.
 
 Product migration remains unauthorized during this comparison.
 
@@ -112,7 +116,7 @@ Remaining Python baseline architectural gaps / L5 requirements:
 - shared budget concurrent oversubscription
 - settlement retry idempotency
 
-These gaps are future requirements to fix or surpass. Rust candidates do not need to reproduce Python defects. Golden semantic equivalence applies to frozen invariants and expected outcomes, not to known Python weaknesses.
+These gaps are future requirements to fix or surpass. Other candidates do not need to reproduce Python defects. Golden semantic equivalence applies to frozen invariants and expected outcomes, not to known Python weaknesses.
 
 ## Candidate Row Template
 
