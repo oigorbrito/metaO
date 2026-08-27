@@ -1,0 +1,14 @@
+[workspace]
+members = [
+  "metao-contracts",
+  "metao-kernel",
+  "metao-registry",
+  "metao-wire",
+  "metao-testkit",
+]
+exclude = ["fuzz"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
