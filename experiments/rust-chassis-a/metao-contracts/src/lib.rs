@@ -1,3 +1,6 @@
+mod rejection;
+pub use rejection::RejectionReason;
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum ContractError {
     EmptyIdentity(&'static str),
