@@ -68,6 +68,21 @@ public readonly struct ExecutionId : IEquatable<ExecutionId>, IIdentityValue
     public static bool operator !=(ExecutionId left, ExecutionId right) => !left.Equals(right);
 }
 
+public readonly struct AttemptId : IEquatable<AttemptId>, IIdentityValue
+{
+    private readonly string? _value;
+    public string Value => _value ?? throw new InvalidOperationException("Invalid identity.");
+    public bool IsValid => !string.IsNullOrWhiteSpace(_value);
+    private AttemptId(string value) => _value = MissionId.Create(value).Value;
+    public static AttemptId Create(string value) => new(value);
+    public bool Equals(AttemptId other) => string.Equals(_value, other._value, StringComparison.Ordinal);
+    public override bool Equals(object? obj) => obj is AttemptId other && Equals(other);
+    public override int GetHashCode() => StringComparer.Ordinal.GetHashCode(_value ?? string.Empty);
+    public override string ToString() => Value;
+    public static bool operator ==(AttemptId left, AttemptId right) => left.Equals(right);
+    public static bool operator !=(AttemptId left, AttemptId right) => !left.Equals(right);
+}
+
 public readonly struct VerifierId : IEquatable<VerifierId>, IIdentityValue
 {
     private readonly string? _value;
