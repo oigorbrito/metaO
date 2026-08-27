@@ -329,7 +329,15 @@ def execute_mission_once(
     if cancellation_requested is not None and cancellation_requested():
         orchestrator.cancel(execution_id)
 
-    execution = orchestrator.execute(request)
+    try:
+        execution = orchestrator.execute(request)
+    except Exception as exc:
+        execution = ExecutionResult(
+            execution_id,
+            selected,
+            ExecutionStatus.FAILED,
+            error=f"{type(exc).__name__}: {exc}",
+        )
     ended_at_epoch = clock()
     if on_attempt_finished is not None:
         on_attempt_finished(attempt_context, execution, ended_at_epoch)
