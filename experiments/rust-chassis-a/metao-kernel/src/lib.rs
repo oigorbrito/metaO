@@ -1,7 +1,14 @@
 use metao_contracts::{
     AcceptanceDecision, Evidence, ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyEffect,
-    RuntimeId,
+    RejectionReason, RuntimeId,
 };
+
+pub fn classify_rejection(evidence: Option<&Evidence>) -> Option<RejectionReason> {
+    match evidence {
+        Some(item) if !item.verified => Some(RejectionReason::InvalidEvidence),
+        _ => None,
+    }
+}
 
 pub fn evaluate_acceptance(
     request: &ExecutionRequest,
