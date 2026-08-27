@@ -48,3 +48,97 @@ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<R
     missing.dedup();
     missing
 }
+
+#[cfg(test)]
+mod tests {
+    use super::evaluate_acceptance;
+    use metao_contracts::{
+        AcceptanceDecision, Evidence, ExecutionId, ExecutionRequest, ExecutionResult,
+        ExecutionStatus, MissionId, PolicyEffect, RuntimeId,
+    };
+
+    fn request() -> ExecutionRequest {
+        ExecutionRequest {
+            execution_id: ExecutionId::new("exec-1").unwrap(),
+            mission_id: MissionId::new("mission-1").unwrap(),
+        }
+    }
+
+    fn result() -> ExecutionResult {
+        ExecutionResult {
+            execution_id: ExecutionId::new("exec-1").unwrap(),
+            runtime_id: RuntimeId::new("runtime-1").unwrap(),
+            status: ExecutionStatus::Succeeded,
+        }
+    }
+
+    fn evidence() -> Evidence {
+        Evidence {
+            mission_id: MissionId::new("mission-1").unwrap(),
+            execution_id: ExecutionId::new("exec-1").unwrap(),
+            runtime_id: RuntimeId::new("runtime-1").unwrap(),
+            policy_version: "policy-1".into(),
+            verified: true,
+            created_at_epoch: 10,
+            expires_at_epoch: 20,
+        }
+    }
+
+    #[test]
+    fn unverified_exact_binding_is_blocked() {
+        let mut item = evidence();
+        item.verified = false;
+        assert_eq!(
+            evaluate_acceptance(
+                &request(),
+                &result(),
+                Some(&item),
+                PolicyEffect::Allow,
+                15,
+            ),
+            AcceptanceDecision::Block,
+        );
+    }
+
+    #[test]
+    fn time_before_evidence_creation_is_stale() {
+        assert_eq!(
+            evaluate_acceptance(
+                &request(),
+                &result(),
+                Some(&evidence()),
+                PolicyEffect::Allow,
+                9,
+            ),
+            AcceptanceDecision::Stale,
+        );
+    }
+
+    #[test]
+    fn evidence_is_valid_at_creation_boundary() {
+        assert_eq!(
+            evaluate_acceptance(
+                &request(),
+                &result(),
+                Some(&evidence()),
+                PolicyEffect::Allow,
+                10,
+            ),
+            AcceptanceDecision::Accept,
+        );
+    }
+
+    #[test]
+    fn evidence_is_valid_at_expiry_boundary() {
+        assert_eq!(
+            evaluate_acceptance(
+                &request(),
+                &result(),
+                Some(&evidence()),
+                PolicyEffect::Allow,
+                20,
+            ),
+            AcceptanceDecision::Accept,
+        );
+    }
+}
