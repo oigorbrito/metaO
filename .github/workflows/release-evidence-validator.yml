@@ -1,0 +1,22 @@
+name: Release Evidence Validator
+
+on:
+  pull_request:
+    paths:
+      - '.github/workflows/release-evidence-validator.yml'
+      - 'scripts/validate_release_evidence.py'
+      - 'tests/unit/test_release_evidence_validator.py'
+      - 'docs/RELEASE-EVIDENCE-VALIDATOR.md'
+
+jobs:
+  evidence-validator:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Validator CLI smoke
+        run: python scripts/validate_release_evidence.py --help
+      - name: Fail-closed validator unit tests
+        run: python -m unittest tests.unit.test_release_evidence_validator -v
