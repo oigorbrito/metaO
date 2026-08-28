@@ -49,3 +49,38 @@ pub fn decode_response(payload: &str) -> Result<WireResponse, String> {
     }
     Ok(response)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{decode_request, decode_response, PROTOCOL_VERSION};
+
+    #[test]
+    fn malformed_request_fails_closed_through_real_decoder() {
+        assert!(decode_request("{not-json").is_err());
+    }
+
+    #[test]
+    fn malformed_response_fails_closed_through_real_decoder() {
+        assert!(decode_response("{not-json").is_err());
+    }
+
+    #[test]
+    fn unknown_request_protocol_version_fails_closed() {
+        let payload = format!(
+            r#"{{"protocol_version":{},"execution_id":"x1","mission_id":"m1","objective":"test"}}"#,
+            PROTOCOL_VERSION + 1
+        );
+        let error = decode_request(&payload).expect_err("unknown version must be rejected");
+        assert!(error.contains("unsupported protocol version"));
+    }
+
+    #[test]
+    fn unknown_response_protocol_version_fails_closed() {
+        let payload = format!(
+            r#"{{"protocol_version":{},"execution_id":"x1","runtime_id":"orch-a","status":"Succeeded","result":"ok"}}"#,
+            PROTOCOL_VERSION + 1
+        );
+        let error = decode_response(&payload).expect_err("unknown version must be rejected");
+        assert!(error.contains("unsupported protocol version"));
+    }
+}
