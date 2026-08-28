@@ -1,0 +1,56 @@
+{
+  "fixture_version": 1,
+  "contract_version": 1,
+  "cases": [
+    {"case_id": "acceptance.valid_bound", "category": "acceptance", "scenario": "valid_bound"},
+    {"case_id": "acceptance.succeeded_without_evidence", "category": "acceptance", "scenario": "succeeded_without_evidence"},
+    {"case_id": "acceptance.failed_obligation", "category": "acceptance", "scenario": "failed_obligation"},
+    {"case_id": "acceptance.stale_evidence", "category": "acceptance", "scenario": "stale_evidence"},
+    {"case_id": "acceptance.future_evidence", "category": "acceptance", "scenario": "future_evidence"},
+    {"case_id": "acceptance.subject_mismatch", "category": "acceptance", "scenario": "subject_mismatch"},
+    {"case_id": "acceptance.subject_state_mismatch", "category": "acceptance", "scenario": "subject_state_mismatch"},
+    {"case_id": "acceptance.verification_context_mismatch", "category": "acceptance", "scenario": "verification_context_mismatch"},
+    {"case_id": "acceptance.policy_bundle_mismatch", "category": "acceptance", "scenario": "policy_bundle_mismatch"},
+
+    {"case_id": "authority_provenance.missing_provenance", "category": "authority_provenance", "scenario": "missing_provenance"},
+    {"case_id": "authority_provenance.untrusted_verifier", "category": "authority_provenance", "scenario": "untrusted_verifier"},
+    {"case_id": "authority_provenance.untrusted_provenance_root", "category": "authority_provenance", "scenario": "untrusted_provenance_root"},
+    {"case_id": "authority_provenance.missing_authority", "category": "authority_provenance", "scenario": "missing_authority"},
+    {"case_id": "authority_provenance.unauthorized_authority", "category": "authority_provenance", "scenario": "unauthorized_authority"},
+    {"case_id": "authority_provenance.trusted_exact_evidence", "category": "authority_provenance", "scenario": "trusted_exact_evidence"},
+
+    {"case_id": "policy.allow_default", "category": "policy", "scenario": "allow_default"},
+    {"case_id": "policy.deny_default", "category": "policy", "scenario": "deny_default"},
+    {"case_id": "policy.require_human_default", "category": "policy", "scenario": "require_human_default"},
+    {"case_id": "policy.deny_overrides_require_human", "category": "policy", "scenario": "deny_overrides_require_human"},
+
+    {"case_id": "approval.approved_exact_binding", "category": "approval", "scenario": "approved_exact_binding"},
+    {"case_id": "approval.denied_exact_binding", "category": "approval", "scenario": "denied_exact_binding"},
+    {"case_id": "approval.approval_id_mismatch", "category": "approval", "scenario": "approval_id_mismatch"},
+    {"case_id": "approval.low_confidence_requires_human", "category": "approval", "scenario": "low_confidence_requires_human"},
+    {"case_id": "approval.invalid_confidence_fails_closed", "category": "approval", "scenario": "invalid_confidence_fails_closed"},
+
+    {"case_id": "budget.shared_budget_no_oversubscription", "category": "budget", "scenario": "shared_budget_no_oversubscription"},
+    {"case_id": "budget.exact_capacity_admission", "category": "budget", "scenario": "exact_capacity_admission"},
+    {"case_id": "budget.failed_reservation_no_mutation", "category": "budget", "scenario": "failed_reservation_no_mutation"},
+    {"case_id": "budget.duplicate_reservation_replay_idempotent", "category": "budget", "scenario": "duplicate_reservation_replay_idempotent"},
+    {"case_id": "budget.conflicting_reservation_replay_fails_closed", "category": "budget", "scenario": "conflicting_reservation_replay_fails_closed"},
+    {"case_id": "budget.settlement_retry_idempotent", "category": "budget", "scenario": "settlement_retry_idempotent"},
+    {"case_id": "budget.concurrent_same_settlement_single_effect", "category": "budget", "scenario": "concurrent_same_settlement_single_effect"},
+    {"case_id": "budget.unknown_settlement_id_fails_closed", "category": "budget", "scenario": "unknown_settlement_id_fails_closed"},
+
+    {"case_id": "proof.valid_replay", "category": "proof", "scenario": "valid_replay"},
+    {"case_id": "proof.tampered_evidence_ids", "category": "proof", "scenario": "tampered_evidence_ids"},
+    {"case_id": "proof.tampered_decision", "category": "proof", "scenario": "tampered_decision"},
+    {"case_id": "proof.tampered_reasons", "category": "proof", "scenario": "tampered_reasons"},
+    {"case_id": "proof.tampered_digest", "category": "proof", "scenario": "tampered_digest"},
+    {"case_id": "proof.order_independent", "category": "proof", "scenario": "order_independent"},
+
+    {"case_id": "runtime.success_without_evidence", "category": "runtime", "scenario": "success_without_evidence"},
+    {"case_id": "runtime.recovered_success_without_evidence", "category": "runtime", "scenario": "recovered_success_without_evidence"},
+    {"case_id": "runtime.failover_success_without_evidence", "category": "runtime", "scenario": "failover_success_without_evidence"},
+    {"case_id": "runtime.failover_success_with_valid_evidence", "category": "runtime", "scenario": "failover_success_with_valid_evidence"},
+    {"case_id": "runtime.crash_recovery", "category": "runtime", "scenario": "crash_recovery"},
+    {"case_id": "runtime.timeout_recovery", "category": "runtime", "scenario": "timeout_recovery"}
+  ]
+}
