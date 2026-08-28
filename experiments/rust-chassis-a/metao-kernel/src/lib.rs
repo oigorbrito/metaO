@@ -1,7 +1,7 @@
 use metao_contracts::{
-    AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, BudgetReservation,
-    ContractError, Evidence, EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus,
-    PolicyEffect, RuntimeId,
+    AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, ApprovalRecord,
+    ApprovalRequest, BudgetReservation, ContractError, Evidence, EvidenceEnvelope,
+    ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyEffect, RuntimeId,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -56,6 +56,63 @@ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<R
     missing.sort();
     missing.dedup();
     missing
+}
+
+pub fn require_human(
+    approval_id: impl Into<String>,
+    mission_id: impl Into<String>,
+    execution_id: impl Into<String>,
+    subject_state_id: impl Into<String>,
+    policy_bundle_id: impl Into<String>,
+    reason: impl Into<String>,
+) -> ApprovalRequest {
+    ApprovalRequest {
+        approval_id: approval_id.into(),
+        mission_id: mission_id.into(),
+        execution_id: execution_id.into(),
+        subject_state_id: subject_state_id.into(),
+        policy_bundle_id: policy_bundle_id.into(),
+        reason: reason.into(),
+    }
+}
+
+pub fn resume_after_approval(
+    request: &ApprovalRequest,
+    record: &ApprovalRecord,
+) -> AcceptanceDecision {
+    let bindings = [
+        request.approval_id == record.approval_id,
+        request.mission_id == record.mission_id,
+        request.execution_id == record.execution_id,
+        request.subject_state_id == record.subject_state_id,
+        request.policy_bundle_id == record.policy_bundle_id,
+    ];
+    if bindings.iter().any(|binding| !binding) {
+        return AcceptanceDecision::Block;
+    }
+    if record.approved {
+        AcceptanceDecision::Accept
+    } else {
+        AcceptanceDecision::Block
+    }
+}
+
+pub fn apply_confidence_after_hard_gates(
+    hard_gate_decision: AcceptanceDecision,
+    confidence: f64,
+    threshold: f64,
+) -> Result<AcceptanceDecision, ContractError> {
+    if hard_gate_decision != AcceptanceDecision::Accept {
+        return Ok(hard_gate_decision);
+    }
+    if !(0.0..=1.0).contains(&confidence) || !(0.0..=1.0).contains(&threshold) {
+        return Err(ContractError::InvalidConfidence);
+    }
+    if confidence < threshold {
+        Ok(AcceptanceDecision::RequireHuman)
+    } else {
+        Ok(AcceptanceDecision::Accept)
+    }
 }
 
 fn budget_exhausted() -> ContractError {

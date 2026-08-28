@@ -12,6 +12,7 @@ pub enum ContractError {
     ReplayConflict,
     BudgetExhausted,
     UnknownReservation(String),
+    InvalidConfidence,
 }
 
 fn validate_identity(kind: &'static str, value: String) -> Result<String, ContractError> {
@@ -87,6 +88,27 @@ pub enum PolicyEffect {
     RequireHuman,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApprovalRequest {
+    pub approval_id: String,
+    pub mission_id: String,
+    pub execution_id: String,
+    pub subject_state_id: String,
+    pub policy_bundle_id: String,
+    pub reason: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ApprovalRecord {
+    pub approval_id: String,
+    pub mission_id: String,
+    pub execution_id: String,
+    pub subject_state_id: String,
+    pub policy_bundle_id: String,
+    pub approver_id: String,
+    pub approved: bool,
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AcceptanceBudget {
     pub money_limit: f64,
@@ -107,7 +129,12 @@ impl AcceptanceBudget {
         verifier_attempt_limit: u64,
     ) -> Result<Self, ContractError> {
         Self::with_usage(
-            (money_limit, token_limit, wall_time_limit_s, verifier_attempt_limit),
+            (
+                money_limit,
+                token_limit,
+                wall_time_limit_s,
+                verifier_attempt_limit,
+            ),
             (0.0, 0, 0.0, 0),
         )
     }
