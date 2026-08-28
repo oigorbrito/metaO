@@ -5,6 +5,13 @@ pub const CONTRACT_VERSION: u32 = 1;
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ContractError {
     EmptyIdentity(&'static str),
+    NegativeBudget,
+    InitialUsageExceedsLimit,
+    EmptyReservationId,
+    NegativeReservation,
+    ReplayConflict,
+    BudgetExhausted,
+    UnknownReservation(String),
 }
 
 fn validate_identity(kind: &'static str, value: String) -> Result<String, ContractError> {
@@ -78,6 +85,113 @@ pub enum PolicyEffect {
     Allow,
     Deny,
     RequireHuman,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct AcceptanceBudget {
+    pub money_limit: f64,
+    pub token_limit: u64,
+    pub wall_time_limit_s: f64,
+    pub verifier_attempt_limit: u64,
+    pub money_used: f64,
+    pub tokens_used: u64,
+    pub wall_time_used_s: f64,
+    pub verifier_attempts_used: u64,
+}
+
+impl AcceptanceBudget {
+    pub fn new(
+        money_limit: f64,
+        token_limit: u64,
+        wall_time_limit_s: f64,
+        verifier_attempt_limit: u64,
+    ) -> Result<Self, ContractError> {
+        Self::with_usage(
+            (money_limit, token_limit, wall_time_limit_s, verifier_attempt_limit),
+            (0.0, 0, 0.0, 0),
+        )
+    }
+
+    pub fn with_usage(
+        limits: (f64, u64, f64, u64),
+        usage: (f64, u64, f64, u64),
+    ) -> Result<Self, ContractError> {
+        let (money_limit, token_limit, wall_time_limit_s, verifier_attempt_limit) = limits;
+        let (money_used, tokens_used, wall_time_used_s, verifier_attempts_used) = usage;
+        if money_limit < 0.0
+            || wall_time_limit_s < 0.0
+            || money_used < 0.0
+            || wall_time_used_s < 0.0
+        {
+            return Err(ContractError::NegativeBudget);
+        }
+        if money_used > money_limit
+            || tokens_used > token_limit
+            || wall_time_used_s > wall_time_limit_s
+            || verifier_attempts_used > verifier_attempt_limit
+        {
+            return Err(ContractError::InitialUsageExceedsLimit);
+        }
+        Ok(Self {
+            money_limit,
+            token_limit,
+            wall_time_limit_s,
+            verifier_attempt_limit,
+            money_used,
+            tokens_used,
+            wall_time_used_s,
+            verifier_attempts_used,
+        })
+    }
+
+    pub fn apply_usage(
+        mut self,
+        money: f64,
+        tokens: u64,
+        wall_time_s: f64,
+        verifier_attempts: u64,
+    ) -> Result<Self, ContractError> {
+        if money < 0.0 || wall_time_s < 0.0 {
+            return Err(ContractError::NegativeBudget);
+        }
+        let next_money = self.money_used + money;
+        let next_tokens = self.tokens_used + tokens;
+        let next_wall_time = self.wall_time_used_s + wall_time_s;
+        let next_attempts = self.verifier_attempts_used + verifier_attempts;
+        if next_money > self.money_limit
+            || next_tokens > self.token_limit
+            || next_wall_time > self.wall_time_limit_s
+            || next_attempts > self.verifier_attempt_limit
+        {
+            return Err(ContractError::BudgetExhausted);
+        }
+        self.money_used = next_money;
+        self.tokens_used = next_tokens;
+        self.wall_time_used_s = next_wall_time;
+        self.verifier_attempts_used = next_attempts;
+        Ok(self)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct BudgetReservation {
+    pub reservation_id: String,
+    pub money: f64,
+    pub tokens: u64,
+    pub wall_time_s: f64,
+    pub verifier_attempts: u64,
+    pub settled: bool,
+}
+
+impl BudgetReservation {
+    pub fn request_tuple(&self) -> (f64, u64, f64, u64) {
+        (
+            self.money,
+            self.tokens,
+            self.wall_time_s,
+            self.verifier_attempts,
+        )
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
