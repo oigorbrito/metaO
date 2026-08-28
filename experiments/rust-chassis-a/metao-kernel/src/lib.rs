@@ -31,7 +31,11 @@ pub fn evaluate_acceptance(
         return AcceptanceDecision::Block;
     }
 
-    if now_epoch < evidence.created_at_epoch || now_epoch > evidence.expires_at_epoch {
+    if now_epoch < evidence.created_at_epoch {
+        return AcceptanceDecision::Block;
+    }
+
+    if now_epoch > evidence.expires_at_epoch {
         return AcceptanceDecision::Stale;
     }
 
@@ -47,4 +51,48 @@ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<R
     missing.sort();
     missing.dedup();
     missing
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn mission_id(value: &str) -> metao_contracts::MissionId {
+        metao_contracts::MissionId::new(value).unwrap()
+    }
+
+    fn execution_id(value: &str) -> metao_contracts::ExecutionId {
+        metao_contracts::ExecutionId::new(value).unwrap()
+    }
+
+    fn runtime_id(value: &str) -> RuntimeId {
+        RuntimeId::new(value).unwrap()
+    }
+
+    #[test]
+    fn unverified_evidence_with_exact_binding_is_blocked() {
+        let request = ExecutionRequest {
+            execution_id: execution_id("exec-1"),
+            mission_id: mission_id("mission-1"),
+        };
+        let result = ExecutionResult {
+            execution_id: execution_id("exec-1"),
+            runtime_id: runtime_id("alpha"),
+            status: ExecutionStatus::Succeeded,
+        };
+        let evidence = Evidence {
+            mission_id: mission_id("mission-1"),
+            execution_id: execution_id("exec-1"),
+            runtime_id: runtime_id("alpha"),
+            policy_version: "policy-v1".into(),
+            verified: false,
+            created_at_epoch: 10,
+            expires_at_epoch: 20,
+        };
+
+        assert_eq!(
+            evaluate_acceptance(&request, &result, Some(&evidence), PolicyEffect::Allow, 15),
+            AcceptanceDecision::Block
+        );
+    }
 }
