@@ -1,7 +1,8 @@
 use metao_contracts::{
-    AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, ApprovalRecord,
-    ApprovalRequest, BudgetReservation, ContractError, Evidence, EvidenceEnvelope,
-    ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyDecision, PolicyEffect, RuntimeId,
+    AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, AggregationResult,
+    ApprovalRecord, ApprovalRequest, BudgetReservation, ConflictDecision, ContractError, Evidence,
+    EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyDecision,
+    PolicyEffect, RequiredEvidenceSet, RuntimeId,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -45,6 +46,84 @@ pub fn evaluate_acceptance(
     }
 
     AcceptanceDecision::Accept
+}
+
+pub fn aggregate_evidence(
+    required: &RequiredEvidenceSet,
+    evidence: &[EvidenceEnvelope],
+) -> AggregationResult {
+    let mut by_obligation: std::collections::BTreeMap<String, &EvidenceEnvelope> =
+        std::collections::BTreeMap::new();
+    let mut seen_ids = std::collections::BTreeSet::new();
+
+    for item in evidence {
+        if !seen_ids.insert(item.evidence_id.clone()) {
+            return AggregationResult {
+                decision: AcceptanceDecision::Block,
+                reasons: vec!["duplicate_evidence_id".into()],
+                conflict: ConflictDecision::Duplicate,
+            };
+        }
+        if !required.obligations.contains(&item.obligation_id) {
+            return AggregationResult {
+                decision: AcceptanceDecision::Block,
+                reasons: vec![format!("unexpected_obligation:{}", item.obligation_id)],
+                conflict: ConflictDecision::Unexpected,
+            };
+        }
+        if let Some(existing) = by_obligation.get(&item.obligation_id) {
+            let reason = if *existing == item {
+                "duplicate_obligation_evidence"
+            } else {
+                "conflicting_obligation_evidence"
+            };
+            let conflict = if *existing == item {
+                ConflictDecision::Duplicate
+            } else {
+                ConflictDecision::Conflict
+            };
+            return AggregationResult {
+                decision: AcceptanceDecision::Block,
+                reasons: vec![reason.into()],
+                conflict,
+            };
+        }
+        by_obligation.insert(item.obligation_id.clone(), item);
+    }
+
+    let seen: std::collections::BTreeSet<_> = by_obligation.keys().cloned().collect();
+    let missing: Vec<_> = required.obligations.difference(&seen).cloned().collect();
+    if !missing.is_empty() {
+        return AggregationResult {
+            decision: AcceptanceDecision::NotDone,
+            reasons: missing
+                .into_iter()
+                .map(|name| format!("missing_obligation:{name}"))
+                .collect(),
+            conflict: ConflictDecision::None,
+        };
+    }
+
+    let failed: Vec<_> = by_obligation
+        .iter()
+        .filter_map(|(name, item)| (!item.passed).then_some(name.clone()))
+        .collect();
+    if !failed.is_empty() {
+        return AggregationResult {
+            decision: AcceptanceDecision::NotDone,
+            reasons: failed
+                .into_iter()
+                .map(|name| format!("failed_obligation:{name}"))
+                .collect(),
+            conflict: ConflictDecision::None,
+        };
+    }
+
+    AggregationResult {
+        decision: AcceptanceDecision::Accept,
+        reasons: Vec::new(),
+        conflict: ConflictDecision::None,
+    }
 }
 
 pub fn evaluate_policy(

@@ -88,6 +88,26 @@ pub enum PolicyEffect {
     RequireHuman,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ConflictDecision {
+    None,
+    Duplicate,
+    Conflict,
+    Unexpected,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RequiredEvidenceSet {
+    pub obligations: std::collections::BTreeSet<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AggregationResult {
+    pub decision: AcceptanceDecision,
+    pub reasons: Vec<String>,
+    pub conflict: ConflictDecision,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct PolicyDecision {
     pub effect: PolicyEffect,
@@ -288,14 +308,6 @@ pub struct AcceptanceContext {
     pub trusted_verifiers: Vec<String>,
     pub trusted_provenance_roots: Vec<String>,
     pub authorized_authorities: Vec<String>,
-}
-
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum ConflictDecision {
-    None,
-    Duplicate,
-    Conflict,
-    Unexpected,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
