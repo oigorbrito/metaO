@@ -73,6 +73,90 @@ class BlockKGovernanceBudgetApprovalAcceptance(unittest.TestCase):
             AcceptanceDecision.ACCEPT,
         )
 
+    def test_approval_id_mismatch_blocks(self):
+        request = require_human(
+            approval_id="ap-1",
+            mission_id="m1",
+            execution_id="x1",
+            subject_state_id="s1",
+            policy_bundle_id="p1",
+            reason="high risk",
+        )
+        record = ApprovalRecord("ap-2", "m1", "x1", "s1", "p1", "human-1", True)
+        self.assertEqual(resume_after_approval(request, record), AcceptanceDecision.BLOCK)
+
+    def test_mission_id_mismatch_blocks(self):
+        request = require_human(
+            approval_id="ap-1",
+            mission_id="m1",
+            execution_id="x1",
+            subject_state_id="s1",
+            policy_bundle_id="p1",
+            reason="high risk",
+        )
+        record = ApprovalRecord("ap-1", "m2", "x1", "s1", "p1", "human-1", True)
+        self.assertEqual(resume_after_approval(request, record), AcceptanceDecision.BLOCK)
+
+    def test_execution_id_mismatch_blocks(self):
+        request = require_human(
+            approval_id="ap-1",
+            mission_id="m1",
+            execution_id="x1",
+            subject_state_id="s1",
+            policy_bundle_id="p1",
+            reason="high risk",
+        )
+        record = ApprovalRecord("ap-1", "m1", "x2", "s1", "p1", "human-1", True)
+        self.assertEqual(resume_after_approval(request, record), AcceptanceDecision.BLOCK)
+
+    def test_subject_state_id_mismatch_blocks(self):
+        request = require_human(
+            approval_id="ap-1",
+            mission_id="m1",
+            execution_id="x1",
+            subject_state_id="s1",
+            policy_bundle_id="p1",
+            reason="high risk",
+        )
+        record = ApprovalRecord("ap-1", "m1", "x1", "s2", "p1", "human-1", True)
+        self.assertEqual(resume_after_approval(request, record), AcceptanceDecision.BLOCK)
+
+    def test_policy_bundle_id_mismatch_blocks(self):
+        request = require_human(
+            approval_id="ap-1",
+            mission_id="m1",
+            execution_id="x1",
+            subject_state_id="s1",
+            policy_bundle_id="p1",
+            reason="high risk",
+        )
+        record = ApprovalRecord("ap-1", "m1", "x1", "s1", "p2", "human-1", True)
+        self.assertEqual(resume_after_approval(request, record), AcceptanceDecision.BLOCK)
+
+    def test_low_confidence_requires_human(self):
+        self.assertEqual(
+            apply_confidence_after_hard_gates(AcceptanceDecision.ACCEPT, confidence=0.4),
+            AcceptanceDecision.REQUIRE_HUMAN,
+        )
+
+    def test_threshold_confidence_accepts(self):
+        self.assertEqual(
+            apply_confidence_after_hard_gates(AcceptanceDecision.ACCEPT, confidence=0.8),
+            AcceptanceDecision.ACCEPT,
+        )
+
+    def test_invalid_confidence_raises(self):
+        with self.assertRaises(ValueError):
+            apply_confidence_after_hard_gates(AcceptanceDecision.ACCEPT, confidence=-0.1)
+        with self.assertRaises(ValueError):
+            apply_confidence_after_hard_gates(AcceptanceDecision.ACCEPT, confidence=1.1)
+
+    def test_invalid_threshold_raises(self):
+        with self.assertRaises(ValueError):
+            apply_confidence_after_hard_gates(AcceptanceDecision.ACCEPT, confidence=0.5, threshold=-0.1)
+        with self.assertRaises(ValueError):
+            apply_confidence_after_hard_gates(AcceptanceDecision.ACCEPT, confidence=0.5, threshold=1.1)
+
 
 if __name__ == "__main__":
     unittest.main()
