@@ -1,10 +1,12 @@
 use metao_contracts::{
-    AcceptanceContext, AcceptanceDecision, AcceptanceResult, Evidence, EvidenceEnvelope,
-    ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyEffect, RuntimeId,
+    AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, BudgetReservation,
+    ContractError, Evidence, EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus,
+    PolicyEffect, RuntimeId,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
+use std::sync::Mutex;
 
 pub fn evaluate_acceptance(
     request: &ExecutionRequest,
@@ -54,6 +56,119 @@ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<R
     missing.sort();
     missing.dedup();
     missing
+}
+
+fn budget_exhausted() -> ContractError {
+    ContractError::BudgetExhausted
+}
+
+fn pending_totals(reservations: &BTreeMap<String, BudgetReservation>) -> (f64, u64, f64, u64) {
+    reservations
+        .values()
+        .filter(|reservation| !reservation.settled)
+        .fold((0.0, 0, 0.0, 0), |acc, reservation| {
+            (
+                acc.0 + reservation.money,
+                acc.1 + reservation.tokens,
+                acc.2 + reservation.wall_time_s,
+                acc.3 + reservation.verifier_attempts,
+            )
+        })
+}
+
+pub struct AcceptanceBudgetAuthority {
+    budget: Mutex<AcceptanceBudget>,
+    reservations: Mutex<BTreeMap<String, BudgetReservation>>,
+}
+
+impl AcceptanceBudgetAuthority {
+    pub fn new(budget: AcceptanceBudget) -> Self {
+        Self {
+            budget: Mutex::new(budget),
+            reservations: Mutex::new(BTreeMap::new()),
+        }
+    }
+
+    pub fn snapshot(&self) -> AcceptanceBudget {
+        self.budget.lock().expect("budget lock").clone()
+    }
+
+    pub fn reservation(&self, reservation_id: &str) -> Option<BudgetReservation> {
+        self.reservations
+            .lock()
+            .expect("reservations lock")
+            .get(reservation_id)
+            .cloned()
+    }
+
+    pub fn reserve(
+        &self,
+        reservation_id: impl Into<String>,
+        money: f64,
+        tokens: u64,
+        wall_time_s: f64,
+        verifier_attempts: u64,
+    ) -> Result<BudgetReservation, ContractError> {
+        let reservation_id = reservation_id.into();
+        if reservation_id.trim().is_empty() {
+            return Err(ContractError::EmptyReservationId);
+        }
+        if money < 0.0 || wall_time_s < 0.0 {
+            return Err(ContractError::NegativeReservation);
+        }
+
+        let mut reservations = self.reservations.lock().expect("reservations lock");
+        let budget = self.budget.lock().expect("budget lock");
+        let requested = (money, tokens, wall_time_s, verifier_attempts);
+        if let Some(existing) = reservations.get(&reservation_id) {
+            if existing.request_tuple() != requested {
+                return Err(ContractError::ReplayConflict);
+            }
+            return Ok(existing.clone());
+        }
+
+        let (pending_money, pending_tokens, pending_wall_time, pending_attempts) =
+            pending_totals(&reservations);
+        if budget.money_used + pending_money + money > budget.money_limit
+            || budget.tokens_used + pending_tokens + tokens > budget.token_limit
+            || budget.wall_time_used_s + pending_wall_time + wall_time_s > budget.wall_time_limit_s
+            || budget.verifier_attempts_used + pending_attempts + verifier_attempts
+                > budget.verifier_attempt_limit
+        {
+            return Err(budget_exhausted());
+        }
+
+        let reservation = BudgetReservation {
+            reservation_id: reservation_id.clone(),
+            money,
+            tokens,
+            wall_time_s,
+            verifier_attempts,
+            settled: false,
+        };
+        reservations.insert(reservation_id, reservation.clone());
+        Ok(reservation)
+    }
+
+    pub fn settle(&self, reservation_id: &str) -> Result<AcceptanceBudget, ContractError> {
+        let mut reservations = self.reservations.lock().expect("reservations lock");
+        let mut budget = self.budget.lock().expect("budget lock");
+        let reservation = reservations
+            .get_mut(reservation_id)
+            .ok_or_else(|| ContractError::UnknownReservation(reservation_id.to_string()))?;
+        if reservation.settled {
+            return Ok(budget.clone());
+        }
+        let next = budget.clone().apply_usage(
+            reservation.money,
+            reservation.tokens,
+            reservation.wall_time_s,
+            reservation.verifier_attempts,
+        )?;
+        *budget = next.clone();
+        reservation.settled = true;
+        Ok(next)
+    }
 }
 
 fn decision_value(decision: AcceptanceDecision) -> &'static str {
