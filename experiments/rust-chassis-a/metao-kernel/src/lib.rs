@@ -132,7 +132,10 @@ pub fn canonical_acceptance(
                     .collect(),
             );
         }
-        if by_obligation.insert(item.obligation_id.clone(), item).is_some() {
+        if by_obligation
+            .insert(item.obligation_id.clone(), item)
+            .is_some()
+        {
             return acceptance_result(
                 AcceptanceDecision::Block,
                 vec!["duplicate_or_conflicting_obligation_evidence".into()],
