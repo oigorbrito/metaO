@@ -89,6 +89,13 @@ pub enum PolicyEffect {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PolicyDecision {
+    pub effect: PolicyEffect,
+    pub policy_bundle_id: String,
+    pub reason: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ApprovalRequest {
     pub approval_id: String,
     pub mission_id: String,
