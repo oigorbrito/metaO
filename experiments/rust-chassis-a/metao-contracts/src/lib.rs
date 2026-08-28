@@ -132,9 +132,6 @@ pub struct EvidenceEnvelope {
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AcceptanceContext {
-    pub mission_id: String,
-    pub execution_id: String,
-    pub runtime_id: String,
     pub subject_id: String,
     pub subject_state_id: String,
     pub verification_context_id: String,
