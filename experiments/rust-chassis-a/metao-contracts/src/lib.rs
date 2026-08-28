@@ -325,36 +325,3 @@ pub struct AcceptanceResult {
     pub reasons: Vec<String>,
     pub proof: Option<AcceptanceProof>,
 }
-
-fn digest_acceptance_proof(
-    decision: AcceptanceDecision,
-    reasons: &[String],
-    evidence_ids: &[String],
-) -> String {
-    let payload = serde_json::json!({
-        "decision": match decision {
-            AcceptanceDecision::Accept => "ACCEPT",
-            AcceptanceDecision::Block => "BLOCK",
-            AcceptanceDecision::NotDone => "NOT_DONE",
-            AcceptanceDecision::Stale => "STALE",
-            AcceptanceDecision::RequireHuman => "REQUIRE_HUMAN",
-        },
-        "reasons": reasons,
-        "evidence_ids": evidence_ids,
-    });
-    let bytes = serde_json::to_vec(&payload).expect("stable acceptance digest");
-    use sha2::{Digest, Sha256};
-    let mut hasher = Sha256::new();
-    hasher.update(bytes);
-    format!("{:x}", hasher.finalize())
-}
-
-pub fn replay_acceptance_decision(
-    proof: &AcceptanceProof,
-) -> Result<AcceptanceDecision, ContractError> {
-    let expected = digest_acceptance_proof(proof.decision, &proof.reasons, &proof.evidence_ids);
-    if expected != proof.digest {
-        return Err(ContractError::AcceptanceProofDigestMismatch);
-    }
-    Ok(proof.decision)
-}

@@ -408,6 +408,16 @@ fn digest_payload(
     format!("{:x}", hasher.finalize())
 }
 
+pub fn replay_acceptance_decision(
+    proof: &metao_contracts::AcceptanceProof,
+) -> Result<AcceptanceDecision, ContractError> {
+    let expected = digest_payload(proof.decision, &proof.reasons, &proof.evidence_ids);
+    if expected != proof.digest {
+        return Err(ContractError::AcceptanceProofDigestMismatch);
+    }
+    Ok(proof.decision)
+}
+
 fn acceptance_result(
     decision: AcceptanceDecision,
     reasons: Vec<String>,
