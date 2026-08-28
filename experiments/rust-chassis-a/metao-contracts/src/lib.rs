@@ -13,6 +13,7 @@ pub enum ContractError {
     BudgetExhausted,
     UnknownReservation(String),
     InvalidConfidence,
+    AcceptanceProofDigestMismatch,
 }
 
 fn validate_identity(kind: &'static str, value: String) -> Result<String, ContractError> {
