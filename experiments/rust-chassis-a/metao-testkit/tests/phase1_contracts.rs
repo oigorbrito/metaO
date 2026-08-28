@@ -1,6 +1,4 @@
-use metao_contracts::{
-    AcceptanceContext, AcceptanceDecision, EvidenceEnvelope, MissionId,
-};
+use metao_contracts::{AcceptanceContext, AcceptanceDecision, EvidenceEnvelope, MissionId};
 use metao_kernel::canonical_acceptance;
 use serde::Deserialize;
 use std::process::Command;
@@ -117,15 +115,20 @@ fn cross_language_contract_replay_matches_python_oracle() {
             "acceptance" => {
                 let input: AcceptanceInput =
                     serde_json::from_value(case.input.clone()).expect("parse acceptance case");
-                let result =
-                    canonical_acceptance(&context(&input.context), &input.evidence, input.now_epoch);
+                let result = canonical_acceptance(
+                    &context(&input.context),
+                    &input.evidence,
+                    input.now_epoch,
+                );
                 assert_eq!(
                     normalize(result.decision),
                     case.expected.decision.as_str(),
                     "expected mismatch for {}",
                     case.name
                 );
-                let proof = result.proof.expect("acceptance result must carry parity proof");
+                let proof = result
+                    .proof
+                    .expect("acceptance result must carry parity proof");
                 serde_json::json!({
                     "name": case.name,
                     "decision": normalize(result.decision),
