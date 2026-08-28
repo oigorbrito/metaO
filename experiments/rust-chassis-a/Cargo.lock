@@ -114,8 +114,10 @@ version = "0.0.0"
 dependencies = [
  "metao-contracts",
  "metao-kernel",
+ "metao-registry",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]
