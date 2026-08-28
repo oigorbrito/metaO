@@ -1,4 +1,5 @@
 import unittest
+from dataclasses import replace
 
 from metao.acceptance import (
     AcceptanceContext,
@@ -72,6 +73,64 @@ class BlockJAcceptanceTrustAcceptance(unittest.TestCase):
         self.assertTrue(check_policy(item, ctx).passed)
         self.assertEqual(evaluate_acceptance(ctx, [item], now_epoch=21).decision, AcceptanceDecision.STALE)
         self.assertEqual(evaluate_acceptance(ctx, [evidence(verifier_id="evil")], now_epoch=15).decision, AcceptanceDecision.BLOCK)
+
+    def test_missing_payload_digest_blocks(self):
+        result = check_provenance(evidence(payload_digest=""), context())
+        self.assertEqual(result.decision, AcceptanceDecision.BLOCK)
+        self.assertEqual(result.reason, "missing_provenance")
+
+    def test_missing_provenance_root_blocks(self):
+        result = check_provenance(evidence(provenance_root=""), context())
+        self.assertEqual(result.decision, AcceptanceDecision.BLOCK)
+        self.assertEqual(result.reason, "missing_provenance")
+
+    def test_empty_trusted_verifiers_allows_nonempty_verifier(self):
+        ctx = context()
+        ctx = replace(ctx, trusted_verifiers=frozenset())
+        self.assertTrue(check_provenance(evidence(verifier_id="any"), ctx).passed)
+
+    def test_untrusted_verifier_blocks(self):
+        result = check_provenance(evidence(verifier_id="evil"), context())
+        self.assertEqual(result.decision, AcceptanceDecision.BLOCK)
+        self.assertEqual(result.reason, "untrusted_verifier")
+
+    def test_trusted_verifier_passes_gate(self):
+        self.assertTrue(check_provenance(evidence(verifier_id="verifier-1"), context()).passed)
+
+    def test_empty_trusted_provenance_roots_allows_nonempty_root(self):
+        ctx = context()
+        ctx = replace(ctx, trusted_provenance_roots=frozenset())
+        self.assertTrue(check_provenance(evidence(provenance_root="any-root"), ctx).passed)
+
+    def test_untrusted_provenance_root_blocks(self):
+        result = check_provenance(evidence(provenance_root="evil-root"), context())
+        self.assertEqual(result.decision, AcceptanceDecision.BLOCK)
+        self.assertEqual(result.reason, "untrusted_provenance_root")
+
+    def test_trusted_provenance_root_passes_gate(self):
+        self.assertTrue(check_provenance(evidence(provenance_root="root-1"), context()).passed)
+
+    def test_missing_authority_blocks(self):
+        result = check_authority(evidence(authority_id=""), context())
+        self.assertEqual(result.decision, AcceptanceDecision.BLOCK)
+        self.assertEqual(result.reason, "missing_authority")
+
+    def test_empty_authorized_authorities_allows_nonempty_authority(self):
+        ctx = context()
+        ctx = replace(ctx, authorized_authorities=frozenset())
+        self.assertTrue(check_authority(evidence(authority_id="any-authority"), ctx).passed)
+
+    def test_unauthorized_authority_blocks(self):
+        result = check_authority(evidence(authority_id="evil-authority"), context())
+        self.assertEqual(result.decision, AcceptanceDecision.BLOCK)
+        self.assertEqual(result.reason, "unauthorized_authority")
+
+    def test_authorized_authority_passes_gate(self):
+        self.assertTrue(check_authority(evidence(authority_id="authority-1"), context()).passed)
+
+    def test_fully_trusted_evidence_can_continue_to_acceptance(self):
+        result = evaluate_acceptance(context(), [evidence()], now_epoch=15)
+        self.assertEqual(result.decision, AcceptanceDecision.ACCEPT)
 
     def test_partial_conflicting_and_duplicate_evidence_are_governed(self):
         required = RequiredEvidenceSet(frozenset({"verify", "audit"}))
