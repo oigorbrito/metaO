@@ -1,7 +1,7 @@
 use metao_contracts::{
     AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, ApprovalRecord,
     ApprovalRequest, BudgetReservation, ContractError, Evidence, EvidenceEnvelope,
-    ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyEffect, RuntimeId,
+    ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyDecision, PolicyEffect, RuntimeId,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -45,6 +45,42 @@ pub fn evaluate_acceptance(
     }
 
     AcceptanceDecision::Accept
+}
+
+pub fn evaluate_policy(
+    policy_bundle_id: impl Into<String>,
+    allowed: bool,
+    require_human: bool,
+    reason: impl Into<String>,
+) -> PolicyDecision {
+    let reason = reason.into();
+    if !allowed {
+        return PolicyDecision {
+            effect: PolicyEffect::Deny,
+            policy_bundle_id: policy_bundle_id.into(),
+            reason: if reason.is_empty() {
+                "policy_denied".to_string()
+            } else {
+                reason
+            },
+        };
+    }
+    if require_human {
+        return PolicyDecision {
+            effect: PolicyEffect::RequireHuman,
+            policy_bundle_id: policy_bundle_id.into(),
+            reason: if reason.is_empty() {
+                "human_approval_required".to_string()
+            } else {
+                reason
+            },
+        };
+    }
+    PolicyDecision {
+        effect: PolicyEffect::Allow,
+        policy_bundle_id: policy_bundle_id.into(),
+        reason,
+    }
 }
 
 pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {
