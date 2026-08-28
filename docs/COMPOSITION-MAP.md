@@ -57,6 +57,12 @@ Pins below record the audit/composition reference used to freeze Block C. Before
 
 Other previously audited donors (OpenLinker, AgentField, Network-AI, ORCH, RouteLLM/RouterBench, CADTopo, Temporal, Dapr, MAS-Orchestra) MUST be pinned to exact commits/paths at the first implementation work unit that consumes them. Block C freezes their roles below, not unmeasured source pins.
 
+### SMAG composition addendum
+
+The bounded SMAG audit is recorded in [`SMAG-DONOR-COMPOSITION.md`](SMAG-DONOR-COMPOSITION.md) at `tihotm/smag@548a2ce85acb2aeb0e2d64a0fd03cfd839763ad8`.
+
+The addendum is a governance, evidence, execution-control and engineering-harness donor map. It does not authorize SMAG as a metaO foundation, orchestrator, Core dependency, durable-workflow authority or acceptance authority. Every implementation work unit must still re-pin the exact donor commit, paths and tests it consumes.
+
 ## 4. Foundation / durable execution
 
 ### SOURCE
