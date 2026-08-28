@@ -1,8 +1,7 @@
 use metao_contracts::{
-    AcceptanceContext, AcceptanceDecision, EvidenceEnvelope, ExecutionId, ExecutionRequest,
-    ExecutionResult, ExecutionStatus, MissionId, PolicyEffect, RuntimeId,
+    AcceptanceContext, AcceptanceDecision, EvidenceEnvelope, MissionId,
 };
-use metao_kernel::{canonical_acceptance, evaluate_acceptance};
+use metao_kernel::canonical_acceptance;
 use serde::Deserialize;
 use std::process::Command;
 
@@ -50,27 +49,6 @@ struct IdentityInput {
     mission_id: String,
 }
 
-#[derive(Debug, Deserialize)]
-struct PolicyInput {
-    request: RequestInput,
-    result: ResultInput,
-    policy: String,
-    now_epoch: i64,
-}
-
-#[derive(Debug, Deserialize)]
-struct RequestInput {
-    execution_id: String,
-    mission_id: String,
-}
-
-#[derive(Debug, Deserialize)]
-struct ResultInput {
-    execution_id: String,
-    runtime_id: String,
-    status: String,
-}
-
 fn load_fixture() -> Fixture {
     serde_json::from_str(include_str!(concat!(
         "../../../../tests/golden/phase1_contracts_v1.json"
@@ -88,9 +66,6 @@ fn workspace_root() -> std::path::PathBuf {
 
 fn context(input: &ContextInput) -> AcceptanceContext {
     AcceptanceContext {
-        mission_id: "m1".into(),
-        execution_id: "x1".into(),
-        runtime_id: "orch-a".into(),
         subject_id: input.subject_id.clone(),
         subject_state_id: input.subject_state_id.clone(),
         verification_context_id: input.verification_context_id.clone(),
@@ -99,27 +74,6 @@ fn context(input: &ContextInput) -> AcceptanceContext {
         trusted_verifiers: input.trusted_verifiers.clone(),
         trusted_provenance_roots: input.trusted_provenance_roots.clone(),
         authorized_authorities: input.authorized_authorities.clone(),
-    }
-}
-
-fn request(input: &RequestInput) -> ExecutionRequest {
-    ExecutionRequest {
-        execution_id: ExecutionId::new(input.execution_id.clone()).unwrap(),
-        mission_id: MissionId::new(input.mission_id.clone()).unwrap(),
-    }
-}
-
-fn result(input: &ResultInput) -> ExecutionResult {
-    let status = match input.status.as_str() {
-        "Succeeded" => ExecutionStatus::Succeeded,
-        "Failed" => ExecutionStatus::Failed,
-        "Cancelled" => ExecutionStatus::Cancelled,
-        other => panic!("unexpected status {other}"),
-    };
-    ExecutionResult {
-        execution_id: ExecutionId::new(input.execution_id.clone()).unwrap(),
-        runtime_id: RuntimeId::new(input.runtime_id.clone()).unwrap(),
-        status,
     }
 }
 
@@ -137,7 +91,7 @@ fn normalize(decision: AcceptanceDecision) -> &'static str {
 fn cross_language_contract_replay_matches_python_oracle() {
     let fixture = load_fixture();
     assert_eq!(fixture.fixture_version, 1);
-    assert_eq!(fixture.contract_version, 1);
+    assert_eq!(fixture.contract_version, metao_contracts::CONTRACT_VERSION);
 
     let root = workspace_root();
     let python = Command::new("python")
@@ -159,64 +113,55 @@ fn cross_language_contract_replay_matches_python_oracle() {
 
     let mut rust_results = Vec::new();
     for case in &fixture.cases {
-        let decision = match case.kind.as_str() {
+        let rust_case = match case.kind.as_str() {
             "acceptance" => {
                 let input: AcceptanceInput =
                     serde_json::from_value(case.input.clone()).expect("parse acceptance case");
-                canonical_acceptance(&context(&input.context), &input.evidence, input.now_epoch)
-                    .decision
+                let result =
+                    canonical_acceptance(&context(&input.context), &input.evidence, input.now_epoch);
+                assert_eq!(
+                    normalize(result.decision),
+                    case.expected.decision.as_str(),
+                    "expected mismatch for {}",
+                    case.name
+                );
+                let proof = result.proof.expect("acceptance result must carry parity proof");
+                serde_json::json!({
+                    "name": case.name,
+                    "decision": normalize(result.decision),
+                    "reasons": result.reasons,
+                    "proof_digest": proof.digest,
+                })
             }
             "identity" => {
                 let input: IdentityInput =
                     serde_json::from_value(case.input.clone()).expect("parse identity case");
-                if MissionId::new(input.mission_id).is_err() {
-                    rust_results.push(serde_json::json!({
-                        "name": case.name,
-                        "decision": "REJECT"
-                    }));
-                    continue;
+                let decision = if MissionId::new(input.mission_id).is_err() {
+                    "REJECT"
                 } else {
-                    AcceptanceDecision::Accept
-                }
-            }
-            "policy_deny" => {
-                let input: PolicyInput =
-                    serde_json::from_value(case.input.clone()).expect("parse policy case");
-                let policy = match input.policy.as_str() {
-                    "Deny" => PolicyEffect::Deny,
-                    "Allow" => PolicyEffect::Allow,
-                    "RequireHuman" => PolicyEffect::RequireHuman,
-                    other => panic!("unexpected policy {other}"),
+                    "ACCEPT"
                 };
-                evaluate_acceptance(
-                    &request(&input.request),
-                    &result(&input.result),
-                    None,
-                    policy,
-                    input.now_epoch,
-                )
-            }
-            "contract_version" | "malformed" => {
-                rust_results.push(serde_json::json!({
+                assert_eq!(
+                    decision,
+                    case.expected.decision.as_str(),
+                    "expected mismatch for {}",
+                    case.name
+                );
+                serde_json::json!({
                     "name": case.name,
-                    "decision": "REJECT"
-                }));
-                continue;
+                    "decision": decision,
+                })
             }
-            other => panic!("unexpected case kind {other}"),
+            other => panic!("unexpected differential case kind {other}"),
         };
-        assert_eq!(
-            normalize(decision),
-            case.expected.decision.as_str(),
-            "expected mismatch for {}",
-            case.name
-        );
-        rust_results.push(serde_json::json!({
-            "name": case.name,
-            "decision": normalize(decision)
-        }));
+        rust_results.push(rust_case);
     }
 
+    assert_eq!(
+        python_results.len(),
+        rust_results.len(),
+        "oracle result cardinality mismatch"
+    );
     for (python_case, rust_case) in python_results.iter().zip(rust_results.iter()) {
         assert_eq!(python_case, rust_case);
     }
