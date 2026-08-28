@@ -1,7 +1,8 @@
 use metao_contracts::{
-    AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, ApprovalRecord,
-    ApprovalRequest, BudgetReservation, ContractError, Evidence, EvidenceEnvelope,
-    ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyDecision, PolicyEffect, RuntimeId,
+    AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, AggregationResult,
+    ApprovalRecord, ApprovalRequest, BudgetReservation, ConflictDecision, ContractError, Evidence,
+    EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyDecision,
+    PolicyEffect, RequiredEvidenceSet, RuntimeId,
 };
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -45,6 +46,270 @@ pub fn evaluate_acceptance(
     }
 
     AcceptanceDecision::Accept
+}
+
+pub fn aggregate_evidence(
+    required: &RequiredEvidenceSet,
+    evidence: &[EvidenceEnvelope],
+) -> AggregationResult {
+    let mut by_obligation: std::collections::BTreeMap<String, &EvidenceEnvelope> =
+        std::collections::BTreeMap::new();
+    let mut seen_ids = std::collections::BTreeSet::new();
+
+    for item in evidence {
+        if !seen_ids.insert(item.evidence_id.clone()) {
+            return AggregationResult {
+                decision: AcceptanceDecision::Block,
+                reasons: vec!["duplicate_evidence_id".into()],
+                conflict: ConflictDecision::Duplicate,
+            };
+        }
+        if !required.obligations.contains(&item.obligation_id) {
+            return AggregationResult {
+                decision: AcceptanceDecision::Block,
+                reasons: vec![format!("unexpected_obligation:{}", item.obligation_id)],
+                conflict: ConflictDecision::Unexpected,
+            };
+        }
+        if let Some(existing) = by_obligation.get(&item.obligation_id) {
+            let reason = if *existing == item {
+                "duplicate_obligation_evidence"
+            } else {
+                "conflicting_obligation_evidence"
+            };
+            let conflict = if *existing == item {
+                ConflictDecision::Duplicate
+            } else {
+                ConflictDecision::Conflict
+            };
+            return AggregationResult {
+                decision: AcceptanceDecision::Block,
+                reasons: vec![reason.into()],
+                conflict,
+            };
+        }
+        by_obligation.insert(item.obligation_id.clone(), item);
+    }
+
+    let seen: std::collections::BTreeSet<_> = by_obligation.keys().cloned().collect();
+    let missing: Vec<_> = required.obligations.difference(&seen).cloned().collect();
+    if !missing.is_empty() {
+        return AggregationResult {
+            decision: AcceptanceDecision::NotDone,
+            reasons: missing
+                .into_iter()
+                .map(|name| format!("missing_obligation:{name}"))
+                .collect(),
+            conflict: ConflictDecision::None,
+        };
+    }
+
+    let failed: Vec<_> = by_obligation
+        .iter()
+        .filter_map(|(name, item)| (!item.passed).then_some(name.clone()))
+        .collect();
+    if !failed.is_empty() {
+        return AggregationResult {
+            decision: AcceptanceDecision::NotDone,
+            reasons: failed
+                .into_iter()
+                .map(|name| format!("failed_obligation:{name}"))
+                .collect(),
+            conflict: ConflictDecision::None,
+        };
+    }
+
+    AggregationResult {
+        decision: AcceptanceDecision::Accept,
+        reasons: Vec::new(),
+        conflict: ConflictDecision::None,
+    }
+}
+
+pub fn evaluate_acceptance_contract(
+    context: &AcceptanceContext,
+    evidence: &[EvidenceEnvelope],
+    now_epoch: f64,
+    executor_done: bool,
+) -> AcceptanceResult {
+    let _ = executor_done;
+    let ids: Vec<_> = evidence
+        .iter()
+        .map(|item| item.evidence_id.clone())
+        .collect();
+    if ids.len() != ids.iter().collect::<std::collections::BTreeSet<_>>().len() {
+        return acceptance_result(
+            AcceptanceDecision::Block,
+            vec!["duplicate_evidence_id".into()],
+            evidence
+                .iter()
+                .map(|item| item.evidence_id.clone())
+                .collect(),
+        );
+    }
+
+    let mut seen_obligations: std::collections::BTreeMap<String, &EvidenceEnvelope> =
+        std::collections::BTreeMap::new();
+    for item in evidence {
+        if !context.required_obligations.contains(&item.obligation_id) {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["unknown_obligation".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if seen_obligations.contains_key(&item.obligation_id) {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["duplicate_or_conflicting_obligation_evidence".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        seen_obligations.insert(item.obligation_id.clone(), item);
+
+        if item.subject_id != context.subject_id {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["subject_mismatch".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if item.subject_state_id != context.subject_state_id {
+            return acceptance_result(
+                AcceptanceDecision::Stale,
+                vec!["subject_state_mismatch".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if item.verification_context_id != context.verification_context_id {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["verification_context_mismatch".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if item.policy_bundle_id != context.policy_bundle_id {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["policy_bundle_mismatch".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if item
+            .expires_at_epoch
+            .is_some_and(|expires| now_epoch > expires)
+        {
+            return acceptance_result(
+                AcceptanceDecision::Stale,
+                vec!["evidence_expired".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if item.created_at_epoch != 0.0 && item.created_at_epoch > now_epoch {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["evidence_from_future".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if item.payload_digest.is_empty() || item.provenance_root.is_empty() {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["missing_provenance".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if !context.trusted_verifiers.is_empty()
+            && !context.trusted_verifiers.contains(&item.verifier_id)
+        {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["untrusted_verifier".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if !context.trusted_provenance_roots.is_empty()
+            && !context
+                .trusted_provenance_roots
+                .contains(&item.provenance_root)
+        {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["untrusted_provenance_root".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if item.authority_id.is_empty() {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["missing_authority".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if !context.authorized_authorities.is_empty()
+            && !context.authorized_authorities.contains(&item.authority_id)
+        {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["unauthorized_authority".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+    }
+
+    let aggregation = aggregate_evidence(
+        &RequiredEvidenceSet {
+            obligations: context.required_obligations.iter().cloned().collect(),
+        },
+        evidence,
+    );
+    acceptance_result(
+        aggregation.decision,
+        aggregation.reasons,
+        evidence
+            .iter()
+            .map(|item| item.evidence_id.clone())
+            .collect(),
+    )
 }
 
 pub fn evaluate_policy(
