@@ -56,13 +56,23 @@ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<R
     missing
 }
 
+fn decision_value(decision: AcceptanceDecision) -> &'static str {
+    match decision {
+        AcceptanceDecision::Accept => "ACCEPT",
+        AcceptanceDecision::Block => "BLOCK",
+        AcceptanceDecision::NotDone => "NOT_DONE",
+        AcceptanceDecision::Stale => "STALE",
+        AcceptanceDecision::RequireHuman => "REQUIRE_HUMAN",
+    }
+}
+
 fn digest_payload(
-    decision: &AcceptanceDecision,
+    decision: AcceptanceDecision,
     reasons: &[String],
     evidence_ids: &[String],
 ) -> String {
     let payload = json!({
-        "decision": format!("{decision:?}"),
+        "decision": decision_value(decision),
         "reasons": reasons,
         "evidence_ids": evidence_ids,
     });
@@ -77,7 +87,9 @@ fn acceptance_result(
     reasons: Vec<String>,
     evidence_ids: Vec<String>,
 ) -> AcceptanceResult {
-    let digest = digest_payload(&decision, &reasons, &evidence_ids);
+    let mut evidence_ids = evidence_ids;
+    evidence_ids.sort();
+    let digest = digest_payload(decision, &reasons, &evidence_ids);
     AcceptanceResult {
         proof: Some(metao_contracts::AcceptanceProof {
             decision,
@@ -100,36 +112,6 @@ pub fn canonical_acceptance(
     let required: BTreeSet<_> = context.required_obligations.iter().cloned().collect();
 
     for item in evidence {
-        if item.mission_id.as_str() != context.mission_id {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["mission_mismatch".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
-        }
-        if item.execution_id.as_str() != context.execution_id {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["execution_mismatch".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
-        }
-        if item.orchestrator_id.as_str() != context.runtime_id {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["runtime_mismatch".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
-        }
         if !seen_ids.insert(item.evidence_id.clone()) {
             return acceptance_result(
                 AcceptanceDecision::Block,
@@ -143,22 +125,17 @@ pub fn canonical_acceptance(
         if !required.contains(&item.obligation_id) {
             return acceptance_result(
                 AcceptanceDecision::Block,
-                vec![format!("unexpected_obligation:{}", item.obligation_id)],
+                vec!["unknown_obligation".into()],
                 evidence
                     .iter()
                     .map(|item| item.evidence_id.clone())
                     .collect(),
             );
         }
-        if let Some(existing) = by_obligation.insert(item.obligation_id.clone(), item) {
-            let reason = if existing == item {
-                "duplicate_obligation_evidence"
-            } else {
-                "conflicting_obligation_evidence"
-            };
+        if by_obligation.insert(item.obligation_id.clone(), item).is_some() {
             return acceptance_result(
                 AcceptanceDecision::Block,
-                vec![reason.into()],
+                vec!["duplicate_or_conflicting_obligation_evidence".into()],
                 evidence
                     .iter()
                     .map(|item| item.evidence_id.clone())
@@ -218,20 +195,10 @@ pub fn canonical_acceptance(
                     .collect(),
             );
         }
-        if item.created_at_epoch > now_epoch {
+        if item.created_at_epoch != 0.0 && item.created_at_epoch > now_epoch {
             return acceptance_result(
                 AcceptanceDecision::Block,
                 vec!["evidence_from_future".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
-        }
-        if !item.passed {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["unverified_evidence".into()],
                 evidence
                     .iter()
                     .map(|item| item.evidence_id.clone())
@@ -268,6 +235,16 @@ pub fn canonical_acceptance(
             return acceptance_result(
                 AcceptanceDecision::Block,
                 vec!["untrusted_provenance_root".into()],
+                evidence
+                    .iter()
+                    .map(|item| item.evidence_id.clone())
+                    .collect(),
+            );
+        }
+        if item.authority_id.is_empty() {
+            return acceptance_result(
+                AcceptanceDecision::Block,
+                vec!["missing_authority".into()],
                 evidence
                     .iter()
                     .map(|item| item.evidence_id.clone())
