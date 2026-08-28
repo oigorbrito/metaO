@@ -2,7 +2,7 @@ use metao_contracts::{
     AcceptanceContext, AcceptanceDecision, EvidenceEnvelope, ExecutionId, MissionId,
     RequiredEvidenceSet, RuntimeId,
 };
-use metao_kernel::{aggregate_evidence, canonical_acceptance, evaluate_acceptance_contract};
+use metao_kernel::{aggregate_evidence, canonical_acceptance};
 use std::collections::BTreeSet;
 
 fn context() -> AcceptanceContext {
@@ -92,7 +92,7 @@ fn duplicate_evidence_id_blocks() {
 #[test]
 fn unknown_obligation_blocks() {
     let item = evidence("unexpected", "e1");
-    let result = evaluate_acceptance_contract(&context(), &[item], 15.0, true);
+    let result = canonical_acceptance(&context(), &[item], 15.0);
     assert_eq!(result.decision, AcceptanceDecision::Block);
     assert_eq!(result.reasons, ["unknown_obligation"]);
 }
@@ -102,7 +102,7 @@ fn duplicate_or_conflicting_obligation_blocks() {
     let first = evidence("verify", "e1");
     let mut second = evidence("verify", "e2");
     second.payload_digest = "different".into();
-    let result = evaluate_acceptance_contract(&context(), &[first, second], 15.0, true);
+    let result = canonical_acceptance(&context(), &[first, second], 15.0);
     assert_eq!(result.decision, AcceptanceDecision::Block);
     assert_eq!(
         result.reasons,
@@ -140,7 +140,7 @@ fn failed_obligation_is_not_done() {
 
 #[test]
 fn executor_done_without_evidence_does_not_accept() {
-    let result = evaluate_acceptance_contract(&context(), &[], 15.0, true);
+    let result = canonical_acceptance(&context(), &[], 15.0);
     assert_eq!(result.decision, AcceptanceDecision::NotDone);
 }
 
