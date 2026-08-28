@@ -1,8 +1,8 @@
 use metao_contracts::{
-    replay_acceptance_decision, AcceptanceContext, AcceptanceDecision, EvidenceEnvelope,
-    ExecutionId, MissionId, RuntimeId,
+    AcceptanceContext, AcceptanceDecision, EvidenceEnvelope, ExecutionId, MissionId, RuntimeId,
 };
 use metao_kernel::canonical_acceptance;
+use metao_kernel::replay_acceptance_decision;
 
 fn context() -> AcceptanceContext {
     AcceptanceContext {
