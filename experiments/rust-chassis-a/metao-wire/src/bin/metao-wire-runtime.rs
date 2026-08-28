@@ -7,6 +7,10 @@ use metao_wire::{decode_request, encode_response, WireResponse, PROTOCOL_VERSION
 fn main() {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
+    let attempt = std::env::var("METAO_RUNTIME_ATTEMPT")
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok())
+        .unwrap_or(1);
 
     for line in stdin.lock().lines() {
         let line = match line {
@@ -31,7 +35,16 @@ fn main() {
             continue;
         }
 
+        if request.objective == "__hang_then_recover__" && attempt == 1 {
+            thread::sleep(Duration::from_secs(5));
+            continue;
+        }
+
         if request.objective == "__crash__" {
+            panic!("simulated external runtime crash");
+        }
+
+        if request.objective == "__crash_then_recover__" && attempt == 1 {
             panic!("simulated external runtime crash");
         }
 

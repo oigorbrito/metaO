@@ -112,6 +112,8 @@ dependencies = [
 name = "metao-wire"
 version = "0.0.0"
 dependencies = [
+ "metao-contracts",
+ "metao-kernel",
  "serde",
  "serde_json",
 ]
