@@ -203,6 +203,15 @@ fn duplicate_and_version_conflict_fail_deterministically() {
 }
 
 #[test]
+fn unknown_runtime_fails_closed() {
+    let registry = Registry::default();
+    assert_eq!(
+        registry.execute_contained(&runtime_id("missing"), &request()),
+        Err(RegistryError::NotFound(runtime_id("missing")))
+    );
+}
+
+#[test]
 fn invalid_identity_construction_is_rejected_by_public_api() {
     assert!(MissionId::new("").is_err());
     assert!(MissionId::new("   ").is_err());
