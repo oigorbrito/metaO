@@ -9,6 +9,45 @@ use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
 
+fn check_provenance(
+    evidence: &EvidenceEnvelope,
+    context: &AcceptanceContext,
+) -> Result<(), (AcceptanceDecision, &'static str)> {
+    if evidence.payload_digest.is_empty() || evidence.provenance_root.is_empty() {
+        return Err((AcceptanceDecision::Block, "missing_provenance"));
+    }
+    if !context.trusted_verifiers.is_empty()
+        && !context.trusted_verifiers.contains(&evidence.verifier_id)
+    {
+        return Err((AcceptanceDecision::Block, "untrusted_verifier"));
+    }
+    if !context.trusted_provenance_roots.is_empty()
+        && !context
+            .trusted_provenance_roots
+            .contains(&evidence.provenance_root)
+    {
+        return Err((AcceptanceDecision::Block, "untrusted_provenance_root"));
+    }
+    Ok(())
+}
+
+fn check_authority(
+    evidence: &EvidenceEnvelope,
+    context: &AcceptanceContext,
+) -> Result<(), (AcceptanceDecision, &'static str)> {
+    if evidence.authority_id.is_empty() {
+        return Err((AcceptanceDecision::Block, "missing_authority"));
+    }
+    if !context.authorized_authorities.is_empty()
+        && !context
+            .authorized_authorities
+            .contains(&evidence.authority_id)
+    {
+        return Err((AcceptanceDecision::Block, "unauthorized_authority"));
+    }
+    Ok(())
+}
+
 pub fn evaluate_acceptance(
     request: &ExecutionRequest,
     result: &ExecutionResult,
@@ -495,63 +534,20 @@ pub fn canonical_acceptance(
                     .collect(),
             );
         }
-        if item.payload_digest.is_empty() || item.provenance_root.is_empty() {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["missing_provenance".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
-        }
-        if !context.trusted_verifiers.is_empty()
-            && !context.trusted_verifiers.contains(&item.verifier_id)
-        {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["untrusted_verifier".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
-        }
-        if !context.trusted_provenance_roots.is_empty()
-            && !context
-                .trusted_provenance_roots
-                .contains(&item.provenance_root)
-        {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["untrusted_provenance_root".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
-        }
-        if item.authority_id.is_empty() {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["missing_authority".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
-        }
-        if !context.authorized_authorities.is_empty()
-            && !context.authorized_authorities.contains(&item.authority_id)
-        {
-            return acceptance_result(
-                AcceptanceDecision::Block,
-                vec!["unauthorized_authority".into()],
-                evidence
-                    .iter()
-                    .map(|item| item.evidence_id.clone())
-                    .collect(),
-            );
+        for gate in [
+            check_provenance(item, context),
+            check_authority(item, context),
+        ] {
+            if let Err((decision, reason)) = gate {
+                return acceptance_result(
+                    decision,
+                    vec![reason.into()],
+                    evidence
+                        .iter()
+                        .map(|item| item.evidence_id.clone())
+                        .collect(),
+                );
+            }
         }
     }
 
