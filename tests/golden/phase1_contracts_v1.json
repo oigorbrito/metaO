@@ -1,0 +1,334 @@
+{
+  "fixture_version": 1,
+  "contract_version": 1,
+  "cases": [
+    {
+      "name": "valid_bound_evidence",
+      "kind": "acceptance",
+      "input": {
+        "context": {
+          "subject_id": "s1",
+          "subject_state_id": "state-1",
+          "verification_context_id": "ctx-1",
+          "policy_bundle_id": "policy-1",
+          "required_obligations": ["verify"],
+          "trusted_verifiers": ["verifier-1"],
+          "trusted_provenance_roots": ["root-1"],
+          "authorized_authorities": ["authority-1"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "e1",
+            "obligation_id": "verify",
+            "mission_id": "m1",
+            "execution_id": "x1",
+            "orchestrator_id": "orch-a",
+            "adapter_version": "1",
+            "attempt_id": "a1",
+            "subject_id": "s1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "ctx-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+            "payload_digest": "abc",
+            "provenance_root": "root-1",
+            "authority_id": "authority-1",
+            "passed": true,
+            "created_at_epoch": 10.0,
+            "expires_at_epoch": 20.0
+          }
+        ],
+        "now_epoch": 15.0
+      },
+      "expected": { "decision": "ACCEPT" }
+    },
+    {
+      "name": "empty_identity",
+      "kind": "identity",
+      "input": { "mission_id": "" },
+      "expected": { "decision": "REJECT" }
+    },
+    {
+      "name": "succeeded_without_evidence",
+      "kind": "acceptance",
+      "input": {
+        "context": {
+          "subject_id": "s1",
+          "subject_state_id": "state-1",
+          "verification_context_id": "ctx-1",
+          "policy_bundle_id": "policy-1",
+          "required_obligations": ["verify"],
+          "trusted_verifiers": ["verifier-1"],
+          "trusted_provenance_roots": ["root-1"],
+          "authorized_authorities": ["authority-1"]
+        },
+        "evidence": [],
+        "now_epoch": 15.0
+      },
+      "expected": { "decision": "NOT_DONE" }
+    },
+    {
+      "name": "unverified_evidence",
+      "kind": "acceptance",
+      "input": {
+        "context": {
+          "subject_id": "s1",
+          "subject_state_id": "state-1",
+          "verification_context_id": "ctx-1",
+          "policy_bundle_id": "policy-1",
+          "required_obligations": ["verify"],
+          "trusted_verifiers": ["verifier-1"],
+          "trusted_provenance_roots": ["root-1"],
+          "authorized_authorities": ["authority-1"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "e1",
+            "obligation_id": "verify",
+            "mission_id": "m1",
+            "execution_id": "x1",
+            "orchestrator_id": "orch-a",
+            "adapter_version": "1",
+            "attempt_id": "a1",
+            "subject_id": "s1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "ctx-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+            "payload_digest": "abc",
+            "provenance_root": "root-1",
+            "authority_id": "authority-1",
+            "passed": false,
+            "created_at_epoch": 10.0,
+            "expires_at_epoch": 20.0
+          }
+        ],
+        "now_epoch": 15.0
+      },
+      "expected": { "decision": "BLOCK" }
+    },
+    {
+      "name": "stale_evidence",
+      "kind": "acceptance",
+      "input": {
+        "context": {
+          "subject_id": "s1",
+          "subject_state_id": "state-1",
+          "verification_context_id": "ctx-1",
+          "policy_bundle_id": "policy-1",
+          "required_obligations": ["verify"],
+          "trusted_verifiers": ["verifier-1"],
+          "trusted_provenance_roots": ["root-1"],
+          "authorized_authorities": ["authority-1"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "e1",
+            "obligation_id": "verify",
+            "mission_id": "m1",
+            "execution_id": "x1",
+            "orchestrator_id": "orch-a",
+            "adapter_version": "1",
+            "attempt_id": "a1",
+            "subject_id": "s1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "ctx-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+            "payload_digest": "abc",
+            "provenance_root": "root-1",
+            "authority_id": "authority-1",
+            "passed": true,
+            "created_at_epoch": 10.0,
+            "expires_at_epoch": 12.0
+          }
+        ],
+        "now_epoch": 15.0
+      },
+      "expected": { "decision": "STALE" }
+    },
+    {
+      "name": "future_evidence",
+      "kind": "acceptance",
+      "input": {
+        "context": {
+          "subject_id": "s1",
+          "subject_state_id": "state-1",
+          "verification_context_id": "ctx-1",
+          "policy_bundle_id": "policy-1",
+          "required_obligations": ["verify"],
+          "trusted_verifiers": ["verifier-1"],
+          "trusted_provenance_roots": ["root-1"],
+          "authorized_authorities": ["authority-1"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "e1",
+            "obligation_id": "verify",
+            "mission_id": "m1",
+            "execution_id": "x1",
+            "orchestrator_id": "orch-a",
+            "adapter_version": "1",
+            "attempt_id": "a1",
+            "subject_id": "s1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "ctx-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+            "payload_digest": "abc",
+            "provenance_root": "root-1",
+            "authority_id": "authority-1",
+            "passed": true,
+            "created_at_epoch": 20.0,
+            "expires_at_epoch": 30.0
+          }
+        ],
+        "now_epoch": 15.0
+      },
+      "expected": { "decision": "BLOCK" }
+    },
+    {
+      "name": "mission_mismatch",
+      "kind": "acceptance",
+      "input": {
+        "context": {
+          "subject_id": "s1",
+          "subject_state_id": "state-1",
+          "verification_context_id": "ctx-1",
+          "policy_bundle_id": "policy-1",
+          "required_obligations": ["verify"],
+          "trusted_verifiers": ["verifier-1"],
+          "trusted_provenance_roots": ["root-1"],
+          "authorized_authorities": ["authority-1"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "e1",
+            "obligation_id": "verify",
+            "mission_id": "m2",
+            "execution_id": "x1",
+            "orchestrator_id": "orch-a",
+            "adapter_version": "1",
+            "attempt_id": "a1",
+            "subject_id": "s1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "ctx-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+            "payload_digest": "abc",
+            "provenance_root": "root-1",
+            "authority_id": "authority-1",
+            "passed": true,
+            "created_at_epoch": 10.0,
+            "expires_at_epoch": 20.0
+          }
+        ],
+        "now_epoch": 15.0
+      },
+      "expected": { "decision": "BLOCK" }
+    },
+    {
+      "name": "execution_mismatch",
+      "kind": "acceptance",
+      "input": {
+        "context": {
+          "subject_id": "s1",
+          "subject_state_id": "state-1",
+          "verification_context_id": "ctx-1",
+          "policy_bundle_id": "policy-1",
+          "required_obligations": ["verify"],
+          "trusted_verifiers": ["verifier-1"],
+          "trusted_provenance_roots": ["root-1"],
+          "authorized_authorities": ["authority-1"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "e1",
+            "obligation_id": "verify",
+            "mission_id": "m1",
+            "execution_id": "x2",
+            "orchestrator_id": "orch-a",
+            "adapter_version": "1",
+            "attempt_id": "a1",
+            "subject_id": "s1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "ctx-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+            "payload_digest": "abc",
+            "provenance_root": "root-1",
+            "authority_id": "authority-1",
+            "passed": true,
+            "created_at_epoch": 10.0,
+            "expires_at_epoch": 20.0
+          }
+        ],
+        "now_epoch": 15.0
+      },
+      "expected": { "decision": "BLOCK" }
+    },
+    {
+      "name": "runtime_mismatch",
+      "kind": "acceptance",
+      "input": {
+        "context": {
+          "subject_id": "s1",
+          "subject_state_id": "state-1",
+          "verification_context_id": "ctx-1",
+          "policy_bundle_id": "policy-1",
+          "required_obligations": ["verify"],
+          "trusted_verifiers": ["verifier-1"],
+          "trusted_provenance_roots": ["root-1"],
+          "authorized_authorities": ["authority-1"]
+        },
+        "evidence": [
+          {
+            "evidence_id": "e1",
+            "obligation_id": "verify",
+            "mission_id": "m1",
+            "execution_id": "x1",
+            "orchestrator_id": "orch-b",
+            "adapter_version": "1",
+            "attempt_id": "a1",
+            "subject_id": "s1",
+            "subject_state_id": "state-1",
+            "verification_context_id": "ctx-1",
+            "policy_bundle_id": "policy-1",
+            "verifier_id": "verifier-1",
+            "payload_digest": "abc",
+            "provenance_root": "root-1",
+            "authority_id": "authority-1",
+            "passed": true,
+            "created_at_epoch": 10.0,
+            "expires_at_epoch": 20.0
+          }
+        ],
+        "now_epoch": 15.0
+      },
+      "expected": { "decision": "BLOCK" }
+    },
+    {
+      "name": "policy_deny",
+      "kind": "policy_deny",
+      "input": {
+        "request": { "execution_id": "exec-1", "mission_id": "mission-1" },
+        "result": { "execution_id": "exec-1", "runtime_id": "runtime-1", "status": "Succeeded" },
+        "policy": "Deny",
+        "now_epoch": 15
+      },
+      "expected": { "decision": "BLOCK" }
+    },
+    {
+      "name": "incompatible_contract_version",
+      "kind": "contract_version",
+      "input": { "contract_version": 2 },
+      "expected": { "decision": "REJECT" }
+    },
+    {
+      "name": "malformed_payload",
+      "kind": "malformed",
+      "input": { "payload": "{not-json" },
+      "expected": { "decision": "REJECT" }
+    }
+  ]
+}
