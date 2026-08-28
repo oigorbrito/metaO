@@ -61,9 +61,7 @@ fn real_hang_is_contained_and_recovers_250_times() {
         let deadline = Instant::now() + HANG_DEADLINE;
         loop {
             if let Some(status) = child.try_wait().expect("poll hanging runtime") {
-                panic!(
-                    "hang injection {iteration} exited before containment deadline: {status}"
-                );
+                panic!("hang injection {iteration} exited before containment deadline: {status}");
             }
             if Instant::now() >= deadline {
                 child.kill().expect("kill timed-out runtime");
@@ -83,8 +81,11 @@ fn malformed_and_incompatible_protocol_fail_closed_and_recover_250_times_each() 
     let mut reader = BufReader::new(child.stdout.take().expect("child stdout"));
 
     for iteration in 0..INJECTIONS_PER_CLASS {
-        writeln!(child.stdin.as_mut().expect("child stdin"), "not-json-{iteration}")
-            .expect("send malformed payload");
+        writeln!(
+            child.stdin.as_mut().expect("child stdin"),
+            "not-json-{iteration}"
+        )
+        .expect("send malformed payload");
         let mut malformed_error = String::new();
         reader
             .read_line(&mut malformed_error)
@@ -134,7 +135,8 @@ fn malformed_and_incompatible_protocol_fail_closed_and_recover_250_times_each() 
         reader
             .read_line(&mut recovery_line)
             .expect("read version recovery response");
-        let response = decode_response(recovery_line.trim()).expect("decode version recovery response");
+        let response =
+            decode_response(recovery_line.trim()).expect("decode version recovery response");
         assert_eq!(response.execution_id, recovery.execution_id);
         assert_eq!(response.status, "SUCCEEDED");
     }
