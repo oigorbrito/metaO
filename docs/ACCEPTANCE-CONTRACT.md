@@ -374,3 +374,15 @@ Post-v0.1 terminal source composition:
 - authoritative source mismatch or rollback fails closed before terminal acceptance continues.
 
 This slice intentionally stops before broader evidence-envelope normalization gaps that remain tracked in `#228`.
+
+## 22. Authoritative retry history
+
+The post-v0.1 A11 slice adds an append-only retry history authority for retry/recovery/attempt/cost facts.
+
+Required behavior:
+
+- retry history is factual and authoritative for the scoped mission/execution ledger;
+- callers may not omit prior attempts, shorten the factual history, or reset counters to reopen acceptance;
+- duplicate record identity, sequence gaps and binding mismatches fail closed;
+- factual history is preserved even when budget application later fails;
+- retry history is not the final acceptance authority; only `canonical_acceptance` can mint final acceptance.
