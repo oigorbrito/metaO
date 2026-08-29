@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
+use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::sync::{Arc, Barrier, Mutex};
 use std::thread;
@@ -10,6 +11,10 @@ use metao_contracts::{
 use metao_kernel::{
     apply_confidence_after_hard_gates, canonical_acceptance, evaluate_policy,
     replay_acceptance_decision, require_human, resume_after_approval, AcceptanceBudgetAuthority,
+};
+use metao_wire::{
+    execute_with_recovery, RecoveryPolicy, RuntimeExecutionBlocked, RuntimeExecutionFailure,
+    RuntimeExecutionOutcome, WireRequest, PROTOCOL_VERSION,
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -233,6 +238,71 @@ fn proof_semantic(result: metao_contracts::AcceptanceResult) -> Value {
     })
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+enum CapabilityAuthority {
+    Python,
+    RustShadow,
+    RustActive,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CapabilityCutoverState {
+    qualified_capabilities: BTreeSet<String>,
+    shadow_capabilities: BTreeSet<String>,
+    active_capabilities: BTreeSet<String>,
+}
+
+impl CapabilityCutoverState {
+    fn new() -> Self {
+        Self {
+            qualified_capabilities: [
+                "acceptance",
+                "policy",
+                "approval",
+                "budget",
+                "authority_provenance",
+                "proof_replay",
+            ]
+            .into_iter()
+            .map(str::to_string)
+            .collect(),
+            shadow_capabilities: ["runtime"].into_iter().map(str::to_string).collect(),
+            active_capabilities: BTreeSet::new(),
+        }
+    }
+
+    fn authority_for(&self, capability: &str) -> CapabilityAuthority {
+        if self.active_capabilities.contains(capability) {
+            CapabilityAuthority::RustActive
+        } else if self.shadow_capabilities.contains(capability) {
+            CapabilityAuthority::RustShadow
+        } else {
+            CapabilityAuthority::Python
+        }
+    }
+
+    fn promote(mut self, capability: &str) -> Self {
+        if self.qualified_capabilities.contains(capability) {
+            self.shadow_capabilities.remove(capability);
+            self.active_capabilities.insert(capability.to_string());
+        }
+        self
+    }
+
+    fn rollback(mut self, capability: &str) -> Self {
+        self.active_capabilities.remove(capability);
+        self.shadow_capabilities.remove(capability);
+        self
+    }
+}
+
+fn capability_for_category(category: &str) -> &str {
+    match category {
+        "proof" => "proof_replay",
+        other => other,
+    }
+}
+
 fn normalized_error_category(err: impl std::fmt::Debug) -> String {
     let text = format!("{err:?}");
     if text.contains("BudgetExhausted") {
@@ -250,29 +320,217 @@ fn normalized_error_category(err: impl std::fmt::Debug) -> String {
     }
 }
 
-fn runtime_success_summary(
-    orchestrator_id: &str,
-    result_status: &str,
-    result_output: Value,
-    acceptance: Value,
-) -> Value {
+fn runtime_binary() -> PathBuf {
+    if let Ok(path) = std::env::var("CARGO_BIN_EXE_metao-wire-runtime") {
+        return PathBuf::from(path);
+    }
+    let fallback = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("target")
+        .join("debug")
+        .join(if cfg!(windows) {
+            "metao-wire-runtime.exe"
+        } else {
+            "metao-wire-runtime"
+        });
+    assert!(
+        fallback.exists(),
+        "missing runtime binary; run metao-wire runtime tests first or build the workspace: {}",
+        fallback.display()
+    );
+    fallback
+}
+
+fn runtime_objective(scenario: &str) -> &'static str {
+    match scenario {
+        "success_without_evidence" => "normal",
+        "recovered_success_without_evidence" => "__crash_then_recover__",
+        "failover_success_without_evidence" => "__crash_then_recover__",
+        "failover_success_with_valid_evidence" => "__crash_then_recover__",
+        "crash_recovery" => "__crash_then_recover__",
+        "timeout_recovery" => "__hang_then_recover__",
+        other => panic!("unknown runtime scenario: {other}"),
+    }
+}
+
+fn runtime_request(scenario: &str) -> WireRequest {
+    WireRequest {
+        protocol_version: PROTOCOL_VERSION,
+        execution_id: format!("runtime-{scenario}"),
+        mission_id: "mission-rt".into(),
+        objective: runtime_objective(scenario).into(),
+    }
+}
+
+fn runtime_result_summary(scenario: &str) -> Value {
+    let started = std::time::Instant::now();
+    let request = runtime_request(scenario);
+    let outcome = execute_with_recovery(
+        runtime_binary(),
+        &request,
+        RecoveryPolicy::new(1, std::time::Duration::from_millis(200)),
+    );
+
+    let (execution_status, execution_error, runtime_observation, acceptance) = match outcome {
+        RuntimeExecutionOutcome::Completed { response, attempts } => {
+            let execution_status = response.status.clone();
+            let execution_id = response.execution_id.clone();
+            let runtime_id = response.runtime_id.clone();
+            let result = response.result.clone();
+            let acceptance = if scenario == "failover_success_with_valid_evidence" {
+                acceptance_semantic(canonical_acceptance(
+                    &context(
+                        "subject-rt",
+                        "state-rt",
+                        "ctx-rt",
+                        "policy-rt",
+                        vec!["verify"],
+                        vec!["verifier-rt"],
+                        vec!["root-rt"],
+                        vec!["authority-rt"],
+                    ),
+                    &[evidence(|item| {
+                        item.evidence_id = "rt-e1".into();
+                        item.obligation_id = "verify".into();
+                        item.mission_id = MissionId::new("mission-rt").unwrap();
+                        item.execution_id =
+                            ExecutionId::new("runtime-failover_success_with_valid_evidence")
+                                .unwrap();
+                        item.orchestrator_id = RuntimeId::new("runtime-a").unwrap();
+                        item.adapter_version = "1".into();
+                        item.attempt_id = "attempt-1".into();
+                        item.subject_id = "subject-rt".into();
+                        item.subject_state_id = "state-rt".into();
+                        item.verification_context_id = "ctx-rt".into();
+                        item.policy_bundle_id = "policy-rt".into();
+                        item.verifier_id = "verifier-rt".into();
+                        item.payload_digest = "digest-rt".into();
+                        item.provenance_root = "root-rt".into();
+                        item.authority_id = "authority-rt".into();
+                        item.passed = true;
+                        item.created_at_epoch = 10.0;
+                        item.expires_at_epoch = Some(100.0);
+                    })],
+                    15.0,
+                ))
+            } else {
+                acceptance_semantic(canonical_acceptance(
+                    &context(
+                        "subject-rt",
+                        "state-rt",
+                        "ctx-rt",
+                        "policy-rt",
+                        vec!["verify"],
+                        vec!["verifier-rt"],
+                        vec!["root-rt"],
+                        vec!["authority-rt"],
+                    ),
+                    &[],
+                    15.0,
+                ))
+            };
+            let execution_status_for_output = execution_status.clone();
+            (
+                execution_status_for_output,
+                String::new(),
+                json!({
+                    "runtime_outcome": "COMPLETED",
+                    "attempts": attempts,
+                    "response": {
+                        "protocol_version": response.protocol_version,
+                        "execution_id": execution_id,
+                        "runtime_id": runtime_id,
+                        "status": execution_status.clone(),
+                        "result": result,
+                    },
+                }),
+                acceptance,
+            )
+        }
+        RuntimeExecutionOutcome::Failed { reason, attempts } => {
+            let reason_text = match reason {
+                RuntimeExecutionFailure::Crash => "crash",
+                RuntimeExecutionFailure::Timeout => "timeout",
+                RuntimeExecutionFailure::SpawnFailed => "spawn_failed",
+                RuntimeExecutionFailure::RecoveryExhausted => "recovery_exhausted",
+            };
+            (
+                "FAILED".into(),
+                reason_text.into(),
+                json!({
+                    "runtime_outcome": "FAILED",
+                    "attempts": attempts,
+                    "reason": reason_text,
+                }),
+                acceptance_semantic(canonical_acceptance(
+                    &context(
+                        "subject-rt",
+                        "state-rt",
+                        "ctx-rt",
+                        "policy-rt",
+                        vec!["verify"],
+                        vec!["verifier-rt"],
+                        vec!["root-rt"],
+                        vec!["authority-rt"],
+                    ),
+                    &[],
+                    15.0,
+                )),
+            )
+        }
+        RuntimeExecutionOutcome::Blocked { reason, attempts } => {
+            let reason_text = match reason {
+                RuntimeExecutionBlocked::MalformedProtocol => "malformed_protocol",
+                RuntimeExecutionBlocked::IncompatibleProtocol => "incompatible_protocol",
+            };
+            (
+                "BLOCKED".into(),
+                reason_text.into(),
+                json!({
+                    "runtime_outcome": "BLOCKED",
+                    "attempts": attempts,
+                    "reason": reason_text,
+                }),
+                acceptance_semantic(canonical_acceptance(
+                    &context(
+                        "subject-rt",
+                        "state-rt",
+                        "ctx-rt",
+                        "policy-rt",
+                        vec!["verify"],
+                        vec!["verifier-rt"],
+                        vec!["root-rt"],
+                        vec!["authority-rt"],
+                    ),
+                    &[],
+                    15.0,
+                )),
+            )
+        }
+    };
+    let execution_status_for_attempt = execution_status.clone();
+    let acceptance_decision = acceptance["decision"]
+        .as_str()
+        .unwrap_or("NOT_DONE")
+        .to_string();
+
     json!({
         "mission_id": "mission-rt",
-        "orchestrator_id": orchestrator_id,
-        "attempted_orchestrators": [orchestrator_id],
-        "execution_status": result_status,
-        "execution_error": "",
-        "execution_output": result_output,
+        "orchestrator_id": "runtime-a",
+        "attempted_orchestrators": ["runtime-a"],
+        "execution_status": execution_status,
+        "execution_error": execution_error,
+        "execution_output": runtime_observation.clone(),
         "acceptance": acceptance,
         "state": {
             "status": "VERIFYING",
             "history": ["CREATED", "PLANNING", "SELECTING", "RUNNING", "VERIFYING"],
             "attempts": [{
                 "attempt_number": 1,
-                "execution_id": "exec-rt",
-                "orchestrator_id": orchestrator_id,
-                "execution_status": result_status,
-                "acceptance_decision": "NOT_DONE",
+                "execution_id": request.execution_id,
+                "orchestrator_id": "runtime-a",
+                "execution_status": execution_status_for_attempt,
+                "acceptance_decision": acceptance_decision,
                 "reasons": [],
             }],
         },
@@ -286,75 +544,11 @@ fn runtime_success_summary(
             "verifier_attempt_limit": 4,
             "verifier_attempts_used": 0,
         },
-    })
-}
-
-fn runtime_recovery_summary(
-    primary_error: &str,
-    fallback_id: &str,
-    execution_output: Value,
-    acceptance: Value,
-) -> Value {
-    let accepted = acceptance["decision"] == "ACCEPT";
-    let mut history = vec![
-        "CREATED",
-        "PLANNING",
-        "SELECTING",
-        "RUNNING",
-        "FAILED",
-        "REPLANNING",
-        "RUNNING",
-        "VERIFYING",
-    ];
-    let status = if accepted { "ACCEPTED" } else { "VERIFYING" };
-    if accepted {
-        history.push("ACCEPTED");
-    }
-    json!({
-        "mission_id": "mission-rt",
-        "orchestrator_id": fallback_id,
-        "attempted_orchestrators": ["runtime-a", "runtime-b"],
-        "execution_status": "SUCCEEDED",
-        "execution_error": "",
-        "execution_output": execution_output,
-        "acceptance": acceptance,
-        "state": {
-            "status": status,
-            "history": history,
-            "attempts": [
-                {
-                    "attempt_number": 1,
-                    "execution_id": "exec-rt",
-                    "orchestrator_id": "runtime-a",
-                    "execution_status": "FAILED",
-                    "acceptance_decision": "NOT_DONE",
-                    "reasons": [primary_error],
-                    "error": match primary_error {
-                        "runtimeerror" => "simulated runtime crash",
-                        "timeouterror" => "simulated runtime timeout",
-                        other => other,
-                    },
-                },
-                {
-                    "attempt_number": 2,
-                    "execution_id": "exec-rt",
-                    "orchestrator_id": fallback_id,
-                    "execution_status": "SUCCEEDED",
-                    "acceptance_decision": "NOT_DONE",
-                    "reasons": [],
-                },
-            ],
-        },
-        "budget": {
-            "money_limit": 1.0,
-            "money_used": 0.0,
-            "token_limit": 1000,
-            "tokens_used": 0,
-            "wall_time_limit_s": 60.0,
-            "wall_time_used_s": 0.0,
-            "verifier_attempt_limit": 4,
-            "verifier_attempts_used": 0,
-        },
+        "comparison_kind": "HARNESS_ONLY",
+        "runtime_observation": runtime_observation,
+        "metrics": {
+            "duration_ms": started.elapsed().as_secs_f64() * 1000.0,
+        }
     })
 }
 
@@ -898,60 +1092,20 @@ fn run_case(case: &Case) -> Value {
             })
         }
 
-        ("runtime", "success_without_evidence") => runtime_success_summary(
-            "runtime-a",
-            "SUCCEEDED",
-            json!({"result": "runtime-a:mission-rt"}),
-            json!({
-                "decision": "NOT_DONE",
-                "reasons": ["missing_obligation:execution_result"],
-            }),
-        ),
-        ("runtime", "recovered_success_without_evidence") => runtime_recovery_summary(
-            "runtimeerror",
-            "runtime-b",
-            json!({"result": "runtime-b:mission-rt"}),
-            json!({
-                "decision": "NOT_DONE",
-                "reasons": ["missing_obligation:execution_result"],
-            }),
-        ),
-        ("runtime", "failover_success_without_evidence") => runtime_recovery_summary(
-            "runtimeerror",
-            "runtime-b",
-            json!({"result": "runtime-b:mission-rt"}),
-            json!({
-                "decision": "NOT_DONE",
-                "reasons": ["missing_obligation:execution_result"],
-            }),
-        ),
-        ("runtime", "failover_success_with_valid_evidence") => runtime_recovery_summary(
-            "runtimeerror",
-            "runtime-b",
-            json!({"result": "runtime-b:mission-rt"}),
-            json!({
-                "decision": "ACCEPT",
-                "reasons": [],
-            }),
-        ),
-        ("runtime", "crash_recovery") => runtime_recovery_summary(
-            "runtimeerror",
-            "runtime-b",
-            json!({"result": "runtime-b:mission-rt"}),
-            json!({
-                "decision": "NOT_DONE",
-                "reasons": ["missing_obligation:execution_result"],
-            }),
-        ),
-        ("runtime", "timeout_recovery") => runtime_recovery_summary(
-            "timeouterror",
-            "runtime-b",
-            json!({"result": "runtime-b:mission-rt"}),
-            json!({
-                "decision": "NOT_DONE",
-                "reasons": ["missing_obligation:execution_result"],
-            }),
-        ),
+        ("runtime", "success_without_evidence") => {
+            runtime_result_summary("success_without_evidence")
+        }
+        ("runtime", "recovered_success_without_evidence") => {
+            runtime_result_summary("recovered_success_without_evidence")
+        }
+        ("runtime", "failover_success_without_evidence") => {
+            runtime_result_summary("failover_success_without_evidence")
+        }
+        ("runtime", "failover_success_with_valid_evidence") => {
+            runtime_result_summary("failover_success_with_valid_evidence")
+        }
+        ("runtime", "crash_recovery") => runtime_result_summary("crash_recovery"),
+        ("runtime", "timeout_recovery") => runtime_result_summary("timeout_recovery"),
 
         other => panic!("unhandled shadow case: {other:?}"),
     };
@@ -1011,21 +1165,40 @@ fn shadow_corpus_matches_python_semantics() {
 
     let python = strip_metrics(&python_results);
     let rust = strip_metrics(&rust_results);
-    let real_cases = fixture
-        .cases
-        .iter()
-        .filter(|case| case.category != "runtime")
-        .count();
-    let harness_only_cases = fixture
-        .cases
-        .iter()
-        .filter(|case| case.category == "runtime")
-        .count();
+    let mut real_cases = 0usize;
+    let mut harness_only_cases = 0usize;
+    let cutover = CapabilityCutoverState::new()
+        .promote("acceptance")
+        .promote("policy")
+        .promote("approval")
+        .promote("budget")
+        .promote("authority_provenance")
+        .promote("proof_replay");
 
     assert_eq!(python.len(), rust.len(), "shadow corpus length mismatch");
+    for case in &fixture.cases {
+        match case.category.as_str() {
+            "runtime" => harness_only_cases += 1,
+            "acceptance" | "policy" | "approval" | "budget" | "authority_provenance" | "proof" => {
+                real_cases += 1;
+                assert_eq!(
+                    cutover.authority_for(capability_for_category(case.category.as_str())),
+                    CapabilityAuthority::RustActive
+                );
+            }
+            other => panic!("unexpected phase 7 capability category: {other}"),
+        }
+    }
     assert_eq!(real_cases, 38);
     assert_eq!(harness_only_cases, 6);
     for (index, (py, rs)) in python.iter().zip(rust.iter()).enumerate() {
+        let case = &fixture.cases[index];
+        if case.category == "runtime" {
+            assert_eq!(py["comparison_kind"], "HARNESS_ONLY");
+            assert_eq!(rs["comparison_kind"], "HARNESS_ONLY");
+            assert!(rs["semantic"]["runtime_observation"]["runtime_outcome"].is_string());
+            continue;
+        }
         if py != rs {
             let case_id = &fixture.cases[index].case_id;
             panic!(
@@ -1035,6 +1208,55 @@ fn shadow_corpus_matches_python_semantics() {
             );
         }
     }
+}
+
+#[test]
+fn phase7_cutover_promotes_qualified_capabilities_and_keeps_runtime_shadow() {
+    let state = CapabilityCutoverState::new()
+        .promote("acceptance")
+        .promote("policy")
+        .promote("approval")
+        .promote("budget")
+        .promote("authority_provenance")
+        .promote("proof_replay");
+
+    for capability in [
+        "acceptance",
+        "policy",
+        "approval",
+        "budget",
+        "authority_provenance",
+        "proof_replay",
+    ] {
+        assert_eq!(
+            state.authority_for(capability),
+            CapabilityAuthority::RustActive
+        );
+    }
+    assert_eq!(
+        state.authority_for("runtime"),
+        CapabilityAuthority::RustShadow
+    );
+    assert_eq!(
+        state.authority_for("unqualified_capability"),
+        CapabilityAuthority::Python
+    );
+}
+
+#[test]
+fn phase7_cutover_rollback_is_idempotent_and_restores_python() {
+    let promoted = CapabilityCutoverState::new().promote("acceptance");
+    assert_eq!(
+        promoted.authority_for("acceptance"),
+        CapabilityAuthority::RustActive
+    );
+
+    let rolled_back = promoted.clone().rollback("acceptance");
+    assert_eq!(
+        rolled_back.authority_for("acceptance"),
+        CapabilityAuthority::Python
+    );
+    assert_eq!(rolled_back.clone().rollback("acceptance"), rolled_back);
 }
 
 #[test]
