@@ -22,6 +22,7 @@ PHASE7_QUALIFIED_CAPABILITIES = frozenset(
 )
 
 PHASE7_SHADOW_CAPABILITIES = frozenset({"runtime"})
+PHASE8_QUALIFIED_CAPABILITIES = PHASE7_QUALIFIED_CAPABILITIES | frozenset({"runtime"})
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,3 +81,11 @@ class CapabilityCutoverState:
 
 def default_phase7_cutover_state() -> CapabilityCutoverState:
     return CapabilityCutoverState()
+
+
+def default_phase8_cutover_state() -> CapabilityCutoverState:
+    return CapabilityCutoverState(
+        qualified_capabilities=PHASE8_QUALIFIED_CAPABILITIES,
+        shadow_capabilities=frozenset(),
+        active_capabilities=frozenset(),
+    ).promote_qualified()

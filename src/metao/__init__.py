@@ -4,7 +4,9 @@ from .cutover import (
     CapabilityCutoverState,
     PHASE7_QUALIFIED_CAPABILITIES,
     PHASE7_SHADOW_CAPABILITIES,
+    PHASE8_QUALIFIED_CAPABILITIES,
     default_phase7_cutover_state,
+    default_phase8_cutover_state,
 )
 from .core import (
     EvidenceEnvelope,
@@ -70,7 +72,9 @@ __all__ = [
     "CapabilityCutoverState",
     "PHASE7_QUALIFIED_CAPABILITIES",
     "PHASE7_SHADOW_CAPABILITIES",
+    "PHASE8_QUALIFIED_CAPABILITIES",
     "default_phase7_cutover_state",
+    "default_phase8_cutover_state",
     "OrchestratorCatalogEntry",
     "OrchestratorCatalog",
     "ActiveExecutionHandle",
