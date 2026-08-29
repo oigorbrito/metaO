@@ -86,6 +86,8 @@ name = "metao-kernel"
 version = "0.0.0"
 dependencies = [
  "metao-contracts",
+ "metao-registry",
+ "serde",
  "serde_json",
  "sha2",
 ]
