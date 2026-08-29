@@ -1,4 +1,0 @@
-metao-registry/src/lib.rs:30:9: replace Registry::register -> Result<(), RegistryError> with Ok(())
-metao-registry/src/lib.rs:33:33: replace == with != in Registry::register
-metao-registry/src/lib.rs:48:9: replace Registry::unregister -> bool with true
-metao-registry/src/lib.rs:48:9: replace Registry::unregister -> bool with false
