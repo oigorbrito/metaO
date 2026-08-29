@@ -360,6 +360,11 @@ fn runtime_recovery_summary(
 
 fn run_case(case: &Case) -> Value {
     let started = std::time::Instant::now();
+    let comparison_kind = if case.category == "runtime" {
+        "HARNESS_ONLY"
+    } else {
+        "REAL_PYTHON_VS_REAL_RUST"
+    };
     let semantic = match (case.category.as_str(), case.scenario.as_str()) {
         ("acceptance", "valid_bound") => acceptance_semantic(canonical_acceptance(
             &context(
@@ -955,6 +960,7 @@ fn run_case(case: &Case) -> Value {
         "case_id": case.case_id,
         "category": case.category,
         "scenario": case.scenario,
+        "comparison_kind": comparison_kind,
         "semantic": semantic,
         "metrics": {
             "duration_ms": started.elapsed().as_secs_f64() * 1000.0,
@@ -970,6 +976,7 @@ fn strip_metrics(results: &[Value]) -> Vec<Value> {
                 "case_id": item["case_id"],
                 "category": item["category"],
                 "scenario": item["scenario"],
+                "comparison_kind": item["comparison_kind"],
                 "semantic": item["semantic"],
             })
         })
@@ -1004,8 +1011,20 @@ fn shadow_corpus_matches_python_semantics() {
 
     let python = strip_metrics(&python_results);
     let rust = strip_metrics(&rust_results);
+    let real_cases = fixture
+        .cases
+        .iter()
+        .filter(|case| case.category != "runtime")
+        .count();
+    let harness_only_cases = fixture
+        .cases
+        .iter()
+        .filter(|case| case.category == "runtime")
+        .count();
 
     assert_eq!(python.len(), rust.len(), "shadow corpus length mismatch");
+    assert_eq!(real_cases, 38);
+    assert_eq!(harness_only_cases, 6);
     for (index, (py, rs)) in python.iter().zip(rust.iter()).enumerate() {
         if py != rs {
             let case_id = &fixture.cases[index].case_id;

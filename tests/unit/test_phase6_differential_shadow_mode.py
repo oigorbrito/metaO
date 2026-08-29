@@ -30,6 +30,7 @@ def _strip_metrics(results: list[dict]) -> list[dict]:
                 "case_id": item["case_id"],
                 "category": item["category"],
                 "scenario": item["scenario"],
+                "comparison_kind": item["comparison_kind"],
                 "semantic": item["semantic"],
             }
         )

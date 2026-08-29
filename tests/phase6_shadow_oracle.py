@@ -49,6 +49,10 @@ def _jsonable(value):
     return value
 
 
+def _comparison_kind(category: str) -> str:
+    return "HARNESS_ONLY" if category == "runtime" else "REAL_PYTHON_VS_REAL_RUST"
+
+
 def _context(
     *,
     subject_id: str = "subject-1",
@@ -766,7 +770,14 @@ def _run_case(case: dict) -> dict:
 
     elapsed_ms = (perf_counter() - started) * 1000.0
     metrics = {"duration_ms": round(elapsed_ms, 3)}
-    return {"case_id": case["case_id"], "category": case["category"], "scenario": scenario, "semantic": semantic, "metrics": metrics}
+    return {
+        "case_id": case["case_id"],
+        "category": case["category"],
+        "scenario": scenario,
+        "comparison_kind": _comparison_kind(case["category"]),
+        "semantic": semantic,
+        "metrics": metrics,
+    }
 
 
 def main() -> int:
