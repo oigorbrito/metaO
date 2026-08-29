@@ -3,9 +3,10 @@ use metao_contracts::{
     ApprovalRecord, ApprovalRequest, AuthoritativeAuthorityDecision, AuthoritativePolicyBundle,
     AuthoritativeSubjectState, AuthorityRegistryPort, BudgetReservation, ConflictDecision,
     ContractError, Evidence, EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus,
-    PolicyDecision, PolicyEffect, PolicyRegistryPort, RequiredEvidenceSet, RuntimeId,
-    SubjectStatePort, TerminalClaims, VerificationAttemptId, VerificationAttemptStarted,
-    VerificationRequest, VerificationUsage, VerifierDescriptor, VerifierResult,
+    PolicyDecision, PolicyEffect, PolicyRegistryPort, RequiredEvidenceSet, RetryHistoryKind,
+    RetryHistoryPort, RetryHistoryRecord, RuntimeId, SubjectStatePort, TerminalClaims,
+    VerificationAttemptId, VerificationAttemptStarted, VerificationRequest, VerificationUsage,
+    VerifierDescriptor, VerifierResult,
 };
 use metao_registry::{VerifierRegistry, VerifierRegistryError};
 use serde::{Deserialize, Serialize};
@@ -589,6 +590,13 @@ pub struct VerificationAccountingAuthority {
     attempts: Mutex<BTreeMap<VerificationAttemptId, VerificationAttemptStarted>>,
     attempt_facts: Mutex<BTreeSet<String>>,
     usages: Mutex<BTreeMap<VerificationAttemptId, VerificationUsage>>,
+    retry_history: Mutex<
+        BTreeMap<
+            (metao_contracts::MissionId, metao_contracts::ExecutionId),
+            Vec<RetryHistoryRecord>,
+        >,
+    >,
+    retry_record_ids: Mutex<BTreeSet<String>>,
 }
 
 impl VerificationAccountingAuthority {
@@ -598,6 +606,8 @@ impl VerificationAccountingAuthority {
             attempts: Mutex::new(BTreeMap::new()),
             attempt_facts: Mutex::new(BTreeSet::new()),
             usages: Mutex::new(BTreeMap::new()),
+            retry_history: Mutex::new(BTreeMap::new()),
+            retry_record_ids: Mutex::new(BTreeSet::new()),
         }
     }
 
@@ -624,36 +634,172 @@ impl VerificationAccountingAuthority {
             .cloned()
     }
 
+    pub fn retry_history(
+        &self,
+        mission_id: &metao_contracts::MissionId,
+        execution_id: &metao_contracts::ExecutionId,
+    ) -> Option<Vec<RetryHistoryRecord>> {
+        self.retry_history
+            .lock()
+            .expect("retry_history lock")
+            .get(&(mission_id.clone(), execution_id.clone()))
+            .cloned()
+    }
+
+    fn append_retry_history_record(&self, record: RetryHistoryRecord) -> Result<(), ContractError> {
+        if record.record_id.trim().is_empty() {
+            return Err(ContractError::EmptyIdentity("retry_history_record_id"));
+        }
+
+        let scope = (record.mission_id.clone(), record.execution_id.clone());
+        let mut history_by_scope = self.retry_history.lock().expect("retry_history lock");
+        let history = history_by_scope.entry(scope).or_default();
+        let expected_sequence = history.len() as u64;
+        if record.sequence != expected_sequence {
+            return Err(ContractError::RetryHistorySequenceGap {
+                expected: expected_sequence,
+                actual: record.sequence,
+            });
+        }
+
+        let mut record_ids = self.retry_record_ids.lock().expect("retry_record_ids lock");
+        if record_ids.contains(&record.record_id) {
+            return Err(ContractError::RetryHistoryDuplicateRecord(
+                record.record_id.clone(),
+            ));
+        }
+
+        match &record.kind {
+            RetryHistoryKind::AttemptStarted => {
+                let Some(started) = record.attempt_started.as_ref() else {
+                    return Err(ContractError::RetryHistoryBindingMismatch);
+                };
+                if started.mission_id != record.mission_id
+                    || started.execution_id != record.execution_id
+                    || started.attempt_id != record.attempt_id
+                {
+                    return Err(ContractError::RetryHistoryBindingMismatch);
+                }
+                let mut attempts = self.attempts.lock().expect("attempts lock");
+                if attempts.contains_key(&record.attempt_id) {
+                    return Err(ContractError::DuplicateVerificationAttempt(
+                        record.attempt_id.as_str().to_string(),
+                    ));
+                }
+                let mut attempt_facts = self.attempt_facts.lock().expect("attempt facts lock");
+                let fact_key = verification_attempt_key(started);
+                if !attempt_facts.insert(fact_key.clone()) {
+                    return Err(ContractError::DuplicateFactualAttempt(fact_key));
+                }
+                attempts.insert(record.attempt_id.clone(), started.clone());
+            }
+            RetryHistoryKind::UsageRecorded => {
+                let Some(usage) = record.usage.as_ref() else {
+                    return Err(ContractError::RetryHistoryBindingMismatch);
+                };
+                if usage.attempt_id != record.attempt_id {
+                    return Err(ContractError::RetryHistoryBindingMismatch);
+                }
+                let attempts = self.attempts.lock().expect("attempts lock");
+                let Some(started) = attempts.get(&record.attempt_id) else {
+                    return Err(ContractError::InvalidVerificationBinding);
+                };
+                if started.mission_id != record.mission_id
+                    || started.execution_id != record.execution_id
+                {
+                    return Err(ContractError::RetryHistoryBindingMismatch);
+                }
+                drop(attempts);
+                let mut usages = self.usages.lock().expect("usages lock");
+                if usages.contains_key(&record.attempt_id) {
+                    return Err(ContractError::DuplicateVerificationAttempt(
+                        record.attempt_id.as_str().to_string(),
+                    ));
+                }
+                usages.insert(record.attempt_id.clone(), usage.clone());
+            }
+            RetryHistoryKind::RecoveryObserved => {
+                if record.recovery_from_attempt_id.is_none() || record.recovery_outcome.is_none() {
+                    return Err(ContractError::RetryHistoryBindingMismatch);
+                }
+            }
+        }
+
+        record_ids.insert(record.record_id.clone());
+        history.push(record);
+        Ok(())
+    }
+
+    pub fn replay_history(&self, records: &[RetryHistoryRecord]) -> Result<(), ContractError> {
+        for record in records {
+            self.append_retry_history_record(record.clone())?;
+            if let (RetryHistoryKind::UsageRecorded, Some(usage)) = (&record.kind, &record.usage) {
+                self.budget.apply_exact_usage(usage)?;
+            }
+        }
+        Ok(())
+    }
+
     pub fn start_attempt(&self, started: VerificationAttemptStarted) -> Result<(), ContractError> {
-        let mut attempts = self.attempts.lock().expect("attempts lock");
+        let attempts = self.attempts.lock().expect("attempts lock");
         if attempts.contains_key(&started.attempt_id) {
             return Err(ContractError::DuplicateVerificationAttempt(
                 started.attempt_id.as_str().to_string(),
             ));
         }
-        let mut attempt_facts = self.attempt_facts.lock().expect("attempt facts lock");
-        let fact_key = verification_attempt_key(&started);
-        if !attempt_facts.insert(fact_key.clone()) {
-            return Err(ContractError::DuplicateFactualAttempt(fact_key));
-        }
-        attempts.insert(started.attempt_id.clone(), started);
-        Ok(())
+        drop(attempts);
+        let record = RetryHistoryRecord {
+            record_id: verification_attempt_key(&started),
+            mission_id: started.mission_id.clone(),
+            execution_id: started.execution_id.clone(),
+            attempt_id: started.attempt_id.clone(),
+            sequence: self
+                .retry_history
+                .lock()
+                .expect("retry_history lock")
+                .get(&(started.mission_id.clone(), started.execution_id.clone()))
+                .map(|history| history.len() as u64)
+                .unwrap_or(0),
+            kind: RetryHistoryKind::AttemptStarted,
+            attempt_started: Some(started),
+            recovery_from_attempt_id: None,
+            recovery_outcome: None,
+            usage: None,
+        };
+        self.append_retry_history_record(record)
     }
 
     pub fn record_usage(&self, usage: VerificationUsage) -> Result<(), ContractError> {
-        let attempts = self.attempts.lock().expect("attempts lock");
-        if !attempts.contains_key(&usage.attempt_id) {
+        let started = self
+            .attempt_started(&usage.attempt_id)
+            .ok_or(ContractError::InvalidVerificationBinding)?;
+        let record = RetryHistoryRecord {
+            record_id: format!("usage:{}", usage.attempt_id.as_str()),
+            mission_id: started.mission_id.clone(),
+            execution_id: started.execution_id.clone(),
+            attempt_id: usage.attempt_id.clone(),
+            sequence: self
+                .retry_history
+                .lock()
+                .expect("retry_history lock")
+                .get(&(started.mission_id.clone(), started.execution_id.clone()))
+                .map(|history| history.len() as u64)
+                .unwrap_or(0),
+            kind: RetryHistoryKind::UsageRecorded,
+            attempt_started: None,
+            recovery_from_attempt_id: None,
+            recovery_outcome: None,
+            usage: Some(usage),
+        };
+        if !self
+            .attempts
+            .lock()
+            .expect("attempts lock")
+            .contains_key(&record.attempt_id)
+        {
             return Err(ContractError::InvalidVerificationBinding);
         }
-        drop(attempts);
-        let mut usages = self.usages.lock().expect("usages lock");
-        if usages.contains_key(&usage.attempt_id) {
-            return Err(ContractError::DuplicateVerificationAttempt(
-                usage.attempt_id.as_str().to_string(),
-            ));
-        }
-        usages.insert(usage.attempt_id.clone(), usage);
-        Ok(())
+        self.append_retry_history_record(record)
     }
 
     pub fn apply_usage(
@@ -734,6 +880,68 @@ pub fn execute_verification(
         verifier_result,
         budget,
     })
+}
+
+pub fn validate_retry_history_projection(
+    history_port: &dyn RetryHistoryPort,
+    mission_id: &metao_contracts::MissionId,
+    execution_id: &metao_contracts::ExecutionId,
+    caller_history: &[RetryHistoryRecord],
+) -> Result<(), ContractError> {
+    let Some(authoritative_history) = history_port.history(mission_id, execution_id) else {
+        return Err(ContractError::MissingRetryHistorySource);
+    };
+
+    if authoritative_history.len() != caller_history.len() {
+        return Err(ContractError::RetryHistoryProjectionMismatch);
+    }
+
+    for (index, (authoritative, caller)) in authoritative_history
+        .iter()
+        .zip(caller_history.iter())
+        .enumerate()
+    {
+        let expected_sequence = index as u64;
+        if authoritative.sequence != expected_sequence || caller.sequence != expected_sequence {
+            return Err(ContractError::RetryHistorySequenceGap {
+                expected: expected_sequence,
+                actual: caller.sequence,
+            });
+        }
+        if authoritative.mission_id != *mission_id
+            || authoritative.execution_id != *execution_id
+            || caller.mission_id != *mission_id
+            || caller.execution_id != *execution_id
+        {
+            return Err(ContractError::RetryHistoryBindingMismatch);
+        }
+        if authoritative.record_id != caller.record_id
+            || authoritative.attempt_id != caller.attempt_id
+            || authoritative.kind != caller.kind
+            || authoritative.attempt_started != caller.attempt_started
+            || authoritative.recovery_from_attempt_id != caller.recovery_from_attempt_id
+            || authoritative.recovery_outcome != caller.recovery_outcome
+            || authoritative.usage != caller.usage
+        {
+            return Err(ContractError::RetryHistoryProjectionMismatch);
+        }
+    }
+
+    Ok(())
+}
+
+impl RetryHistoryPort for VerificationAccountingAuthority {
+    fn append(&self, record: RetryHistoryRecord) -> Result<(), ContractError> {
+        self.append_retry_history_record(record)
+    }
+
+    fn history(
+        &self,
+        mission_id: &metao_contracts::MissionId,
+        execution_id: &metao_contracts::ExecutionId,
+    ) -> Option<Vec<RetryHistoryRecord>> {
+        VerificationAccountingAuthority::retry_history(self, mission_id, execution_id)
+    }
 }
 
 fn decision_value(decision: AcceptanceDecision) -> &'static str {
