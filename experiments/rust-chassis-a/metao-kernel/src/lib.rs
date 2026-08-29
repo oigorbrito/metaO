@@ -1,12 +1,12 @@
 use metao_contracts::{
     AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, AggregationResult,
     ApprovalRecord, ApprovalRequest, AuthoritativeAuthorityDecision, AuthoritativePolicyBundle,
-    AuthoritativeSubjectState, AuthorityRegistryPort, BudgetReservation, ConflictDecision,
-    ContractError, Evidence, EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus,
-    PolicyDecision, PolicyEffect, PolicyRegistryPort, RequiredEvidenceSet, RetryHistoryKind,
-    RetryHistoryPort, RetryHistoryRecord, RuntimeId, SubjectStatePort, TerminalClaims,
-    VerificationAttemptId, VerificationAttemptStarted, VerificationRequest, VerificationUsage,
-    VerifierDescriptor, VerifierResult,
+    AuthoritativeSubjectState, AuthorityRegistryPort, BoundConfidence, BudgetReservation,
+    ConflictDecision, ContractError, Evidence, EvidenceEnvelope, ExecutionRequest, ExecutionResult,
+    ExecutionStatus, PolicyDecision, PolicyEffect, PolicyRegistryPort, RequiredEvidenceSet,
+    RetryHistoryKind, RetryHistoryPort, RetryHistoryRecord, RuntimeId, SubjectStatePort,
+    TerminalClaims, VerificationAttemptId, VerificationAttemptStarted, VerificationRequest,
+    VerificationUsage, VerifierDescriptor, VerifierResult,
 };
 use metao_registry::{VerifierRegistry, VerifierRegistryError};
 use serde::{Deserialize, Serialize};
@@ -417,18 +417,49 @@ pub fn resume_after_approval(
     }
 }
 
+fn confidence_binding_matches(
+    bound: &BoundConfidence,
+    verifier: &VerifierDescriptor,
+    request: &VerificationRequest,
+    evidence: &EvidenceEnvelope,
+    context: &AcceptanceContext,
+) -> bool {
+    bound.verifier_id == verifier.verifier_id
+        && bound.verifier_version == verifier.version
+        && bound.mission_id == request.mission_id
+        && bound.mission_id == evidence.mission_id
+        && bound.execution_id == request.execution_id
+        && bound.execution_id == evidence.execution_id
+        && bound.subject_id == evidence.subject_id
+        && bound.subject_id == context.subject_id
+        && bound.subject_state_id == evidence.subject_state_id
+        && bound.subject_state_id == context.subject_state_id
+        && bound.verification_context_id == evidence.verification_context_id
+        && bound.verification_context_id == context.verification_context_id
+        && bound.policy_bundle_id == evidence.policy_bundle_id
+        && bound.policy_bundle_id == context.policy_bundle_id
+        && bound.payload_digest == evidence.payload_digest
+}
+
 pub fn apply_confidence_after_hard_gates(
     hard_gate_decision: AcceptanceDecision,
-    confidence: f64,
+    bound_confidence: &BoundConfidence,
     threshold: f64,
+    verifier: &VerifierDescriptor,
+    request: &VerificationRequest,
+    evidence: &EvidenceEnvelope,
+    context: &AcceptanceContext,
 ) -> Result<AcceptanceDecision, ContractError> {
     if hard_gate_decision != AcceptanceDecision::Accept {
         return Ok(hard_gate_decision);
     }
-    if !(0.0..=1.0).contains(&confidence) || !(0.0..=1.0).contains(&threshold) {
+    if !(0.0..=1.0).contains(&bound_confidence.confidence) || !(0.0..=1.0).contains(&threshold) {
         return Err(ContractError::InvalidConfidence);
     }
-    if confidence < threshold {
+    if !confidence_binding_matches(bound_confidence, verifier, request, evidence, context) {
+        return Err(ContractError::InvalidConfidence);
+    }
+    if bound_confidence.confidence < threshold {
         Ok(AcceptanceDecision::RequireHuman)
     } else {
         Ok(AcceptanceDecision::Accept)

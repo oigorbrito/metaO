@@ -516,6 +516,21 @@ pub struct VerifierResult {
     pub usage: VerificationUsage,
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct BoundConfidence {
+    pub verifier_id: VerifierId,
+    pub verifier_version: String,
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub subject_id: String,
+    pub subject_state_id: String,
+    pub verification_context_id: String,
+    pub policy_bundle_id: String,
+    pub payload_digest: String,
+    pub score: Option<f64>,
+    pub confidence: f64,
+}
+
 pub trait VerifierPort: Send + Sync {
     fn descriptor(&self) -> VerifierDescriptor;
     fn verify(&self, request: &VerificationRequest) -> VerifierResult;

@@ -152,6 +152,17 @@ Confidence may only influence:
 
 Confidence MUST be bound to the verifier identity, verification context, subject state and evidence payload it evaluates.
 
+For the Rust A14 slice, confidence is represented only as a bound advisory object. The advisory binding MUST match the exact terminal context before it can be used, including:
+
+- verifier identity and version;
+- mission and execution;
+- subject and subject state;
+- verification context;
+- policy bundle;
+- evidence payload digest.
+
+An unbound numeric confidence value is never terminal authority.
+
 ## 7. Partial and conflicting evidence
 
 Missing mandatory evidence yields `NOT_DONE` unless a stricter integrity condition requires `BLOCK`.
