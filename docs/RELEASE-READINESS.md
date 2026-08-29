@@ -1,6 +1,6 @@
 # metaO Release Readiness
 
-Status: POST-MIGRATION RUST A RELEASE READINESS VALIDATED LOCALLY — HOSTED ACTIONS REMAINS EXTERNALLY BLOCKED — EXACT JSON RE-VALIDATION PASS.
+Status: POST-MIGRATION RUST A RELEASE READINESS VALIDATED LOCALLY — RC ARTIFACT REPRODUCTION PASS — HOSTED ACTIONS REMAINS EXTERNALLY BLOCKED — EXACT JSON RE-VALIDATION PASS.
 
 This document separates current executable evidence, historical failed attempts, external infrastructure blockers, and claims that remain intentionally unmade.
 
@@ -10,7 +10,7 @@ The post-migration Rust A candidate was validated on the exact branch/SHA below:
 
 ```text
 branch = HEAD
-validated candidate = c5f0ec62405ca6ba6fccf3354df886b5ab5a1696
+validated candidate = f1b9b94b606c3fbf6945019e14d396d406f2cadf
 phase = complete
 clean_worktree = true
 results = 21
@@ -19,13 +19,13 @@ local_release_gate = PASS
 full_unit_suite = PASS 339/339
 ```
 
-The tested SHA matched the current `main` merge commit after PR #251 authorization.
+The tested SHA matched the current `main` merge commit after PR #253 authorization.
 
-PR #251 was then explicitly authorized and merged into `main`:
+PR #253 was then explicitly authorized and merged into `main`:
 
 ```text
-PR #251 = MERGED
-main merge commit = c5f0ec62405ca6ba6fccf3354df886b5ab5a1696
+PR #253 = MERGED
+main merge commit = f1b9b94b606c3fbf6945019e14d396d406f2cadf
 ```
 
 The merge commit has the validated candidate as the accepted repository state, preserving the tested lineage.
@@ -94,8 +94,8 @@ The final 21-gate local release run passed completely.
 Fresh executable release evidence was generated from the exact post-migration candidate and validated with the fail-closed release evidence validator.
 
 ```text
-candidate = c5f0ec62405ca6ba6fccf3354df886b5ab5a1696
-fresh_evidence = C:\Users\Igor B\AppData\Local\metaO\release-gate-evidence\gate-20260829-003039.json
+candidate = f1b9b94b606c3fbf6945019e14d396d406f2cadf
+fresh_evidence = C:\Users\Igor B\AppData\Local\metaO\release-gate-evidence\gate-20260829-091456.json
 fresh_evidence_validator = PASS
 python_product_runtime_dependency = 0
 python_oracle_reference = PRESERVED
@@ -126,6 +126,7 @@ The validated candidate includes:
 - bounded durable human escalation;
 - heterogeneous three-runtime recovery;
 - independent metaO acceptance;
+- reproducible published RC artifact installation and smoke execution;
 - reproducible Windows local release gate.
 
 Roadmap 7 recovery authority remains:
@@ -266,18 +267,48 @@ Hosted GitHub Actions pre-step infrastructure failures remain separate from meta
 ```text
 RUST_A_MIGRATION = COMPLETE
 RUST_CAPABILITIES_ACTIVE = 7
-VALIDATED_CANDIDATE = 37955cad9f5304401fe56afd5c0274d0db63cb61
+VALIDATED_CANDIDATE = f1b9b94b606c3fbf6945019e14d396d406f2cadf
 LOCAL_RELEASE_GATE = PASS 21/21
 FULL_UNIT_SUITE = PASS 339/339
-PR_247 = MERGED
-MAIN = 37955cad9f5304401fe56afd5c0274d0db63cb61
+PR_253 = MERGED
+MAIN = f1b9b94b606c3fbf6945019e14d396d406f2cadf
 THREE_RUNTIMES = OpenAI Agents 0.20.0 + CrewAI 1.15.16 + LangGraph 1.2.11
 PYTHON_PRODUCT_RUNTIME_DEPENDENCY = 0
 PYTHON_ORACLE_REFERENCE = PRESERVED
 HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
-FRESH_RELEASE_EVIDENCE = C:\Users\Igor B\AppData\Local\metaO\release-gate-evidence\gate-20260829-001458.json
+FRESH_RELEASE_EVIDENCE = C:\Users\Igor B\AppData\Local\metaO\release-gate-evidence\gate-20260829-091456.json
 RELEASE_EVIDENCE_VALIDATOR = PASS
 PRODUCTION_CLAIM = NO
+```
+
+## v0.1.0 claim boundary and release decision
+
+The exact `v0.1.0` claim is bounded to the validated post-migration Rust A repository state plus the reproducible local release evidence, not to hosted CI or production SLO claims.
+
+Supported claims:
+
+- meta-orchestrator / control-plane architecture;
+- pluggable orchestrator boundary;
+- Rust-authoritative governance / runtime capabilities already qualified in the migration;
+- independent metaO acceptance;
+- fail-closed policy / evidence behavior;
+- runtime replacement and recovery / failover paths already validated;
+- reproducible local release gate and published RC artifact reproduction.
+
+Not claimed:
+
+- production SLOs or security certification;
+- hosted GitHub Actions success;
+- cryptographic authenticity beyond implemented/tested mechanisms;
+- scale or load characteristics not measured;
+- future Roadmap 8 / #228 acceptance enhancements unless explicitly validated later.
+
+Release decision:
+
+```text
+DECISION = PROMOTE_TO_V0_1
+HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
+V0_1_PRODUCT_BLOCKER = NO
 ```
 
 ## Phase 8 runtime retirement
