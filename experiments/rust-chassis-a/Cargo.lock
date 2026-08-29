@@ -104,6 +104,7 @@ dependencies = [
  "metao-contracts",
  "metao-kernel",
  "metao-registry",
+ "metao-wire",
  "serde",
  "serde_json",
 ]
