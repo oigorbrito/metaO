@@ -1,9 +1,11 @@
 use metao_contracts::{
     AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, AggregationResult,
-    ApprovalRecord, ApprovalRequest, AuthoritativeAuthorityDecision, AuthoritativePolicyBundle,
-    AuthoritativeSubjectState, AuthorityRegistryPort, BoundConfidence, BudgetReservation,
-    ConflictDecision, ContractError, Evidence, EvidenceEnvelope, ExecutionRequest, ExecutionResult,
-    ExecutionStatus, PolicyDecision, PolicyEffect, PolicyRegistryPort, RequiredEvidenceSet,
+    ApprovalAuthorityPort, ApprovalAuthorityTicket, ApprovalRecord, ApprovalRequest,
+    AuthoritativeAuthorityDecision, AuthoritativePolicyBundle, AuthoritativeSubjectState,
+    AuthorityRegistryPort, BoundConfidence, BudgetReservation, ConflictDecision, ContractError,
+    Evidence, EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyDecision,
+    PolicyEffect, PolicyRegistryPort, ProvenanceVerificationObservation,
+    ProvenanceVerificationPort, ProvenanceVerificationStatus, RequiredEvidenceSet,
     RetryHistoryKind, RetryHistoryPort, RetryHistoryRecord, RuntimeId, SubjectStatePort,
     TerminalClaims, VerificationAttemptId, VerificationAttemptStarted, VerificationRequest,
     VerificationUsage, VerifierDescriptor, VerifierResult,
@@ -52,6 +54,217 @@ fn check_authority(
         return Err((AcceptanceDecision::Block, "unauthorized_authority"));
     }
     Ok(())
+}
+
+fn approval_binding_matches(
+    candidate: &ApprovalAuthorityTicket,
+    current: &ApprovalAuthorityTicket,
+) -> bool {
+    candidate.mission_id == current.mission_id
+        && candidate.execution_id == current.execution_id
+        && candidate.subject_state_id == current.subject_state_id
+        && candidate.policy_bundle_id == current.policy_bundle_id
+        && candidate.approver_id == current.approver_id
+        && candidate.capability_id == current.capability_id
+        && candidate.action == current.action
+        && candidate.target == current.target
+        && candidate.scope == current.scope
+        && candidate.authority_epoch == current.authority_epoch
+        && candidate.not_before_epoch == current.not_before_epoch
+        && candidate.expires_at_epoch == current.expires_at_epoch
+}
+
+pub fn resolve_approval_authority(
+    candidate: &ApprovalAuthorityTicket,
+    authority_port: &dyn ApprovalAuthorityPort,
+    now_epoch: f64,
+) -> TerminalSourceAssessment {
+    if candidate.approval_id.trim().is_empty()
+        || candidate.mission_id.as_str().trim().is_empty()
+        || candidate.execution_id.as_str().trim().is_empty()
+        || candidate.subject_state_id.trim().is_empty()
+        || candidate.policy_bundle_id.trim().is_empty()
+        || candidate.approver_id.trim().is_empty()
+        || candidate.capability_id.trim().is_empty()
+        || candidate.action.trim().is_empty()
+        || candidate.target.trim().is_empty()
+        || candidate.scope.trim().is_empty()
+    {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_approval_claim".into()],
+            None,
+        );
+    }
+
+    let Some(current) = authority_port.current(&candidate.approval_id) else {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_approval_source".into()],
+            None,
+        );
+    };
+
+    if candidate.revoked || current.revoked {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["approval_revoked".into()],
+            None,
+        );
+    }
+
+    if candidate
+        .not_before_epoch
+        .is_some_and(|not_before| now_epoch < not_before)
+        || current
+            .not_before_epoch
+            .is_some_and(|not_before| now_epoch < not_before)
+    {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["approval_not_yet_valid".into()],
+            None,
+        );
+    }
+
+    if candidate
+        .expires_at_epoch
+        .is_some_and(|expires| now_epoch > expires)
+        || current
+            .expires_at_epoch
+            .is_some_and(|expires| now_epoch > expires)
+    {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["approval_expired".into()],
+            None,
+        );
+    }
+
+    if current.authority_epoch > candidate.authority_epoch {
+        return terminal_assessment(
+            TerminalSourceDecision::Stale,
+            vec!["approval_authority_epoch_stale".into()],
+            None,
+        );
+    }
+
+    if !approval_binding_matches(candidate, &current) {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["approval_binding_mismatch".into()],
+            None,
+        );
+    }
+
+    terminal_assessment(TerminalSourceDecision::Continue, Vec::new(), None)
+}
+
+fn provenance_binding_matches(
+    evidence: &EvidenceEnvelope,
+    observation: &ProvenanceVerificationObservation,
+) -> bool {
+    observation.evidence_id == evidence.evidence_id
+        && observation.mission_id == evidence.mission_id
+        && observation.execution_id == evidence.execution_id
+        && observation.subject_id == evidence.subject_id
+        && observation.subject_state_id == evidence.subject_state_id
+        && observation.verification_context_id == evidence.verification_context_id
+        && observation.policy_bundle_id == evidence.policy_bundle_id
+        && observation.payload_digest == evidence.payload_digest
+        && observation.provenance_root == evidence.provenance_root
+        && observation.verifier_id.as_str() == evidence.verifier_id
+        && observation.issuer_id == evidence.authority_id
+}
+
+pub fn verify_provenance(
+    evidence: &EvidenceEnvelope,
+    provenance_port: &dyn ProvenanceVerificationPort,
+    now_epoch: f64,
+) -> TerminalSourceAssessment {
+    if evidence.payload_digest.is_empty() || evidence.provenance_root.is_empty() {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_provenance".into()],
+            None,
+        );
+    }
+
+    let Some(observation) = provenance_port.verify(evidence) else {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_provenance_source".into()],
+            None,
+        );
+    };
+
+    if observation.observed_at_epoch > now_epoch
+        || observation
+            .expires_at_epoch
+            .is_some_and(|expires| now_epoch > expires)
+    {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["provenance_expired".into()],
+            None,
+        );
+    }
+
+    if !provenance_binding_matches(evidence, &observation) {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["provenance_binding_mismatch".into()],
+            None,
+        );
+    }
+
+    match observation.status {
+        ProvenanceVerificationStatus::Verified => {
+            terminal_assessment(TerminalSourceDecision::Continue, Vec::new(), None)
+        }
+        ProvenanceVerificationStatus::Stale => terminal_assessment(
+            TerminalSourceDecision::Stale,
+            vec![if observation.reason.is_empty() {
+                "provenance_stale".into()
+            } else {
+                observation.reason
+            }],
+            None,
+        ),
+        ProvenanceVerificationStatus::Unverified => terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec![if observation.reason.is_empty() {
+                "provenance_unverified".into()
+            } else {
+                observation.reason
+            }],
+            None,
+        ),
+        ProvenanceVerificationStatus::Invalid => terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec![if observation.reason.is_empty() {
+                "provenance_invalid".into()
+            } else {
+                observation.reason
+            }],
+            None,
+        ),
+    }
+}
+
+pub fn resolve_approval_provenance_terminal_sources(
+    approval: &ApprovalAuthorityTicket,
+    approval_port: &dyn ApprovalAuthorityPort,
+    evidence: &EvidenceEnvelope,
+    provenance_port: &dyn ProvenanceVerificationPort,
+    now_epoch: f64,
+) -> TerminalSourceAssessment {
+    let approval = resolve_approval_authority(approval, approval_port, now_epoch);
+    if approval.decision != TerminalSourceDecision::Continue {
+        return approval;
+    }
+
+    verify_provenance(evidence, provenance_port, now_epoch)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
