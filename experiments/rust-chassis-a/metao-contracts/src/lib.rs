@@ -35,6 +35,15 @@ pub enum ContractError {
     RetryHistoryBindingMismatch,
     MissingRetryHistorySource,
     RetryHistoryProjectionMismatch,
+    UnsupportedTerminalProofVersion(u32),
+    TerminalProofMissingObservation(&'static str),
+    TerminalProofDuplicateObservation(String),
+    TerminalProofSequenceGap {
+        expected: u64,
+        actual: u64,
+    },
+    TerminalProofBindingMismatch,
+    TerminalProofDigestMismatch,
 }
 
 fn validate_identity(kind: &'static str, value: String) -> Result<String, ContractError> {
@@ -532,6 +541,82 @@ pub struct ProvenanceVerificationObservation {
 
 pub trait ProvenanceVerificationPort: Send + Sync {
     fn verify(&self, evidence: &EvidenceEnvelope) -> Option<ProvenanceVerificationObservation>;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum TerminalObservationKind {
+    SubjectState,
+    AuthorityResolution,
+    PolicyBundle,
+    RetryHistory,
+    VerificationUsage,
+    Approval,
+    Provenance,
+    Confidence,
+    VerifierResult,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub enum TerminalObservation {
+    SubjectState(AuthoritativeSubjectState),
+    AuthorityResolution(AuthoritativeAuthorityDecision),
+    PolicyBundle(AuthoritativePolicyBundle),
+    RetryHistory(Vec<RetryHistoryRecord>),
+    VerificationUsage {
+        usage: VerificationUsage,
+        budget: AcceptanceBudget,
+    },
+    Approval(ApprovalAuthorityTicket),
+    Provenance(ProvenanceVerificationObservation),
+    Confidence(BoundConfidence),
+    VerifierResult(VerifierResult),
+}
+
+impl TerminalObservation {
+    pub fn kind(&self) -> TerminalObservationKind {
+        match self {
+            TerminalObservation::SubjectState(_) => TerminalObservationKind::SubjectState,
+            TerminalObservation::AuthorityResolution(_) => {
+                TerminalObservationKind::AuthorityResolution
+            }
+            TerminalObservation::PolicyBundle(_) => TerminalObservationKind::PolicyBundle,
+            TerminalObservation::RetryHistory(_) => TerminalObservationKind::RetryHistory,
+            TerminalObservation::VerificationUsage { .. } => {
+                TerminalObservationKind::VerificationUsage
+            }
+            TerminalObservation::Approval(_) => TerminalObservationKind::Approval,
+            TerminalObservation::Provenance(_) => TerminalObservationKind::Provenance,
+            TerminalObservation::Confidence(_) => TerminalObservationKind::Confidence,
+            TerminalObservation::VerifierResult(_) => TerminalObservationKind::VerifierResult,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TerminalValidationProfile {
+    pub required_kinds: std::collections::BTreeSet<TerminalObservationKind>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TerminalObservationEntry {
+    pub observation_id: String,
+    pub sequence: u64,
+    pub observation: TerminalObservation,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct TerminalDecisionProof {
+    pub version: u32,
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub acceptance_proof: AcceptanceProof,
+    pub validation_profile: TerminalValidationProfile,
+    pub observations: Vec<TerminalObservationEntry>,
+    pub digest: String,
+}
+
+impl TerminalDecisionProof {
+    pub const CURRENT_VERSION: u32 = 1;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
