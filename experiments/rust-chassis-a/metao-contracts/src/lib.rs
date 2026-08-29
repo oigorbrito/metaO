@@ -27,6 +27,14 @@ pub enum ContractError {
     InvalidVerificationResult,
     MissingUsageFact(&'static str),
     VerificationPanic(String),
+    RetryHistoryDuplicateRecord(String),
+    RetryHistorySequenceGap {
+        expected: u64,
+        actual: u64,
+    },
+    RetryHistoryBindingMismatch,
+    MissingRetryHistorySource,
+    RetryHistoryProjectionMismatch,
 }
 
 fn validate_identity(kind: &'static str, value: String) -> Result<String, ContractError> {
@@ -328,6 +336,36 @@ pub struct VerificationUsage {
     pub tokens: Option<u64>,
     pub wall_time_s: Option<f64>,
     pub verifier_attempts: Option<u64>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RetryHistoryKind {
+    AttemptStarted,
+    RecoveryObserved,
+    UsageRecorded,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct RetryHistoryRecord {
+    pub record_id: String,
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub attempt_id: VerificationAttemptId,
+    pub sequence: u64,
+    pub kind: RetryHistoryKind,
+    pub attempt_started: Option<VerificationAttemptStarted>,
+    pub recovery_from_attempt_id: Option<VerificationAttemptId>,
+    pub recovery_outcome: Option<ExecutionStatus>,
+    pub usage: Option<VerificationUsage>,
+}
+
+pub trait RetryHistoryPort: Send + Sync {
+    fn append(&self, record: RetryHistoryRecord) -> Result<(), ContractError>;
+    fn history(
+        &self,
+        mission_id: &MissionId,
+        execution_id: &ExecutionId,
+    ) -> Option<Vec<RetryHistoryRecord>>;
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
