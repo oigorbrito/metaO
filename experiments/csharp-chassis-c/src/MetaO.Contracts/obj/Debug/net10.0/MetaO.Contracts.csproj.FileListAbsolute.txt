@@ -1,0 +1,12 @@
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\bin\Debug\net10.0\MetaO.Contracts.deps.json
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\MetaO.Contracts.GeneratedMSBuildEditorConfig.editorconfig
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\MetaO.Contracts.AssemblyInfoInputs.cache
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\MetaO.Contracts.AssemblyInfo.cs
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\bin\Debug\net10.0\MetaO.Contracts.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\bin\Debug\net10.0\MetaO.Contracts.pdb
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\MetaO.Contracts.csproj.CoreCompileInputs.cache
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\MetaO.Contracts.sourcelink.json
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\MetaO.Contracts.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\refint\MetaO.Contracts.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\MetaO.Contracts.pdb
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Contracts\obj\Debug\net10.0\ref\MetaO.Contracts.dll

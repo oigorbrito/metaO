@@ -1,0 +1,216 @@
+
+*** metao-registry/src/lib.rs:30:9: replace Registry::register -> Result<(), RegistryError> with Ok(())
+
+*** mutation diff:
+--- metao-registry/src/lib.rs
++++ replace Registry::register -> Result<(), RegistryError> with Ok(())
+@@ -22,31 +22,17 @@
+ 
+ #[derive(Default)]
+ pub struct Registry {
+     runtimes: HashMap<RuntimeId, RegisteredRuntime>,
+ }
+ 
+ impl Registry {
+     pub fn register(&mut self, runtime: Box<dyn Orchestrator>) -> Result<(), RegistryError> {
+-        let id = runtime.id();
+-        let version = runtime.version();
+-        if let Some(existing) = self.runtimes.get(&id) {
+-            if existing.version == version {
+-                return Err(RegistryError::Duplicate(id));
+-            }
+-            return Err(RegistryError::VersionConflict {
+-                id,
+-                existing: existing.version.clone(),
+-                incoming: version,
+-            });
+-        }
+-        self.runtimes
+-            .insert(id, RegisteredRuntime { version, runtime });
+-        Ok(())
++        Ok(()) /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn unregister(&mut self, id: &RuntimeId) -> bool {
+         self.runtimes.remove(id).is_some()
+     }
+ 
+     pub fn execute_contained(
+         &self,
+
+
+*** C:\\Users\\Igor\ B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe test --no-run --verbose --workspace
+       Fresh unicode-ident v1.0.24
+       Fresh itoa v1.0.18
+       Fresh proc-macro2 v1.0.107
+       Fresh memchr v2.8.3
+       Dirty metao-registry v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-registry): the file `metao-registry\src\lib.rs` has changed (13432338618.733577000s, 1m 37s after last build at 13432338521.500541100s)
+   Compiling metao-registry v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-registry)
+       Dirty metao-kernel v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-kernel): the file `metao-kernel\src\lib.rs` has changed (13432338618.731066400s, 3s after last build at 13432338615.433710300s)
+   Compiling metao-kernel v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-kernel)
+       Fresh quote v1.0.47
+       Fresh serde_core v1.0.229
+       Fresh zmij v1.0.23
+       Fresh metao-contracts v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-contracts)
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_registry --edition=2021 metao-registry\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=7c2b7be1c83c374c -C extra-filename=-643a34d702e3604c --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rmeta`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_kernel --edition=2021 metao-kernel\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=8063af36809cfa34 -C extra-filename=-a40e2e7ebf26b89a --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rmeta`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_kernel --edition=2021 metao-kernel\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=3db362b8d7158fe1 -C extra-filename=-d9efad0534f7e869 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_registry --edition=2021 metao-registry\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=182bc52ada0c90b5 -C extra-filename=-e77873071df07843 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib`
+       Fresh syn v3.0.4
+       Fresh serde_json v1.0.151
+       Fresh serde_derive v1.0.229
+       Fresh serde v1.0.229
+       Fresh metao-wire v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-wire)
+warning: unused variable: `runtime`
+  --> metao-registry\src\lib.rs:29:32
+   |
+29 |     pub fn register(&mut self, runtime: Box<dyn Orchestrator>) -> Result<(), RegistryError> {
+   |                                ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_runtime`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `version` is never read
+  --> metao-registry\src\lib.rs:19:5
+   |
+18 | struct RegisteredRuntime {
+   |        ----------------- field in this struct
+19 |     version: String,
+   |     ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+       Dirty metao-testkit v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-testkit): the dependency `metao-kernel` was rebuilt
+   Compiling metao-testkit v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-testkit)
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_testkit --edition=2021 metao-testkit\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=ac1feb24395f8bb5 -C extra-filename=-e2ed2f3d49ec8132 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rmeta --extern metao_kernel=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_kernel-a40e2e7ebf26b89a.rmeta --extern metao_registry=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_registry-643a34d702e3604c.rmeta`
+warning: `metao-registry` (lib test) generated 2 warnings (run `cargo fix --lib -p metao-registry --tests` to apply 1 suggestion)
+warning: `metao-registry` (lib) generated 2 warnings (2 duplicates)
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_testkit --edition=2021 metao-testkit\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=0539eabef6058b53 -C extra-filename=-43eab5b3a6ecb238 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib --extern metao_kernel=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_kernel-a40e2e7ebf26b89a.rlib --extern metao_registry=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_registry-643a34d702e3604c.rlib`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name qualification --edition=2021 metao-testkit\tests\qualification.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=db513d631f70f5fe -C extra-filename=-e5efad604ea8365a --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib --extern metao_kernel=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_kernel-a40e2e7ebf26b89a.rlib --extern metao_registry=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_registry-643a34d702e3604c.rlib --extern metao_testkit=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_testkit-e2ed2f3d49ec8132.rlib`
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.37s
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_contracts-8f25e6b6f266c18c.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_kernel-d9efad0534f7e869.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_registry-e77873071df07843.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_testkit-43eab5b3a6ecb238.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\qualification-e5efad604ea8365a.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_wire-524044db49b62174.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_wire_runtime-c66be4dba49471ae.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\out_of_process-a42f1ab588f9896b.exe`
+
+*** result: Success
+
+*** C:\\Users\\Igor\ B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe test --verbose --workspace
+       Fresh unicode-ident v1.0.24
+       Fresh itoa v1.0.18
+       Fresh proc-macro2 v1.0.107
+       Fresh memchr v2.8.3
+warning: unused variable: `runtime`
+  --> metao-registry\src\lib.rs:29:32
+   |
+29 |     pub fn register(&mut self, runtime: Box<dyn Orchestrator>) -> Result<(), RegistryError> {
+   |                                ^^^^^^^ help: if this is intentional, prefix it with an underscore: `_runtime`
+   |
+   = note: `#[warn(unused_variables)]` (part of `#[warn(unused)]`) on by default
+
+warning: field `version` is never read
+  --> metao-registry\src\lib.rs:19:5
+   |
+18 | struct RegisteredRuntime {
+   |        ----------------- field in this struct
+19 |     version: String,
+   |     ^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+warning: `metao-registry` (lib) generated 2 warnings (run `cargo fix --lib -p metao-registry` to apply 1 suggestion)
+       Fresh quote v1.0.47
+       Fresh serde_core v1.0.229
+       Fresh zmij v1.0.23
+       Fresh metao-kernel v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-kernel)
+       Fresh syn v3.0.4
+       Fresh serde_json v1.0.151
+       Fresh metao-testkit v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-testkit)
+       Fresh metao-registry v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-registry)
+       Fresh metao-contracts v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-contracts)
+warning: `metao-registry` (lib test) generated 2 warnings (2 duplicates)
+       Fresh serde_derive v1.0.229
+       Fresh serde v1.0.229
+       Fresh metao-wire v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-wire)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.15s
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_contracts-8f25e6b6f266c18c.exe`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_kernel-d9efad0534f7e869.exe`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_registry-e77873071df07843.exe`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_testkit-43eab5b3a6ecb238.exe`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\qualification-e5efad604ea8365a.exe`
+
+running 11 tests
+test acceptance_hard_gates_match_python_baseline ... ok
+test adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok
+test kernel_is_platform_framework_and_unsafe_free ... ok
+test invalid_identity_construction_is_rejected_by_public_api ... ok
+test duplicate_and_version_conflict_fail_deterministically ... FAILED
+test exhaustive_small_reconcile_state_space_satisfies_laws ... ok
+test failed_execution_never_accepts_and_panic_is_contained ... FAILED
+test reconciliation_is_idempotent_and_deterministic ... ok
+test replays_python_golden_fixture_outcomes ... ok
+test unregister_reports_presence_and_removal ... FAILED
+test whole_orchestrator_replacement_changes_no_kernel_contract ... FAILED
+
+failures:
+
+---- duplicate_and_version_conflict_fail_deterministically stdout ----
+
+thread 'duplicate_and_version_conflict_fail_deterministically' (22748) panicked at metao-testkit\tests\qualification.rs:189:5:
+assertion `left == right` failed
+  left: Ok(())
+ right: Err(Duplicate(RuntimeId("alpha")))
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- failed_execution_never_accepts_and_panic_is_contained stdout ----
+
+thread 'failed_execution_never_accepts_and_panic_is_contained' (24492) panicked at metao-testkit\tests\qualification.rs:350:5:
+assertion `left == right` failed
+  left: Err(NotFound(RuntimeId("panic")))
+ right: Err(Panicked(RuntimeId("panic")))
+
+---- unregister_reports_presence_and_removal stdout ----
+
+thread 'unregister_reports_presence_and_removal' (2404) panicked at metao-testkit\tests\qualification.rs:360:5:
+assertion failed: registry.unregister(&runtime_id("alpha"))
+
+---- whole_orchestrator_replacement_changes_no_kernel_contract stdout ----
+
+thread 'whole_orchestrator_replacement_changes_no_kernel_contract' (15372) panicked at metao-testkit\tests\qualification.rs:170:14:
+called `Result::unwrap()` on an `Err` value: NotFound(RuntimeId("alpha"))
+
+
+failures:
+    duplicate_and_version_conflict_fail_deterministically
+    failed_execution_never_accepts_and_panic_is_contained
+    unregister_reports_presence_and_removal
+    whole_orchestrator_replacement_changes_no_kernel_contract
+
+test result: FAILED. 7 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p metao-testkit --test qualification`
+
+*** result: Failure(101)

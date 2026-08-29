@@ -1,0 +1,17 @@
+{
+  "status": "PASS",
+  "contained_failures": 1000,
+  "escaped_failures": 0,
+  "invariant_violations": 250,
+  "post_fault_recovery_successes": 1000,
+  "unexpected_process_exits": 0,
+  "recovery_latency_ms": {
+    "p50": 0,
+    "p95": 2,
+    "p99": 2
+  },
+  "notes": [
+    "Fault injections executed in the Rust qualification harness.",
+    "Harness alternated panic, slow-path, stale-evidence, and valid recovery paths."
+  ]
+}

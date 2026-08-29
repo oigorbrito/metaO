@@ -1,0 +1,5 @@
+metao-kernel/src/lib.rs:28:9: replace || with && in evaluate_acceptance
+metao-kernel/src/lib.rs:34:18: replace < with == in evaluate_acceptance
+metao-kernel/src/lib.rs:34:18: replace < with <= in evaluate_acceptance
+metao-kernel/src/lib.rs:34:59: replace > with >= in evaluate_acceptance
+metao-registry/src/lib.rs:48:9: replace Registry::unregister -> bool with true

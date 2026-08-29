@@ -1,0 +1,21 @@
+--- metao-kernel/src/lib.rs
++++ replace || with && in evaluate_acceptance
+@@ -21,17 +21,17 @@
+     let Some(evidence) = evidence else {
+         return AcceptanceDecision::NotDone;
+     };
+ 
+     if !evidence.verified
+         || evidence.mission_id != request.mission_id
+         || evidence.execution_id != request.execution_id
+         || evidence.execution_id != result.execution_id
+-        || evidence.runtime_id != result.runtime_id
++        && /* ~ changed by cargo-mutants ~ */ evidence.runtime_id != result.runtime_id
+     {
+         return AcceptanceDecision::Block;
+     }
+ 
+     if now_epoch < evidence.created_at_epoch {
+         return AcceptanceDecision::Block;
+     }
+ 

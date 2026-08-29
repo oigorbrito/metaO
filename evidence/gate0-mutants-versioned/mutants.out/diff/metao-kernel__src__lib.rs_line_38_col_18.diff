@@ -1,0 +1,21 @@
+--- metao-kernel/src/lib.rs
++++ replace > with == in evaluate_acceptance
+@@ -30,17 +30,17 @@
+     {
+         return AcceptanceDecision::Block;
+     }
+ 
+     if now_epoch < evidence.created_at_epoch {
+         return AcceptanceDecision::Block;
+     }
+ 
+-    if now_epoch > evidence.expires_at_epoch {
++    if now_epoch == /* ~ changed by cargo-mutants ~ */ evidence.expires_at_epoch {
+         return AcceptanceDecision::Stale;
+     }
+ 
+     AcceptanceDecision::Accept
+ }
+ 
+ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {
+     let mut missing: Vec<_> = desired
