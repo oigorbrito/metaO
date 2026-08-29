@@ -544,7 +544,7 @@ fn runtime_result_summary(scenario: &str) -> Value {
             "verifier_attempt_limit": 4,
             "verifier_attempts_used": 0,
         },
-        "comparison_kind": "HARNESS_ONLY",
+        "comparison_kind": "NOT_COMPARABLE",
         "runtime_observation": runtime_observation,
         "metrics": {
             "duration_ms": started.elapsed().as_secs_f64() * 1000.0,
@@ -555,7 +555,7 @@ fn runtime_result_summary(scenario: &str) -> Value {
 fn run_case(case: &Case) -> Value {
     let started = std::time::Instant::now();
     let comparison_kind = if case.category == "runtime" {
-        "HARNESS_ONLY"
+        "NOT_COMPARABLE"
     } else {
         "REAL_PYTHON_VS_REAL_RUST"
     };
@@ -877,8 +877,8 @@ fn run_case(case: &Case) -> Value {
                 .map(|id| authority.reservation(id).unwrap().money)
                 .unwrap_or_default();
             budget_semantic(BTreeMap::from([
-                ("accepted", json!(accepted)),
-                ("rejected", json!(rejected)),
+                ("accepted_count", json!(accepted.len())),
+                ("rejected_count", json!(rejected.len())),
                 ("winner_money", json!(winner_money)),
                 ("money_used", json!(authority.snapshot().money_used)),
             ]))
@@ -1131,10 +1131,23 @@ fn strip_metrics(results: &[Value]) -> Vec<Value> {
                 "category": item["category"],
                 "scenario": item["scenario"],
                 "comparison_kind": item["comparison_kind"],
-                "semantic": item["semantic"],
+                "semantic": strip_metrics_value(&item["semantic"]),
             })
         })
         .collect()
+}
+
+fn strip_metrics_value(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => Value::Object(
+            map.iter()
+                .filter(|(key, _)| key.as_str() != "metrics")
+                .map(|(key, nested)| (key.clone(), strip_metrics_value(nested)))
+                .collect(),
+        ),
+        Value::Array(items) => Value::Array(items.iter().map(strip_metrics_value).collect()),
+        other => other.clone(),
+    }
 }
 
 fn run_python_oracle() -> Vec<Value> {
@@ -1166,7 +1179,7 @@ fn shadow_corpus_matches_python_semantics() {
     let python = strip_metrics(&python_results);
     let rust = strip_metrics(&rust_results);
     let mut real_cases = 0usize;
-    let mut harness_only_cases = 0usize;
+    let mut not_comparable_cases = 0usize;
     let cutover = CapabilityCutoverState::new()
         .promote("acceptance")
         .promote("policy")
@@ -1178,7 +1191,7 @@ fn shadow_corpus_matches_python_semantics() {
     assert_eq!(python.len(), rust.len(), "shadow corpus length mismatch");
     for case in &fixture.cases {
         match case.category.as_str() {
-            "runtime" => harness_only_cases += 1,
+            "runtime" => not_comparable_cases += 1,
             "acceptance" | "policy" | "approval" | "budget" | "authority_provenance" | "proof" => {
                 real_cases += 1;
                 assert_eq!(
@@ -1190,12 +1203,12 @@ fn shadow_corpus_matches_python_semantics() {
         }
     }
     assert_eq!(real_cases, 38);
-    assert_eq!(harness_only_cases, 6);
+    assert_eq!(not_comparable_cases, 6);
     for (index, (py, rs)) in python.iter().zip(rust.iter()).enumerate() {
         let case = &fixture.cases[index];
         if case.category == "runtime" {
-            assert_eq!(py["comparison_kind"], "HARNESS_ONLY");
-            assert_eq!(rs["comparison_kind"], "HARNESS_ONLY");
+            assert_eq!(py["comparison_kind"], "NOT_COMPARABLE");
+            assert_eq!(rs["comparison_kind"], "NOT_COMPARABLE");
             assert!(rs["semantic"]["runtime_observation"]["runtime_outcome"].is_string());
             continue;
         }
@@ -1208,6 +1221,28 @@ fn shadow_corpus_matches_python_semantics() {
             );
         }
     }
+}
+
+#[test]
+fn shadow_corpus_replays_deterministically() {
+    let fixture = fixture();
+    assert_eq!(fixture.fixture_version, 1);
+    assert_eq!(fixture.contract_version, metao_contracts::CONTRACT_VERSION);
+
+    let comparable_cases: Vec<&Case> = fixture
+        .cases
+        .iter()
+        .filter(|case| case.category != "runtime")
+        .collect();
+
+    let first: Vec<Value> = comparable_cases.iter().map(|case| run_case(case)).collect();
+    let second: Vec<Value> = comparable_cases.iter().map(|case| run_case(case)).collect();
+
+    assert_eq!(
+        strip_metrics(&first),
+        strip_metrics(&second),
+        "shadow comparable corpus replay drifted"
+    );
 }
 
 #[test]

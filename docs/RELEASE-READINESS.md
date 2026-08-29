@@ -251,3 +251,11 @@ HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
 RELEASE_EVIDENCE_VALIDATOR = BLOCKED_EVIDENCE_FILE_UNAVAILABLE
 PRODUCTION_CLAIM = NO
 ```
+
+## Phase 8 runtime retirement
+
+On the Phase 8 retirement gate branch, the runtime capability is qualified for `RUST_ACTIVE` through the frozen shadow corpus and the real Rust process / recovery / failover paths.
+
+Python remains available as oracle / reference / test harness, but the sustained parity gate treats runtime cases as `NOT_COMPARABLE` rather than parity evidence.
+
+The executable retirement gate is documented in [`docs/PHASE8-RUNTIME-RETIREMENT-GATE.md`](PHASE8-RUNTIME-RETIREMENT-GATE.md).
