@@ -1,34 +1,44 @@
 # metaO Release Readiness
 
-Status: ROADMAPS 2-7 CANONICAL CANDIDATE VALIDATED LOCALLY AND MERGED — HOSTED ACTIONS REMAINS EXTERNALLY BLOCKED — EXACT JSON RE-VALIDATION REMAINS OPEN.
+Status: POST-MIGRATION RUST A RELEASE READINESS VALIDATED LOCALLY — HOSTED ACTIONS REMAINS EXTERNALLY BLOCKED — EXACT JSON RE-VALIDATION PASS.
 
 This document separates current executable evidence, historical failed attempts, external infrastructure blockers, and claims that remain intentionally unmade.
 
 ## Current canonical state
 
-The cumulative Roadmaps 2-7 candidate was validated on the exact branch/SHA below:
+The post-migration Rust A candidate was validated on the exact branch/SHA below:
 
 ```text
-branch = roadmap7/integration-candidate-v1
-validated candidate = aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea
+branch = HEAD
+validated candidate = c5f0ec62405ca6ba6fccf3354df886b5ab5a1696
 phase = complete
 clean_worktree = true
 results = 21
 failures = 0
 local_release_gate = PASS
-full_unit_suite = PASS 279/279
+full_unit_suite = PASS 339/339
 ```
 
-The tested SHA matched PR #68 head before merge authorization.
+The tested SHA matched the current `main` merge commit after PR #251 authorization.
 
-PR #68 was then explicitly authorized and merged into `main`:
+PR #251 was then explicitly authorized and merged into `main`:
 
 ```text
-PR #68 = MERGED
-main merge commit = 58feb12531982342bf3c12b9e8b8c61a5e819c5f
+PR #251 = MERGED
+main merge commit = c5f0ec62405ca6ba6fccf3354df886b5ab5a1696
 ```
 
-The merge commit has the validated candidate as a parent, preserving the tested lineage.
+The merge commit has the validated candidate as the accepted repository state, preserving the tested lineage.
+
+## Release candidate policy
+
+The repository version policy currently comes from `pyproject.toml`:
+
+```text
+CURRENT_VERSION = 0.1.0
+NEXT_RELEASE_CANDIDATE_VERSION = 0.1.0-rc.1
+TAG = v0.1.0-rc.1
+```
 
 ## Active runtime set
 
@@ -78,6 +88,20 @@ An older PASS never regains authority behind a newer FAIL, revoked PASS, or stal
 ## Executed Roadmaps 2-7 evidence
 
 The final 21-gate local release run passed completely.
+
+## Post-migration release evidence
+
+Fresh executable release evidence was generated from the exact post-migration candidate and validated with the fail-closed release evidence validator.
+
+```text
+candidate = c5f0ec62405ca6ba6fccf3354df886b5ab5a1696
+fresh_evidence = C:\Users\Igor B\AppData\Local\metaO\release-gate-evidence\gate-20260829-003039.json
+fresh_evidence_validator = PASS
+python_product_runtime_dependency = 0
+python_oracle_reference = PRESERVED
+hosted_actions = BLOCKED_EXTERNAL_PRE_STEP
+production_claim = NO
+```
 
 Supporting focused evidence includes:
 
