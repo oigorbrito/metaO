@@ -350,3 +350,19 @@ A future change to any of the following requires an explicit architecture decisi
 - cross-orchestrator evidence boundary.
 
 Implementation may refine concrete schemas and APIs while preserving these invariants.
+
+## 21. Post-v0.1 verifier/accounting composition
+
+The post-v0.1 A02/A18 slice adds a minimal Rust-native composition boundary for independent verifier execution and factual accounting.
+
+Required behavior:
+
+- metaO selects an eligible verifier from its own registry;
+- a `VerificationAttemptStarted` record is appended before verifier invocation;
+- verifier result/request/binding mismatches fail closed;
+- exact usage facts are recorded before budget application;
+- budget exhaustion fails closed while preserving factual attempt/usage records;
+- verifier success does not mint final acceptance;
+- final acceptance remains owned only by `canonical_acceptance`.
+
+This slice intentionally stops before broader evidence-envelope normalization gaps that remain tracked in `#228`.

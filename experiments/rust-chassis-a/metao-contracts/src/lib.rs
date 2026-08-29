@@ -14,6 +14,19 @@ pub enum ContractError {
     UnknownReservation(String),
     InvalidConfidence,
     AcceptanceProofDigestMismatch,
+    UnknownVerifier(String),
+    DuplicateVerifier(String),
+    VerifierVersionConflict {
+        id: String,
+        existing: String,
+        incoming: String,
+    },
+    DuplicateVerificationAttempt(String),
+    DuplicateFactualAttempt(String),
+    InvalidVerificationBinding,
+    InvalidVerificationResult,
+    MissingUsageFact(&'static str),
+    VerificationPanic(String),
 }
 
 fn validate_identity(kind: &'static str, value: String) -> Result<String, ContractError> {
@@ -62,10 +75,58 @@ impl RuntimeId {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct VerifierId(String);
+
+impl VerifierId {
+    pub fn new(value: impl Into<String>) -> Result<Self, ContractError> {
+        validate_identity("verifier_id", value.into()).map(Self)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct VerificationRequestId(String);
+
+impl VerificationRequestId {
+    pub fn new(value: impl Into<String>) -> Result<Self, ContractError> {
+        validate_identity("verification_request_id", value.into()).map(Self)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
+pub struct VerificationAttemptId(String);
+
+impl VerificationAttemptId {
+    pub fn new(value: impl Into<String>) -> Result<Self, ContractError> {
+        validate_identity("verification_attempt_id", value.into()).map(Self)
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.0
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionRequest {
     pub execution_id: ExecutionId,
     pub mission_id: MissionId,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VerificationRequest {
+    pub request_id: VerificationRequestId,
+    pub attempt_id: VerificationAttemptId,
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub capability: String,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -80,6 +141,17 @@ pub struct ExecutionResult {
     pub execution_id: ExecutionId,
     pub runtime_id: RuntimeId,
     pub status: ExecutionStatus,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct VerificationAttemptStarted {
+    pub request_id: VerificationRequestId,
+    pub attempt_id: VerificationAttemptId,
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub verifier_id: VerifierId,
+    pub verifier_version: String,
+    pub started_at_epoch: f64,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -249,6 +321,15 @@ impl BudgetReservation {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct VerificationUsage {
+    pub attempt_id: VerificationAttemptId,
+    pub money: Option<f64>,
+    pub tokens: Option<u64>,
+    pub wall_time_s: Option<f64>,
+    pub verifier_attempts: Option<u64>,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Evidence {
     pub mission_id: MissionId,
@@ -324,4 +405,29 @@ pub struct AcceptanceResult {
     pub decision: AcceptanceDecision,
     pub reasons: Vec<String>,
     pub proof: Option<AcceptanceProof>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VerifierDescriptor {
+    pub verifier_id: VerifierId,
+    pub version: String,
+    pub capabilities: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct VerifierResult {
+    pub request_id: VerificationRequestId,
+    pub attempt_id: VerificationAttemptId,
+    pub verifier_id: VerifierId,
+    pub verifier_version: String,
+    pub passed: bool,
+    pub reason: String,
+    pub score: Option<f64>,
+    pub confidence: Option<f64>,
+    pub usage: VerificationUsage,
+}
+
+pub trait VerifierPort: Send + Sync {
+    fn descriptor(&self) -> VerifierDescriptor;
+    fn verify(&self, request: &VerificationRequest) -> VerifierResult;
 }

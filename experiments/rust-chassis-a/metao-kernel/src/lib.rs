@@ -2,8 +2,12 @@ use metao_contracts::{
     AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, AggregationResult,
     ApprovalRecord, ApprovalRequest, BudgetReservation, ConflictDecision, ContractError, Evidence,
     EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyDecision,
-    PolicyEffect, RequiredEvidenceSet, RuntimeId,
+    PolicyEffect, RequiredEvidenceSet, RuntimeId, VerificationAttemptId,
+    VerificationAttemptStarted, VerificationRequest, VerificationUsage, VerifierDescriptor,
+    VerifierResult,
 };
+use metao_registry::{VerifierRegistry, VerifierRegistryError};
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
@@ -380,6 +384,195 @@ impl AcceptanceBudgetAuthority {
         reservation.settled = true;
         Ok(next)
     }
+
+    pub fn apply_exact_usage(
+        &self,
+        usage: &VerificationUsage,
+    ) -> Result<AcceptanceBudget, ContractError> {
+        let money = usage
+            .money
+            .ok_or(ContractError::MissingUsageFact("money"))?;
+        let tokens = usage
+            .tokens
+            .ok_or(ContractError::MissingUsageFact("tokens"))?;
+        let wall_time_s = usage
+            .wall_time_s
+            .ok_or(ContractError::MissingUsageFact("wall_time"))?;
+        let verifier_attempts = usage
+            .verifier_attempts
+            .ok_or(ContractError::MissingUsageFact("attempts"))?;
+        let mut budget = self.budget.lock().expect("budget lock");
+        let next = budget
+            .clone()
+            .apply_usage(money, tokens, wall_time_s, verifier_attempts)?;
+        *budget = next.clone();
+        Ok(next)
+    }
+}
+
+fn verification_attempt_key(started: &VerificationAttemptStarted) -> String {
+    format!(
+        "{}|{}|{}|{}|{}|{}|{:016x}",
+        started.request_id.as_str(),
+        started.attempt_id.as_str(),
+        started.mission_id.as_str(),
+        started.execution_id.as_str(),
+        started.verifier_id.as_str(),
+        started.verifier_version,
+        started.started_at_epoch.to_bits()
+    )
+}
+
+pub struct VerificationAccountingAuthority {
+    budget: AcceptanceBudgetAuthority,
+    attempts: Mutex<BTreeMap<VerificationAttemptId, VerificationAttemptStarted>>,
+    attempt_facts: Mutex<BTreeSet<String>>,
+    usages: Mutex<BTreeMap<VerificationAttemptId, VerificationUsage>>,
+}
+
+impl VerificationAccountingAuthority {
+    pub fn new(budget: AcceptanceBudget) -> Self {
+        Self {
+            budget: AcceptanceBudgetAuthority::new(budget),
+            attempts: Mutex::new(BTreeMap::new()),
+            attempt_facts: Mutex::new(BTreeSet::new()),
+            usages: Mutex::new(BTreeMap::new()),
+        }
+    }
+
+    pub fn budget(&self) -> AcceptanceBudget {
+        self.budget.snapshot()
+    }
+
+    pub fn attempt_started(
+        &self,
+        attempt_id: &VerificationAttemptId,
+    ) -> Option<VerificationAttemptStarted> {
+        self.attempts
+            .lock()
+            .expect("attempts lock")
+            .get(attempt_id)
+            .cloned()
+    }
+
+    pub fn usage(&self, attempt_id: &VerificationAttemptId) -> Option<VerificationUsage> {
+        self.usages
+            .lock()
+            .expect("usages lock")
+            .get(attempt_id)
+            .cloned()
+    }
+
+    pub fn start_attempt(&self, started: VerificationAttemptStarted) -> Result<(), ContractError> {
+        let mut attempts = self.attempts.lock().expect("attempts lock");
+        if attempts.contains_key(&started.attempt_id) {
+            return Err(ContractError::DuplicateVerificationAttempt(
+                started.attempt_id.as_str().to_string(),
+            ));
+        }
+        let mut attempt_facts = self.attempt_facts.lock().expect("attempt facts lock");
+        let fact_key = verification_attempt_key(&started);
+        if !attempt_facts.insert(fact_key.clone()) {
+            return Err(ContractError::DuplicateFactualAttempt(fact_key));
+        }
+        attempts.insert(started.attempt_id.clone(), started);
+        Ok(())
+    }
+
+    pub fn record_usage(&self, usage: VerificationUsage) -> Result<(), ContractError> {
+        let attempts = self.attempts.lock().expect("attempts lock");
+        if !attempts.contains_key(&usage.attempt_id) {
+            return Err(ContractError::InvalidVerificationBinding);
+        }
+        drop(attempts);
+        let mut usages = self.usages.lock().expect("usages lock");
+        if usages.contains_key(&usage.attempt_id) {
+            return Err(ContractError::DuplicateVerificationAttempt(
+                usage.attempt_id.as_str().to_string(),
+            ));
+        }
+        usages.insert(usage.attempt_id.clone(), usage);
+        Ok(())
+    }
+
+    pub fn apply_usage(
+        &self,
+        usage: &VerificationUsage,
+    ) -> Result<AcceptanceBudget, ContractError> {
+        self.budget.apply_exact_usage(usage)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct VerificationExecutionOutcome {
+    pub attempt_started: VerificationAttemptStarted,
+    pub verifier_result: VerifierResult,
+    pub budget: AcceptanceBudget,
+}
+
+fn binding_matches(
+    request: &VerificationRequest,
+    descriptor: &VerifierDescriptor,
+    result: &VerifierResult,
+) -> bool {
+    result.request_id == request.request_id
+        && result.attempt_id == request.attempt_id
+        && result.verifier_id == descriptor.verifier_id
+        && result.verifier_version == descriptor.version
+}
+
+pub fn execute_verification(
+    registry: &VerifierRegistry,
+    accounting: &VerificationAccountingAuthority,
+    request: VerificationRequest,
+    started_at_epoch: f64,
+) -> Result<VerificationExecutionOutcome, ContractError> {
+    let descriptor = registry
+        .select_eligible(&request.capability)
+        .ok_or_else(|| ContractError::UnknownVerifier(request.capability.clone()))?;
+    let started = VerificationAttemptStarted {
+        request_id: request.request_id.clone(),
+        attempt_id: request.attempt_id.clone(),
+        mission_id: request.mission_id.clone(),
+        execution_id: request.execution_id.clone(),
+        verifier_id: descriptor.verifier_id.clone(),
+        verifier_version: descriptor.version.clone(),
+        started_at_epoch,
+    };
+    accounting.start_attempt(started.clone())?;
+    let verifier_result = match registry.execute_contained(&descriptor.verifier_id, &request) {
+        Ok(result) => result,
+        Err(VerifierRegistryError::Duplicate(id)) => {
+            return Err(ContractError::DuplicateVerifier(id.as_str().to_string()))
+        }
+        Err(VerifierRegistryError::VersionConflict {
+            id,
+            existing,
+            incoming,
+        }) => {
+            return Err(ContractError::VerifierVersionConflict {
+                id: id.as_str().to_string(),
+                existing,
+                incoming,
+            })
+        }
+        Err(VerifierRegistryError::NotFound(id)) => {
+            return Err(ContractError::UnknownVerifier(id.as_str().to_string()))
+        }
+        Err(VerifierRegistryError::Panicked(id)) => {
+            return Err(ContractError::VerificationPanic(id.as_str().to_string()))
+        }
+    };
+    if !binding_matches(&request, &descriptor, &verifier_result) {
+        return Err(ContractError::InvalidVerificationBinding);
+    }
+    accounting.record_usage(verifier_result.usage.clone())?;
+    let budget = accounting.apply_usage(&verifier_result.usage)?;
+    Ok(VerificationExecutionOutcome {
+        attempt_started: started,
+        verifier_result,
+        budget,
+    })
 }
 
 fn decision_value(decision: AcceptanceDecision) -> &'static str {
