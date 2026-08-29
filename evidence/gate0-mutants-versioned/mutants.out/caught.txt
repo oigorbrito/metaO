@@ -1,3 +1,0 @@
-metao-kernel/src/lib.rs:17:8: delete ! in evaluate_acceptance
-metao-kernel/src/lib.rs:26:9: replace || with && in evaluate_acceptance
-metao-kernel/src/lib.rs:25:8: delete ! in evaluate_acceptance

@@ -1,1 +1,0 @@
-metao-registry/src/lib.rs:56:9: replace Registry::execute_contained -> Result<ExecutionResult, RegistryError> with Ok(Default::default())
