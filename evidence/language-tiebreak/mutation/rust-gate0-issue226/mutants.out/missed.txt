@@ -1,0 +1,1 @@
+metao-kernel/src/lib.rs:28:9: replace || with && in evaluate_acceptance

@@ -1,1 +1,98 @@
-# Post-v0.1 Product Roadmap Reconciliation\n\nThis document establishes the canonical execution order for the metaO repository following the v0.1 acceptance closure.\n\n## 1. Classification Matrix\n\n| Issue | Title | Classification | Canonical Owner | Safe To Close |\n|---|---|---|---|---|\n| #274 | Post-v0.1 product roadmap reconciliation | PROCESS_CANONICAL | #274 | NO |\n| #254 | Empirical/reproducible engineering concepts | RESEARCH_ONLY | #254 | NO |\n| #245 | Engineering execution protocol | PROCESS_CANONICAL | #245 | NO |\n| #227 | Repository convergence wave 1 | PROCESS_CANONICAL | #227 | NO |\n| #209 | Research/Spike: autonomous project governance | SATISFIED_OR_SUPERSEDED_SAFE_TO_CLOSE | #209 | YES |\n| #206 | Executable evidence-control donor | DONOR_EVALUATION_ONLY | #206 | NO |\n| #205 | Legacy scientific/design donors | DONOR_EVALUATION_ONLY | #205 | NO |\n| #204 | Operator UX | ACTIVE_PRODUCT_NOW | #204 | NO |\n| #180 | Scientific fit — ClarifyCodeBench | RESEARCH_ONLY | #180 | NO |\n| #177 | Project Discovery — E2E scenario | DEFERRED_PRODUCT_WITH_TRIGGER | #177 | NO |\n| #176 | Project Discovery — state machine and coordinator | DEFERRED_PRODUCT_WITH_TRIGGER | #176 | NO |\n| #175 | Project Discovery — MVP DoD and ProjectCompletionGate | DEFERRED_PRODUCT_WITH_TRIGGER | #175 | NO |\n| #174 | Project Discovery — ProjectContract foundations | ACTIVE_PRODUCT_NOW | #174 | NO |\n| #173 | Project Discovery — clarification policy | PRODUCT_NEXT_DEPENDENCY | #173 | NO |\n| #172 | Project Discovery — technical stack intake | PRODUCT_NEXT_DEPENDENCY | #172 | NO |\n| #171 | Project Discovery — reference intake | PRODUCT_NEXT_DEPENDENCY | #171 | NO |\n| #170 | Project Discovery — turn vague intent into MVP | SATISFIED_OR_SUPERSEDED_SAFE_TO_CLOSE | #170 | YES |\n| #168 | Scientific validation matrix | DEFERRED_PRODUCT_WITH_TRIGGER | #168 | NO |\n| #167 | Audit assurance | DEFERRED_PRODUCT_WITH_TRIGGER | #167 | NO |\n| #166 | Control-plane admission | DEFERRED_PRODUCT_WITH_TRIGGER | #166 | NO |\n| #165 | Security boundary | DEFERRED_PRODUCT_WITH_TRIGGER | #165 | NO |\n| #164 | Control-plane HA | DEFERRED_PRODUCT_WITH_TRIGGER | #164 | NO |\n| #163 | Interoperability — CloudEvents | DEFERRED_PRODUCT_WITH_TRIGGER | #163 | NO |\n| #162 | Runtime certification | DEFERRED_PRODUCT_WITH_TRIGGER | #162 | NO |\n| #161 | Scientific harness | DEFERRED_PRODUCT_WITH_TRIGGER | #161 | NO |\n| #160 | Control-plane gap — runtime health | DEFERRED_PRODUCT_WITH_TRIGGER | #160 | NO |\n| #159 | Control-plane gap — workload identity | DEFERRED_PRODUCT_WITH_TRIGGER | #159 | NO |\n| #158 | Control-plane gap — external-effect idempotency | PRODUCT_NEXT_DEPENDENCY | #158 | NO |\n| #149 | SMAG composition — security, isolation | DEFERRED_PRODUCT_WITH_TRIGGER | #149 | NO |\n| #148 | SMAG composition — cost-aware routing | DEFERRED_PRODUCT_WITH_TRIGGER | #148 | NO |\n| #147 | SMAG composition — operational service | DEFERRED_PRODUCT_WITH_TRIGGER | #147 | NO |\n| #146 | SMAG composition — checkpoint/resume | DEFERRED_PRODUCT_WITH_TRIGGER | #146 | NO |\n| #145 | SMAG composition — orchestrator expansion | DEFERRED_PRODUCT_WITH_TRIGGER | #145 | NO |\n| #144 | SMAG composition — engineering-workload plugin | PRODUCT_NEXT_DEPENDENCY | #144 | NO |\n| #143 | SMAG composition — engineering harness | PRODUCT_NEXT_DEPENDENCY | #143 | NO |\n| #142 | SMAG composition — execution-stage evidence | ACTIVE_PRODUCT_NOW | #142 | NO |\n| #141 | SMAG composition — failure causality | DEFERRED_PRODUCT_WITH_TRIGGER | #141 | NO |\n| #140 | SMAG composition — Risk Governance and ExecutionBudget | ACTIVE_PRODUCT_NOW | #140 | NO |\n| #71 | GitHub Actions hosted-runner pre-step blocker | BLOCKED_EXTERNAL | #71 | NO |\n\n## 2. Dependency/Order Graph\n\n1. **ACTIVE_PRODUCT_NOW**\n   - #204: Operator UX\n   - #174: ProjectContract foundations\n   - #140: Risk Governance and ExecutionBudget\n   - #142: Execution-stage evidence\n\n2. **PRODUCT_NEXT_DEPENDENCY**\n   - Project Discovery Expansion: #171, #172, #173\n   - SMAG Engineering: #143, #144\n   - Reliability: #158\n\n3. **DEFERRED_PRODUCT_WITH_TRIGGER**\n   - HA, Multi-tenant, CloudEvents, Orchestrator Failover, etc.\n\n## 3. Explicit Separation\n\n### PRODUCT\nIssues actively being worked on for the core orchestrator and user experience (e.g., #204, #174, #140, #142).\n\n### RESEARCH\nIssues dedicated to scientific validation, donor evaluation, and long-term research (e.g., #254, #180, #205, #206).\n\n### EXTERNAL_INFRASTRUCTURE\nIssues blocked by third-party infrastructure (e.g., #71).\n\n## 4. Top 3 Candidate Blocks\n\n**RANK_1**: #204 Operator UX\n* WHY_NOW: A powerful orchestrator is useless without an obvious entrypoint and usable execution environment.\n* WHAT_IT_UNLOCKS: Real-world adoption, user feedback, and end-to-end usage of the v0.1 features.\n* WHY_NOT_OTHER_CANDIDATES: Project Discovery requires the UX to be usable first.\n* MINIMUM_EXECUTABLE_SLICE: Environment validation, runtime discovery, and CLI --help with basic mission submission.\n\n**RANK_2**: #174 ProjectContract foundations\n* WHY_NOW: Establishes the core data model for Project Discovery.\n* WHAT_IT_UNLOCKS: The entire Project Discovery feature family (#171-#177).\n* WHY_NOT_OTHER_CANDIDATES: Operator UX is more pressing for immediate usability.\n* MINIMUM_EXECUTABLE_SLICE: Schema definition and basic validation for project intents.\n\n**RANK_3**: #140 Risk Governance and ExecutionBudget\n* WHY_NOW: Safety and budget constraints are necessary before executing complex autonomous missions.\n* WHAT_IT_UNLOCKS: Safe execution of SMAG workloads.\n* WHY_NOT_OTHER_CANDIDATES: The system can run in a trusted/local mode first while UX and Contracts are built.\n* MINIMUM_EXECUTABLE_SLICE: Budget tracking data structures and enforcement during execution steps.\n\n## 5. Next Canonical Block\n\n**NEXT_CANONICAL_BLOCK**: #204 Operator UX\n
+# Post-v0.1 Product Roadmap Reconciliation
+
+This document establishes the canonical execution order for the metaO repository following the v0.1 acceptance closure.
+
+## 1. Classification Matrix
+
+| Issue | Title | Classification | Canonical Owner | Safe To Close |
+|---|---|---|---|---|
+| #274 | Post-v0.1 product roadmap reconciliation | PROCESS_CANONICAL | #274 | NO |
+| #254 | Empirical/reproducible engineering concepts | RESEARCH_ONLY | #254 | NO |
+| #245 | Engineering execution protocol | PROCESS_CANONICAL | #245 | NO |
+| #227 | Repository convergence wave 1 | PROCESS_CANONICAL | #227 | NO |
+| #209 | Research/Spike: autonomous project governance | SATISFIED_OR_SUPERSEDED_SAFE_TO_CLOSE | #209 | YES |
+| #206 | Executable evidence-control donor | DONOR_EVALUATION_ONLY | #206 | NO |
+| #205 | Legacy scientific/design donors | DONOR_EVALUATION_ONLY | #205 | NO |
+| #204 | Operator UX | ACTIVE_PRODUCT_NOW | #204 | NO |
+| #180 | Scientific fit — ClarifyCodeBench | RESEARCH_ONLY | #180 | NO |
+| #177 | Project Discovery — E2E scenario | DEFERRED_PRODUCT_WITH_TRIGGER | #177 | NO |
+| #176 | Project Discovery — state machine and coordinator | DEFERRED_PRODUCT_WITH_TRIGGER | #176 | NO |
+| #175 | Project Discovery — MVP DoD and ProjectCompletionGate | DEFERRED_PRODUCT_WITH_TRIGGER | #175 | NO |
+| #174 | Project Discovery — ProjectContract foundations | ACTIVE_PRODUCT_NOW | #174 | NO |
+| #173 | Project Discovery — clarification policy | PRODUCT_NEXT_DEPENDENCY | #173 | NO |
+| #172 | Project Discovery — technical stack intake | PRODUCT_NEXT_DEPENDENCY | #172 | NO |
+| #171 | Project Discovery — reference intake | PRODUCT_NEXT_DEPENDENCY | #171 | NO |
+| #170 | Project Discovery — turn vague intent into MVP | SATISFIED_OR_SUPERSEDED_SAFE_TO_CLOSE | #170 | YES |
+| #168 | Scientific validation matrix | DEFERRED_PRODUCT_WITH_TRIGGER | #168 | NO |
+| #167 | Audit assurance | DEFERRED_PRODUCT_WITH_TRIGGER | #167 | NO |
+| #166 | Control-plane admission | DEFERRED_PRODUCT_WITH_TRIGGER | #166 | NO |
+| #165 | Security boundary | DEFERRED_PRODUCT_WITH_TRIGGER | #165 | NO |
+| #164 | Control-plane HA | DEFERRED_PRODUCT_WITH_TRIGGER | #164 | NO |
+| #163 | Interoperability — CloudEvents | DEFERRED_PRODUCT_WITH_TRIGGER | #163 | NO |
+| #162 | Runtime certification | DEFERRED_PRODUCT_WITH_TRIGGER | #162 | NO |
+| #161 | Scientific harness | DEFERRED_PRODUCT_WITH_TRIGGER | #161 | NO |
+| #160 | Control-plane gap — runtime health | DEFERRED_PRODUCT_WITH_TRIGGER | #160 | NO |
+| #159 | Control-plane gap — workload identity | DEFERRED_PRODUCT_WITH_TRIGGER | #159 | NO |
+| #158 | Control-plane gap — external-effect idempotency | PRODUCT_NEXT_DEPENDENCY | #158 | NO |
+| #149 | SMAG composition — security, isolation | DEFERRED_PRODUCT_WITH_TRIGGER | #149 | NO |
+| #148 | SMAG composition — cost-aware routing | DEFERRED_PRODUCT_WITH_TRIGGER | #148 | NO |
+| #147 | SMAG composition — operational service | DEFERRED_PRODUCT_WITH_TRIGGER | #147 | NO |
+| #146 | SMAG composition — checkpoint/resume | DEFERRED_PRODUCT_WITH_TRIGGER | #146 | NO |
+| #145 | SMAG composition — orchestrator expansion | DEFERRED_PRODUCT_WITH_TRIGGER | #145 | NO |
+| #144 | SMAG composition — engineering-workload plugin | PRODUCT_NEXT_DEPENDENCY | #144 | NO |
+| #143 | SMAG composition — engineering harness | PRODUCT_NEXT_DEPENDENCY | #143 | NO |
+| #142 | SMAG composition — execution-stage evidence | ACTIVE_PRODUCT_NOW | #142 | NO |
+| #141 | SMAG composition — failure causality | DEFERRED_PRODUCT_WITH_TRIGGER | #141 | NO |
+| #140 | SMAG composition — Risk Governance and ExecutionBudget | ACTIVE_PRODUCT_NOW | #140 | NO |
+| #71 | GitHub Actions hosted-runner pre-step blocker | BLOCKED_EXTERNAL | #71 | NO |
+
+## 2. Dependency/Order Graph
+
+1. **ACTIVE_PRODUCT_NOW**
+   - #204: Operator UX
+   - #174: ProjectContract foundations
+   - #140: Risk Governance and ExecutionBudget
+   - #142: Execution-stage evidence
+
+2. **PRODUCT_NEXT_DEPENDENCY**
+   - Project Discovery Expansion: #171, #172, #173
+   - SMAG Engineering: #143, #144
+   - Reliability: #158
+
+3. **DEFERRED_PRODUCT_WITH_TRIGGER**
+   - HA, Multi-tenant, CloudEvents, Orchestrator Failover, etc.
+
+## 3. Explicit Separation
+
+### PRODUCT
+Issues actively being worked on for the core orchestrator and user experience (e.g., #204, #174, #140, #142).
+
+### RESEARCH
+Issues dedicated to scientific validation, donor evaluation, and long-term research (e.g., #254, #180, #205, #206).
+
+### EXTERNAL_INFRASTRUCTURE
+Issues blocked by third-party infrastructure (e.g., #71).
+
+## 4. Top 3 Candidate Blocks
+
+**RANK_1**: #204 Operator UX
+* WHY_NOW: A powerful orchestrator is useless without an obvious entrypoint and usable execution environment.
+* WHAT_IT_UNLOCKS: Real-world adoption, user feedback, and end-to-end usage of the v0.1 features.
+* WHY_NOT_OTHER_CANDIDATES: Project Discovery requires the UX to be usable first.
+* MINIMUM_EXECUTABLE_SLICE: Environment validation, runtime discovery, and CLI --help with basic mission submission.
+
+**RANK_2**: #174 ProjectContract foundations
+* WHY_NOW: Establishes the core data model for Project Discovery.
+* WHAT_IT_UNLOCKS: The entire Project Discovery feature family (#171-#177).
+* WHY_NOT_OTHER_CANDIDATES: Operator UX is more pressing for immediate usability.
+* MINIMUM_EXECUTABLE_SLICE: Schema definition and basic validation for project intents.
+
+**RANK_3**: #140 Risk Governance and ExecutionBudget
+* WHY_NOW: Safety and budget constraints are necessary before executing complex autonomous missions.
+* WHAT_IT_UNLOCKS: Safe execution of SMAG workloads.
+* WHY_NOT_OTHER_CANDIDATES: The system can run in a trusted/local mode first while UX and Contracts are built.
+* MINIMUM_EXECUTABLE_SLICE: Budget tracking data structures and enforcement during execution steps.
+
+## 5. Next Canonical Block
+
+**NEXT_CANONICAL_BLOCK**: #204 Operator UX

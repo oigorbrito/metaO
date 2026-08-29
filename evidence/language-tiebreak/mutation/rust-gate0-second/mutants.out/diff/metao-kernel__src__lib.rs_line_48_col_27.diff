@@ -1,0 +1,19 @@
+--- metao-kernel/src/lib.rs
++++ delete ! in reconcile_missing
+@@ -40,15 +40,15 @@
+     }
+ 
+     AcceptanceDecision::Accept
+ }
+ 
+ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {
+     let mut missing: Vec<_> = desired
+         .iter()
+-        .filter(|runtime| !observed.contains(runtime))
++        .filter(|runtime|  /* ~ changed by cargo-mutants ~ */observed.contains(runtime))
+         .cloned()
+         .collect();
+     missing.sort();
+     missing.dedup();
+     missing
+ }

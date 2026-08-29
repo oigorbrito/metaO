@@ -1,0 +1,16 @@
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\bin\Release\net10.0\MetaO.Reconcile.deps.json
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\bin\Release\net10.0\MetaO.Reconcile.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\bin\Release\net10.0\MetaO.Reconcile.pdb
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\bin\Release\net10.0\MetaO.Contracts.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\bin\Release\net10.0\MetaO.Contracts.pdb
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Reconcile.csproj.AssemblyReference.cache
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Reconcile.GeneratedMSBuildEditorConfig.editorconfig
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Reconcile.AssemblyInfoInputs.cache
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Reconcile.AssemblyInfo.cs
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Reconcile.csproj.CoreCompileInputs.cache
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Reconcile.sourcelink.json
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Re.58537AE5.Up2Date
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Reconcile.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\refint\MetaO.Reconcile.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\MetaO.Reconcile.pdb
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Reconcile\obj\Release\net10.0\ref\MetaO.Reconcile.dll

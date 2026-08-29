@@ -1,0 +1,21 @@
+--- metao-registry/src/lib.rs
++++ replace == with != in Registry::register
+@@ -25,17 +25,17 @@
+     runtimes: HashMap<RuntimeId, RegisteredRuntime>,
+ }
+ 
+ impl Registry {
+     pub fn register(&mut self, runtime: Box<dyn Orchestrator>) -> Result<(), RegistryError> {
+         let id = runtime.id();
+         let version = runtime.version();
+         if let Some(existing) = self.runtimes.get(&id) {
+-            if existing.version == version {
++            if existing.version != /* ~ changed by cargo-mutants ~ */ version {
+                 return Err(RegistryError::Duplicate(id));
+             }
+             return Err(RegistryError::VersionConflict {
+                 id,
+                 existing: existing.version.clone(),
+                 incoming: version,
+             });
+         }

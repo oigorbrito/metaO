@@ -1,0 +1,358 @@
+{
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Success",
+      "log_path": "log/baseline.log",
+      "diff_path": null,
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.3849737,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=metao-registry@0.0.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 0.8652433,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--package=metao-registry@0.0.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:30:9: replace Registry::register -> Result<(), RegistryError> with Ok(())",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::register",
+            "return_type": "-> Result<(), RegistryError>",
+            "span": {
+              "start": {
+                "line": 29,
+                "column": 5
+              },
+              "end": {
+                "line": 45,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 30,
+              "column": 9
+            },
+            "end": {
+              "line": 44,
+              "column": 15
+            }
+          },
+          "replacement": "Ok(())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-registry__src__lib.rs_line_30_col_9.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_30_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 13.0869715,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.7282953,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:33:33: replace == with != in Registry::register",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::register",
+            "return_type": "-> Result<(), RegistryError>",
+            "span": {
+              "start": {
+                "line": 29,
+                "column": 5
+              },
+              "end": {
+                "line": 45,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 33,
+              "column": 33
+            },
+            "end": {
+              "line": 33,
+              "column": 35
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-registry__src__lib.rs_line_33_col_33.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_33_col_33.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.4334295,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.9208607,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:48:9: replace Registry::unregister -> bool with true",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::unregister",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 47,
+                "column": 5
+              },
+              "end": {
+                "line": 49,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 48,
+              "column": 9
+            },
+            "end": {
+              "line": 48,
+              "column": 43
+            }
+          },
+          "replacement": "true",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-registry__src__lib.rs_line_48_col_9.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_48_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.3651846,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.9812872000000001,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:48:9: replace Registry::unregister -> bool with false",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::unregister",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 47,
+                "column": 5
+              },
+              "end": {
+                "line": 49,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 48,
+              "column": 9
+            },
+            "end": {
+              "line": 48,
+              "column": 43
+            }
+          },
+          "replacement": "false",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-registry__src__lib.rs_line_48_col_9_001.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_48_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.5732134,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.7676574999999999,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:56:9: replace Registry::execute_contained -> Result<ExecutionResult, RegistryError> with Ok(Default::default())",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::execute_contained",
+            "return_type": "-> Result<ExecutionResult, RegistryError>",
+            "span": {
+              "start": {
+                "line": 51,
+                "column": 5
+              },
+              "end": {
+                "line": 63,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 56,
+              "column": 9
+            },
+            "end": {
+              "line": 62,
+              "column": 10
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/metao-registry__src__lib.rs_line_56_col_9.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_56_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.4084422,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    }
+  ],
+  "total_mutants": 5,
+  "missed": 0,
+  "caught": 4,
+  "timeout": 0,
+  "unviable": 1,
+  "success": 0,
+  "start_time": "2026-08-27T21:07:51.740261Z",
+  "end_time": "2026-08-27T21:08:20.8136833Z",
+  "cargo_mutants_version": "27.1.0"
+}

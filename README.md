@@ -33,7 +33,50 @@ EXECUTED != ACCEPTED
 ORCHESTRATOR_DONE != METAO_ACCEPTED
 ```
 
-## Quickstart
+## Quickstart (Operator CLI)
+
+metaO provides a CLI for managing missions and runtimes. On Windows (PowerShell) or Linux:
+
+1. **Install the package**:
+   ```powershell
+   pip install -e .
+   ```
+
+2. **Verify installation**:
+   ```powershell
+   metao --help
+   ```
+
+3. **Configure your runtime factory**:
+   Specify a Python module and function that returns a `MissionOperator`.
+   ```powershell
+   $env:METAO_OPERATOR_FACTORY="my_app.factory:create_operator"
+   # Or use --factory my_app.factory:create_operator on every command
+   ```
+
+4. **Diagnose environment readiness**:
+   ```powershell
+   metao doctor
+   ```
+
+5. **List available runtimes**:
+   ```powershell
+   metao runtimes
+   ```
+
+6. **Run a mission**:
+   ```powershell
+   # Assumes tests/golden/chassis_v1.json exists or similar valid fixture
+   metao run tests/golden/chassis_v1.json
+   ```
+
+7. **Check mission status and inspect**:
+   ```powershell
+   metao status <mission_id>
+   metao inspect <mission_id>
+   ```
+
+## Python API Quickstart
 
 The public operator API takes an explicit durable-execution port. With a running Conductor instance:
 

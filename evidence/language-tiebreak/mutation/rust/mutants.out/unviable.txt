@@ -1,0 +1,3 @@
+metao-kernel/src/lib.rs:13:5: replace evaluate_acceptance -> AcceptanceDecision with Default::default()
+metao-kernel/src/lib.rs:42:5: replace reconcile_missing -> Vec<RuntimeId> with vec![Default::default()]
+metao-registry/src/lib.rs:56:9: replace Registry::execute_contained -> Result<ExecutionResult, RegistryError> with Ok(Default::default())
