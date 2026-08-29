@@ -218,6 +218,24 @@ pub struct ApprovalRecord {
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ApprovalAuthorityTicket {
+    pub approval_id: String,
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub subject_state_id: String,
+    pub policy_bundle_id: String,
+    pub approver_id: String,
+    pub capability_id: String,
+    pub action: String,
+    pub target: String,
+    pub scope: String,
+    pub authority_epoch: i64,
+    pub not_before_epoch: Option<f64>,
+    pub expires_at_epoch: Option<f64>,
+    pub revoked: bool,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AcceptanceBudget {
     pub money_limit: f64,
     pub token_limit: u64,
@@ -479,6 +497,41 @@ pub trait AuthorityRegistryPort: Send + Sync {
 
 pub trait PolicyRegistryPort: Send + Sync {
     fn get(&self, policy_bundle_id: &str) -> Option<AuthoritativePolicyBundle>;
+}
+
+pub trait ApprovalAuthorityPort: Send + Sync {
+    fn current(&self, approval_id: &str) -> Option<ApprovalAuthorityTicket>;
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ProvenanceVerificationStatus {
+    Verified,
+    Unverified,
+    Invalid,
+    Stale,
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ProvenanceVerificationObservation {
+    pub status: ProvenanceVerificationStatus,
+    pub evidence_id: String,
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub subject_id: String,
+    pub subject_state_id: String,
+    pub verification_context_id: String,
+    pub policy_bundle_id: String,
+    pub payload_digest: String,
+    pub provenance_root: String,
+    pub verifier_id: VerifierId,
+    pub issuer_id: String,
+    pub observed_at_epoch: f64,
+    pub expires_at_epoch: Option<f64>,
+    pub reason: String,
+}
+
+pub trait ProvenanceVerificationPort: Send + Sync {
+    fn verify(&self, evidence: &EvidenceEnvelope) -> Option<ProvenanceVerificationObservation>;
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

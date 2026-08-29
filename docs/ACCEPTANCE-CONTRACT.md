@@ -397,3 +397,20 @@ Required behavior:
 - duplicate record identity, sequence gaps and binding mismatches fail closed;
 - factual history is preserved even when budget application later fails;
 - retry history is not the final acceptance authority; only `canonical_acceptance` can mint final acceptance.
+
+## 23. Approval authority and provenance verification
+
+The post-v0.1 A08/A04/A06 slice adds a minimal Rust-native boundary for current approval authority and hostile provenance verification.
+
+Required behavior:
+
+- an approval record or caller claim is not the same thing as current approval authority;
+- approval authority MUST be confirmed against the authoritative current source before terminal acceptance continues;
+- approval capability, action, target, scope, authority epoch and freshness fields MUST bind to the current authority source;
+- not-before and expiry semantics MUST fail closed;
+- a caller provenance claim or local digest/root is not the same thing as verified provenance authenticity;
+- provenance verification MUST happen behind a provider-neutral verification port;
+- local hash/digest evidence remains useful for deterministic integrity and replay, but it MUST NOT be treated as cryptographic authenticity;
+- runtime/verifier self-report MUST NOT mint approval authority or provenance authenticity;
+- canonical acceptance remains the only final acceptance authority;
+- any unresolved broader evidence-envelope gaps remain tracked in `#228`.
