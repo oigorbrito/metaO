@@ -240,15 +240,19 @@ Hosted GitHub Actions pre-step infrastructure failures remain separate from meta
 ## Current evidence status
 
 ```text
-ROADMAPS_2_7_ASSEMBLY = COMPLETE
-VALIDATED_CANDIDATE = aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea
+RUST_A_MIGRATION = COMPLETE
+RUST_CAPABILITIES_ACTIVE = 7
+VALIDATED_CANDIDATE = 37955cad9f5304401fe56afd5c0274d0db63cb61
 LOCAL_RELEASE_GATE = PASS 21/21
-FULL_UNIT_SUITE = PASS 279/279
-PR_68 = MERGED
-MAIN = 58feb12531982342bf3c12b9e8b8c61a5e819c5f
+FULL_UNIT_SUITE = PASS 339/339
+PR_247 = MERGED
+MAIN = 37955cad9f5304401fe56afd5c0274d0db63cb61
 THREE_RUNTIMES = OpenAI Agents 0.20.0 + CrewAI 1.15.16 + LangGraph 1.2.11
+PYTHON_PRODUCT_RUNTIME_DEPENDENCY = 0
+PYTHON_ORACLE_REFERENCE = PRESERVED
 HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
-RELEASE_EVIDENCE_VALIDATOR = BLOCKED_EVIDENCE_FILE_UNAVAILABLE
+FRESH_RELEASE_EVIDENCE = C:\Users\Igor B\AppData\Local\metaO\release-gate-evidence\gate-20260829-001458.json
+RELEASE_EVIDENCE_VALIDATOR = PASS
 PRODUCTION_CLAIM = NO
 ```
 
@@ -256,6 +260,6 @@ PRODUCTION_CLAIM = NO
 
 On the Phase 8 retirement gate branch, the runtime capability is qualified for `RUST_ACTIVE` through the frozen shadow corpus and the real Rust process / recovery / failover paths.
 
-Python remains available as oracle / reference / test harness, but the sustained parity gate treats runtime cases as `NOT_COMPARABLE` rather than parity evidence.
+Python remains available as oracle / reference / test harness, but it is no longer a product runtime dependency. The sustained parity gate treats runtime cases as `NOT_COMPARABLE` rather than parity evidence.
 
 The executable retirement gate is documented in [`docs/PHASE8-RUNTIME-RETIREMENT-GATE.md`](PHASE8-RUNTIME-RETIREMENT-GATE.md).
