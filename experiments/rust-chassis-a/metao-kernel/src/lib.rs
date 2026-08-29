@@ -1,10 +1,11 @@
 use metao_contracts::{
     AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, AggregationResult,
-    ApprovalRecord, ApprovalRequest, BudgetReservation, ConflictDecision, ContractError, Evidence,
-    EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus, PolicyDecision,
-    PolicyEffect, RequiredEvidenceSet, RuntimeId, VerificationAttemptId,
-    VerificationAttemptStarted, VerificationRequest, VerificationUsage, VerifierDescriptor,
-    VerifierResult,
+    ApprovalRecord, ApprovalRequest, AuthoritativeAuthorityDecision, AuthoritativePolicyBundle,
+    AuthoritativeSubjectState, AuthorityRegistryPort, BudgetReservation, ConflictDecision,
+    ContractError, Evidence, EvidenceEnvelope, ExecutionRequest, ExecutionResult, ExecutionStatus,
+    PolicyDecision, PolicyEffect, PolicyRegistryPort, RequiredEvidenceSet, RuntimeId,
+    SubjectStatePort, TerminalClaims, VerificationAttemptId, VerificationAttemptStarted,
+    VerificationRequest, VerificationUsage, VerifierDescriptor, VerifierResult,
 };
 use metao_registry::{VerifierRegistry, VerifierRegistryError};
 use serde::{Deserialize, Serialize};
@@ -50,6 +51,166 @@ fn check_authority(
         return Err((AcceptanceDecision::Block, "unauthorized_authority"));
     }
     Ok(())
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum TerminalSourceDecision {
+    Continue,
+    Stale,
+    Block,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct AuthoritativeTerminalSources {
+    pub subject_state: AuthoritativeSubjectState,
+    pub authority_resolution: AuthoritativeAuthorityDecision,
+    pub policy_bundle: AuthoritativePolicyBundle,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct TerminalSourceAssessment {
+    pub decision: TerminalSourceDecision,
+    pub reasons: Vec<String>,
+    pub sources: Option<AuthoritativeTerminalSources>,
+}
+
+fn terminal_assessment(
+    decision: TerminalSourceDecision,
+    reasons: Vec<String>,
+    sources: Option<AuthoritativeTerminalSources>,
+) -> TerminalSourceAssessment {
+    TerminalSourceAssessment {
+        decision,
+        reasons,
+        sources,
+    }
+}
+
+pub fn resolve_authoritative_terminal_sources(
+    claims: &TerminalClaims,
+    evidence: &[EvidenceEnvelope],
+    subject_port: &dyn SubjectStatePort,
+    authority_port: &dyn AuthorityRegistryPort,
+    policy_port: &dyn PolicyRegistryPort,
+) -> TerminalSourceAssessment {
+    if claims.subject_id.trim().is_empty()
+        || claims.subject_state_id.trim().is_empty()
+        || claims.authority_context_id.trim().is_empty()
+        || claims.authority_id.trim().is_empty()
+        || claims.policy_bundle_id.trim().is_empty()
+        || claims.policy_bundle_root.trim().is_empty()
+    {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_terminal_claim".into()],
+            None,
+        );
+    }
+
+    if evidence.is_empty() {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_candidate_evidence".into()],
+            None,
+        );
+    }
+
+    let Some(subject_state) = subject_port.current(&claims.subject_id) else {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_subject_source".into()],
+            None,
+        );
+    };
+
+    let Some(authority_resolution) = authority_port.resolve(&claims.authority_context_id, claims)
+    else {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_authority_source".into()],
+            None,
+        );
+    };
+
+    let Some(policy_bundle) = policy_port.get(&claims.policy_bundle_id) else {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["missing_policy_source".into()],
+            None,
+        );
+    };
+
+    if policy_bundle.decision.effect == PolicyEffect::Deny {
+        return terminal_assessment(
+            TerminalSourceDecision::Block,
+            vec!["authoritative_policy_deny".into()],
+            None,
+        );
+    }
+
+    for item in evidence {
+        if item.subject_id != claims.subject_id {
+            return terminal_assessment(
+                TerminalSourceDecision::Block,
+                vec!["subject_id_mismatch".into()],
+                None,
+            );
+        }
+        if item.subject_state_id != claims.subject_state_id
+            || item.subject_state_id != subject_state.subject_state_id
+        {
+            let decision = if subject_state.state_epoch as f64 > item.created_at_epoch {
+                TerminalSourceDecision::Stale
+            } else {
+                TerminalSourceDecision::Block
+            };
+            return terminal_assessment(decision, vec!["subject_state_mismatch".into()], None);
+        }
+        if item.authority_id != claims.authority_id
+            || authority_resolution.authority_id != claims.authority_id
+            || authority_resolution.authority_context_id != claims.authority_context_id
+        {
+            let decision = if authority_resolution.authority_epoch as f64 > item.created_at_epoch {
+                TerminalSourceDecision::Stale
+            } else {
+                TerminalSourceDecision::Block
+            };
+            return terminal_assessment(decision, vec!["authority_mismatch".into()], None);
+        }
+        if item.policy_bundle_id != claims.policy_bundle_id
+            || policy_bundle.policy_bundle_id != claims.policy_bundle_id
+            || policy_bundle.policy_bundle_root != claims.policy_bundle_root
+        {
+            let decision = if policy_bundle.bundle_epoch as f64 > item.created_at_epoch {
+                TerminalSourceDecision::Stale
+            } else {
+                TerminalSourceDecision::Block
+            };
+            return terminal_assessment(decision, vec!["policy_bundle_mismatch".into()], None);
+        }
+        if item.provenance_root != authority_resolution.evidence_root {
+            let decision = if authority_resolution.authority_epoch as f64 > item.created_at_epoch {
+                TerminalSourceDecision::Stale
+            } else {
+                TerminalSourceDecision::Block
+            };
+            return terminal_assessment(
+                decision,
+                vec!["authority_provenance_mismatch".into()],
+                None,
+            );
+        }
+    }
+
+    terminal_assessment(
+        TerminalSourceDecision::Continue,
+        Vec::new(),
+        Some(AuthoritativeTerminalSources {
+            subject_state,
+            authority_resolution,
+            policy_bundle,
+        }),
+    )
 }
 
 pub fn evaluate_acceptance(

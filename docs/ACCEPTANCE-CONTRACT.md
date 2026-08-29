@@ -365,4 +365,12 @@ Required behavior:
 - verifier success does not mint final acceptance;
 - final acceptance remains owned only by `canonical_acceptance`.
 
+Post-v0.1 terminal source composition:
+
+- A05 re-reads subject state from an authoritative subject-state port;
+- A07 resolves authority through an authoritative registry port;
+- A09 resolves the policy bundle/root through an authoritative policy registry port;
+- caller/runtime/verifier claims remain candidate inputs only;
+- authoritative source mismatch or rollback fails closed before terminal acceptance continues.
+
 This slice intentionally stops before broader evidence-envelope normalization gaps that remain tracked in `#228`.
