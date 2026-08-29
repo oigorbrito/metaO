@@ -392,6 +392,57 @@ pub struct AcceptanceContext {
     pub authorized_authorities: Vec<String>,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct TerminalClaims {
+    pub subject_id: String,
+    pub subject_state_id: String,
+    pub authority_context_id: String,
+    pub authority_id: String,
+    pub policy_bundle_id: String,
+    pub policy_bundle_root: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthoritativeSubjectState {
+    pub subject_id: String,
+    pub subject_state_id: String,
+    pub state_epoch: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthoritativeAuthorityDecision {
+    pub authority_context_id: String,
+    pub authority_id: String,
+    pub authority_epoch: i64,
+    pub capability_id: Option<String>,
+    pub reason: String,
+    pub evidence_root: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AuthoritativePolicyBundle {
+    pub policy_bundle_id: String,
+    pub policy_bundle_root: String,
+    pub bundle_epoch: i64,
+    pub decision: PolicyDecision,
+}
+
+pub trait SubjectStatePort: Send + Sync {
+    fn current(&self, subject_id: &str) -> Option<AuthoritativeSubjectState>;
+}
+
+pub trait AuthorityRegistryPort: Send + Sync {
+    fn resolve(
+        &self,
+        authority_context_id: &str,
+        request: &TerminalClaims,
+    ) -> Option<AuthoritativeAuthorityDecision>;
+}
+
+pub trait PolicyRegistryPort: Send + Sync {
+    fn get(&self, policy_bundle_id: &str) -> Option<AuthoritativePolicyBundle>;
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct AcceptanceProof {
     pub decision: AcceptanceDecision,
