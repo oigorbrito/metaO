@@ -1,4 +1,11 @@
 from .catalog import CatalogEntryAlreadyExists, OrchestratorCatalog, OrchestratorCatalogEntry
+from .cutover import (
+    CapabilityAuthority,
+    CapabilityCutoverState,
+    PHASE7_QUALIFIED_CAPABILITIES,
+    PHASE7_SHADOW_CAPABILITIES,
+    default_phase7_cutover_state,
+)
 from .core import (
     EvidenceEnvelope,
     ExecutionRequest,
@@ -59,6 +66,11 @@ __all__ = [
     "OrchestratorDescriptor",
     "OrchestratorRegistry",
     "CatalogEntryAlreadyExists",
+    "CapabilityAuthority",
+    "CapabilityCutoverState",
+    "PHASE7_QUALIFIED_CAPABILITIES",
+    "PHASE7_SHADOW_CAPABILITIES",
+    "default_phase7_cutover_state",
     "OrchestratorCatalogEntry",
     "OrchestratorCatalog",
     "ActiveExecutionHandle",
