@@ -11,3 +11,22 @@ dist/
 # Local virtual environments
 .venv/
 venv/
+
+# C# build outputs
+**/bin/
+**/obj/
+
+# Local state
+.metao/
+
+# Local worktree data
+.worktrees/
+
+# CI / Test virtual environments
+.venv-ci/
+
+# Specific local artifacts
+/gate0-local-before-manual-test.patch
+/issues.json
+/open_issues.json
+/final-language-tiebreak.json
