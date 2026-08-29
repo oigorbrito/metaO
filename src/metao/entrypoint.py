@@ -15,7 +15,7 @@ import os
 import sys
 from typing import Any, Sequence, TextIO
 
-from .cli import CLIInputError, DEFAULT_DB, main as mission_main
+from .cli import CLIInputError, DEFAULT_DB, main as mission_main, resolve_factory_spec
 from .operator import MissionOperator
 from .runtime_certification import RuntimeCertification, is_certificate_fresh
 from .runtime_certification_revocation import (
@@ -114,7 +114,7 @@ def _runtime_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     runtimes = sub.add_parser("runtimes", help="list configured runtime catalog and live/control health")
-    runtimes.add_argument("--factory", required=True, help="configured operator factory module:function")
+    runtimes.add_argument("--factory", required=False, help="configured operator factory module:function")
 
     quarantine_parser = sub.add_parser("runtime-quarantine", help="durably quarantine one runtime")
     quarantine_parser.add_argument("orchestrator_id")
@@ -157,13 +157,14 @@ def _runtime_parser() -> argparse.ArgumentParser:
 
 
 def _load_factory_operator(
-    factory_spec: str,
+    factory_spec: str | None,
     *,
     db: str,
     control_db: str,
     certification_db: str,
     certification_revocation_db: str,
 ) -> MissionOperator:
+    factory_spec = resolve_factory_spec(factory_spec)
     if ":" not in factory_spec:
         raise CLIInputError("factory must use module:function syntax")
     module_name, attribute = factory_spec.split(":", 1)

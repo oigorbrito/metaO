@@ -1,0 +1,21 @@
+--- metao-kernel/src/lib.rs
++++ replace reconcile_missing -> Vec<RuntimeId> with vec![]
+@@ -34,17 +34,10 @@
+     if now_epoch < evidence.created_at_epoch || now_epoch > evidence.expires_at_epoch {
+         return AcceptanceDecision::Stale;
+     }
+ 
+     AcceptanceDecision::Accept
+ }
+ 
+ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {
+-    let mut missing: Vec<_> = desired
+-        .iter()
+-        .filter(|runtime| !observed.contains(runtime))
+-        .cloned()
+-        .collect();
+-    missing.sort();
+-    missing.dedup();
+-    missing
++    vec![] /* ~ changed by cargo-mutants ~ */
+ }

@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\experiments\csharp-chassis-c\src\MetaO.Contracts\MetaO.Contracts.csproj" />
+    <ProjectReference Include="..\..\..\experiments\csharp-chassis-c\src\MetaO.Kernel\MetaO.Kernel.csproj" />
+    <ProjectReference Include="..\..\..\experiments\csharp-chassis-c\src\MetaO.Registry\MetaO.Registry.csproj" />
+    <ProjectReference Include="..\..\..\experiments\csharp-chassis-c\src\MetaO.ControlPlane\MetaO.ControlPlane.csproj" />
+    <ProjectReference Include="..\..\..\experiments\csharp-chassis-c\src\MetaO.Reconcile\MetaO.Reconcile.csproj" />
+    <ProjectReference Include="..\..\..\experiments\csharp-chassis-c\src\MetaO.Budget\MetaO.Budget.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,84 @@
+
+*** metao-kernel/src/lib.rs:46:5: replace reconcile_missing -> Vec<RuntimeId> with vec![Default::default()]
+
+*** mutation diff:
+--- metao-kernel/src/lib.rs
++++ replace reconcile_missing -> Vec<RuntimeId> with vec![Default::default()]
+@@ -38,24 +38,17 @@
+     if now_epoch > evidence.expires_at_epoch {
+         return AcceptanceDecision::Stale;
+     }
+ 
+     AcceptanceDecision::Accept
+ }
+ 
+ pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {
+-    let mut missing: Vec<_> = desired
+-        .iter()
+-        .filter(|runtime| !observed.contains(runtime))
+-        .cloned()
+-        .collect();
+-    missing.sort();
+-    missing.dedup();
+-    missing
++    vec![Default::default()] /* ~ changed by cargo-mutants ~ */
+ }
+ 
+ #[cfg(test)]
+ mod tests {
+     use super::*;
+ 
+     fn mission_id(value: &str) -> metao_contracts::MissionId {
+         metao_contracts::MissionId::new(value).unwrap()
+
+
+*** C:\\Users\\Igor\ B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe test --no-run --verbose --workspace
+warning: failed to save last-use data
+This may prevent cargo from accurately tracking what is being used in its global cache. This information is used for automatically removing unused data in the cache.
+
+attempt to write a readonly database
+
+Caused by:
+  Error code 8: attempt to write a readonly database
+       Fresh unicode-ident v1.0.24
+       Fresh proc-macro2 v1.0.107
+       Fresh memchr v2.8.3
+       Fresh itoa v1.0.18
+       Dirty metao-kernel v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\metao-kernel): the file `metao-kernel\src\lib.rs` has changed (13432348409.743565900s, 10s after last build at 13432348399.969749600s)
+   Compiling metao-kernel v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\metao-kernel)
+       Fresh quote v1.0.47
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_kernel --edition=2021 metao-kernel\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=8063af36809cfa34 -C extra-filename=-a40e2e7ebf26b89a --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rmeta`
+       Fresh syn v3.0.4
+       Fresh serde_core v1.0.229
+       Fresh zmij v1.0.23
+       Fresh metao-registry v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\metao-registry)
+       Fresh metao-contracts v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\metao-contracts)
+       Fresh serde_derive v1.0.229
+       Fresh serde_json v1.0.151
+       Fresh serde v1.0.229
+       Fresh metao-wire v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\metao-wire)
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_kernel --edition=2021 metao-kernel\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=3db362b8d7158fe1 -C extra-filename=-d9efad0534f7e869 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib`
+error[E0277]: the trait bound `RuntimeId: Default` is not satisfied
+  --> metao-kernel\src\lib.rs:46:10
+   |
+46 |     vec![Default::default()] /* ~ changed by cargo-mutants ~ */
+   |          ^^^^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `RuntimeId`
+
+For more information about this error, try `rustc --explain E0277`.
+error: could not compile `metao-kernel` (lib) due to 1 previous error
+
+Caused by:
+  process didn't exit successfully: `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_kernel --edition=2021 metao-kernel\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=8063af36809cfa34 -C extra-filename=-a40e2e7ebf26b89a --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rmeta` (exit code: 1)
+warning: build failed, waiting for other jobs to finish...
+error[E0277]: the trait bound `metao_contracts::RuntimeId: Default` is not satisfied
+  --> metao-kernel\src\lib.rs:46:10
+   |
+46 |     vec![Default::default()] /* ~ changed by cargo-mutants ~ */
+   |          ^^^^^^^^^^^^^^^^^^ the trait `Default` is not implemented for `metao_contracts::RuntimeId`
+
+error: could not compile `metao-kernel` (lib test) due to 1 previous error
+
+Caused by:
+  process didn't exit successfully: `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_kernel --edition=2021 metao-kernel\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=3db362b8d7158fe1 -C extra-filename=-d9efad0534f7e869 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-Vf012E.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib` (exit code: 1)
+
+*** result: Failure(101)

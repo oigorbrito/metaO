@@ -1,0 +1,39 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "MetaO.Reconcile/1.0.0": {
+        "dependencies": {
+          "MetaO.Contracts": "1.0.0"
+        },
+        "runtime": {
+          "MetaO.Reconcile.dll": {}
+        }
+      },
+      "MetaO.Contracts/1.0.0": {
+        "runtime": {
+          "MetaO.Contracts.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "MetaO.Reconcile/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "MetaO.Contracts/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    }
+  }
+}

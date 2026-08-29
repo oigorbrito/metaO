@@ -1,0 +1,12 @@
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\bin\Debug\net10.0\MetaO.Budget.deps.json
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\MetaO.Budget.GeneratedMSBuildEditorConfig.editorconfig
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\MetaO.Budget.AssemblyInfoInputs.cache
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\MetaO.Budget.AssemblyInfo.cs
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\bin\Debug\net10.0\MetaO.Budget.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\bin\Debug\net10.0\MetaO.Budget.pdb
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\MetaO.Budget.csproj.CoreCompileInputs.cache
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\MetaO.Budget.sourcelink.json
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\MetaO.Budget.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\refint\MetaO.Budget.dll
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\MetaO.Budget.pdb
+C:\Projetos\metao-gate\experiments\csharp-chassis-c\src\MetaO.Budget\obj\Debug\net10.0\ref\MetaO.Budget.dll
