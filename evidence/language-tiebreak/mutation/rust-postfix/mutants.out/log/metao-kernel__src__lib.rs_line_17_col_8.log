@@ -1,0 +1,180 @@
+
+*** metao-kernel/src/lib.rs:17:8: delete ! in evaluate_acceptance
+
+*** mutation diff:
+--- metao-kernel/src/lib.rs
++++ delete ! in evaluate_acceptance
+@@ -9,17 +9,17 @@
+     evidence: Option<&Evidence>,
+     policy: PolicyEffect,
+     now_epoch: i64,
+ ) -> AcceptanceDecision {
+     if matches!(policy, PolicyEffect::Deny) {
+         return AcceptanceDecision::Block;
+     }
+ 
+-    if !matches!(result.status, ExecutionStatus::Succeeded) {
++    if  /* ~ changed by cargo-mutants ~ */matches!(result.status, ExecutionStatus::Succeeded) {
+         return AcceptanceDecision::NotDone;
+     }
+ 
+     let Some(evidence) = evidence else {
+         return AcceptanceDecision::NotDone;
+     };
+ 
+     if !evidence.verified
+
+
+*** C:\\Users\\Igor\ B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe test --no-run --verbose --workspace
+   Compiling proc-macro2 v1.0.107
+       Fresh unicode-ident v1.0.24
+       Fresh memchr v2.8.3
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\build\proc-macro2-63f79d925bc13e28\build-script-build`
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling serde v1.0.229
+       Fresh itoa v1.0.18
+       Dirty metao-kernel v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-kernel): couldn't read metadata for file `target\debug\deps\libmetao_kernel-a40e2e7ebf26b89a.rlib`
+   Compiling metao-kernel v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-kernel)
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\build\serde_core-a9c94a87763300d1\build-script-build`
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\build\zmij-9a1e767e9238dcdb\build-script-build`
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\build\serde-da9697703d592838\build-script-build`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_kernel --edition=2021 metao-kernel\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=8063af36809cfa34 -C extra-filename=-a40e2e7ebf26b89a --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rmeta`
+       Fresh metao-registry v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-registry)
+   Compiling metao-contracts v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-contracts)
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_kernel --edition=2021 metao-kernel\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=3db362b8d7158fe1 -C extra-filename=-d9efad0534f7e869 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_contracts --edition=2021 metao-contracts\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=520783a7879c34f8 -C extra-filename=-8f25e6b6f266c18c --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name proc_macro2 --edition=2021 "C:\Users\Igor B\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\proc-macro2-1.0.107\src\lib.rs" --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"proc-macro\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"nightly\", \"proc-macro\", \"span-locations\"))" -C metadata=9e6bd0e57682c7b0 -C extra-filename=-0fb3d04074ee2eb9 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern unicode_ident=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libunicode_ident-d5d6c102c8b1605b.rmeta --cap-lints allow --cfg wrap_proc_macro --cfg proc_macro_span_location --cfg proc_macro_span_file --check-cfg cfg(fuzzing) --check-cfg cfg(no_is_available) --check-cfg cfg(no_literal_byte_character) --check-cfg cfg(no_literal_c_string) --check-cfg cfg(no_source_text) --check-cfg cfg(proc_macro_span) --check-cfg cfg(proc_macro_span_file) --check-cfg cfg(proc_macro_span_location) --check-cfg cfg(procmacro2_backtrace) --check-cfg cfg(procmacro2_build_probe) --check-cfg cfg(procmacro2_nightly_testing) --check-cfg cfg(procmacro2_semver_exempt) --check-cfg cfg(randomize_layout) --check-cfg cfg(span_locations) --check-cfg cfg(super_unstable) --check-cfg cfg(wrap_proc_macro)`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name serde_core --edition=2021 "C:\Users\Igor B\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_core-1.0.229\src\lib.rs" --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg "feature=\"result\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"rc\", \"result\", \"std\", \"unstable\"))" -C metadata=f4cf1929caf9b33f -C extra-filename=-cff848a14a6a8f25 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --cap-lints allow --check-cfg cfg(if_docsrs_then_no_serde_core) --check-cfg cfg(no_core_cstr) --check-cfg cfg(no_core_error) --check-cfg cfg(no_core_net) --check-cfg cfg(no_core_num_saturating) --check-cfg cfg(no_diagnostic_namespace) --check-cfg cfg(no_serde_derive) --check-cfg cfg(no_std_atomic) --check-cfg cfg(no_std_atomic64) --check-cfg cfg(no_target_has_atomic)`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name zmij --edition=2021 "C:\Users\Igor B\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\zmij-1.0.23\src\lib.rs" --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"no-panic\"))" -C metadata=bcf067471e9d6a32 -C extra-filename=-dbeba41857b3a4f8 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --cap-lints allow --check-cfg cfg(exhaustive) --check-cfg "cfg(opt_level, values(\"s\"))" --check-cfg cfg(zmij_no_select_unpredictable)`
+   Compiling metao-testkit v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-testkit)
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_testkit --edition=2021 metao-testkit\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=ac1feb24395f8bb5 -C extra-filename=-e2ed2f3d49ec8132 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rmeta --extern metao_kernel=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_kernel-a40e2e7ebf26b89a.rmeta --extern metao_registry=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_registry-643a34d702e3604c.rmeta`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name qualification --edition=2021 metao-testkit\tests\qualification.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=db513d631f70f5fe -C extra-filename=-e5efad604ea8365a --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib --extern metao_kernel=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_kernel-a40e2e7ebf26b89a.rlib --extern metao_registry=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_registry-643a34d702e3604c.rlib --extern metao_testkit=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_testkit-e2ed2f3d49ec8132.rlib`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_testkit --edition=2021 metao-testkit\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=0539eabef6058b53 -C extra-filename=-43eab5b3a6ecb238 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_contracts=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_contracts-2f46a9e12d2edc35.rlib --extern metao_kernel=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_kernel-a40e2e7ebf26b89a.rlib --extern metao_registry=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_registry-643a34d702e3604c.rlib`
+   Compiling quote v1.0.47
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name quote --edition=2021 "C:\Users\Igor B\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\quote-1.0.47\src\lib.rs" --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"proc-macro\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"proc-macro\"))" -C metadata=75ef177fd7e22f9a -C extra-filename=-ba301fa409bd70ca --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern proc_macro2=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libproc_macro2-0fb3d04074ee2eb9.rmeta --cap-lints allow --check-cfg cfg(no_diagnostic_namespace)`
+   Compiling syn v3.0.4
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name syn --edition=2021 "C:\Users\Igor B\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\syn-3.0.4\src\lib.rs" --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no --cfg "feature=\"clone-impls\"" --cfg "feature=\"derive\"" --cfg "feature=\"parsing\"" --cfg "feature=\"printing\"" --cfg "feature=\"proc-macro\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"clone-impls\", \"default\", \"derive\", \"extra-traits\", \"fold\", \"full\", \"parsing\", \"printing\", \"proc-macro\", \"test\", \"visit\", \"visit-mut\"))" -C metadata=d341769252d5eab2 -C extra-filename=-4af7bbd02e482c77 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern proc_macro2=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libproc_macro2-0fb3d04074ee2eb9.rmeta --extern quote=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libquote-ba301fa409bd70ca.rmeta --extern unicode_ident=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libunicode_ident-d5d6c102c8b1605b.rmeta --cap-lints allow`
+   Compiling serde_json v1.0.151
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name serde_json --edition=2021 "C:\Users\Igor B\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_json-1.0.151\src\lib.rs" --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg "feature=\"default\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"arbitrary_precision\", \"default\", \"float_roundtrip\", \"indexmap\", \"preserve_order\", \"raw_value\", \"std\", \"unbounded_depth\"))" -C metadata=c9c6b21b9aaabfd3 -C extra-filename=-7a69b8d7633dfb7a --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern itoa=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libitoa-870d67c3f75d08a9.rmeta --extern memchr=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmemchr-b97dc146a50c32ce.rmeta --extern serde_core=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde_core-cff848a14a6a8f25.rmeta --extern zmij=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libzmij-dbeba41857b3a4f8.rmeta --cap-lints allow --cfg "fast_arithmetic=\"64\"" --check-cfg "cfg(fast_arithmetic, values(\"32\", \"64\"))"`
+   Compiling serde_derive v1.0.229
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name serde_derive --edition=2021 "C:\Users\Igor B\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde_derive-1.0.229\src\lib.rs" --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type proc-macro --emit=dep-info,link -C prefer-dynamic -C embed-bitcode=no --cfg "feature=\"default\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"default\", \"deserialize_in_place\"))" -C metadata=0a6233e2cc8b10d6 -C extra-filename=-0b73cbbf1f3aa67c --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern proc_macro2=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libproc_macro2-0fb3d04074ee2eb9.rlib --extern quote=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libquote-ba301fa409bd70ca.rlib --extern syn=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libsyn-4af7bbd02e482c77.rlib --extern proc_macro --cap-lints allow`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name serde --edition=2021 "C:\Users\Igor B\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\serde-1.0.229\src\lib.rs" --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --cfg "feature=\"default\"" --cfg "feature=\"derive\"" --cfg "feature=\"serde_derive\"" --cfg "feature=\"std\"" --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values(\"alloc\", \"default\", \"derive\", \"rc\", \"serde_derive\", \"std\", \"unstable\"))" -C metadata=79dcd36bdeb067ff -C extra-filename=-9e1b7dd9725ff4da --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern serde_core=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde_core-cff848a14a6a8f25.rmeta --extern serde_derive=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\serde_derive-0b73cbbf1f3aa67c.dll --cap-lints allow --cfg if_docsrs_then_no_serde_core --check-cfg "cfg(feature, values(\"result\"))" --check-cfg cfg(if_docsrs_then_no_serde_core) --check-cfg cfg(no_core_cstr) --check-cfg cfg(no_core_error) --check-cfg cfg(no_core_net) --check-cfg cfg(no_core_num_saturating) --check-cfg cfg(no_diagnostic_namespace) --check-cfg cfg(no_serde_derive) --check-cfg cfg(no_std_atomic) --check-cfg cfg(no_std_atomic64) --check-cfg cfg(no_target_has_atomic)`
+   Compiling metao-wire v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-wire)
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_wire --edition=2021 metao-wire\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type lib --emit=dep-info,metadata,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=29553dc4f9255058 -C extra-filename=-3d79d230c42ad962 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern serde=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde-9e1b7dd9725ff4da.rmeta --extern serde_json=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde_json-7a69b8d7633dfb7a.rmeta`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_wire --edition=2021 metao-wire\src\lib.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=b9785d1dcf23e69a -C extra-filename=-524044db49b62174 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern serde=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde-9e1b7dd9725ff4da.rlib --extern serde_json=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde_json-7a69b8d7633dfb7a.rlib`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_wire_runtime --edition=2021 metao-wire\src\bin\metao-wire-runtime.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=f5141e0d2a1bd642 -C extra-filename=-c66be4dba49471ae --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_wire=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_wire-3d79d230c42ad962.rlib --extern serde=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde-9e1b7dd9725ff4da.rlib --extern serde_json=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde_json-7a69b8d7633dfb7a.rlib`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name out_of_process --edition=2021 metao-wire\tests\out_of_process.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --test --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=7d98e9cdfb1d9a84 -C extra-filename=-a42f1ab588f9896b --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_wire=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_wire-3d79d230c42ad962.rlib --extern serde=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde-9e1b7dd9725ff4da.rlib --extern serde_json=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde_json-7a69b8d7633dfb7a.rlib`
+     Running `C:\Users\Igor B\.rustup\toolchains\stable-x86_64-pc-windows-msvc\bin\rustc.exe --crate-name metao_wire_runtime --edition=2021 metao-wire\src\bin\metao-wire-runtime.rs --error-format=json --json=diagnostic-rendered-ansi,artifacts,future-incompat --crate-type bin --emit=dep-info,link -C embed-bitcode=no -C debuginfo=2 --check-cfg cfg(docsrs,test) --check-cfg "cfg(feature, values())" -C metadata=eafeab5bf3a567f1 --out-dir C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps -C incremental=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\incremental -L dependency=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps --extern metao_wire=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libmetao_wire-3d79d230c42ad962.rlib --extern serde=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde-9e1b7dd9725ff4da.rlib --extern serde_json=C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\libserde_json-7a69b8d7633dfb7a.rlib`
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 12.21s
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_contracts-8f25e6b6f266c18c.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_kernel-d9efad0534f7e869.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_registry-e77873071df07843.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_testkit-43eab5b3a6ecb238.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\qualification-e5efad604ea8365a.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_wire-524044db49b62174.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_wire_runtime-c66be4dba49471ae.exe`
+  Executable `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\out_of_process-a42f1ab588f9896b.exe`
+
+*** result: Success
+
+*** C:\\Users\\Igor\ B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe test --verbose --workspace
+       Fresh unicode-ident v1.0.24
+       Fresh itoa v1.0.18
+       Fresh proc-macro2 v1.0.107
+       Fresh memchr v2.8.3
+       Fresh quote v1.0.47
+       Fresh serde_core v1.0.229
+       Fresh zmij v1.0.23
+       Fresh metao-kernel v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-kernel)
+       Fresh syn v3.0.4
+       Fresh serde_json v1.0.151
+       Fresh metao-testkit v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-testkit)
+       Fresh metao-registry v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-registry)
+       Fresh metao-contracts v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-contracts)
+       Fresh serde_derive v1.0.229
+       Fresh serde v1.0.229
+       Fresh metao-wire v0.0.0 (C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\metao-wire)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_contracts-8f25e6b6f266c18c.exe`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_kernel-d9efad0534f7e869.exe`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_registry-e77873071df07843.exe`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\metao_testkit-43eab5b3a6ecb238.exe`
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running `C:\Users\IGORB~1\AppData\Local\Temp\cargo-mutants-rust-chassis-a-FsYB9I.tmp\target\debug\deps\qualification-e5efad604ea8365a.exe`
+
+running 11 tests
+test acceptance_hard_gates_match_python_baseline ... FAILED
+test adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... FAILED
+test invalid_identity_construction_is_rejected_by_public_api ... ok
+test failed_execution_never_accepts_and_panic_is_contained ... FAILED
+test duplicate_and_version_conflict_fail_deterministically ... ok
+test kernel_is_platform_framework_and_unsafe_free ... ok
+test reconciliation_is_idempotent_and_deterministic ... ok
+test exhaustive_small_reconcile_state_space_satisfies_laws ... ok
+test replays_python_golden_fixture_outcomes ... FAILED
+test unregister_reports_presence_and_removal ... ok
+test whole_orchestrator_replacement_changes_no_kernel_contract ... ok
+
+failures:
+
+---- acceptance_hard_gates_match_python_baseline stdout ----
+
+thread 'acceptance_hard_gates_match_python_baseline' (6112) panicked at metao-testkit\tests\qualification.rs:235:5:
+assertion `left == right` failed
+  left: NotDone
+ right: Accept
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+---- adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding stdout ----
+
+thread 'adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding' (12360) panicked at metao-testkit\tests\qualification.rs:321:21:
+assertion `left == right` failed
+  left: false
+ right: true
+
+---- failed_execution_never_accepts_and_panic_is_contained stdout ----
+
+thread 'failed_execution_never_accepts_and_panic_is_contained' (540) panicked at metao-testkit\tests\qualification.rs:338:5:
+assertion `left != right` failed
+  left: Accept
+ right: Accept
+
+---- replays_python_golden_fixture_outcomes stdout ----
+
+thread 'replays_python_golden_fixture_outcomes' (6984) panicked at metao-testkit\tests\qualification.rs:290:9:
+assertion `left == right` failed: golden case bound_verified_evidence executor_done=false drifted
+  left: NotDone
+ right: Accept
+
+
+failures:
+    acceptance_hard_gates_match_python_baseline
+    adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding
+    failed_execution_never_accepts_and_panic_is_contained
+    replays_python_golden_fixture_outcomes
+
+test result: FAILED. 7 passed; 4 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+error: test failed, to rerun pass `-p metao-testkit --test qualification`
+
+*** result: Failure(101)

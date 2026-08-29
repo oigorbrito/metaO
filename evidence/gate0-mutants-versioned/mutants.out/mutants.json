@@ -1,0 +1,642 @@
+[
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace evaluate_acceptance -> AcceptanceDecision with Default::default()\n@@ -5,46 +5,17 @@\n \n pub fn evaluate_acceptance(\n     request: &ExecutionRequest,\n     result: &ExecutionResult,\n     evidence: Option<&Evidence>,\n     policy: PolicyEffect,\n     now_epoch: i64,\n ) -> AcceptanceDecision {\n-    if matches!(policy, PolicyEffect::Deny) {\n-        return AcceptanceDecision::Block;\n-    }\n-\n-    if !matches!(result.status, ExecutionStatus::Succeeded) {\n-        return AcceptanceDecision::NotDone;\n-    }\n-\n-    let Some(evidence) = evidence else {\n-        return AcceptanceDecision::NotDone;\n-    };\n-\n-    if !evidence.verified\n-        || evidence.mission_id != request.mission_id\n-        || evidence.execution_id != request.execution_id\n-        || evidence.execution_id != result.execution_id\n-        || evidence.runtime_id != result.runtime_id\n-    {\n-        return AcceptanceDecision::Block;\n-    }\n-\n-    if now_epoch < evidence.created_at_epoch {\n-        return AcceptanceDecision::Block;\n-    }\n-\n-    if now_epoch > evidence.expires_at_epoch {\n-        return AcceptanceDecision::Stale;\n-    }\n-\n-    AcceptanceDecision::Accept\n+    Default::default() /* ~ changed by cargo-mutants ~ */\n }\n \n pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {\n     let mut missing: Vec<_> = desired\n         .iter()\n         .filter(|runtime| !observed.contains(runtime))\n         .cloned()\n         .collect();\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "metao-kernel/src/lib.rs:13:5: replace evaluate_acceptance -> AcceptanceDecision with Default::default()",
+    "package": "metao-kernel",
+    "replacement": "Default::default()",
+    "span": {
+      "end": {
+        "column": 31,
+        "line": 42
+      },
+      "start": {
+        "column": 5,
+        "line": 13
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ delete ! in evaluate_acceptance\n@@ -9,17 +9,17 @@\n     evidence: Option<&Evidence>,\n     policy: PolicyEffect,\n     now_epoch: i64,\n ) -> AcceptanceDecision {\n     if matches!(policy, PolicyEffect::Deny) {\n         return AcceptanceDecision::Block;\n     }\n \n-    if !matches!(result.status, ExecutionStatus::Succeeded) {\n+    if  /* ~ changed by cargo-mutants ~ */matches!(result.status, ExecutionStatus::Succeeded) {\n         return AcceptanceDecision::NotDone;\n     }\n \n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "UnaryOperator",
+    "name": "metao-kernel/src/lib.rs:17:8: delete ! in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 9,
+        "line": 17
+      },
+      "start": {
+        "column": 8,
+        "line": 17
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace || with && in evaluate_acceptance\n@@ -21,17 +21,17 @@\n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n         || evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n-        || evidence.runtime_id != result.runtime_id\n+        && /* ~ changed by cargo-mutants ~ */ evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n \n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:29:9: replace || with && in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "&&",
+    "span": {
+      "end": {
+        "column": 11,
+        "line": 29
+      },
+      "start": {
+        "column": 9,
+        "line": 29
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace || with && in evaluate_acceptance\n@@ -20,17 +20,17 @@\n \n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n         || evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n-        || evidence.execution_id != result.execution_id\n+        && /* ~ changed by cargo-mutants ~ */ evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:28:9: replace || with && in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "&&",
+    "span": {
+      "end": {
+        "column": 11,
+        "line": 28
+      },
+      "start": {
+        "column": 9,
+        "line": 28
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace || with && in evaluate_acceptance\n@@ -19,17 +19,17 @@\n     }\n \n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n         || evidence.mission_id != request.mission_id\n-        || evidence.execution_id != request.execution_id\n+        && /* ~ changed by cargo-mutants ~ */ evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:27:9: replace || with && in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "&&",
+    "span": {
+      "end": {
+        "column": 11,
+        "line": 27
+      },
+      "start": {
+        "column": 9,
+        "line": 27
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace || with && in evaluate_acceptance\n@@ -18,17 +18,17 @@\n         return AcceptanceDecision::NotDone;\n     }\n \n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n-        || evidence.mission_id != request.mission_id\n+        && /* ~ changed by cargo-mutants ~ */ evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:26:9: replace || with && in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "&&",
+    "span": {
+      "end": {
+        "column": 11,
+        "line": 26
+      },
+      "start": {
+        "column": 9,
+        "line": 26
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ delete ! in evaluate_acceptance\n@@ -17,17 +17,17 @@\n     if !matches!(result.status, ExecutionStatus::Succeeded) {\n         return AcceptanceDecision::NotDone;\n     }\n \n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n-    if !evidence.verified\n+    if  /* ~ changed by cargo-mutants ~ */evidence.verified\n         || evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "UnaryOperator",
+    "name": "metao-kernel/src/lib.rs:25:8: delete ! in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 9,
+        "line": 25
+      },
+      "start": {
+        "column": 8,
+        "line": 25
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace != with == in evaluate_acceptance\n@@ -18,17 +18,17 @@\n         return AcceptanceDecision::NotDone;\n     }\n \n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n-        || evidence.mission_id != request.mission_id\n+        || evidence.mission_id == /* ~ changed by cargo-mutants ~ */ request.mission_id\n         || evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:26:32: replace != with == in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 34,
+        "line": 26
+      },
+      "start": {
+        "column": 32,
+        "line": 26
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace != with == in evaluate_acceptance\n@@ -19,17 +19,17 @@\n     }\n \n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n         || evidence.mission_id != request.mission_id\n-        || evidence.execution_id != request.execution_id\n+        || evidence.execution_id == /* ~ changed by cargo-mutants ~ */ request.execution_id\n         || evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:27:34: replace != with == in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 36,
+        "line": 27
+      },
+      "start": {
+        "column": 34,
+        "line": 27
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace != with == in evaluate_acceptance\n@@ -20,17 +20,17 @@\n \n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n         || evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n-        || evidence.execution_id != result.execution_id\n+        || evidence.execution_id == /* ~ changed by cargo-mutants ~ */ result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:28:34: replace != with == in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 36,
+        "line": 28
+      },
+      "start": {
+        "column": 34,
+        "line": 28
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace != with == in evaluate_acceptance\n@@ -21,17 +21,17 @@\n     let Some(evidence) = evidence else {\n         return AcceptanceDecision::NotDone;\n     };\n \n     if !evidence.verified\n         || evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n-        || evidence.runtime_id != result.runtime_id\n+        || evidence.runtime_id == /* ~ changed by cargo-mutants ~ */ result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n \n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:29:32: replace != with == in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 34,
+        "line": 29
+      },
+      "start": {
+        "column": 32,
+        "line": 29
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace < with == in evaluate_acceptance\n@@ -26,17 +26,17 @@\n         || evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n-    if now_epoch < evidence.created_at_epoch {\n+    if now_epoch == /* ~ changed by cargo-mutants ~ */ evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch > evidence.expires_at_epoch {\n         return AcceptanceDecision::Stale;\n     }\n \n     AcceptanceDecision::Accept\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:34:18: replace < with == in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 34
+      },
+      "start": {
+        "column": 18,
+        "line": 34
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace < with > in evaluate_acceptance\n@@ -26,17 +26,17 @@\n         || evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n-    if now_epoch < evidence.created_at_epoch {\n+    if now_epoch > /* ~ changed by cargo-mutants ~ */ evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch > evidence.expires_at_epoch {\n         return AcceptanceDecision::Stale;\n     }\n \n     AcceptanceDecision::Accept\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:34:18: replace < with > in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": ">",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 34
+      },
+      "start": {
+        "column": 18,
+        "line": 34
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace < with <= in evaluate_acceptance\n@@ -26,17 +26,17 @@\n         || evidence.mission_id != request.mission_id\n         || evidence.execution_id != request.execution_id\n         || evidence.execution_id != result.execution_id\n         || evidence.runtime_id != result.runtime_id\n     {\n         return AcceptanceDecision::Block;\n     }\n \n-    if now_epoch < evidence.created_at_epoch {\n+    if now_epoch <= /* ~ changed by cargo-mutants ~ */ evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch > evidence.expires_at_epoch {\n         return AcceptanceDecision::Stale;\n     }\n \n     AcceptanceDecision::Accept\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:34:18: replace < with <= in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "<=",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 34
+      },
+      "start": {
+        "column": 18,
+        "line": 34
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace > with == in evaluate_acceptance\n@@ -30,17 +30,17 @@\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n \n-    if now_epoch > evidence.expires_at_epoch {\n+    if now_epoch == /* ~ changed by cargo-mutants ~ */ evidence.expires_at_epoch {\n         return AcceptanceDecision::Stale;\n     }\n \n     AcceptanceDecision::Accept\n }\n \n pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {\n     let mut missing: Vec<_> = desired\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:38:18: replace > with == in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "==",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 38
+      },
+      "start": {
+        "column": 18,
+        "line": 38
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace > with < in evaluate_acceptance\n@@ -30,17 +30,17 @@\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n \n-    if now_epoch > evidence.expires_at_epoch {\n+    if now_epoch < /* ~ changed by cargo-mutants ~ */ evidence.expires_at_epoch {\n         return AcceptanceDecision::Stale;\n     }\n \n     AcceptanceDecision::Accept\n }\n \n pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {\n     let mut missing: Vec<_> = desired\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:38:18: replace > with < in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": "<",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 38
+      },
+      "start": {
+        "column": 18,
+        "line": 38
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace > with >= in evaluate_acceptance\n@@ -30,17 +30,17 @@\n     {\n         return AcceptanceDecision::Block;\n     }\n \n     if now_epoch < evidence.created_at_epoch {\n         return AcceptanceDecision::Block;\n     }\n \n-    if now_epoch > evidence.expires_at_epoch {\n+    if now_epoch >= /* ~ changed by cargo-mutants ~ */ evidence.expires_at_epoch {\n         return AcceptanceDecision::Stale;\n     }\n \n     AcceptanceDecision::Accept\n }\n \n pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {\n     let mut missing: Vec<_> = desired\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "evaluate_acceptance",
+      "return_type": "-> AcceptanceDecision",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 43
+        },
+        "start": {
+          "column": 1,
+          "line": 6
+        }
+      }
+    },
+    "genre": "BinaryOperator",
+    "name": "metao-kernel/src/lib.rs:38:18: replace > with >= in evaluate_acceptance",
+    "package": "metao-kernel",
+    "replacement": ">=",
+    "span": {
+      "end": {
+        "column": 19,
+        "line": 38
+      },
+      "start": {
+        "column": 18,
+        "line": 38
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace reconcile_missing -> Vec<RuntimeId> with vec![]\n@@ -38,24 +38,17 @@\n     if now_epoch > evidence.expires_at_epoch {\n         return AcceptanceDecision::Stale;\n     }\n \n     AcceptanceDecision::Accept\n }\n \n pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {\n-    let mut missing: Vec<_> = desired\n-        .iter()\n-        .filter(|runtime| !observed.contains(runtime))\n-        .cloned()\n-        .collect();\n-    missing.sort();\n-    missing.dedup();\n-    missing\n+    vec![] /* ~ changed by cargo-mutants ~ */\n }\n \n #[cfg(test)]\n mod tests {\n     use super::*;\n \n     fn mission_id(value: &str) -> metao_contracts::MissionId {\n         metao_contracts::MissionId::new(value).unwrap()\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "reconcile_missing",
+      "return_type": "-> Vec<RuntimeId>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 54
+        },
+        "start": {
+          "column": 1,
+          "line": 45
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "metao-kernel/src/lib.rs:46:5: replace reconcile_missing -> Vec<RuntimeId> with vec![]",
+    "package": "metao-kernel",
+    "replacement": "vec![]",
+    "span": {
+      "end": {
+        "column": 12,
+        "line": 53
+      },
+      "start": {
+        "column": 5,
+        "line": 46
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ replace reconcile_missing -> Vec<RuntimeId> with vec![Default::default()]\n@@ -38,24 +38,17 @@\n     if now_epoch > evidence.expires_at_epoch {\n         return AcceptanceDecision::Stale;\n     }\n \n     AcceptanceDecision::Accept\n }\n \n pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {\n-    let mut missing: Vec<_> = desired\n-        .iter()\n-        .filter(|runtime| !observed.contains(runtime))\n-        .cloned()\n-        .collect();\n-    missing.sort();\n-    missing.dedup();\n-    missing\n+    vec![Default::default()] /* ~ changed by cargo-mutants ~ */\n }\n \n #[cfg(test)]\n mod tests {\n     use super::*;\n \n     fn mission_id(value: &str) -> metao_contracts::MissionId {\n         metao_contracts::MissionId::new(value).unwrap()\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "reconcile_missing",
+      "return_type": "-> Vec<RuntimeId>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 54
+        },
+        "start": {
+          "column": 1,
+          "line": 45
+        }
+      }
+    },
+    "genre": "FnValue",
+    "name": "metao-kernel/src/lib.rs:46:5: replace reconcile_missing -> Vec<RuntimeId> with vec![Default::default()]",
+    "package": "metao-kernel",
+    "replacement": "vec![Default::default()]",
+    "span": {
+      "end": {
+        "column": 12,
+        "line": 53
+      },
+      "start": {
+        "column": 5,
+        "line": 46
+      }
+    }
+  },
+  {
+    "diff": "--- metao-kernel/src/lib.rs\n+++ delete ! in reconcile_missing\n@@ -40,17 +40,17 @@\n     }\n \n     AcceptanceDecision::Accept\n }\n \n pub fn reconcile_missing(desired: &[RuntimeId], observed: &[RuntimeId]) -> Vec<RuntimeId> {\n     let mut missing: Vec<_> = desired\n         .iter()\n-        .filter(|runtime| !observed.contains(runtime))\n+        .filter(|runtime|  /* ~ changed by cargo-mutants ~ */observed.contains(runtime))\n         .cloned()\n         .collect();\n     missing.sort();\n     missing.dedup();\n     missing\n }\n \n #[cfg(test)]\n",
+    "file": "metao-kernel/src/lib.rs",
+    "function": {
+      "function_name": "reconcile_missing",
+      "return_type": "-> Vec<RuntimeId>",
+      "span": {
+        "end": {
+          "column": 2,
+          "line": 54
+        },
+        "start": {
+          "column": 1,
+          "line": 45
+        }
+      }
+    },
+    "genre": "UnaryOperator",
+    "name": "metao-kernel/src/lib.rs:48:27: delete ! in reconcile_missing",
+    "package": "metao-kernel",
+    "replacement": "",
+    "span": {
+      "end": {
+        "column": 28,
+        "line": 48
+      },
+      "start": {
+        "column": 27,
+        "line": 48
+      }
+    }
+  }
+]

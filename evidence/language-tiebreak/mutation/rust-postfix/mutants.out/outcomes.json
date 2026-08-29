@@ -1,0 +1,1695 @@
+{
+  "outcomes": [
+    {
+      "scenario": "Baseline",
+      "summary": "Success",
+      "log_path": "log/baseline.log",
+      "diff_path": null,
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.1269878,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--package=metao-kernel@0.0.0",
+            "--package=metao-registry@0.0.0"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.3699873,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--package=metao-kernel@0.0.0",
+            "--package=metao-registry@0.0.0"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:13:5: replace evaluate_acceptance -> AcceptanceDecision with Default::default()",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 13,
+              "column": 5
+            },
+            "end": {
+              "line": 38,
+              "column": 31
+            }
+          },
+          "replacement": "Default::default()",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/metao-kernel__src__lib.rs_line_13_col_5.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_13_col_5.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.1022205,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:17:8: delete ! in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 17,
+              "column": 8
+            },
+            "end": {
+              "line": 17,
+              "column": 9
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_17_col_8.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_17_col_8.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 12.3055794,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.3743976,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:29:9: replace || with && in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 29,
+              "column": 9
+            },
+            "end": {
+              "line": 29,
+              "column": 11
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_29_col_9.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_29_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.4249713,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.8706488000000001,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:28:9: replace || with && in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 28,
+              "column": 9
+            },
+            "end": {
+              "line": 28,
+              "column": 11
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_28_col_9.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_28_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.4218599,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 4.7457315,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:27:9: replace || with && in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 27,
+              "column": 9
+            },
+            "end": {
+              "line": 27,
+              "column": 11
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_27_col_9.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_27_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.6197919,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.9326647000000001,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:26:9: replace || with && in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 26,
+              "column": 9
+            },
+            "end": {
+              "line": 26,
+              "column": 11
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_26_col_9.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_26_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.8015001000000002,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.8306087,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:25:8: delete ! in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 25,
+              "column": 8
+            },
+            "end": {
+              "line": 25,
+              "column": 9
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_25_col_8.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_25_col_8.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.4152589,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.7677638,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:26:32: replace != with == in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 26,
+              "column": 32
+            },
+            "end": {
+              "line": 26,
+              "column": 34
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_26_col_32.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_26_col_32.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.5150137,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.8761273,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:27:34: replace != with == in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 27,
+              "column": 34
+            },
+            "end": {
+              "line": 27,
+              "column": 36
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_27_col_34.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_27_col_34.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.2037547,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.1637509,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:28:34: replace != with == in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 28,
+              "column": 34
+            },
+            "end": {
+              "line": 28,
+              "column": 36
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_28_col_34.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_28_col_34.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.5934168,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.2712407,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:29:32: replace != with == in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 29,
+              "column": 32
+            },
+            "end": {
+              "line": 29,
+              "column": 34
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_29_col_32.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_29_col_32.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.3435081,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.2765995,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:34:46: replace || with && in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 34,
+              "column": 46
+            },
+            "end": {
+              "line": 34,
+              "column": 48
+            }
+          },
+          "replacement": "&&",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_34_col_46.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_34_col_46.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.4468303000000002,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.2696233,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:34:18: replace < with == in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 34,
+              "column": 18
+            },
+            "end": {
+              "line": 34,
+              "column": 19
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_34_col_18.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_34_col_18.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.4295512,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.6365965,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:34:18: replace < with > in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 34,
+              "column": 18
+            },
+            "end": {
+              "line": 34,
+              "column": 19
+            }
+          },
+          "replacement": ">",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_34_col_18_001.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_34_col_18_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.52151,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.2794561,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:34:18: replace < with <= in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 34,
+              "column": 18
+            },
+            "end": {
+              "line": 34,
+              "column": 19
+            }
+          },
+          "replacement": "<=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_34_col_18_002.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_34_col_18_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.098578,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.4916479000000002,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:34:59: replace > with == in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 34,
+              "column": 59
+            },
+            "end": {
+              "line": 34,
+              "column": 60
+            }
+          },
+          "replacement": "==",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_34_col_59.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_34_col_59.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.8187271,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.0551682,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:34:59: replace > with < in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 34,
+              "column": 59
+            },
+            "end": {
+              "line": 34,
+              "column": 60
+            }
+          },
+          "replacement": "<",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_34_col_59_001.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_34_col_59_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.3174588,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.1201470000000002,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:34:59: replace > with >= in evaluate_acceptance",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "evaluate_acceptance",
+            "return_type": "-> AcceptanceDecision",
+            "span": {
+              "start": {
+                "line": 6,
+                "column": 1
+              },
+              "end": {
+                "line": 39,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 34,
+              "column": 59
+            },
+            "end": {
+              "line": 34,
+              "column": 60
+            }
+          },
+          "replacement": ">=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "MissedMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_34_col_59_002.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_34_col_59_002.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.8956300000000001,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 3.3015518999999998,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:42:5: replace reconcile_missing -> Vec<RuntimeId> with vec![]",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "reconcile_missing",
+            "return_type": "-> Vec<RuntimeId>",
+            "span": {
+              "start": {
+                "line": 41,
+                "column": 1
+              },
+              "end": {
+                "line": 50,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 42,
+              "column": 5
+            },
+            "end": {
+              "line": 49,
+              "column": 12
+            }
+          },
+          "replacement": "vec![]",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_42_col_5.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_42_col_5.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.6385838000000001,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.9369576,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:42:5: replace reconcile_missing -> Vec<RuntimeId> with vec![Default::default()]",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "reconcile_missing",
+            "return_type": "-> Vec<RuntimeId>",
+            "span": {
+              "start": {
+                "line": 41,
+                "column": 1
+              },
+              "end": {
+                "line": 50,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 42,
+              "column": 5
+            },
+            "end": {
+              "line": 49,
+              "column": 12
+            }
+          },
+          "replacement": "vec![Default::default()]",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/metao-kernel__src__lib.rs_line_42_col_5_001.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_42_col_5_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.3631804,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-kernel/src/lib.rs:44:27: delete ! in reconcile_missing",
+          "package": "metao-kernel",
+          "file": "metao-kernel/src/lib.rs",
+          "function": {
+            "function_name": "reconcile_missing",
+            "return_type": "-> Vec<RuntimeId>",
+            "span": {
+              "start": {
+                "line": 41,
+                "column": 1
+              },
+              "end": {
+                "line": 50,
+                "column": 2
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 44,
+              "column": 27
+            },
+            "end": {
+              "line": 44,
+              "column": 28
+            }
+          },
+          "replacement": "",
+          "genre": "UnaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-kernel__src__lib.rs_line_44_col_27.log",
+      "diff_path": "diff/metao-kernel__src__lib.rs_line_44_col_27.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.7337658,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.7168391,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:30:9: replace Registry::register -> Result<(), RegistryError> with Ok(())",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::register",
+            "return_type": "-> Result<(), RegistryError>",
+            "span": {
+              "start": {
+                "line": 29,
+                "column": 5
+              },
+              "end": {
+                "line": 45,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 30,
+              "column": 9
+            },
+            "end": {
+              "line": 44,
+              "column": 15
+            }
+          },
+          "replacement": "Ok(())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-registry__src__lib.rs_line_30_col_9.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_30_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.4196554,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.2721501,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:33:33: replace == with != in Registry::register",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::register",
+            "return_type": "-> Result<(), RegistryError>",
+            "span": {
+              "start": {
+                "line": 29,
+                "column": 5
+              },
+              "end": {
+                "line": 45,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 33,
+              "column": 33
+            },
+            "end": {
+              "line": 33,
+              "column": 35
+            }
+          },
+          "replacement": "!=",
+          "genre": "BinaryOperator"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-registry__src__lib.rs_line_33_col_33.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_33_col_33.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 1.5692955,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.8354671,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:48:9: replace Registry::unregister -> bool with true",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::unregister",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 47,
+                "column": 5
+              },
+              "end": {
+                "line": 49,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 48,
+              "column": 9
+            },
+            "end": {
+              "line": 48,
+              "column": 43
+            }
+          },
+          "replacement": "true",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-registry__src__lib.rs_line_48_col_9.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_48_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.0960335,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 1.991676,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:48:9: replace Registry::unregister -> bool with false",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::unregister",
+            "return_type": "-> bool",
+            "span": {
+              "start": {
+                "line": 47,
+                "column": 5
+              },
+              "end": {
+                "line": 49,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 48,
+              "column": 9
+            },
+            "end": {
+              "line": 48,
+              "column": 43
+            }
+          },
+          "replacement": "false",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "CaughtMutant",
+      "log_path": "log/metao-registry__src__lib.rs_line_48_col_9_001.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_48_col_9_001.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 2.217674,
+          "process_status": "Success",
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        },
+        {
+          "phase": "Test",
+          "duration": 2.345006,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    },
+    {
+      "scenario": {
+        "Mutant": {
+          "name": "metao-registry/src/lib.rs:56:9: replace Registry::execute_contained -> Result<ExecutionResult, RegistryError> with Ok(Default::default())",
+          "package": "metao-registry",
+          "file": "metao-registry/src/lib.rs",
+          "function": {
+            "function_name": "Registry::execute_contained",
+            "return_type": "-> Result<ExecutionResult, RegistryError>",
+            "span": {
+              "start": {
+                "line": 51,
+                "column": 5
+              },
+              "end": {
+                "line": 63,
+                "column": 6
+              }
+            }
+          },
+          "span": {
+            "start": {
+              "line": 56,
+              "column": 9
+            },
+            "end": {
+              "line": 62,
+              "column": 10
+            }
+          },
+          "replacement": "Ok(Default::default())",
+          "genre": "FnValue"
+        }
+      },
+      "summary": "Unviable",
+      "log_path": "log/metao-registry__src__lib.rs_line_56_col_9.log",
+      "diff_path": "diff/metao-registry__src__lib.rs_line_56_col_9.diff",
+      "phase_results": [
+        {
+          "phase": "Build",
+          "duration": 0.7711602,
+          "process_status": {
+            "Failure": 101
+          },
+          "argv": [
+            "C:\\Users\\Igor B\\.rustup\\toolchains\\stable-x86_64-pc-windows-msvc\\bin\\cargo.exe",
+            "test",
+            "--no-run",
+            "--verbose",
+            "--workspace"
+          ]
+        }
+      ]
+    }
+  ],
+  "total_mutants": 26,
+  "missed": 4,
+  "caught": 19,
+  "timeout": 0,
+  "unviable": 3,
+  "success": 0,
+  "start_time": "2026-08-27T21:08:41.1094158Z",
+  "end_time": "2026-08-27T21:10:36.4010114Z",
+  "cargo_mutants_version": "27.1.0"
+}

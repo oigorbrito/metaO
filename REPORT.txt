@@ -1,0 +1,121 @@
+SMAG_BASELINE_SHA = 548a2ce85acb2aeb0e2d64a0fd03cfd839763ad8
+SMAG_CURRENT_MAIN_VERIFIED = YES
+SMAG_NEW_CAPABILITIES =
+* governance/control-plane semantics (CURRENT_MAIN_PROVEN)
+* operator CLI (CURRENT_MAIN_PROVEN)
+* package/install/local execution (CURRENT_MAIN_PROVEN)
+* OpenCode runtime integration (CURRENT_MAIN_PROVEN)
+* risk/budget governance (CURRENT_MAIN_PROVEN)
+* failure/recovery/retry (CURRENT_MAIN_PROVEN)
+* execution-stage evidence/reporting (CURRENT_MAIN_PROVEN)
+* engineering harness (CURRENT_MAIN_PROVEN)
+* engineering workload/runtime integration (CURRENT_MAIN_PROVEN)
+* runtime/provider routing (CURRENT_MAIN_PROVEN)
+* checkpoint/resume (CURRENT_MAIN_PROVEN)
+* approval ledger (CURRENT_MAIN_PROVEN)
+* HTTP/service API (CURRENT_MAIN_PROVEN)
+* observability/OTLP/exporters (CURRENT_MAIN_PROVEN)
+* .NET/client surface (CURRENT_MAIN_PROVEN)
+* security/isolation (CURRENT_MAIN_PARTIAL)
+* evidence discipline (CURRENT_MAIN_PROVEN)
+* operational documentation (CURRENT_MAIN_PROVEN)
+
+SMAG_HISTORICAL_ONLY_CAPABILITIES = NONE
+
+ISSUE_140_DISPOSITION =
+ISSUE = 140
+OLD_SMAG_DONOR_ASSUMPTION = Prototype or missing budget enforcement.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = risk-governance.test.js, budget-governance.test.js
+METAO_CURRENT_EQUIVALENT = metaO Rust Kernel budget_authority
+UNIQUE_METAO_GAP = Control-plane enforcement across orchestrators
+FIT = REFERENCE_ONLY
+
+ISSUE_141_DISPOSITION =
+ISSUE = 141
+OLD_SMAG_DONOR_ASSUMPTION = Basic retry limits.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = recovery-governance.test.js, retry-governance.test.js
+METAO_CURRENT_EQUIVALENT = metaO recovery regression specs
+UNIQUE_METAO_GAP = Cross-orchestrator failover causality
+FIT = REFERENCE_ONLY
+
+ISSUE_142_DISPOSITION =
+ISSUE = 142
+OLD_SMAG_DONOR_ASSUMPTION = Informal logging.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = execution-report.test.js, execution-telemetry.test.js
+METAO_CURRENT_EQUIVALENT = metaO evidence binding and terminal proof
+UNIQUE_METAO_GAP = Authoritative orchestrator-agnostic evidence schema
+FIT = REFERENCE_ONLY
+
+ISSUE_143_DISPOSITION =
+ISSUE = 143
+OLD_SMAG_DONOR_ASSUMPTION = None.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = smag-engineering-harness.test.js, harness.js
+METAO_CURRENT_EQUIVALENT = metaO generic project context
+UNIQUE_METAO_GAP = Integration of an engineering context builder
+FIT = ADOPT_SEMANTICS
+
+ISSUE_144_DISPOSITION =
+ISSUE = 144
+OLD_SMAG_DONOR_ASSUMPTION = Theoretical integration.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = open-multi-agent-runtime-adapter.test.js
+METAO_CURRENT_EQUIVALENT = metaO adapters
+UNIQUE_METAO_GAP = MetaO adapter implementation for SMAG as workload plugin
+FIT = ADAPT
+
+ISSUE_145_DISPOSITION =
+ISSUE = 145
+OLD_SMAG_DONOR_ASSUMPTION = Manual testing.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = open-multi-agent-runtime-adapter.test.js
+METAO_CURRENT_EQUIVALENT = metaO runtime conformance suite
+UNIQUE_METAO_GAP = Test SMAG within metaO\'s conformance harness
+FIT = TEST_DONOR
+
+ISSUE_146_DISPOSITION =
+ISSUE = 146
+OLD_SMAG_DONOR_ASSUMPTION = In-memory state only.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = checkpoint-resume.test.js, checkpoint-lifecycle.test.js
+METAO_CURRENT_EQUIVALENT = metaO durable execution orchestrator state
+UNIQUE_METAO_GAP = Orchestrator-agnostic durable checkpoint semantics
+FIT = REFERENCE_ONLY
+
+ISSUE_147_DISPOSITION =
+ISSUE = 147
+OLD_SMAG_DONOR_ASSUMPTION = Minimal CLI scripts.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = smag-http-service.test.js, otlp-http-log-exporter.test.js
+METAO_CURRENT_EQUIVALENT = metaO CLI and Rust operational service
+UNIQUE_METAO_GAP = MetaO control plane telemetry and configuration
+FIT = REFERENCE_ONLY
+
+ISSUE_148_DISPOSITION =
+ISSUE = 148
+OLD_SMAG_DONOR_ASSUMPTION = Cost facts lacking.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PROVEN
+CURRENT_SMAG_EVIDENCE = cost-aware-multi-provider-routing.test.js
+METAO_CURRENT_EQUIVALENT = None
+UNIQUE_METAO_GAP = None (metaO delegates provider routing to orchestrators)
+FIT = REJECT
+
+ISSUE_149_DISPOSITION =
+ISSUE = 149
+OLD_SMAG_DONOR_ASSUMPTION = Simple boundary.
+CURRENT_SMAG_CAPABILITY = CURRENT_MAIN_PARTIAL
+CURRENT_SMAG_EVIDENCE = smag-git-boundary.test.js
+METAO_CURRENT_EQUIVALENT = metaO authority boundary invariants
+UNIQUE_METAO_GAP = Orchestrator security capability mapping
+FIT = REFERENCE_ONLY
+
+SMAG_DERIVED_ACTIVE_METAO_GAPS =
+#143: Engineering context handoff semantics.
+#144: MetaO adapter for SMAG integration.
+#145: SMAG evaluation via metaO conformance harness.
+
+SMAG_DERIVED_SAFE_CLOSURES =
+#148: Provider routing is out of scope for metaO core (violates abstraction boundary).

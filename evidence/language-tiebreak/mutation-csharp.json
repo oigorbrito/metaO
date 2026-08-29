@@ -1,0 +1,20 @@
+{
+  "tool": "dotnet-stryker",
+  "version": "4.16.0",
+  "status": "BLOCKED",
+  "reason": "Stryker accepted the minimal xUnit harness only after switching to a classic .sln, then failed the initial build because restore attempted to reach nuget.org and returned NU1301 in the offline environment.",
+  "attempted_infrastructure": [
+    "Custom console harness",
+    "Minimal xUnit harness in evidence/language-tiebreak/csharp-mutation-harness",
+    "Classic .sln created from the harness project"
+  ],
+  "generated": 0,
+  "viable": 0,
+  "killed": 0,
+  "survived": 0,
+  "timeout": 0,
+  "compile_error": 0,
+  "mutation_score": null,
+  "hard_gate_survivors": [],
+  "comparable_families": {}
+}

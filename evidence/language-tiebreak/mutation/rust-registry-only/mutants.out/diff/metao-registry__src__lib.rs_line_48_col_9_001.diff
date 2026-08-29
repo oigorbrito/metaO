@@ -1,0 +1,21 @@
+--- metao-registry/src/lib.rs
++++ replace Registry::unregister -> bool with false
+@@ -40,17 +40,17 @@
+             });
+         }
+         self.runtimes
+             .insert(id, RegisteredRuntime { version, runtime });
+         Ok(())
+     }
+ 
+     pub fn unregister(&mut self, id: &RuntimeId) -> bool {
+-        self.runtimes.remove(id).is_some()
++        false /* ~ changed by cargo-mutants ~ */
+     }
+ 
+     pub fn execute_contained(
+         &self,
+         id: &RuntimeId,
+         request: &ExecutionRequest,
+     ) -> Result<ExecutionResult, RegistryError> {
+         let Some(registered) = self.runtimes.get(id) else {

@@ -130,12 +130,24 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
     }
 
 
+FACTORY_ENV_VAR = "METAO_OPERATOR_FACTORY"
+
+def resolve_factory_spec(explicit_spec: str | None) -> str:
+    """Resolve canonical factory specification."""
+    if explicit_spec:
+        return explicit_spec
+    env_spec = __import__("os").environ.get(FACTORY_ENV_VAR)
+    if env_spec:
+        return env_spec
+    raise CLIInputError(f"Operator factory not configured. Provide --factory or set {FACTORY_ENV_VAR} environment variable.")
+
 def _load_operator(
-    factory_spec: str,
+    factory_spec: str | None,
     store: SQLiteMissionStore,
     ledger: SQLiteEventLedger | None = None,
     execution_handles: SQLiteExecutionHandleStore | None = None,
 ) -> MissionOperator | ObservableMissionOperator:
+    factory_spec = resolve_factory_spec(factory_spec)
     if ":" not in factory_spec:
         raise CLIInputError("factory must use module:function syntax")
     module_name, attribute = factory_spec.split(":", 1)
@@ -305,9 +317,12 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--db", default=DEFAULT_DB, help=f"SQLite mission database (default: {DEFAULT_DB})")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    doctor_parser = sub.add_parser("doctor", help="diagnose operator environment and factory readiness")
+    doctor_parser.add_argument("--factory", required=False, help="configured operator factory module:function")
+
     run_parser = sub.add_parser("run", help="run a mission JSON specification")
     run_parser.add_argument("mission_file")
-    run_parser.add_argument("--factory", required=True, help="configured operator factory module:function")
+    run_parser.add_argument("--factory", required=False, help="configured operator factory module:function")
 
     status_parser = sub.add_parser("status", help="show mission status")
     status_parser.add_argument("mission_id")
@@ -325,17 +340,17 @@ def _parser() -> argparse.ArgumentParser:
     approve_parser.add_argument("mission_id")
     approve_parser.add_argument("--approver", required=True)
     approve_parser.add_argument("--deny", action="store_true")
-    approve_parser.add_argument("--factory", required=True, help="configured operator factory module:function")
+    approve_parser.add_argument("--factory", required=False, help="configured operator factory module:function")
     approve_parser.add_argument("--now-epoch", type=float, default=0.0)
 
     resume_parser = sub.add_parser("resume", help="resume an approved waiting mission")
     resume_parser.add_argument("mission_id")
-    resume_parser.add_argument("--factory", required=True, help="configured operator factory module:function")
+    resume_parser.add_argument("--factory", required=False, help="configured operator factory module:function")
     resume_parser.add_argument("--now-epoch", type=float, default=0.0)
 
     cancel_parser = sub.add_parser("cancel", help="request cancellation of a running or waiting mission")
     cancel_parser.add_argument("mission_id")
-    cancel_parser.add_argument("--factory", required=True, help="configured operator factory module:function")
+    cancel_parser.add_argument("--factory", required=False, help="configured operator factory module:function")
     cancel_parser.add_argument("--now-epoch", type=float, default=0.0)
     return parser
 
@@ -349,6 +364,11 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
         store = SQLiteMissionStore(args.db)
         ledger = SQLiteEventLedger(args.db)
         handles = SQLiteExecutionHandleStore(args.db)
+        if args.command == "doctor":
+            from .doctor import run_doctor
+            result = run_doctor(args.db, args.factory)
+            _write_json(result, out)
+            return 0
         if args.command == "run":
             operator = _load_operator(args.factory, store, ledger, handles)
             spec = _load_run_spec(args.mission_file)

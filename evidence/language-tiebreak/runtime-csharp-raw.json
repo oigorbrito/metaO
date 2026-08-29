@@ -1,0 +1,1316 @@
+﻿{
+    "rust":  {
+                 "runs":  [
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  44.9013,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  2174976,
+                                  "average_working_set_bytes":  2174976,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  41.2653,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  2043904,
+                                  "average_working_set_bytes":  2043904,
+                                  "stdout":  "\nrunning 10 tests\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest replays_python_golden_fixture_outcomes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  39.0405,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3272704,
+                                  "average_working_set_bytes":  3272704,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  36.0293,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3371008,
+                                  "average_working_set_bytes":  3371008,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  28.4512,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3305472,
+                                  "average_working_set_bytes":  3305472,
+                                  "stdout":  "\nrunning 10 tests\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  42.3004,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3383296,
+                                  "average_working_set_bytes":  3383296,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  53.1867,
+                                  "cpu_ms":  31.25,
+                                  "peak_working_set_bytes":  2760704,
+                                  "average_working_set_bytes":  2760704,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest replays_python_golden_fixture_outcomes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  36.8395,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3301376,
+                                  "average_working_set_bytes":  3301376,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  39.5248,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3432448,
+                                  "average_working_set_bytes":  3432448,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  46.082,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  2543616,
+                                  "average_working_set_bytes":  2543616,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  44.583400000000005,
+                                  "cpu_ms":  46.875,
+                                  "peak_working_set_bytes":  3108864,
+                                  "average_working_set_bytes":  3108864,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  44.512,
+                                  "cpu_ms":  31.25,
+                                  "peak_working_set_bytes":  3362816,
+                                  "average_working_set_bytes":  3362816,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  52.819500000000005,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3284992,
+                                  "average_working_set_bytes":  3284992,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  40.305800000000005,
+                                  "cpu_ms":  31.25,
+                                  "peak_working_set_bytes":  3293184,
+                                  "average_working_set_bytes":  3293184,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  34.5636,
+                                  "cpu_ms":  78.125,
+                                  "peak_working_set_bytes":  3112960,
+                                  "average_working_set_bytes":  3112960,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  45.5784,
+                                  "cpu_ms":  31.25,
+                                  "peak_working_set_bytes":  3362816,
+                                  "average_working_set_bytes":  3362816,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  31.6037,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3387392,
+                                  "average_working_set_bytes":  3387392,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  36.2366,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  2904064,
+                                  "average_working_set_bytes":  2904064,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  33.824600000000004,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3112960,
+                                  "average_working_set_bytes":  3112960,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  48.6405,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3293184,
+                                  "average_working_set_bytes":  3293184,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  32.9647,
+                                  "cpu_ms":  0,
+                                  "peak_working_set_bytes":  3239936,
+                                  "average_working_set_bytes":  3239936,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  44.2046,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3272704,
+                                  "average_working_set_bytes":  3272704,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  42.0325,
+                                  "cpu_ms":  46.875,
+                                  "peak_working_set_bytes":  3362816,
+                                  "average_working_set_bytes":  3362816,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  46.9598,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3399680,
+                                  "average_working_set_bytes":  3399680,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  41.4859,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3231744,
+                                  "average_working_set_bytes":  3231744,
+                                  "stdout":  "\nrunning 10 tests\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  31.5883,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  3366912,
+                                  "average_working_set_bytes":  3366912,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  40.6456,
+                                  "cpu_ms":  31.25,
+                                  "peak_working_set_bytes":  2760704,
+                                  "average_working_set_bytes":  2760704,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest replays_python_golden_fixture_outcomes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  37.1993,
+                                  "cpu_ms":  15.625,
+                                  "peak_working_set_bytes":  2191360,
+                                  "average_working_set_bytes":  2191360,
+                                  "stdout":  "\nrunning 10 tests\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  39.1617,
+                                  "cpu_ms":  0,
+                                  "peak_working_set_bytes":  3268608,
+                                  "average_working_set_bytes":  3268608,
+                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              },
+                              {
+                                  "exit_code":  0,
+                                  "wall_clock_ms":  40.2569,
+                                  "cpu_ms":  31.25,
+                                  "peak_working_set_bytes":  3383296,
+                                  "average_working_set_bytes":  3383296,
+                                  "stdout":  "\nrunning 10 tests\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                  "stderr":  ""
+                              }
+                          ],
+                 "warmups":  [
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  76.1603,
+                                     "cpu_ms":  31.25,
+                                     "peak_working_set_bytes":  5971968,
+                                     "average_working_set_bytes":  5971968,
+                                     "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  37.482800000000005,
+                                     "cpu_ms":  15.625,
+                                     "peak_working_set_bytes":  3383296,
+                                     "average_working_set_bytes":  3383296,
+                                     "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  42.983000000000004,
+                                     "cpu_ms":  15.625,
+                                     "peak_working_set_bytes":  3334144,
+                                     "average_working_set_bytes":  3334144,
+                                     "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  36.293800000000005,
+                                     "cpu_ms":  15.625,
+                                     "peak_working_set_bytes":  2760704,
+                                     "average_working_set_bytes":  2760704,
+                                     "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  35.2319,
+                                     "cpu_ms":  15.625,
+                                     "peak_working_set_bytes":  3121152,
+                                     "average_working_set_bytes":  3121152,
+                                     "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  40.572500000000005,
+                                     "cpu_ms":  0,
+                                     "peak_working_set_bytes":  2744320,
+                                     "average_working_set_bytes":  2744320,
+                                     "stdout":  "\nrunning 10 tests\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest replays_python_golden_fixture_outcomes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  40.3072,
+                                     "cpu_ms":  31.25,
+                                     "peak_working_set_bytes":  2322432,
+                                     "average_working_set_bytes":  2322432,
+                                     "stdout":  "\nrunning 10 tests\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest replays_python_golden_fixture_outcomes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  34.4144,
+                                     "cpu_ms":  31.25,
+                                     "peak_working_set_bytes":  2670592,
+                                     "average_working_set_bytes":  2670592,
+                                     "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  48.5629,
+                                     "cpu_ms":  15.625,
+                                     "peak_working_set_bytes":  3104768,
+                                     "average_working_set_bytes":  3104768,
+                                     "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 },
+                                 {
+                                     "exit_code":  0,
+                                     "wall_clock_ms":  39.613600000000005,
+                                     "cpu_ms":  31.25,
+                                     "peak_working_set_bytes":  2764800,
+                                     "average_working_set_bytes":  2764800,
+                                     "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                     "stderr":  ""
+                                 }
+                             ],
+                 "semantic_equivalence":  "PASS",
+                 "summary":  {
+                                 "wall_clock_ms":  {
+                                                       "median":  40.4757,
+                                                       "p99":  53.080212,
+                                                       "p95":  50.938949999999991
+                                                   },
+                                 "cpu_ms":  {
+                                                "median":  15.625,
+                                                "p99":  69.062500000000028,
+                                                "p95":  46.875
+                                            },
+                                 "peak_working_set_bytes":  {
+                                                                "median":  3278848,
+                                                                "p99":  3422945.2800000003,
+                                                                "p95":  3394150.4
+                                                            },
+                                 "runs":  [
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  44.9013,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  2174976,
+                                                  "average_working_set_bytes":  2174976,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  41.2653,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  2043904,
+                                                  "average_working_set_bytes":  2043904,
+                                                  "stdout":  "\nrunning 10 tests\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest replays_python_golden_fixture_outcomes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  39.0405,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3272704,
+                                                  "average_working_set_bytes":  3272704,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  36.0293,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3371008,
+                                                  "average_working_set_bytes":  3371008,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  28.4512,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3305472,
+                                                  "average_working_set_bytes":  3305472,
+                                                  "stdout":  "\nrunning 10 tests\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  42.3004,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3383296,
+                                                  "average_working_set_bytes":  3383296,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  53.1867,
+                                                  "cpu_ms":  31.25,
+                                                  "peak_working_set_bytes":  2760704,
+                                                  "average_working_set_bytes":  2760704,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest replays_python_golden_fixture_outcomes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  36.8395,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3301376,
+                                                  "average_working_set_bytes":  3301376,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  39.5248,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3432448,
+                                                  "average_working_set_bytes":  3432448,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  46.082,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  2543616,
+                                                  "average_working_set_bytes":  2543616,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  44.583400000000005,
+                                                  "cpu_ms":  46.875,
+                                                  "peak_working_set_bytes":  3108864,
+                                                  "average_working_set_bytes":  3108864,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  44.512,
+                                                  "cpu_ms":  31.25,
+                                                  "peak_working_set_bytes":  3362816,
+                                                  "average_working_set_bytes":  3362816,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  52.819500000000005,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3284992,
+                                                  "average_working_set_bytes":  3284992,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  40.305800000000005,
+                                                  "cpu_ms":  31.25,
+                                                  "peak_working_set_bytes":  3293184,
+                                                  "average_working_set_bytes":  3293184,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  34.5636,
+                                                  "cpu_ms":  78.125,
+                                                  "peak_working_set_bytes":  3112960,
+                                                  "average_working_set_bytes":  3112960,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  45.5784,
+                                                  "cpu_ms":  31.25,
+                                                  "peak_working_set_bytes":  3362816,
+                                                  "average_working_set_bytes":  3362816,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  31.6037,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3387392,
+                                                  "average_working_set_bytes":  3387392,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  36.2366,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  2904064,
+                                                  "average_working_set_bytes":  2904064,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  33.824600000000004,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3112960,
+                                                  "average_working_set_bytes":  3112960,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  48.6405,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3293184,
+                                                  "average_working_set_bytes":  3293184,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  32.9647,
+                                                  "cpu_ms":  0,
+                                                  "peak_working_set_bytes":  3239936,
+                                                  "average_working_set_bytes":  3239936,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  44.2046,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3272704,
+                                                  "average_working_set_bytes":  3272704,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  42.0325,
+                                                  "cpu_ms":  46.875,
+                                                  "peak_working_set_bytes":  3362816,
+                                                  "average_working_set_bytes":  3362816,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  46.9598,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3399680,
+                                                  "average_working_set_bytes":  3399680,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  41.4859,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3231744,
+                                                  "average_working_set_bytes":  3231744,
+                                                  "stdout":  "\nrunning 10 tests\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  31.5883,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  3366912,
+                                                  "average_working_set_bytes":  3366912,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  40.6456,
+                                                  "cpu_ms":  31.25,
+                                                  "peak_working_set_bytes":  2760704,
+                                                  "average_working_set_bytes":  2760704,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\ntest replays_python_golden_fixture_outcomes ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  37.1993,
+                                                  "cpu_ms":  15.625,
+                                                  "peak_working_set_bytes":  2191360,
+                                                  "average_working_set_bytes":  2191360,
+                                                  "stdout":  "\nrunning 10 tests\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  39.1617,
+                                                  "cpu_ms":  0,
+                                                  "peak_working_set_bytes":  3268608,
+                                                  "average_working_set_bytes":  3268608,
+                                                  "stdout":  "\nrunning 10 tests\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              },
+                                              {
+                                                  "exit_code":  0,
+                                                  "wall_clock_ms":  40.2569,
+                                                  "cpu_ms":  31.25,
+                                                  "peak_working_set_bytes":  3383296,
+                                                  "average_working_set_bytes":  3383296,
+                                                  "stdout":  "\nrunning 10 tests\ntest adversarial_evidence_binding_matrix_only_accepts_exact_verified_binding ... ok\ntest duplicate_and_version_conflict_fail_deterministically ... ok\ntest kernel_is_platform_framework_and_unsafe_free ... ok\ntest acceptance_hard_gates_match_python_baseline ... ok\ntest exhaustive_small_reconcile_state_space_satisfies_laws ... ok\ntest failed_execution_never_accepts_and_panic_is_contained ... ok\ntest reconciliation_is_idempotent_and_deterministic ... ok\ntest invalid_identity_construction_is_rejected_by_public_api ... ok\ntest replays_python_golden_fixture_outcomes ... ok\ntest whole_orchestrator_replacement_changes_no_kernel_contract ... ok\n\ntest result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n",
+                                                  "stderr":  ""
+                                              }
+                                          ]
+                             },
+                 "artifact_bytes":  4048719
+             },
+    "csharp":  {
+                   "runs":  [
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  492.19640000000004,
+                                    "cpu_ms":  296.875,
+                                    "peak_working_set_bytes":  29933568,
+                                    "average_working_set_bytes":  21798092.8,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  361.7097,
+                                    "cpu_ms":  265.625,
+                                    "peak_working_set_bytes":  29216768,
+                                    "average_working_set_bytes":  18880000,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  238.23010000000002,
+                                    "cpu_ms":  218.75,
+                                    "peak_working_set_bytes":  29437952,
+                                    "average_working_set_bytes":  20297728,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  220.9609,
+                                    "cpu_ms":  234.375,
+                                    "peak_working_set_bytes":  28647424,
+                                    "average_working_set_bytes":  19590485.333333332,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  239.8879,
+                                    "cpu_ms":  218.75,
+                                    "peak_working_set_bytes":  30101504,
+                                    "average_working_set_bytes":  20907349.333333332,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  255.35780000000003,
+                                    "cpu_ms":  218.75,
+                                    "peak_working_set_bytes":  30076928,
+                                    "average_working_set_bytes":  22047402.666666668,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  271.4841,
+                                    "cpu_ms":  218.75,
+                                    "peak_working_set_bytes":  30212096,
+                                    "average_working_set_bytes":  21689490.285714287,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  234.8657,
+                                    "cpu_ms":  234.375,
+                                    "peak_working_set_bytes":  28569600,
+                                    "average_working_set_bytes":  19423914.666666668,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  241.16160000000002,
+                                    "cpu_ms":  250,
+                                    "peak_working_set_bytes":  29085696,
+                                    "average_working_set_bytes":  20766037.333333332,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  240.58380000000002,
+                                    "cpu_ms":  281.25,
+                                    "peak_working_set_bytes":  29470720,
+                                    "average_working_set_bytes":  20322304,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  275.2812,
+                                    "cpu_ms":  250,
+                                    "peak_working_set_bytes":  29081600,
+                                    "average_working_set_bytes":  19675428.571428571,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  258.2791,
+                                    "cpu_ms":  203.125,
+                                    "peak_working_set_bytes":  30019584,
+                                    "average_working_set_bytes":  21408036.571428571,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  237.1155,
+                                    "cpu_ms":  218.75,
+                                    "peak_working_set_bytes":  29368320,
+                                    "average_working_set_bytes":  20791296,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  253.62320000000003,
+                                    "cpu_ms":  250,
+                                    "peak_working_set_bytes":  29519872,
+                                    "average_working_set_bytes":  20856832,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  273.6872,
+                                    "cpu_ms":  265.625,
+                                    "peak_working_set_bytes":  29343744,
+                                    "average_working_set_bytes":  21515702.857142858,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  216.92360000000002,
+                                    "cpu_ms":  203.125,
+                                    "peak_working_set_bytes":  29810688,
+                                    "average_working_set_bytes":  21362005.333333332,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  223.2211,
+                                    "cpu_ms":  187.5,
+                                    "peak_working_set_bytes":  29904896,
+                                    "average_working_set_bytes":  20927829.333333332,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  225.1789,
+                                    "cpu_ms":  203.125,
+                                    "peak_working_set_bytes":  29294592,
+                                    "average_working_set_bytes":  20732586.666666668,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  272.9125,
+                                    "cpu_ms":  250,
+                                    "peak_working_set_bytes":  29380608,
+                                    "average_working_set_bytes":  20282026.666666668,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  240.54170000000002,
+                                    "cpu_ms":  250,
+                                    "peak_working_set_bytes":  29089792,
+                                    "average_working_set_bytes":  20153685.333333332,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  286.1044,
+                                    "cpu_ms":  265.625,
+                                    "peak_working_set_bytes":  29323264,
+                                    "average_working_set_bytes":  20964498.285714287,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  346.6327,
+                                    "cpu_ms":  312.5,
+                                    "peak_working_set_bytes":  30072832,
+                                    "average_working_set_bytes":  22798336,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  257.099,
+                                    "cpu_ms":  234.375,
+                                    "peak_working_set_bytes":  29192192,
+                                    "average_working_set_bytes":  19608722.285714287,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  374.6617,
+                                    "cpu_ms":  296.875,
+                                    "peak_working_set_bytes":  29908992,
+                                    "average_working_set_bytes":  19432448,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  323.8627,
+                                    "cpu_ms":  250,
+                                    "peak_working_set_bytes":  29392896,
+                                    "average_working_set_bytes":  20220416,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  391.7686,
+                                    "cpu_ms":  296.875,
+                                    "peak_working_set_bytes":  29745152,
+                                    "average_working_set_bytes":  21869056,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  310.6762,
+                                    "cpu_ms":  203.125,
+                                    "peak_working_set_bytes":  29458432,
+                                    "average_working_set_bytes":  20856246.857142858,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  289.4431,
+                                    "cpu_ms":  203.125,
+                                    "peak_working_set_bytes":  30101504,
+                                    "average_working_set_bytes":  21225472,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  273.7418,
+                                    "cpu_ms":  234.375,
+                                    "peak_working_set_bytes":  30044160,
+                                    "average_working_set_bytes":  21595282.285714287,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                },
+                                {
+                                    "exit_code":  0,
+                                    "wall_clock_ms":  291.4371,
+                                    "cpu_ms":  250,
+                                    "peak_working_set_bytes":  29913088,
+                                    "average_working_set_bytes":  21262921.142857142,
+                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                    "stderr":  ""
+                                }
+                            ],
+                   "warmups":  [
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  743.1534,
+                                       "cpu_ms":  234.375,
+                                       "peak_working_set_bytes":  31268864,
+                                       "average_working_set_bytes":  18383925.894736841,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  238.63670000000002,
+                                       "cpu_ms":  234.375,
+                                       "peak_working_set_bytes":  29384704,
+                                       "average_working_set_bytes":  21003605.333333332,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  266.1051,
+                                       "cpu_ms":  218.75,
+                                       "peak_working_set_bytes":  30134272,
+                                       "average_working_set_bytes":  21524480,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  256.9031,
+                                       "cpu_ms":  218.75,
+                                       "peak_working_set_bytes":  30040064,
+                                       "average_working_set_bytes":  20985563.428571429,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  212.50490000000002,
+                                       "cpu_ms":  203.125,
+                                       "peak_working_set_bytes":  29224960,
+                                       "average_working_set_bytes":  20349747.2,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  423.997,
+                                       "cpu_ms":  296.875,
+                                       "peak_working_set_bytes":  29818880,
+                                       "average_working_set_bytes":  20504576,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  277.2926,
+                                       "cpu_ms":  250,
+                                       "peak_working_set_bytes":  29708288,
+                                       "average_working_set_bytes":  19837513.142857142,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  282.0052,
+                                       "cpu_ms":  250,
+                                       "peak_working_set_bytes":  28037120,
+                                       "average_working_set_bytes":  19188589.714285713,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  351.69030000000004,
+                                       "cpu_ms":  281.25,
+                                       "peak_working_set_bytes":  31043584,
+                                       "average_working_set_bytes":  21286456.888888888,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   },
+                                   {
+                                       "exit_code":  0,
+                                       "wall_clock_ms":  321.72810000000004,
+                                       "cpu_ms":  281.25,
+                                       "peak_working_set_bytes":  31002624,
+                                       "average_working_set_bytes":  20816457.142857142,
+                                       "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                       "stderr":  ""
+                                   }
+                               ],
+                   "semantic_equivalence":  "PASS",
+                   "summary":  {
+                                   "wall_clock_ms":  {
+                                                         "median":  264.88160000000005,
+                                                         "p99":  463.07233800000012,
+                                                         "p95":  384.07049499999994
+                                                     },
+                                   "cpu_ms":  {
+                                                  "median":  242.1875,
+                                                  "p99":  307.96875,
+                                                  "p95":  296.875
+                                              },
+                                   "peak_working_set_bytes":  {
+                                                                  "median":  29464576,
+                                                                  "p99":  30180024.32,
+                                                                  "p95":  30101504
+                                                              },
+                                   "runs":  [
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  492.19640000000004,
+                                                    "cpu_ms":  296.875,
+                                                    "peak_working_set_bytes":  29933568,
+                                                    "average_working_set_bytes":  21798092.8,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  361.7097,
+                                                    "cpu_ms":  265.625,
+                                                    "peak_working_set_bytes":  29216768,
+                                                    "average_working_set_bytes":  18880000,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  238.23010000000002,
+                                                    "cpu_ms":  218.75,
+                                                    "peak_working_set_bytes":  29437952,
+                                                    "average_working_set_bytes":  20297728,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  220.9609,
+                                                    "cpu_ms":  234.375,
+                                                    "peak_working_set_bytes":  28647424,
+                                                    "average_working_set_bytes":  19590485.333333332,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  239.8879,
+                                                    "cpu_ms":  218.75,
+                                                    "peak_working_set_bytes":  30101504,
+                                                    "average_working_set_bytes":  20907349.333333332,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  255.35780000000003,
+                                                    "cpu_ms":  218.75,
+                                                    "peak_working_set_bytes":  30076928,
+                                                    "average_working_set_bytes":  22047402.666666668,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  271.4841,
+                                                    "cpu_ms":  218.75,
+                                                    "peak_working_set_bytes":  30212096,
+                                                    "average_working_set_bytes":  21689490.285714287,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  234.8657,
+                                                    "cpu_ms":  234.375,
+                                                    "peak_working_set_bytes":  28569600,
+                                                    "average_working_set_bytes":  19423914.666666668,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  241.16160000000002,
+                                                    "cpu_ms":  250,
+                                                    "peak_working_set_bytes":  29085696,
+                                                    "average_working_set_bytes":  20766037.333333332,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  240.58380000000002,
+                                                    "cpu_ms":  281.25,
+                                                    "peak_working_set_bytes":  29470720,
+                                                    "average_working_set_bytes":  20322304,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  275.2812,
+                                                    "cpu_ms":  250,
+                                                    "peak_working_set_bytes":  29081600,
+                                                    "average_working_set_bytes":  19675428.571428571,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  258.2791,
+                                                    "cpu_ms":  203.125,
+                                                    "peak_working_set_bytes":  30019584,
+                                                    "average_working_set_bytes":  21408036.571428571,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  237.1155,
+                                                    "cpu_ms":  218.75,
+                                                    "peak_working_set_bytes":  29368320,
+                                                    "average_working_set_bytes":  20791296,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  253.62320000000003,
+                                                    "cpu_ms":  250,
+                                                    "peak_working_set_bytes":  29519872,
+                                                    "average_working_set_bytes":  20856832,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  273.6872,
+                                                    "cpu_ms":  265.625,
+                                                    "peak_working_set_bytes":  29343744,
+                                                    "average_working_set_bytes":  21515702.857142858,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  216.92360000000002,
+                                                    "cpu_ms":  203.125,
+                                                    "peak_working_set_bytes":  29810688,
+                                                    "average_working_set_bytes":  21362005.333333332,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  223.2211,
+                                                    "cpu_ms":  187.5,
+                                                    "peak_working_set_bytes":  29904896,
+                                                    "average_working_set_bytes":  20927829.333333332,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  225.1789,
+                                                    "cpu_ms":  203.125,
+                                                    "peak_working_set_bytes":  29294592,
+                                                    "average_working_set_bytes":  20732586.666666668,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  272.9125,
+                                                    "cpu_ms":  250,
+                                                    "peak_working_set_bytes":  29380608,
+                                                    "average_working_set_bytes":  20282026.666666668,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  240.54170000000002,
+                                                    "cpu_ms":  250,
+                                                    "peak_working_set_bytes":  29089792,
+                                                    "average_working_set_bytes":  20153685.333333332,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  286.1044,
+                                                    "cpu_ms":  265.625,
+                                                    "peak_working_set_bytes":  29323264,
+                                                    "average_working_set_bytes":  20964498.285714287,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  346.6327,
+                                                    "cpu_ms":  312.5,
+                                                    "peak_working_set_bytes":  30072832,
+                                                    "average_working_set_bytes":  22798336,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  257.099,
+                                                    "cpu_ms":  234.375,
+                                                    "peak_working_set_bytes":  29192192,
+                                                    "average_working_set_bytes":  19608722.285714287,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  374.6617,
+                                                    "cpu_ms":  296.875,
+                                                    "peak_working_set_bytes":  29908992,
+                                                    "average_working_set_bytes":  19432448,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  323.8627,
+                                                    "cpu_ms":  250,
+                                                    "peak_working_set_bytes":  29392896,
+                                                    "average_working_set_bytes":  20220416,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  391.7686,
+                                                    "cpu_ms":  296.875,
+                                                    "peak_working_set_bytes":  29745152,
+                                                    "average_working_set_bytes":  21869056,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  310.6762,
+                                                    "cpu_ms":  203.125,
+                                                    "peak_working_set_bytes":  29458432,
+                                                    "average_working_set_bytes":  20856246.857142858,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  289.4431,
+                                                    "cpu_ms":  203.125,
+                                                    "peak_working_set_bytes":  30101504,
+                                                    "average_working_set_bytes":  21225472,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  273.7418,
+                                                    "cpu_ms":  234.375,
+                                                    "peak_working_set_bytes":  30044160,
+                                                    "average_working_set_bytes":  21595282.285714287,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                },
+                                                {
+                                                    "exit_code":  0,
+                                                    "wall_clock_ms":  291.4371,
+                                                    "cpu_ms":  250,
+                                                    "peak_working_set_bytes":  29913088,
+                                                    "average_working_set_bytes":  21262921.142857142,
+                                                    "stdout":  "TEST_COUNT=69\r\nFAILURES=0\r\nL5_TEST_COUNT=10\r\nDIRECT_COUNT=79\r\nDIRECT_FAILURES=0\r\nRESTART_CHECKPOINT_ROUNDTRIP=PASS\r\nRESTART_RESUME=PASS\r\nRESUME_REVALIDATES_POLICY=PASS\r\nRESUME_REVALIDATES_STATE=PASS\r\nRESUME_REVALIDATES_GOVERNANCE=PASS\r\nREVOKED_RUNTIME_NOT_SELECTED=PASS\r\nREVOCATION_OVERRIDES_HEALTH=PASS\r\nHEALTHY_NOT_EQUAL_AUTHORIZED=PASS\r\nREVOKED_SUCCESS_NOT_ACCEPTED=PASS\r\nRESUME_REVOKED_RUNTIME=PASS\r\n",
+                                                    "stderr":  ""
+                                                }
+                                            ]
+                               },
+                   "artifact_bytes":  374260
+               }
+}
