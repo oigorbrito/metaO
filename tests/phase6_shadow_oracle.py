@@ -50,7 +50,7 @@ def _jsonable(value):
 
 
 def _comparison_kind(category: str) -> str:
-    return "HARNESS_ONLY" if category == "runtime" else "REAL_PYTHON_VS_REAL_RUST"
+    return "NOT_COMPARABLE" if category == "runtime" else "REAL_PYTHON_VS_REAL_RUST"
 
 
 def _context(
@@ -453,10 +453,12 @@ def _run_case(case: dict) -> dict:
                 thread.start()
             for thread in threads:
                 thread.join()
+            accepted_sorted = sorted(accepted)
+            rejected_sorted = sorted(rejected)
             semantic = {
-                "accepted": sorted(accepted),
-                "rejected": sorted(rejected),
-                "winner_money": authority.reservation(accepted[0]).money if accepted else None,
+                "accepted_count": len(accepted_sorted),
+                "rejected_count": len(rejected_sorted),
+                "winner_money": authority.reservation(accepted_sorted[0]).money if accepted_sorted else None,
                 "money_used": authority.snapshot().money_used,
             }
         elif scenario == "exact_capacity_admission":
