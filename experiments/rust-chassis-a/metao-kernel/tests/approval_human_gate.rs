@@ -1,5 +1,101 @@
+use metao_contracts::{
+    AcceptanceContext, BoundConfidence, ContractError, EvidenceEnvelope, ExecutionId, MissionId,
+    RuntimeId, VerificationAttemptId, VerificationRequest, VerificationRequestId,
+    VerifierDescriptor, VerifierId,
+};
 use metao_contracts::{AcceptanceDecision, ApprovalRecord};
-use metao_kernel::{apply_confidence_after_hard_gates, require_human, resume_after_approval};
+use metao_kernel::{
+    apply_confidence_after_hard_gates as apply_bound_confidence_after_hard_gates, require_human,
+    resume_after_approval,
+};
+
+fn verifier() -> VerifierDescriptor {
+    VerifierDescriptor {
+        verifier_id: VerifierId::new("verifier-1").unwrap(),
+        version: "v1".into(),
+        capabilities: vec!["confidence".into()],
+    }
+}
+
+fn confidence_request() -> VerificationRequest {
+    VerificationRequest {
+        request_id: VerificationRequestId::new("request-1").unwrap(),
+        attempt_id: VerificationAttemptId::new("attempt-1").unwrap(),
+        mission_id: MissionId::new("m1").unwrap(),
+        execution_id: ExecutionId::new("x1").unwrap(),
+        capability: "confidence".into(),
+    }
+}
+
+fn evidence() -> EvidenceEnvelope {
+    EvidenceEnvelope {
+        evidence_id: "evidence-1".into(),
+        obligation_id: "obligation-1".into(),
+        mission_id: MissionId::new("m1").unwrap(),
+        execution_id: ExecutionId::new("x1").unwrap(),
+        orchestrator_id: RuntimeId::new("runtime-1").unwrap(),
+        adapter_version: "adapter-1".into(),
+        attempt_id: "attempt-1".into(),
+        subject_id: "subject-1".into(),
+        subject_state_id: "state-1".into(),
+        verification_context_id: "context-1".into(),
+        policy_bundle_id: "p1".into(),
+        verifier_id: "verifier-1".into(),
+        payload_digest: "digest-1".into(),
+        provenance_root: "root-1".into(),
+        authority_id: "authority-1".into(),
+        passed: true,
+        created_at_epoch: 10.0,
+        expires_at_epoch: Some(20.0),
+        approval_id: Some("approval-1".into()),
+        confidence: Some(0.95),
+    }
+}
+
+fn context() -> AcceptanceContext {
+    AcceptanceContext {
+        subject_id: "subject-1".into(),
+        subject_state_id: "state-1".into(),
+        verification_context_id: "context-1".into(),
+        policy_bundle_id: "p1".into(),
+        required_obligations: vec!["obligation-1".into()],
+        trusted_verifiers: vec!["verifier-1".into()],
+        trusted_provenance_roots: vec!["root-1".into()],
+        authorized_authorities: vec!["authority-1".into()],
+    }
+}
+
+fn confidence_advisory(confidence: f64) -> BoundConfidence {
+    BoundConfidence {
+        verifier_id: VerifierId::new("verifier-1").unwrap(),
+        verifier_version: "v1".into(),
+        mission_id: MissionId::new("m1").unwrap(),
+        execution_id: ExecutionId::new("x1").unwrap(),
+        subject_id: "subject-1".into(),
+        subject_state_id: "state-1".into(),
+        verification_context_id: "context-1".into(),
+        policy_bundle_id: "p1".into(),
+        payload_digest: "digest-1".into(),
+        score: Some(0.5),
+        confidence,
+    }
+}
+
+fn apply_confidence_after_hard_gates(
+    hard_gate_decision: AcceptanceDecision,
+    confidence: f64,
+    threshold: f64,
+) -> Result<AcceptanceDecision, ContractError> {
+    apply_bound_confidence_after_hard_gates(
+        hard_gate_decision,
+        &confidence_advisory(confidence),
+        threshold,
+        &verifier(),
+        &confidence_request(),
+        &evidence(),
+        &context(),
+    )
+}
 
 fn request() -> metao_contracts::ApprovalRequest {
     require_human("ap-1", "m1", "x1", "s1", "p1", "high risk")
