@@ -7,8 +7,10 @@ use metao_contracts::{
     PolicyEffect, PolicyRegistryPort, ProvenanceVerificationObservation,
     ProvenanceVerificationPort, ProvenanceVerificationStatus, RequiredEvidenceSet,
     RetryHistoryKind, RetryHistoryPort, RetryHistoryRecord, RuntimeId, SubjectStatePort,
-    TerminalClaims, VerificationAttemptId, VerificationAttemptStarted, VerificationRequest,
-    VerificationUsage, VerifierDescriptor, VerifierResult,
+    TerminalClaims, TerminalDecisionProof, TerminalObservation, TerminalObservationEntry,
+    TerminalObservationKind, TerminalValidationProfile, VerificationAttemptId,
+    VerificationAttemptStarted, VerificationRequest, VerificationUsage, VerifierDescriptor,
+    VerifierResult,
 };
 use metao_registry::{VerifierRegistry, VerifierRegistryError};
 use serde::{Deserialize, Serialize};
@@ -1214,6 +1216,238 @@ fn digest_payload(
     format!("{:x}", hasher.finalize())
 }
 
+fn terminal_observation_kind_name(kind: TerminalObservationKind) -> &'static str {
+    match kind {
+        TerminalObservationKind::SubjectState => "subject_state",
+        TerminalObservationKind::AuthorityResolution => "authority_resolution",
+        TerminalObservationKind::PolicyBundle => "policy_bundle",
+        TerminalObservationKind::RetryHistory => "retry_history",
+        TerminalObservationKind::VerificationUsage => "verification_usage",
+        TerminalObservationKind::Approval => "approval",
+        TerminalObservationKind::Provenance => "provenance",
+        TerminalObservationKind::Confidence => "confidence",
+        TerminalObservationKind::VerifierResult => "verifier_result",
+    }
+}
+
+fn canonical_terminal_observations(
+    observations: &[TerminalObservationEntry],
+) -> Result<Vec<TerminalObservationEntry>, ContractError> {
+    let mut seen_ids = BTreeSet::new();
+    let mut by_sequence = BTreeMap::new();
+    for entry in observations {
+        if !seen_ids.insert(entry.observation_id.clone()) {
+            return Err(ContractError::TerminalProofDuplicateObservation(
+                entry.observation_id.clone(),
+            ));
+        }
+        let expected = by_sequence.len() as u64;
+        if by_sequence.insert(entry.sequence, entry.clone()).is_some() {
+            return Err(ContractError::TerminalProofSequenceGap {
+                expected: expected + 1,
+                actual: entry.sequence,
+            });
+        }
+    }
+
+    let mut canonical = Vec::with_capacity(by_sequence.len());
+    for (expected, (sequence, entry)) in by_sequence.into_iter().enumerate() {
+        let expected = expected as u64;
+        if sequence != expected {
+            return Err(ContractError::TerminalProofSequenceGap {
+                expected,
+                actual: sequence,
+            });
+        }
+        canonical.push(entry);
+    }
+    Ok(canonical)
+}
+
+fn validate_terminal_observation_entry(
+    proof: &TerminalDecisionProof,
+    entry: &TerminalObservationEntry,
+) -> Result<(), ContractError> {
+    match &entry.observation {
+        TerminalObservation::SubjectState(subject_state) => {
+            if subject_state.subject_id.trim().is_empty()
+                || subject_state.subject_state_id.trim().is_empty()
+            {
+                return Err(ContractError::TerminalProofBindingMismatch);
+            }
+        }
+        TerminalObservation::AuthorityResolution(authority) => {
+            if authority.authority_context_id.trim().is_empty()
+                || authority.authority_id.trim().is_empty()
+                || authority.evidence_root.trim().is_empty()
+            {
+                return Err(ContractError::TerminalProofBindingMismatch);
+            }
+        }
+        TerminalObservation::PolicyBundle(policy) => {
+            if policy.policy_bundle_id.trim().is_empty()
+                || policy.policy_bundle_root.trim().is_empty()
+            {
+                return Err(ContractError::TerminalProofBindingMismatch);
+            }
+        }
+        TerminalObservation::RetryHistory(records) => {
+            if records.is_empty() {
+                return Err(ContractError::TerminalProofMissingObservation(
+                    terminal_observation_kind_name(entry.observation.kind()),
+                ));
+            }
+            for (expected, record) in records.iter().enumerate() {
+                let expected = expected as u64;
+                if record.sequence != expected
+                    || record.mission_id != proof.mission_id
+                    || record.execution_id != proof.execution_id
+                    || record.record_id.trim().is_empty()
+                    || record.attempt_id.as_str().trim().is_empty()
+                {
+                    return Err(ContractError::TerminalProofBindingMismatch);
+                }
+            }
+        }
+        TerminalObservation::VerificationUsage { usage, budget } => {
+            if usage.attempt_id.as_str().trim().is_empty()
+                || !budget.money_limit.is_finite()
+                || !budget.wall_time_limit_s.is_finite()
+                || !budget.money_used.is_finite()
+                || !budget.wall_time_used_s.is_finite()
+            {
+                return Err(ContractError::TerminalProofBindingMismatch);
+            }
+        }
+        TerminalObservation::Approval(ticket) => {
+            if ticket.mission_id != proof.mission_id
+                || ticket.execution_id != proof.execution_id
+                || ticket.approval_id.trim().is_empty()
+                || ticket.subject_state_id.trim().is_empty()
+                || ticket.policy_bundle_id.trim().is_empty()
+                || ticket.approver_id.trim().is_empty()
+                || ticket.capability_id.trim().is_empty()
+                || ticket.action.trim().is_empty()
+                || ticket.target.trim().is_empty()
+                || ticket.scope.trim().is_empty()
+            {
+                return Err(ContractError::TerminalProofBindingMismatch);
+            }
+        }
+        TerminalObservation::Provenance(observation) => {
+            if observation.mission_id != proof.mission_id
+                || observation.execution_id != proof.execution_id
+                || observation.subject_id.trim().is_empty()
+                || observation.subject_state_id.trim().is_empty()
+                || observation.verification_context_id.trim().is_empty()
+                || observation.policy_bundle_id.trim().is_empty()
+                || observation.payload_digest.trim().is_empty()
+                || observation.provenance_root.trim().is_empty()
+                || observation.verifier_id.as_str().trim().is_empty()
+                || observation.issuer_id.trim().is_empty()
+            {
+                return Err(ContractError::TerminalProofBindingMismatch);
+            }
+        }
+        TerminalObservation::Confidence(bound) => {
+            if bound.mission_id != proof.mission_id
+                || bound.execution_id != proof.execution_id
+                || bound.subject_id.trim().is_empty()
+                || bound.subject_state_id.trim().is_empty()
+                || bound.verification_context_id.trim().is_empty()
+                || bound.policy_bundle_id.trim().is_empty()
+                || bound.payload_digest.trim().is_empty()
+                || bound.verifier_id.as_str().trim().is_empty()
+                || bound.verifier_version.trim().is_empty()
+                || !(0.0..=1.0).contains(&bound.confidence)
+            {
+                return Err(ContractError::TerminalProofBindingMismatch);
+            }
+        }
+        TerminalObservation::VerifierResult(result) => {
+            if result.request_id.as_str().trim().is_empty()
+                || result.attempt_id.as_str().trim().is_empty()
+                || result.verifier_id.as_str().trim().is_empty()
+                || result.verifier_version.trim().is_empty()
+            {
+                return Err(ContractError::TerminalProofBindingMismatch);
+            }
+        }
+    }
+    Ok(())
+}
+
+fn canonicalize_terminal_decision_proof(
+    proof: &TerminalDecisionProof,
+) -> Result<TerminalDecisionProof, ContractError> {
+    if proof.version != TerminalDecisionProof::CURRENT_VERSION {
+        return Err(ContractError::UnsupportedTerminalProofVersion(
+            proof.version,
+        ));
+    }
+
+    let acceptance_decision = replay_acceptance_decision(&proof.acceptance_proof)?;
+    if acceptance_decision != proof.acceptance_proof.decision {
+        return Err(ContractError::TerminalProofBindingMismatch);
+    }
+
+    let observations = canonical_terminal_observations(&proof.observations)?;
+    let mut observed_kinds = BTreeSet::new();
+    for entry in &observations {
+        let kind = entry.observation.kind();
+        if !proof.validation_profile.required_kinds.contains(&kind) {
+            return Err(ContractError::TerminalProofBindingMismatch);
+        }
+        if !observed_kinds.insert(kind) {
+            return Err(ContractError::TerminalProofDuplicateObservation(format!(
+                "kind:{}",
+                terminal_observation_kind_name(kind)
+            )));
+        }
+        validate_terminal_observation_entry(proof, entry)?;
+    }
+
+    if observed_kinds != proof.validation_profile.required_kinds {
+        if let Some(missing) = proof
+            .validation_profile
+            .required_kinds
+            .difference(&observed_kinds)
+            .next()
+            .copied()
+        {
+            return Err(ContractError::TerminalProofMissingObservation(
+                terminal_observation_kind_name(missing),
+            ));
+        }
+        return Err(ContractError::TerminalProofBindingMismatch);
+    }
+
+    Ok(TerminalDecisionProof {
+        version: proof.version,
+        mission_id: proof.mission_id.clone(),
+        execution_id: proof.execution_id.clone(),
+        acceptance_proof: proof.acceptance_proof.clone(),
+        validation_profile: proof.validation_profile.clone(),
+        observations,
+        digest: proof.digest.clone(),
+    })
+}
+
+fn terminal_decision_proof_digest(proof: &TerminalDecisionProof) -> String {
+    let payload = json!({
+        "version": proof.version,
+        "mission_id": proof.mission_id,
+        "execution_id": proof.execution_id,
+        "acceptance_proof": proof.acceptance_proof,
+        "validation_profile": proof.validation_profile,
+        "observations": proof.observations,
+    });
+    let bytes = serde_json::to_vec(&payload).expect("stable terminal proof digest");
+    let mut hasher = Sha256::new();
+    hasher.update(bytes);
+    format!("{:x}", hasher.finalize())
+}
+
 pub fn replay_acceptance_decision(
     proof: &metao_contracts::AcceptanceProof,
 ) -> Result<AcceptanceDecision, ContractError> {
@@ -1222,6 +1456,42 @@ pub fn replay_acceptance_decision(
         return Err(ContractError::AcceptanceProofDigestMismatch);
     }
     Ok(proof.decision)
+}
+
+pub fn replay_terminal_decision_proof(
+    proof: &TerminalDecisionProof,
+) -> Result<AcceptanceDecision, ContractError> {
+    let canonical = canonicalize_terminal_decision_proof(proof)?;
+    let expected = terminal_decision_proof_digest(&canonical);
+    if expected != proof.digest {
+        return Err(ContractError::TerminalProofDigestMismatch);
+    }
+    Ok(canonical.acceptance_proof.decision)
+}
+
+pub fn build_terminal_decision_proof(
+    proof: &AcceptanceResult,
+    mission_id: &metao_contracts::MissionId,
+    execution_id: &metao_contracts::ExecutionId,
+    validation_profile: TerminalValidationProfile,
+    observations: Vec<TerminalObservationEntry>,
+) -> Result<TerminalDecisionProof, ContractError> {
+    let Some(acceptance_proof) = proof.proof.clone() else {
+        return Err(ContractError::TerminalProofBindingMismatch);
+    };
+
+    let mut proof = TerminalDecisionProof {
+        version: TerminalDecisionProof::CURRENT_VERSION,
+        mission_id: mission_id.clone(),
+        execution_id: execution_id.clone(),
+        acceptance_proof,
+        validation_profile,
+        observations,
+        digest: String::new(),
+    };
+    proof = canonicalize_terminal_decision_proof(&proof)?;
+    proof.digest = terminal_decision_proof_digest(&proof);
+    Ok(proof)
 }
 
 fn acceptance_result(

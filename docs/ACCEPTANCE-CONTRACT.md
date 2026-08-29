@@ -414,3 +414,19 @@ Required behavior:
 - runtime/verifier self-report MUST NOT mint approval authority or provenance authenticity;
 - canonical acceptance remains the only final acceptance authority;
 - any unresolved broader evidence-envelope gaps remain tracked in `#228`.
+
+## 24. Deterministic terminal proof and adversarial closure
+
+The post-v0.1 A16/A19 slice adds a terminal proof that closes over the authoritative observations that actually influenced terminal acceptance.
+
+Required behavior:
+
+- terminal proof replay MUST be deterministic for the same canonical observations, acceptance proof, mission and execution binding;
+- omission, mutation, reorder drift, duplicate observation identity, sequence gaps and binding drift MUST fail closed during replay or reconstruction;
+- the terminal proof MUST include the authoritative observations that were material to the path executed, including subject state, authoritative terminal sources, retry/history facts, accounting facts, approval/provenance observations, confidence advisory input and the embedded acceptance proof;
+- terminal proof replay validates and reconstructs the closure but MUST NOT mint acceptance authority;
+- the proof digest uses deterministic structured serialization plus the existing SHA-256 proof hashing approach;
+- local integrity evidence remains distinct from hostile cryptographic authenticity;
+- runtime self-report and verifier PASS MUST NOT mint terminal proof authority;
+- canonical acceptance remains the only final acceptance authority;
+- any remaining broader post-parity evidence gaps stay tracked in `#228`.
