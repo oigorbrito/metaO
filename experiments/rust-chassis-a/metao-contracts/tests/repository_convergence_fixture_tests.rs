@@ -29,14 +29,23 @@ fn obligations(case: &Value) -> BTreeSet<&str> {
 fn fixture_identity_and_safety_metrics_are_explicit() {
     let value = fixture();
     assert_eq!(value["schema_version"], 1);
-    assert_eq!(value["fixture_family"], "repository-convergence-ground-truth");
+    assert_eq!(
+        value["fixture_family"],
+        "repository-convergence-ground-truth"
+    );
     assert_eq!(value["expected_metrics"]["false_close"], 0);
     assert_eq!(value["expected_metrics"]["protected_experiment_loss"], 0);
     assert_eq!(value["expected_metrics"]["dependency_break"], 0);
     assert_eq!(value["expected_metrics"]["result_reproducible"], true);
     assert_eq!(value["authority_boundary"]["fixture_mutates_github"], false);
-    assert_eq!(value["authority_boundary"]["similarity_is_close_authority"], false);
-    assert_eq!(value["authority_boundary"]["inactivity_is_obsolescence"], false);
+    assert_eq!(
+        value["authority_boundary"]["similarity_is_close_authority"],
+        false
+    );
+    assert_eq!(
+        value["authority_boundary"]["inactivity_is_obsolescence"],
+        false
+    );
 }
 
 #[test]
@@ -62,7 +71,10 @@ fn all_case_ids_are_unique_and_required_classes_exist() {
         "protected-chassis-spike-b",
         "protected-chassis-spike-c",
     ] {
-        assert!(ids.contains(required), "missing required fixture class: {required}");
+        assert!(
+            ids.contains(required),
+            "missing required fixture class: {required}"
+        );
     }
 }
 
@@ -81,7 +93,10 @@ fn safe_supersession_requires_obligation_containment() {
                 .expect("canonical successor must exist in fixture");
             let old = obligations(case);
             let new = obligations(successor);
-            assert!(old.is_subset(&new), "successor must contain every old obligation");
+            assert!(
+                old.is_subset(&new),
+                "successor must contain every old obligation"
+            );
             assert!(!case["protected"].as_bool().expect("protected flag"));
             assert!(case["blocked_by"].is_null());
         }
@@ -122,7 +137,9 @@ fn blocked_work_remains_explicit_and_open() {
         if !case["blocked_by"].is_null() {
             assert_eq!(case["expected_disposition"], "BLOCKED_EXTERNAL");
             assert_eq!(case["safe_to_close"], false);
-            assert!(case["blocked_by"].as_str().is_some_and(|value| !value.trim().is_empty()));
+            assert!(case["blocked_by"]
+                .as_str()
+                .is_some_and(|value| !value.trim().is_empty()));
         }
     }
 }
@@ -147,7 +164,10 @@ fn known_duplicate_and_superseded_cases_are_not_left_active_in_ground_truth() {
     let value = fixture();
     let cases = cases_by_id(&value);
 
-    for id in ["duplicate-reference-intake-old", "superseded-runtime-health-slice-old"] {
+    for id in [
+        "duplicate-reference-intake-old",
+        "superseded-runtime-health-slice-old",
+    ] {
         let case = cases[id];
         assert_eq!(case["expected_disposition"], "ABSORBED");
         assert_eq!(case["safe_to_close"], true);
