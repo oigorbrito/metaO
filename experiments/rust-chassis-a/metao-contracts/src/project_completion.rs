@@ -9,12 +9,22 @@ pub enum CompletionEvidenceStatus {
     NotProven,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompletionEvidenceBasis {
+    IndependentAcceptance,
+    VerifiedEvaluation,
+    CallerDeclared,
+    Unknown,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ProjectCompletionEvidence {
     pub evidence_id: String,
     pub obligation_id: ItemId,
     pub contract_binding: ProjectContractBinding,
     pub status: CompletionEvidenceStatus,
+    pub evidence_basis: CompletionEvidenceBasis,
+    pub verification_ref: Option<String>,
     pub reason: String,
 }
 
@@ -102,9 +112,26 @@ impl ProjectCompletionGate {
 }
 
 fn valid_evidence_record(record: &ProjectCompletionEvidence) -> bool {
-    !record.evidence_id.trim().is_empty()
-        && !record.obligation_id.0.trim().is_empty()
-        && !record.reason.trim().is_empty()
+    if record.evidence_id.trim().is_empty()
+        || record.obligation_id.0.trim().is_empty()
+        || record.reason.trim().is_empty()
+    {
+        return false;
+    }
+
+    match record.status {
+        CompletionEvidenceStatus::Pass | CompletionEvidenceStatus::Fail => {
+            matches!(
+                record.evidence_basis,
+                CompletionEvidenceBasis::IndependentAcceptance
+                    | CompletionEvidenceBasis::VerifiedEvaluation
+            ) && record
+                .verification_ref
+                .as_deref()
+                .is_some_and(|value| !value.trim().is_empty())
+        }
+        CompletionEvidenceStatus::NotProven => true,
+    }
 }
 
 fn completion_obligations(dto: &ProjectContractDto) -> BTreeSet<ItemId> {
@@ -132,7 +159,7 @@ fn evaluate_obligation(
         return ObligationCompletionResult {
             obligation_id: obligation_id.clone(),
             status: CompletionEvidenceStatus::NotProven,
-            reason: "missing exact-binding evidence".to_string(),
+            reason: "missing exact-binding verified evidence".to_string(),
         };
     }
 
@@ -155,8 +182,10 @@ fn evaluate_obligation(
 
     let status = records[0].status;
     let reason = match status {
-        CompletionEvidenceStatus::Pass => "exact-binding obligation evidence passed".to_string(),
-        CompletionEvidenceStatus::Fail => "obligation evidence failed".to_string(),
+        CompletionEvidenceStatus::Pass => {
+            "exact-binding independently verified obligation evidence passed".to_string()
+        }
+        CompletionEvidenceStatus::Fail => "verified obligation evidence failed".to_string(),
         CompletionEvidenceStatus::NotProven => "obligation evidence is not proven".to_string(),
     };
 
