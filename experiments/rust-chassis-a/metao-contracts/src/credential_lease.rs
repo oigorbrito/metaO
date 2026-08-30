@@ -6,6 +6,7 @@ pub enum CredentialLeaseError {
     InvalidValidityWindow,
     InvalidRenewalBound,
     InvalidAssuranceStatusPair,
+    MissingRevocationEvidence,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,6 +63,7 @@ pub struct CredentialLease {
     pub max_expires_at_epoch: Option<i64>,
     pub assurance: CredentialLeaseAssurance,
     pub revocation_status: CredentialRevocationStatus,
+    pub revocation_evidence_ref: Option<String>,
 }
 
 impl CredentialLease {
@@ -80,15 +82,29 @@ impl CredentialLease {
         if self.expires_at_epoch <= self.issued_at_epoch {
             return Err(CredentialLeaseError::InvalidValidityWindow);
         }
-        if let Some(max_expires) = self.max_expires_at_epoch {
-            if max_expires < self.expires_at_epoch || max_expires <= self.issued_at_epoch {
-                return Err(CredentialLeaseError::InvalidRenewalBound);
-            }
+
+        match (self.renewable, self.max_expires_at_epoch) {
+            (true, Some(max_expires))
+                if max_expires > self.expires_at_epoch
+                    && max_expires > self.issued_at_epoch => {}
+            (true, _) => return Err(CredentialLeaseError::InvalidRenewalBound),
+            (false, None) => {}
+            (false, Some(_)) => return Err(CredentialLeaseError::InvalidRenewalBound),
         }
+
         if self.assurance == CredentialLeaseAssurance::Unsupported
             && self.revocation_status == CredentialRevocationStatus::Active
         {
             return Err(CredentialLeaseError::InvalidAssuranceStatusPair);
+        }
+
+        if self.revocation_status == CredentialRevocationStatus::Revoked
+            && self
+                .revocation_evidence_ref
+                .as_deref()
+                .is_none_or(|value| value.trim().is_empty())
+        {
+            return Err(CredentialLeaseError::MissingRevocationEvidence);
         }
         Ok(())
     }
@@ -106,14 +122,19 @@ impl CredentialLease {
         if !self.renewable || !self.applies_to(&self.binding, now_epoch) {
             return false;
         }
-        if requested_expires_at_epoch <= now_epoch {
+        if requested_expires_at_epoch <= self.expires_at_epoch {
             return false;
         }
         self.max_expires_at_epoch
-            .map_or(true, |maximum| requested_expires_at_epoch <= maximum)
+            .is_some_and(|maximum| requested_expires_at_epoch <= maximum)
     }
 
     pub fn revocation_confirmed(&self) -> bool {
-        self.revocation_status == CredentialRevocationStatus::Revoked
+        self.validate().is_ok()
+            && self.revocation_status == CredentialRevocationStatus::Revoked
+            && self
+                .revocation_evidence_ref
+                .as_deref()
+                .is_some_and(|value| !value.trim().is_empty())
     }
 }
