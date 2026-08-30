@@ -464,3 +464,287 @@ fn test_t36_stale_digest_rejected() {
     let res: Result<ProjectContract, _> = dto.try_into();
     assert_eq!(res.unwrap_err(), ContractError::InvalidBindingDigest);
 }
+
+#[test]
+fn test_t38_initial_dto_version_1_no_lineage_pass() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let dto: ProjectContractDto = contract.clone().into();
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert!(res.is_ok());
+}
+
+#[test]
+fn test_t39_initial_dto_version_2_no_lineage_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut dto: ProjectContractDto = contract.into();
+    dto.version = 2;
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidVersionLineage);
+}
+
+#[test]
+fn test_t40_revised_dto_version_1_with_lineage_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut dto: ProjectContractDto = contract.clone().into();
+    dto.version = 1;
+    dto.lineage = Some(ContractLineage {
+        predecessor: contract.binding(),
+        revision_rationale: "r".into(),
+        revision_provenance: mock_provenance(),
+    });
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidVersionLineage);
+}
+
+#[test]
+fn test_t41_revised_dto_version_0_with_lineage_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut dto: ProjectContractDto = contract.clone().into();
+    dto.version = 0;
+    dto.lineage = Some(ContractLineage {
+        predecessor: contract.binding(),
+        revision_rationale: "r".into(),
+        revision_provenance: mock_provenance(),
+    });
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidVersionLineage);
+}
+
+#[test]
+fn test_t42_predecessor_version_not_n_minus_1_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut predecessor = contract.binding();
+    predecessor.version = 0;
+    let mut dto: ProjectContractDto = contract.clone().into();
+    dto.version = 2;
+    dto.lineage = Some(ContractLineage {
+        predecessor,
+        revision_rationale: "r".into(),
+        revision_provenance: mock_provenance(),
+    });
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidPredecessorBinding);
+}
+
+#[test]
+fn test_t43_predecessor_project_id_mismatch_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut predecessor = contract.binding();
+    predecessor.project_id = ProjectId("p2".into());
+    let mut dto: ProjectContractDto = contract.clone().into();
+    dto.version = 2;
+    dto.lineage = Some(ContractLineage {
+        predecessor,
+        revision_rationale: "r".into(),
+        revision_provenance: mock_provenance(),
+    });
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidPredecessorBinding);
+}
+
+#[test]
+fn test_t44_predecessor_contract_id_mismatch_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut predecessor = contract.binding();
+    predecessor.contract_id = ContractId("c2".into());
+    let mut dto: ProjectContractDto = contract.clone().into();
+    dto.version = 2;
+    dto.lineage = Some(ContractLineage {
+        predecessor,
+        revision_rationale: "r".into(),
+        revision_provenance: mock_provenance(),
+    });
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidPredecessorBinding);
+}
+
+#[test]
+fn test_t45_empty_predecessor_digest_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut predecessor = contract.binding();
+    predecessor.contract_digest = "   ".into();
+    let mut dto: ProjectContractDto = contract.clone().into();
+    dto.version = 2;
+    dto.lineage = Some(ContractLineage {
+        predecessor,
+        revision_rationale: "r".into(),
+        revision_provenance: mock_provenance(),
+    });
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidPredecessorBinding);
+}
+
+#[test]
+fn test_t46_blank_revision_rationale_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let predecessor = contract.binding();
+    let mut dto: ProjectContractDto = contract.clone().into();
+    dto.version = 2;
+    dto.lineage = Some(ContractLineage {
+        predecessor,
+        revision_rationale: "   ".into(),
+        revision_provenance: mock_provenance(),
+    });
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::EmptyRevisionRationale);
+}
+
+#[test]
+fn test_t47_invalid_revision_provenance_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let predecessor = contract.binding();
+    let mut dto: ProjectContractDto = contract.clone().into();
+    dto.version = 2;
+    let mut prov = mock_provenance();
+    prov.source_id = "   ".into();
+    dto.lineage = Some(ContractLineage {
+        predecessor,
+        revision_rationale: "r".into(),
+        revision_provenance: prov,
+    });
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidProvenance);
+}
+
+#[test]
+fn test_t48_valid_revision_dto_round_trip_pass() {
+    let previous = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let revision = ProjectContract::revise_contract(
+        &previous,
+        "g2".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+        "r".into(),
+        mock_provenance(),
+    )
+    .unwrap();
+
+    let dto: ProjectContractDto = revision.clone().into();
+    let json = serde_json::to_string(&dto).unwrap();
+    let parsed_dto: ProjectContractDto = serde_json::from_str(&json).unwrap();
+    let contract: ProjectContract = parsed_dto.try_into().unwrap();
+
+    assert_eq!(revision.contract_digest(), contract.contract_digest());
+}
+
+#[test]
+fn test_t49_public_revise_contract_output_serialize_deserialize_identical() {
+    let previous = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let revision = ProjectContract::revise_contract(
+        &previous,
+        "g2".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+        "r".into(),
+        mock_provenance(),
+    )
+    .unwrap();
+
+    let dto: ProjectContractDto = revision.clone().into();
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert!(res.is_ok());
+
+    let deserialized = res.unwrap();
+    assert_eq!(
+        deserialized.binding().contract_digest,
+        revision.binding().contract_digest
+    );
+}

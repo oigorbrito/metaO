@@ -14,6 +14,9 @@ pub enum ContractError {
     EmptyDescription,
     InvalidProvenance,
     InvalidBindingDigest,
+    InvalidVersionLineage,
+    InvalidPredecessorBinding,
+    EmptyRevisionRationale,
 }
 
 impl fmt::Display for ContractError {
@@ -216,6 +219,26 @@ impl TryFrom<ProjectContractDto> for ProjectContract {
         }
 
         let contract = if let Some(lineage) = dto.lineage {
+            if dto.version < 2 {
+                return Err(ContractError::InvalidVersionLineage);
+            }
+            if lineage.predecessor.project_id != dto.project_id {
+                return Err(ContractError::InvalidPredecessorBinding);
+            }
+            if lineage.predecessor.contract_id != dto.contract_id {
+                return Err(ContractError::InvalidPredecessorBinding);
+            }
+            if lineage.predecessor.version + 1 != dto.version {
+                return Err(ContractError::InvalidPredecessorBinding);
+            }
+            if lineage.predecessor.contract_digest.trim().is_empty() {
+                return Err(ContractError::InvalidPredecessorBinding);
+            }
+            if lineage.revision_rationale.trim().is_empty() {
+                return Err(ContractError::EmptyRevisionRationale);
+            }
+            Self::validate_provenance(&lineage.revision_provenance)?;
+
             let mut c = Self::new_internal(
                 dto.project_id,
                 dto.contract_id,
@@ -229,6 +252,9 @@ impl TryFrom<ProjectContractDto> for ProjectContract {
             c.contract_digest = c.calculate_digest();
             c
         } else {
+            if dto.version != 1 {
+                return Err(ContractError::InvalidVersionLineage);
+            }
             Self::new(
                 dto.project_id,
                 dto.contract_id,
