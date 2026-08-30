@@ -17,6 +17,7 @@ pub enum WorkloadIdentityError {
     InvalidAssuranceCredentialPair,
     InvalidVerificationBasis,
     InvalidValidityWindow,
+    SpiffeTrustDomainMismatch,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -96,6 +97,16 @@ impl RuntimeWorkloadIdentity {
         }
         if self.trust_domain.trim().is_empty() {
             return Err(WorkloadIdentityError::BlankTrustDomain);
+        }
+
+        if matches!(
+            self.credential_kind,
+            WorkloadCredentialKind::X509Svid | WorkloadCredentialKind::JwtSvid
+        ) {
+            let expected_prefix = format!("spiffe://{}/", self.trust_domain.trim());
+            if !self.workload_subject.starts_with(&expected_prefix) {
+                return Err(WorkloadIdentityError::SpiffeTrustDomainMismatch);
+            }
         }
 
         if let (Some(issued), Some(expires)) = (self.issued_at_epoch, self.expires_at_epoch) {
