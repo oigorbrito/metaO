@@ -37,6 +37,16 @@
       "intent": "Acceptance requires applicable verified evidence; exact binding alone with unverified evidence remains blocked."
     },
     {
+      "invariant_id": "BlockedRequiresIndependentFreshFail",
+      "implementation_state": "GAP_PENDING_OWNER",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": [],
+      "gap_parent_issue": 161,
+      "gap_reason": "No current Rust target was found that proves a stale or old-generation verifier FAIL cannot terminally BLOCK the current execution generation. The formal model now requires fresh current-generation FAIL evidence before BLOCK.",
+      "python_oracle_targets": ["tests/phase6_shadow_oracle.py"],
+      "intent": "Terminal BLOCK must be bound to fresh verifier FAIL evidence for the authoritative current execution generation; stale failure evidence is not terminal authority."
+    },
+    {
       "invariant_id": "StaleEvidenceCannotAcceptCurrentGeneration",
       "implementation_state": "TEST_PATH_PRESENT",
       "execution_state": "EXECUTION_NOT_RUN",
