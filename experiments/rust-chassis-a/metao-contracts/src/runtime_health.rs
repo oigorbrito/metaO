@@ -125,8 +125,8 @@ pub fn derive_runtime_health(
         ));
         RuntimeHealthState::Quarantined
     } else {
-        let failure_percent = (u64::from(observation.failures) * 100)
-            / u64::from(observation.attempts);
+        let failure_percent =
+            (u64::from(observation.failures) * 100) / u64::from(observation.attempts);
 
         if failure_percent >= u64::from(policy.unhealthy_failure_percent) {
             reasons.push(format!(
@@ -136,7 +136,7 @@ pub fn derive_runtime_health(
             RuntimeHealthState::Unhealthy
         } else if matches!(
             observation.prior_state,
-            Some(RuntimeHealthState::Quarantined | RuntimeHealthState::Unhealthy)
+            Some(RuntimeHealthState::Quarantined) | Some(RuntimeHealthState::Unhealthy)
         ) {
             if observation.failures == 0
                 && observation.fresh_successes_since_unhealthy
@@ -180,9 +180,7 @@ pub fn derive_runtime_health(
         }
     };
 
-    if observation.self_reported_healthy == Some(true)
-        && state != RuntimeHealthState::Healthy
-    {
+    if observation.self_reported_healthy == Some(true) && state != RuntimeHealthState::Healthy {
         reasons.push("runtime self-report healthy=true did not override factual state".to_string());
     }
 
