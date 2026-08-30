@@ -136,6 +136,43 @@ fn same_holder_renewal_cannot_move_generation_or_fence_backwards() {
 }
 
 #[test]
+fn same_execution_renewal_cannot_roll_time_backwards() {
+    let mut current = lease("owner-a", 5, 50);
+    current.renewed_at_epoch = 150;
+    current.expires_at_epoch = 260;
+
+    let mut stale = current.clone();
+    stale.renewed_at_epoch = 140;
+    stale.expires_at_epoch = 250;
+    assert_eq!(
+        current.validate_successor(&stale),
+        Err(ExecutionLeaseError::TimeRegression)
+    );
+}
+
+#[test]
+fn released_or_expired_lease_requires_new_generation_and_fence_to_reactivate() {
+    for terminal_state in [LeaseState::Released, LeaseState::Expired] {
+        let mut current = lease("owner-a", 5, 50);
+        current.state = terminal_state;
+
+        let mut stale_reactivation = current.clone();
+        stale_reactivation.state = LeaseState::Active;
+        stale_reactivation.renewed_at_epoch = 120;
+        stale_reactivation.expires_at_epoch = 220;
+        assert_eq!(
+            current.validate_successor(&stale_reactivation),
+            Err(ExecutionLeaseError::GenerationRegression)
+        );
+
+        let mut valid_reactivation = stale_reactivation;
+        valid_reactivation.generation = 6;
+        valid_reactivation.fencing_token = 51;
+        assert_eq!(current.validate_successor(&valid_reactivation), Ok(()));
+    }
+}
+
+#[test]
 fn zero_generation_or_fence_fails_closed() {
     let mut value = lease("owner-a", 1, 10);
     value.generation = 0;
