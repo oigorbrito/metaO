@@ -1,6 +1,6 @@
 use metao_contracts::execution_governance::{
-    evaluate_pre_runtime_gate, ExecutionBudget, ExecutionGateDecision, ExecutionPolicyEffect,
-    ExecutionRiskDecision, ExecutionUsage,
+    evaluate_pre_runtime_gate, ExecutionBudget, ExecutionGateDecision, ExecutionGovernanceError,
+    ExecutionPolicyEffect, ExecutionRiskDecision, ExecutionUsage,
 };
 
 fn budget() -> ExecutionBudget {
@@ -113,6 +113,64 @@ fn requested_usage_over_limit_blocks_before_runtime() {
 }
 
 #[test]
+fn non_finite_or_negative_budget_values_fail_closed() {
+    for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0] {
+        let mut value = budget();
+        value.money_limit = invalid;
+        assert_eq!(value.validate(), Err(ExecutionGovernanceError::InvalidBudget));
+        assert_eq!(
+            evaluate_pre_runtime_gate(
+                ExecutionPolicyEffect::Allow,
+                ExecutionRiskDecision::Allow,
+                &value,
+                &request(),
+                true,
+            )
+            .decision,
+            ExecutionGateDecision::Block
+        );
+    }
+}
+
+#[test]
+fn non_finite_or_negative_requested_usage_blocks() {
+    for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0] {
+        let mut requested = request();
+        requested.money = invalid;
+        assert_eq!(requested.validate(), Err(ExecutionGovernanceError::InvalidUsage));
+        assert_eq!(
+            evaluate_pre_runtime_gate(
+                ExecutionPolicyEffect::Allow,
+                ExecutionRiskDecision::Allow,
+                &budget(),
+                &requested,
+                false,
+            )
+            .decision,
+            ExecutionGateDecision::Block
+        );
+    }
+}
+
+#[test]
+fn integer_overflow_cannot_be_hidden_by_saturating_accounting() {
+    let value = ExecutionBudget {
+        token_limit: u64::MAX,
+        tokens_used: u64::MAX,
+        attempt_limit: u64::MAX,
+        attempts_used: u64::MAX,
+        ..budget()
+    };
+    let requested = ExecutionUsage {
+        money: 0.0,
+        tokens: 1,
+        wall_time_s: 0.0,
+        attempts: 1,
+    };
+    assert!(!value.has_pre_runtime_capacity(&requested));
+}
+
+#[test]
 fn observed_runtime_overage_is_preserved_as_fact() {
     let observed = ExecutionUsage {
         money: 12.0,
@@ -120,11 +178,48 @@ fn observed_runtime_overage_is_preserved_as_fact() {
         wall_time_s: 120.0,
         attempts: 1,
     };
-    let projection = budget().observe_usage(&observed);
+    let projection = budget()
+        .observe_usage(&observed)
+        .expect("finite observed overage remains factual");
     assert!(projection.over_limit);
     assert_eq!(projection.money_observed, 12.0);
     assert_eq!(projection.tokens_observed, 1_500);
     assert_eq!(projection.wall_time_observed_s, 120.0);
+}
+
+#[test]
+fn invalid_observed_usage_is_error_not_false_non_overage() {
+    for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0] {
+        let observed = ExecutionUsage {
+            money: invalid,
+            tokens: 0,
+            wall_time_s: 0.0,
+            attempts: 0,
+        };
+        assert_eq!(
+            budget().observe_usage(&observed),
+            Err(ExecutionGovernanceError::InvalidUsage)
+        );
+    }
+}
+
+#[test]
+fn observed_integer_overflow_is_error() {
+    let value = ExecutionBudget {
+        token_limit: u64::MAX,
+        tokens_used: u64::MAX,
+        ..budget()
+    };
+    let observed = ExecutionUsage {
+        money: 0.0,
+        tokens: 1,
+        wall_time_s: 0.0,
+        attempts: 0,
+    };
+    assert_eq!(
+        value.observe_usage(&observed),
+        Err(ExecutionGovernanceError::InvalidUsage)
+    );
 }
 
 #[test]
@@ -136,7 +231,7 @@ fn execution_budget_is_serially_distinct_from_acceptance_budget() {
 }
 
 #[test]
-fn gate_result_has_no acceptance_or_runtime_sdk_authority() {
+fn gate_result_has_no_acceptance_or_runtime_sdk_authority() {
     let result = evaluate_pre_runtime_gate(
         ExecutionPolicyEffect::Allow,
         ExecutionRiskDecision::Allow,
