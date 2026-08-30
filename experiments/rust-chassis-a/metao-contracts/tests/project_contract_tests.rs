@@ -9,6 +9,25 @@ fn mock_provenance() -> Provenance {
     }
 }
 
+fn valid_item(id: &str, cat: SemanticCategory) -> SemanticItem {
+    SemanticItem {
+        item_id: ItemId(id.into()),
+        category: cat,
+        description: "Valid desc".into(),
+        provenance: mock_provenance(),
+    }
+}
+
+fn valid_ref(id: &str) -> ProjectReference {
+    ProjectReference {
+        reference_id: ReferenceId(id.into()),
+        locator: "loc".into(),
+        selected_desired_traits: BTreeSet::new(),
+        selected_undesired_traits: BTreeSet::new(),
+        provenance: mock_provenance(),
+    }
+}
+
 #[test]
 fn test_t01_minimal_valid_contract() {
     let contract = ProjectContract::new(
@@ -20,7 +39,7 @@ fn test_t01_minimal_valid_contract() {
         vec![],
     )
     .unwrap();
-    assert_eq!(contract.version, 1);
+    assert_eq!(contract.version(), 1);
 }
 
 #[test]
@@ -33,7 +52,10 @@ fn test_t02_empty_project_id_rejected() {
         vec![],
         vec![],
     );
-    assert_eq!(result, Err(ContractError::EmptyIdentity("project_id")));
+    assert_eq!(
+        result.unwrap_err(),
+        ContractError::EmptyIdentity("project_id")
+    );
 }
 
 #[test]
@@ -46,7 +68,10 @@ fn test_t03_empty_contract_id_rejected() {
         vec![],
         vec![],
     );
-    assert_eq!(result, Err(ContractError::EmptyIdentity("contract_id")));
+    assert_eq!(
+        result.unwrap_err(),
+        ContractError::EmptyIdentity("contract_id")
+    );
 }
 
 #[test]
@@ -59,23 +84,13 @@ fn test_t05_empty_goal_rejected() {
         vec![],
         vec![],
     );
-    assert_eq!(result, Err(ContractError::EmptyGoal));
+    assert_eq!(result.unwrap_err(), ContractError::EmptyGoal);
 }
 
 #[test]
 fn test_t06_duplicate_item_id_rejected() {
-    let item1 = SemanticItem {
-        item_id: ItemId("i1".into()),
-        category: SemanticCategory::Assumption,
-        description: "A".into(),
-        provenance: mock_provenance(),
-    };
-    let item2 = SemanticItem {
-        item_id: ItemId("i1".into()),
-        category: SemanticCategory::UserRequirement,
-        description: "B".into(),
-        provenance: mock_provenance(),
-    };
+    let item1 = valid_item("i1", SemanticCategory::Assumption);
+    let item2 = valid_item("i1", SemanticCategory::UserRequirement);
     let result = ProjectContract::new(
         ProjectId("p1".into()),
         ContractId("c1".into()),
@@ -84,25 +99,16 @@ fn test_t06_duplicate_item_id_rejected() {
         vec![item1, item2],
         vec![],
     );
-    assert_eq!(result, Err(ContractError::DuplicateItemId("i1".into())));
+    assert_eq!(
+        result.unwrap_err(),
+        ContractError::DuplicateItemId("i1".into())
+    );
 }
 
 #[test]
 fn test_t07_duplicate_reference_id_rejected() {
-    let ref1 = ProjectReference {
-        reference_id: ReferenceId("r1".into()),
-        locator: "L1".into(),
-        selected_desired_traits: BTreeSet::new(),
-        selected_undesired_traits: BTreeSet::new(),
-        provenance: mock_provenance(),
-    };
-    let ref2 = ProjectReference {
-        reference_id: ReferenceId("r1".into()),
-        locator: "L2".into(),
-        selected_desired_traits: BTreeSet::new(),
-        selected_undesired_traits: BTreeSet::new(),
-        provenance: mock_provenance(),
-    };
+    let ref1 = valid_ref("r1");
+    let ref2 = valid_ref("r1");
     let result = ProjectContract::new(
         ProjectId("p1".into()),
         ContractId("c1".into()),
@@ -112,38 +118,21 @@ fn test_t07_duplicate_reference_id_rejected() {
         vec![ref1, ref2],
     );
     assert_eq!(
-        result,
-        Err(ContractError::DuplicateReferenceId("r1".into()))
+        result.unwrap_err(),
+        ContractError::DuplicateReferenceId("r1".into())
     );
 }
 
 #[test]
-fn test_t08_to_t12_categories_remain_distinct() {
+fn test_t08_to_t12d_categories_remain_distinct() {
     let items = vec![
-        SemanticItem {
-            item_id: ItemId("1".into()),
-            category: SemanticCategory::Assumption,
-            description: "".into(),
-            provenance: mock_provenance(),
-        },
-        SemanticItem {
-            item_id: ItemId("2".into()),
-            category: SemanticCategory::UserRequirement,
-            description: "".into(),
-            provenance: mock_provenance(),
-        },
-        SemanticItem {
-            item_id: ItemId("3".into()),
-            category: SemanticCategory::Preference,
-            description: "".into(),
-            provenance: mock_provenance(),
-        },
-        SemanticItem {
-            item_id: ItemId("4".into()),
-            category: SemanticCategory::TechnicalConstraint,
-            description: "".into(),
-            provenance: mock_provenance(),
-        },
+        valid_item("1", SemanticCategory::Assumption),
+        valid_item("2", SemanticCategory::UserRequirement),
+        valid_item("3", SemanticCategory::Preference),
+        valid_item("4", SemanticCategory::TechnicalConstraint),
+        valid_item("5", SemanticCategory::RequiredCapability),
+        valid_item("6", SemanticCategory::RequiredSurface),
+        valid_item("7", SemanticCategory::DefinitionOfDone),
     ];
     let contract = ProjectContract::new(
         ProjectId("p1".into()),
@@ -155,21 +144,33 @@ fn test_t08_to_t12_categories_remain_distinct() {
     )
     .unwrap();
 
-    assert!(contract.assumptions.contains_key(&ItemId("1".into())));
-    assert!(contract.user_requirements.contains_key(&ItemId("2".into())));
-    assert!(contract.preferences.contains_key(&ItemId("3".into())));
+    assert!(contract.assumptions().contains_key(&ItemId("1".into())));
+    assert!(!contract
+        .user_requirements()
+        .contains_key(&ItemId("1".into()))); // Negative sensor
     assert!(contract
-        .technical_constraints
+        .user_requirements()
+        .contains_key(&ItemId("2".into())));
+    assert!(contract.preferences().contains_key(&ItemId("3".into())));
+    assert!(contract
+        .technical_constraints()
         .contains_key(&ItemId("4".into())));
+    assert!(contract
+        .required_capabilities()
+        .contains_key(&ItemId("5".into())));
+    assert!(!contract
+        .user_requirements()
+        .contains_key(&ItemId("5".into()))); // Negative sensor
+    assert!(contract
+        .required_surfaces()
+        .contains_key(&ItemId("6".into())));
+    assert!(contract
+        .definition_of_done()
+        .contains_key(&ItemId("7".into())));
 }
 
 #[test]
-fn test_t13_canonical_serialization_deterministic() {
-    // Already enforced by BTreeMap and struct definition
-}
-
-#[test]
-fn test_t14_same_content_same_digest() {
+fn test_t13_t14_same_content_same_digest() {
     let contract1 = ProjectContract::new(
         ProjectId("p1".into()),
         ContractId("c1".into()),
@@ -188,7 +189,32 @@ fn test_t14_same_content_same_digest() {
         vec![],
     )
     .unwrap();
-    assert_eq!(contract1.contract_digest, contract2.contract_digest);
+    assert_eq!(contract1.contract_digest(), contract2.contract_digest());
+}
+
+#[test]
+fn test_t15_unordered_equivalent_input_same_digest() {
+    let item1 = valid_item("i1", SemanticCategory::UserRequirement);
+    let item2 = valid_item("i2", SemanticCategory::Assumption);
+    let contract1 = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        BTreeSet::new(),
+        vec![item1.clone(), item2.clone()],
+        vec![],
+    )
+    .unwrap();
+    let contract2 = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        BTreeSet::new(),
+        vec![item2, item1],
+        vec![],
+    )
+    .unwrap();
+    assert_eq!(contract1.contract_digest(), contract2.contract_digest());
 }
 
 #[test]
@@ -211,7 +237,34 @@ fn test_t16_material_change_changes_digest() {
         vec![],
     )
     .unwrap();
-    assert_ne!(contract1.contract_digest, contract2.contract_digest);
+    assert_ne!(contract1.contract_digest(), contract2.contract_digest());
+}
+
+#[test]
+fn test_t17_provenance_change_changes_digest() {
+    let item1 = valid_item("i1", SemanticCategory::Assumption);
+    let mut item2 = item1.clone();
+    item2.provenance.source_id = "user-456".into();
+
+    let contract1 = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        BTreeSet::new(),
+        vec![item1],
+        vec![],
+    )
+    .unwrap();
+    let contract2 = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        BTreeSet::new(),
+        vec![item2],
+        vec![],
+    )
+    .unwrap();
+    assert_ne!(contract1.contract_digest(), contract2.contract_digest());
 }
 
 #[test]
@@ -237,13 +290,177 @@ fn test_t18_t20_revision_rules() {
     )
     .unwrap();
 
-    assert_eq!(previous.version, 1);
-    assert_eq!(revision.version, 2);
+    assert_eq!(previous.version(), 1);
+    assert_eq!(revision.version(), 2);
 
-    let lineage = revision.lineage.as_ref().unwrap();
+    let lineage = revision.lineage().unwrap();
     assert_eq!(
         lineage.predecessor.contract_digest,
-        previous.contract_digest
+        previous.contract_digest()
     );
     assert_eq!(lineage.predecessor.version, 1);
+
+    // Test t17B and t17C implicitly: revision has diff version and lineage, so digest differs
+    assert_ne!(previous.contract_digest(), revision.contract_digest());
+}
+
+#[test]
+fn test_t24_binding_contains_exact_fields() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let binding = contract.binding();
+    assert_eq!(binding.project_id.0, "p1");
+    assert_eq!(binding.contract_id.0, "c1");
+    assert_eq!(binding.version, 1);
+    assert_eq!(binding.contract_digest, contract.contract_digest());
+}
+
+#[test]
+fn test_t25_acceptance_criterion_and_test_remain_distinct() {
+    let items = vec![
+        valid_item("1", SemanticCategory::AcceptanceCriterion),
+        valid_item("2", SemanticCategory::AcceptanceTest),
+    ];
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        items,
+        vec![],
+    )
+    .unwrap();
+    assert!(contract
+        .acceptance_criteria()
+        .contains_key(&ItemId("1".into())));
+    assert!(!contract
+        .acceptance_criteria()
+        .contains_key(&ItemId("2".into())));
+    assert!(contract
+        .acceptance_tests()
+        .contains_key(&ItemId("2".into())));
+}
+
+#[test]
+fn test_t30_canonical_round_trip() {
+    let items = vec![valid_item("1", SemanticCategory::UserRequirement)];
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        items,
+        vec![],
+    )
+    .unwrap();
+
+    let dto: ProjectContractDto = contract.clone().into();
+    let json = serde_json::to_string(&dto).unwrap();
+    let parsed_dto: ProjectContractDto = serde_json::from_str(&json).unwrap();
+    let contract2: ProjectContract = parsed_dto.try_into().unwrap();
+
+    assert_eq!(contract.contract_digest(), contract2.contract_digest());
+    assert!(contract2
+        .user_requirements()
+        .contains_key(&ItemId("1".into())));
+}
+
+#[test]
+fn test_t31_empty_provenance_source_rejected() {
+    let mut item = valid_item("1", SemanticCategory::UserRequirement);
+    item.provenance.source_id = "   ".into();
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![item],
+        vec![],
+    );
+    assert_eq!(res.unwrap_err(), ContractError::InvalidProvenance);
+}
+
+#[test]
+fn test_t32_empty_item_id_rejected() {
+    let item = valid_item("   ", SemanticCategory::UserRequirement);
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![item],
+        vec![],
+    );
+    assert_eq!(res.unwrap_err(), ContractError::EmptyIdentity("item_id"));
+}
+
+#[test]
+fn test_t33_empty_reference_id_rejected() {
+    let ref1 = valid_ref("   ");
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert_eq!(
+        res.unwrap_err(),
+        ContractError::EmptyIdentity("reference_id")
+    );
+}
+
+#[test]
+fn test_t34_empty_description_rejected() {
+    let mut item = valid_item("1", SemanticCategory::UserRequirement);
+    item.description = "   ".into();
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![item],
+        vec![],
+    );
+    assert_eq!(res.unwrap_err(), ContractError::EmptyDescription);
+}
+
+#[test]
+fn test_t35_empty_locator_rejected() {
+    let mut ref1 = valid_ref("1");
+    ref1.locator = "   ".into();
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert_eq!(res.unwrap_err(), ContractError::EmptyIdentity("locator"));
+}
+
+#[test]
+fn test_t36_stale_digest_rejected() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "g".into(),
+        BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut dto: ProjectContractDto = contract.into();
+    dto.contract_digest = "stale_hash".into();
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidBindingDigest);
 }
