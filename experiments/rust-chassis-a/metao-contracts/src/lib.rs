@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+pub mod project_completion;
 pub mod project_contract;
 pub mod reference_intake;
 pub mod tech_stack_intake;
