@@ -32,7 +32,6 @@ impl RuntimeHealthPolicy {
     pub fn validate(&self) -> Result<(), RuntimeHealthError> {
         if self.quarantine_consecutive_failures == 0
             || self.recovery_successes_required == 0
-            || self.retry_pressure_limit == 0
             || self.unhealthy_failure_percent == 0
             || self.unhealthy_failure_percent > 100
         {
