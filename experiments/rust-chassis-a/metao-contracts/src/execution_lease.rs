@@ -3,6 +3,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ExecutionLeaseError {
     BlankIdentity(&'static str),
+    BlankEvidenceRef,
+    InvalidEvidenceBasis,
     ZeroGeneration,
     ZeroFencingToken,
     InvalidTimeWindow,
@@ -25,6 +27,14 @@ pub enum LeaseAssurance {
     SingleInstanceDevelopment,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum LeaseEvidenceBasis {
+    AuthoritativeStoreRead,
+    DevelopmentLocal,
+    CallerDeclared,
+    Unknown,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionLease {
     pub mission_id: String,
@@ -38,6 +48,8 @@ pub struct ExecutionLease {
     pub expires_at_epoch: i64,
     pub state: LeaseState,
     pub assurance: LeaseAssurance,
+    pub evidence_basis: LeaseEvidenceBasis,
+    pub evidence_ref: Option<String>,
 }
 
 impl ExecutionLease {
@@ -51,6 +63,19 @@ impl ExecutionLease {
             if value.trim().is_empty() {
                 return Err(ExecutionLeaseError::BlankIdentity(name));
             }
+        }
+        match (self.assurance, self.evidence_basis) {
+            (LeaseAssurance::AuthoritativeStore, LeaseEvidenceBasis::AuthoritativeStoreRead) => {
+                if self
+                    .evidence_ref
+                    .as_deref()
+                    .is_none_or(|value| value.trim().is_empty())
+                {
+                    return Err(ExecutionLeaseError::BlankEvidenceRef);
+                }
+            }
+            (LeaseAssurance::SingleInstanceDevelopment, LeaseEvidenceBasis::DevelopmentLocal) => {}
+            _ => return Err(ExecutionLeaseError::InvalidEvidenceBasis),
         }
         if self.generation == 0 {
             return Err(ExecutionLeaseError::ZeroGeneration);
