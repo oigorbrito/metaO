@@ -1,12 +1,14 @@
 use metao_contracts::failure_causality::{
     evaluate_retry_eligibility, FactualExecutionOutcome, FailureCausalityFacts, FailureClass,
-    RecoveryStatus, RetryEligibility,
+    FailureClassificationBasis, RecoveryStatus, RetryEligibility,
 };
 
 fn transient_failure() -> FailureCausalityFacts {
     FailureCausalityFacts {
         original_outcome: FactualExecutionOutcome::Failed,
         failure_class: FailureClass::Transient,
+        failure_class_basis: FailureClassificationBasis::AdapterNormalization,
+        failure_class_evidence_ref: Some("adapter-error:RUNTIME_ADAPTER_FAILED".to_string()),
         recovery_status: RecoveryStatus::Complete,
         current_attempt: 1,
         max_attempts: 3,
@@ -22,6 +24,53 @@ fn factual_transient_failure_can_be_eligible_without_executing_retry() {
     assert_eq!(result.eligibility, RetryEligibility::Eligible);
     assert_eq!(result.next_attempt, Some(2));
     assert_eq!(result.original_outcome, FactualExecutionOutcome::Failed);
+    assert_eq!(
+        result.failure_class_basis,
+        FailureClassificationBasis::AdapterNormalization
+    );
+}
+
+#[test]
+fn caller_declared_transience_is_not_retry_authority() {
+    let mut facts = transient_failure();
+    facts.failure_class_basis = FailureClassificationBasis::CallerDeclared;
+    let result = evaluate_retry_eligibility(&facts);
+    assert_eq!(result.eligibility, RetryEligibility::Ineligible);
+    assert_eq!(result.next_attempt, None);
+    assert!(result.reason.contains("lacks authoritative factual evidence"));
+}
+
+#[test]
+fn missing_or_blank_transience_evidence_is_ineligible() {
+    for evidence_ref in [None, Some(String::new()), Some("   ".to_string())] {
+        let mut facts = transient_failure();
+        facts.failure_class_evidence_ref = evidence_ref;
+        assert_eq!(
+            evaluate_retry_eligibility(&facts).eligibility,
+            RetryEligibility::Ineligible
+        );
+    }
+}
+
+#[test]
+fn missing_classification_basis_cannot_enable_retry() {
+    let mut facts = transient_failure();
+    facts.failure_class_basis = FailureClassificationBasis::Missing;
+    assert_eq!(
+        evaluate_retry_eligibility(&facts).eligibility,
+        RetryEligibility::Ineligible
+    );
+}
+
+#[test]
+fn authoritative_observation_can_support_transience() {
+    let mut facts = transient_failure();
+    facts.failure_class_basis = FailureClassificationBasis::AuthoritativeObservation;
+    facts.failure_class_evidence_ref = Some("transport-observation:timeout-42".to_string());
+    assert_eq!(
+        evaluate_retry_eligibility(&facts).eligibility,
+        RetryEligibility::Eligible
+    );
 }
 
 #[test]
