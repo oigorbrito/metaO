@@ -1,16 +1,9 @@
-mod project_contract {
-    pub use metao_contracts::project_contract::*;
-}
-
-#[path = "../src/clarification_policy.rs"]
-mod clarification_policy;
-
-use clarification_policy::{
-    apply_explicit_resolution, ClarificationAction, ClarificationPolicy, ClarificationPolicyError,
-    ExplicitResolution, Materiality, MaterialityReason, ResolutionKind, Reversibility, SafeDefault,
-    UnresolvedDiscoveryItem,
+use metao_contracts::clarification_policy::{
+    apply_explicit_resolution, ClarificationAction, ClarificationDecision, ClarificationPolicy,
+    ClarificationPolicyError, ExplicitResolution, Materiality, MaterialityReason, ResolutionKind,
+    Reversibility, SafeDefault, UnresolvedDiscoveryItem,
 };
-use project_contract::{Provenance, ProvenanceCategory, SemanticCategory};
+use metao_contracts::project_contract::{Provenance, ProvenanceCategory, SemanticCategory};
 
 fn provenance(category: ProvenanceCategory, source_id: &str) -> Provenance {
     Provenance {
@@ -183,7 +176,7 @@ fn policy_decision_is_deterministic_and_serializable() {
     let right = ClarificationPolicy::classify(&value).expect("second classification");
     assert_eq!(left, right);
     let encoded = serde_json::to_string(&left).expect("serialize decision");
-    let decoded: clarification_policy::ClarificationDecision =
+    let decoded: ClarificationDecision =
         serde_json::from_str(&encoded).expect("deserialize decision");
     assert_eq!(decoded, left);
 }
