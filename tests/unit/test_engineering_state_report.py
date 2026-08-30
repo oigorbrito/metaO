@@ -4,6 +4,7 @@ import importlib.util
 import json
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,6 +13,7 @@ MODULE_PATH = Path(__file__).resolve().parents[2] / "scripts" / "engineering_sta
 SPEC = importlib.util.spec_from_file_location("engineering_state_report", MODULE_PATH)
 assert SPEC is not None and SPEC.loader is not None
 reporter = importlib.util.module_from_spec(SPEC)
+sys.modules[SPEC.name] = reporter
 SPEC.loader.exec_module(reporter)
 
 
