@@ -20,11 +20,14 @@ The model intentionally excludes runtime SDKs, provider topology, agents, tools 
 
 - `OrchestratorDoneIsNotAcceptance`
 - `AcceptedRequiresIndependentFreshPass`
+- `BlockedRequiresIndependentFreshFail`
 - `StaleEvidenceCannotAcceptCurrentGeneration`
 - `IncompleteRecoveryCannotEnableRetry`
 - `UnknownNeverAccepts`
 - `OldGenerationDoneCannotAcceptCurrent`
 - `AcceptedGenerationMatchesCurrent`
+
+Both terminal decisions are bound to fresh evidence for the current execution generation. A stale/old-generation verifier result cannot mint either `ACCEPTED` or `BLOCKED` for the current generation.
 
 ### Claim boundary
 
