@@ -53,7 +53,7 @@ impl ProjectCompletionGate {
 
         let mut indexed: BTreeMap<ItemId, Vec<&ProjectCompletionEvidence>> = BTreeMap::new();
         for record in evidence {
-            if record.contract_binding == binding {
+            if record.contract_binding == binding && valid_evidence_record(record) {
                 indexed
                     .entry(record.obligation_id.clone())
                     .or_default()
@@ -95,6 +95,12 @@ impl ProjectCompletionGate {
             reasons,
         }
     }
+}
+
+fn valid_evidence_record(record: &ProjectCompletionEvidence) -> bool {
+    !record.evidence_id.trim().is_empty()
+        && !record.obligation_id.0.trim().is_empty()
+        && !record.reason.trim().is_empty()
 }
 
 fn completion_obligations(dto: &ProjectContractDto) -> BTreeSet<ItemId> {
