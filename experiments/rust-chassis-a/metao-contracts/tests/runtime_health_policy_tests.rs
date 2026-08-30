@@ -1,6 +1,6 @@
 use metao_contracts::runtime_health::{
-    derive_runtime_health, RuntimeHealthError, RuntimeHealthObservation, RuntimeHealthPolicy,
-    RuntimeHealthState,
+    derive_runtime_health, RuntimeHealthError, RuntimeHealthEvidenceBasis,
+    RuntimeHealthObservation, RuntimeHealthPolicy, RuntimeHealthState,
 };
 
 fn policy() -> RuntimeHealthPolicy {
@@ -17,6 +17,8 @@ fn observation() -> RuntimeHealthObservation {
         runtime_id: "runtime-a".to_string(),
         runtime_version: "1.0.0".to_string(),
         config_id: "config-a".to_string(),
+        evidence_basis: RuntimeHealthEvidenceBasis::AdapterVerified,
+        evidence_ref: "runtime-health:runtime-a:policy-window".to_string(),
         window_start_sequence: 1,
         window_end_sequence: 2,
         attempts: 1,
