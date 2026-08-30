@@ -5,6 +5,8 @@ use std::collections::BTreeSet;
 pub enum ExecutionStageEvidenceError {
     BlankStageId,
     BlankReason,
+    BlankEvidenceRef,
+    InvalidEvidenceBasis,
     DuplicateStage(String),
     SequenceGap { expected: u64, actual: u64 },
     InvalidExecutionClaim,
@@ -19,6 +21,14 @@ pub enum ExecutionStageStatus {
     NotRequested,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExecutionStageEvidenceBasis {
+    IndependentObservation,
+    AdapterVerified,
+    SelfReported,
+    Unknown,
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionStageEvidence {
     pub stage_id: String,
@@ -27,6 +37,7 @@ pub struct ExecutionStageEvidence {
     pub executed: bool,
     pub status: ExecutionStageStatus,
     pub reason: String,
+    pub evidence_basis: ExecutionStageEvidenceBasis,
     pub evidence_ref: Option<String>,
 }
 
@@ -43,6 +54,20 @@ impl ExecutionStageEvidence {
             ExecutionStageStatus::Pass | ExecutionStageStatus::Failed => {
                 if !self.requested || !self.executed {
                     return Err(ExecutionStageEvidenceError::InvalidExecutionClaim);
+                }
+                if !matches!(
+                    self.evidence_basis,
+                    ExecutionStageEvidenceBasis::IndependentObservation
+                        | ExecutionStageEvidenceBasis::AdapterVerified
+                ) {
+                    return Err(ExecutionStageEvidenceError::InvalidEvidenceBasis);
+                }
+                if self
+                    .evidence_ref
+                    .as_deref()
+                    .is_none_or(|value| value.trim().is_empty())
+                {
+                    return Err(ExecutionStageEvidenceError::BlankEvidenceRef);
                 }
             }
             ExecutionStageStatus::Blocked | ExecutionStageStatus::Skipped => {
