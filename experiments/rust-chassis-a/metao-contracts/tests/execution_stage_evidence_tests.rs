@@ -1,6 +1,6 @@
 use metao_contracts::execution_stage_evidence::{
-    project_execution_stages, ExecutionStageEvidence, ExecutionStageEvidenceError,
-    ExecutionStageStatus,
+    project_execution_stages, ExecutionStageEvidence, ExecutionStageEvidenceBasis,
+    ExecutionStageEvidenceError, ExecutionStageStatus,
 };
 
 fn stage(
@@ -10,6 +10,7 @@ fn stage(
     executed: bool,
     status: ExecutionStageStatus,
 ) -> ExecutionStageEvidence {
+    let conclusive = matches!(status, ExecutionStageStatus::Pass | ExecutionStageStatus::Failed);
     ExecutionStageEvidence {
         stage_id: id.to_string(),
         sequence,
@@ -17,7 +18,12 @@ fn stage(
         executed,
         status,
         reason: format!("factual stage result for {id}"),
-        evidence_ref: None,
+        evidence_basis: if conclusive {
+            ExecutionStageEvidenceBasis::AdapterVerified
+        } else {
+            ExecutionStageEvidenceBasis::Unknown
+        },
+        evidence_ref: conclusive.then(|| format!("stage-evidence:{id}:{sequence}")),
     }
 }
 
@@ -29,14 +35,9 @@ fn skipped_and_not_requested_are_distinct_facts() {
         stage("optional-export", 3, false, false, ExecutionStageStatus::NotRequested),
     ])
     .expect("report");
-
     assert_eq!(report.skipped, 1);
     assert_eq!(report.not_requested, 1);
-    assert_ne!(
-        report.stages[1].status,
-        report.stages[2].status,
-        "SKIPPED must not collapse into NOT_REQUESTED"
-    );
+    assert_ne!(report.stages[1].status, report.stages[2].status);
 }
 
 #[test]
@@ -49,14 +50,39 @@ fn unexecuted_stage_cannot_claim_pass() {
 }
 
 #[test]
+fn executed_conclusive_stage_requires_verified_origin_and_evidence() {
+    for basis in [
+        ExecutionStageEvidenceBasis::SelfReported,
+        ExecutionStageEvidenceBasis::Unknown,
+    ] {
+        let mut invalid = stage("runtime", 1, true, true, ExecutionStageStatus::Pass);
+        invalid.evidence_basis = basis;
+        assert_eq!(
+            project_execution_stages(&[invalid]),
+            Err(ExecutionStageEvidenceError::InvalidEvidenceBasis)
+        );
+    }
+
+    for evidence_ref in [None, Some(String::new()), Some("   ".to_string())] {
+        let mut invalid = stage("runtime", 1, true, true, ExecutionStageStatus::Failed);
+        invalid.evidence_ref = evidence_ref;
+        assert_eq!(
+            project_execution_stages(&[invalid]),
+            Err(ExecutionStageEvidenceError::BlankEvidenceRef)
+        );
+    }
+}
+
+#[test]
+fn independent_observation_can_support_conclusive_stage() {
+    let mut value = stage("runtime", 1, true, true, ExecutionStageStatus::Pass);
+    value.evidence_basis = ExecutionStageEvidenceBasis::IndependentObservation;
+    assert_eq!(project_execution_stages(&[value]).expect("report").passed, 1);
+}
+
+#[test]
 fn not_requested_stage_cannot_claim_execution() {
-    let invalid = stage(
-        "export",
-        1,
-        false,
-        true,
-        ExecutionStageStatus::NotRequested,
-    );
+    let invalid = stage("export", 1, false, true, ExecutionStageStatus::NotRequested);
     assert_eq!(
         project_execution_stages(&[invalid]),
         Err(ExecutionStageEvidenceError::InvalidExecutionClaim)
@@ -71,9 +97,7 @@ fn duplicate_stage_id_fails_closed() {
     ]);
     assert_eq!(
         result,
-        Err(ExecutionStageEvidenceError::DuplicateStage(
-            "runtime".to_string()
-        ))
+        Err(ExecutionStageEvidenceError::DuplicateStage("runtime".to_string()))
     );
 }
 
@@ -85,10 +109,7 @@ fn sequence_gap_fails_closed() {
     ]);
     assert_eq!(
         result,
-        Err(ExecutionStageEvidenceError::SequenceGap {
-            expected: 2,
-            actual: 3,
-        })
+        Err(ExecutionStageEvidenceError::SequenceGap { expected: 2, actual: 3 })
     );
 }
 
@@ -99,10 +120,7 @@ fn sequence_must_start_at_one() {
     ]);
     assert_eq!(
         result,
-        Err(ExecutionStageEvidenceError::SequenceGap {
-            expected: 1,
-            actual: 0,
-        })
+        Err(ExecutionStageEvidenceError::SequenceGap { expected: 1, actual: 0 })
     );
 }
 
@@ -114,10 +132,7 @@ fn duplicate_sequence_fails_closed() {
     ]);
     assert_eq!(
         result,
-        Err(ExecutionStageEvidenceError::SequenceGap {
-            expected: 2,
-            actual: 1,
-        })
+        Err(ExecutionStageEvidenceError::SequenceGap { expected: 2, actual: 1 })
     );
 }
 
@@ -153,12 +168,7 @@ fn deterministic_projection_has_no_acceptance_or_telemetry_authority() {
     assert_eq!(left, right);
 
     let encoded = serde_json::to_string(&left).expect("serialize");
-    for forbidden in [
-        "AcceptanceDecision",
-        "telemetry_authority",
-        "dispatch",
-        "provider_sdk",
-    ] {
+    for forbidden in ["AcceptanceDecision", "telemetry_authority", "dispatch", "provider_sdk"] {
         assert!(!encoded.contains(forbidden));
     }
 }
