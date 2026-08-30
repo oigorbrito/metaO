@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use metao_contracts::runtime_security::{
     evaluate_runtime_security, IsolationAssurance, RuntimeSecurityAdmission, RuntimeSecurityBinding,
-    RuntimeSecurityEvidenceBasis, RuntimeSecurityFacts, RuntimeSecurityProfile,
+    RuntimeSecurityError, RuntimeSecurityEvidenceBasis, RuntimeSecurityFacts, RuntimeSecurityProfile,
 };
 
 fn binding(runtime: &str) -> RuntimeSecurityBinding {
@@ -44,6 +44,42 @@ fn sufficient_verified_evidence_satisfies_generic_security_profile() {
     let result = evaluate_runtime_security(&facts("runtime-a"), &profile(), &binding("runtime-a"))
         .expect("projection");
     assert_eq!(result.admission, RuntimeSecurityAdmission::Satisfied);
+}
+
+#[test]
+fn unknown_cannot_be_used_as_policy_minimum() {
+    let mut invalid = profile();
+    invalid.minimum_isolation = IsolationAssurance::Unknown;
+    assert_eq!(
+        invalid.validate(),
+        Err(RuntimeSecurityError::InvalidMinimumIsolation)
+    );
+}
+
+#[test]
+fn none_is_explicit_no_isolation_minimum_when_other_requirements_exist() {
+    let mut explicit_none = profile();
+    explicit_none.minimum_isolation = IsolationAssurance::None;
+    assert!(explicit_none.validate().is_ok());
+    let result = evaluate_runtime_security(
+        &facts("runtime-a"),
+        &explicit_none,
+        &binding("runtime-a"),
+    )
+    .expect("projection");
+    assert_eq!(result.admission, RuntimeSecurityAdmission::Satisfied);
+}
+
+#[test]
+fn empty_profile_with_no_isolation_minimum_fails_closed() {
+    let empty = RuntimeSecurityProfile {
+        minimum_isolation: IsolationAssurance::None,
+        allowed_permissions: BTreeSet::new(),
+        require_secret_redaction: false,
+        require_untrusted_content_isolation: false,
+        required_capabilities: BTreeSet::new(),
+    };
+    assert_eq!(empty.validate(), Err(RuntimeSecurityError::EmptyProfile));
 }
 
 #[test]
