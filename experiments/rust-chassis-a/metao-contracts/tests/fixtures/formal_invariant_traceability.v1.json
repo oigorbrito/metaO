@@ -49,12 +49,17 @@
     },
     {
       "invariant_id": "IncompleteRecoveryCannotEnableRetry",
-      "implementation_state": "GAP_PENDING_OWNER",
+      "implementation_state": "PENDING_BRANCH_TARGET",
       "execution_state": "EXECUTION_NOT_RUN",
       "rust_targets": [],
       "pending_owner": {"issue": 315, "pull_request": 318},
+      "pending_branch": "post-v0.1/failure-retry-causality-v1",
+      "pending_rust_targets": [
+        "experiments/rust-chassis-a/metao-contracts/src/failure_causality.rs",
+        "experiments/rust-chassis-a/metao-contracts/tests/failure_causality_tests.rs"
+      ],
       "python_oracle_targets": ["tests/integration/test_r7_wu03_three_runtime_recovery.py"],
-      "intent": "Current Rust-main traceability lacks the new normalized incomplete-recovery retry classifier; #315/#318 owns it."
+      "intent": "The normalized required-recovery retry gate now exists on #315/#318 branch, but is not merged into current main and has no executable Cargo evidence yet."
     },
     {
       "invariant_id": "UnknownNeverAccepts",
