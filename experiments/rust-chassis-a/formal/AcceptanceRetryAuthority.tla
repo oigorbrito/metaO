@@ -26,6 +26,19 @@ vars == <<generation,
           decision,
           acceptedGeneration>>
 
+TypeOK ==
+    /\ MaxGeneration \in Nat
+    /\ MaxGeneration > 0
+    /\ generation \in 1..MaxGeneration
+    /\ runtimeDoneGeneration \in 0..MaxGeneration
+    /\ evidenceGeneration \in 0..MaxGeneration
+    /\ evidenceFresh \in BOOLEAN
+    /\ verifierState \in VerifierStates
+    /\ recoveryComplete \in BOOLEAN
+    /\ retryEnabled \in BOOLEAN
+    /\ decision \in Decisions
+    /\ acceptedGeneration \in 0..MaxGeneration
+
 Init ==
     /\ generation = 1
     /\ runtimeDoneGeneration = 0
