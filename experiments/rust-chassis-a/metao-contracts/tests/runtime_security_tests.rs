@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 
 use metao_contracts::runtime_security::{
     evaluate_runtime_security, IsolationAssurance, RuntimeSecurityAdmission, RuntimeSecurityBinding,
-    RuntimeSecurityFacts, RuntimeSecurityProfile,
+    RuntimeSecurityEvidenceBasis, RuntimeSecurityFacts, RuntimeSecurityProfile,
 };
 
 fn binding(runtime: &str) -> RuntimeSecurityBinding {
@@ -24,6 +24,7 @@ fn facts(runtime: &str) -> RuntimeSecurityFacts {
             "tool-permission-boundary".to_string(),
             "workspace-isolation".to_string(),
         ]),
+        evidence_basis: RuntimeSecurityEvidenceBasis::AdapterVerified,
         evidence_ref: "security-evidence:runtime-a:1".to_string(),
     }
 }
@@ -39,8 +40,35 @@ fn profile() -> RuntimeSecurityProfile {
 }
 
 #[test]
-fn sufficient_evidence_satisfies_generic_security_profile() {
+fn sufficient_verified_evidence_satisfies_generic_security_profile() {
     let result = evaluate_runtime_security(&facts("runtime-a"), &profile(), &binding("runtime-a"))
+        .expect("projection");
+    assert_eq!(result.admission, RuntimeSecurityAdmission::Satisfied);
+}
+
+#[test]
+fn runtime_self_report_cannot_prove_enforcement() {
+    for basis in [
+        RuntimeSecurityEvidenceBasis::SelfReported,
+        RuntimeSecurityEvidenceBasis::Unknown,
+    ] {
+        let mut value = facts("runtime-a");
+        value.evidence_basis = basis;
+        let result = evaluate_runtime_security(&value, &profile(), &binding("runtime-a"))
+            .expect("projection");
+        assert_eq!(result.admission, RuntimeSecurityAdmission::Rejected);
+        assert!(result
+            .reasons
+            .iter()
+            .any(|reason| reason.contains("not backed by independent or adapter-verified evidence")));
+    }
+}
+
+#[test]
+fn independent_observation_can_support_same_generic_contract() {
+    let mut value = facts("runtime-a");
+    value.evidence_basis = RuntimeSecurityEvidenceBasis::IndependentObservation;
+    let result = evaluate_runtime_security(&value, &profile(), &binding("runtime-a"))
         .expect("projection");
     assert_eq!(result.admission, RuntimeSecurityAdmission::Satisfied);
 }
@@ -63,6 +91,38 @@ fn permission_escalation_is_rejected() {
     let result = evaluate_runtime_security(&value, &profile(), &binding("runtime-a"))
         .expect("projection");
     assert_eq!(result.admission, RuntimeSecurityAdmission::Rejected);
+}
+
+#[test]
+fn blank_permission_or_capability_entries_fail_validation() {
+    let mut blank_permission = facts("runtime-a");
+    blank_permission.effective_permissions.insert("   ".to_string());
+    assert!(evaluate_runtime_security(
+        &blank_permission,
+        &profile(),
+        &binding("runtime-a")
+    )
+    .is_err());
+
+    let mut blank_capability = facts("runtime-a");
+    blank_capability
+        .enforcement_capabilities
+        .insert("   ".to_string());
+    assert!(evaluate_runtime_security(
+        &blank_capability,
+        &profile(),
+        &binding("runtime-a")
+    )
+    .is_err());
+
+    let mut invalid_profile = profile();
+    invalid_profile.allowed_permissions.insert("   ".to_string());
+    assert!(evaluate_runtime_security(
+        &facts("runtime-a"),
+        &invalid_profile,
+        &binding("runtime-a")
+    )
+    .is_err());
 }
 
 #[test]
