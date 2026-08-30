@@ -1,0 +1,132 @@
+{
+  "schema_version": 1,
+  "fixture_family": "runtime-health-adversarial",
+  "sources": [
+    {
+      "reference": "envoyproxy/envoy",
+      "version": "v1.39.1",
+      "pinned_revision": "b579d07d3ad7ee11d32b105e91a5a39ad24718d7",
+      "role": "semantic donor only"
+    }
+  ],
+  "authority_boundary": {
+    "fixture_is_health_implementation": false,
+    "self_report_is_health_authority": false,
+    "retry_pressure_fact_dispatches_retry": false,
+    "fixture_expectation_is_product_acceptance": false
+  },
+  "scenarios": [
+    {
+      "fixture_id": "isolated-failure-then-successes",
+      "sequence": 1,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-a"},
+      "prior_state": "HEALTHY",
+      "observation": {"attempts": 4, "successes": 3, "failures": 1, "consecutive_failures": 0, "timeouts": 0, "transport_failures": 0, "active_retries": 0, "fresh_successes_since_unhealthy": 0, "self_reported_healthy": null},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 75, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "DEGRADED",
+      "expected_retry_pressure_exceeded": false,
+      "rationale": "One isolated failure remains visible but does not create permanent quarantine."
+    },
+    {
+      "fixture_id": "repeated-failures-cross-quarantine-threshold",
+      "sequence": 2,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-a"},
+      "prior_state": "DEGRADED",
+      "observation": {"attempts": 3, "successes": 0, "failures": 3, "consecutive_failures": 3, "timeouts": 1, "transport_failures": 1, "active_retries": 0, "fresh_successes_since_unhealthy": 0, "self_reported_healthy": false},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 75, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "QUARANTINED",
+      "expected_retry_pressure_exceeded": false,
+      "rationale": "Explicit caller-configured consecutive failure threshold is crossed."
+    },
+    {
+      "fixture_id": "alternating-flapping-preserves-degraded-history",
+      "sequence": 3,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-a"},
+      "prior_state": "DEGRADED",
+      "observation": {"attempts": 6, "successes": 3, "failures": 3, "consecutive_failures": 1, "timeouts": 0, "transport_failures": 0, "active_retries": 1, "fresh_successes_since_unhealthy": 0, "self_reported_healthy": true},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 80, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "DEGRADED",
+      "expected_retry_pressure_exceeded": false,
+      "rationale": "Alternating success/failure does not silently reset factual failure history to healthy."
+    },
+    {
+      "fixture_id": "retry-pressure-over-limit",
+      "sequence": 4,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-a"},
+      "prior_state": "UNHEALTHY",
+      "observation": {"attempts": 5, "successes": 2, "failures": 3, "consecutive_failures": 1, "timeouts": 1, "transport_failures": 0, "active_retries": 3, "fresh_successes_since_unhealthy": 1, "self_reported_healthy": null},
+      "policy": {"quarantine_consecutive_failures": 4, "unhealthy_failure_percent": 80, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "RECOVERING",
+      "expected_retry_pressure_exceeded": true,
+      "rationale": "Retry pressure is a factual projection input and does not itself dispatch or fail over."
+    },
+    {
+      "fixture_id": "lying-self-report-cannot-override-failures",
+      "sequence": 5,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-a"},
+      "prior_state": "HEALTHY",
+      "observation": {"attempts": 4, "successes": 0, "failures": 4, "consecutive_failures": 2, "timeouts": 0, "transport_failures": 1, "active_retries": 0, "fresh_successes_since_unhealthy": 0, "self_reported_healthy": true},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 75, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "UNHEALTHY",
+      "expected_retry_pressure_exceeded": false,
+      "rationale": "Runtime self-report is observation only and cannot override factual outcomes."
+    },
+    {
+      "fixture_id": "failover-b-does-not-reset-a-history",
+      "sequence": 6,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-a"},
+      "failover_target": {"id": "runtime-b", "version": "2.0.0", "config_id": "cfg-b"},
+      "prior_state": "QUARANTINED",
+      "observation": {"attempts": 5, "successes": 1, "failures": 4, "consecutive_failures": 4, "timeouts": 1, "transport_failures": 1, "active_retries": 0, "fresh_successes_since_unhealthy": 0, "self_reported_healthy": null},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 75, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "QUARANTINED",
+      "expected_retry_pressure_exceeded": false,
+      "rationale": "Selecting another runtime does not erase the unhealthy history bound to runtime A."
+    },
+    {
+      "fixture_id": "fresh-successes-required-for-recovery",
+      "sequence": 7,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-a"},
+      "prior_state": "QUARANTINED",
+      "observation": {"attempts": 2, "successes": 2, "failures": 0, "consecutive_failures": 0, "timeouts": 0, "transport_failures": 0, "active_retries": 0, "fresh_successes_since_unhealthy": 1, "self_reported_healthy": true},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 75, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "RECOVERING",
+      "expected_retry_pressure_exceeded": false,
+      "rationale": "One fresh success is insufficient when policy requires two."
+    },
+    {
+      "fixture_id": "zero-retry-pressure-limit-is-strict-valid-policy",
+      "sequence": 8,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-a"},
+      "prior_state": "HEALTHY",
+      "observation": {"attempts": 1, "successes": 1, "failures": 0, "consecutive_failures": 0, "timeouts": 0, "transport_failures": 0, "active_retries": 1, "fresh_successes_since_unhealthy": 0, "self_reported_healthy": null},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 75, "recovery_successes_required": 2, "retry_pressure_limit": 0},
+      "expected_state": "DEGRADED",
+      "expected_retry_pressure_exceeded": true,
+      "rationale": "Zero means no concurrent retry pressure is allowed; it is not invalid configuration."
+    },
+    {
+      "fixture_id": "config-mutation-creates-distinct-health-scope",
+      "sequence": 9,
+      "runtime": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-new"},
+      "previous_scope": {"id": "runtime-a", "version": "1.0.0", "config_id": "cfg-old"},
+      "prior_state": "UNKNOWN",
+      "observation": {"attempts": 1, "successes": 1, "failures": 0, "consecutive_failures": 0, "timeouts": 0, "transport_failures": 0, "active_retries": 0, "fresh_successes_since_unhealthy": 0, "self_reported_healthy": null},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 75, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "HEALTHY",
+      "expected_retry_pressure_exceeded": false,
+      "rationale": "Material config identity change creates a distinct observation scope rather than inheriting prior state silently."
+    },
+    {
+      "fixture_id": "empty-window-remains-unknown",
+      "sequence": 10,
+      "runtime": {"id": "runtime-c", "version": "1.0.0", "config_id": "cfg-c"},
+      "prior_state": "UNKNOWN",
+      "observation": {"attempts": 0, "successes": 0, "failures": 0, "consecutive_failures": 0, "timeouts": 0, "transport_failures": 0, "active_retries": 0, "fresh_successes_since_unhealthy": 0, "self_reported_healthy": true},
+      "policy": {"quarantine_consecutive_failures": 3, "unhealthy_failure_percent": 75, "recovery_successes_required": 2, "retry_pressure_limit": 2},
+      "expected_state": "UNKNOWN",
+      "expected_retry_pressure_exceeded": false,
+      "rationale": "No factual attempts means UNKNOWN even when the runtime self-reports healthy."
+    }
+  ]
+}
