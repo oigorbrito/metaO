@@ -1,6 +1,7 @@
 use metao_contracts::execution_governance::{
     evaluate_pre_runtime_gate, ExecutionBudget, ExecutionGateDecision, ExecutionGovernanceError,
-    ExecutionPolicyEffect, ExecutionRiskDecision, ExecutionUsage,
+    ExecutionObservedUsage, ExecutionPolicyEffect, ExecutionRiskDecision, ExecutionUsage,
+    ExecutionUsageEvidenceBasis,
 };
 
 fn budget() -> ExecutionBudget {
@@ -22,6 +23,14 @@ fn request() -> ExecutionUsage {
         tokens: 100,
         wall_time_s: 10.0,
         attempts: 1,
+    }
+}
+
+fn observed(usage: ExecutionUsage) -> ExecutionObservedUsage {
+    ExecutionObservedUsage {
+        usage,
+        evidence_basis: ExecutionUsageEvidenceBasis::AdapterVerified,
+        evidence_ref: "execution-usage:exec-a:1".to_string(),
     }
 }
 
@@ -171,15 +180,15 @@ fn integer_overflow_cannot_be_hidden_by_saturating_accounting() {
 }
 
 #[test]
-fn observed_runtime_overage_is_preserved_as_fact() {
-    let observed = ExecutionUsage {
+fn observed_runtime_overage_is_preserved_as_verified_fact() {
+    let usage = ExecutionUsage {
         money: 12.0,
         tokens: 1_500,
         wall_time_s: 120.0,
         attempts: 1,
     };
     let projection = budget()
-        .observe_usage(&observed)
+        .observe_usage(&observed(usage))
         .expect("finite observed overage remains factual");
     assert!(projection.over_limit);
     assert_eq!(projection.money_observed, 12.0);
@@ -188,16 +197,48 @@ fn observed_runtime_overage_is_preserved_as_fact() {
 }
 
 #[test]
+fn caller_declared_or_unknown_observed_usage_is_not_authoritative() {
+    for basis in [
+        ExecutionUsageEvidenceBasis::SelfReported,
+        ExecutionUsageEvidenceBasis::Unknown,
+    ] {
+        let mut value = observed(request());
+        value.evidence_basis = basis;
+        assert_eq!(
+            budget().observe_usage(&value),
+            Err(ExecutionGovernanceError::InvalidEvidenceBasis)
+        );
+    }
+}
+
+#[test]
+fn observed_usage_requires_nonblank_evidence_reference() {
+    let mut value = observed(request());
+    value.evidence_ref = "   ".to_string();
+    assert_eq!(
+        budget().observe_usage(&value),
+        Err(ExecutionGovernanceError::BlankEvidenceRef)
+    );
+}
+
+#[test]
+fn independent_observation_can_support_post_runtime_usage() {
+    let mut value = observed(request());
+    value.evidence_basis = ExecutionUsageEvidenceBasis::IndependentObservation;
+    assert!(!budget().observe_usage(&value).expect("observation").over_limit);
+}
+
+#[test]
 fn invalid_observed_usage_is_error_not_false_non_overage() {
     for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0] {
-        let observed = ExecutionUsage {
+        let usage = ExecutionUsage {
             money: invalid,
             tokens: 0,
             wall_time_s: 0.0,
             attempts: 0,
         };
         assert_eq!(
-            budget().observe_usage(&observed),
+            budget().observe_usage(&observed(usage)),
             Err(ExecutionGovernanceError::InvalidUsage)
         );
     }
@@ -210,14 +251,14 @@ fn observed_integer_overflow_is_error() {
         tokens_used: u64::MAX,
         ..budget()
     };
-    let observed = ExecutionUsage {
+    let usage = ExecutionUsage {
         money: 0.0,
         tokens: 1,
         wall_time_s: 0.0,
         attempts: 0,
     };
     assert_eq!(
-        value.observe_usage(&observed),
+        value.observe_usage(&observed(usage)),
         Err(ExecutionGovernanceError::InvalidUsage)
     );
 }
