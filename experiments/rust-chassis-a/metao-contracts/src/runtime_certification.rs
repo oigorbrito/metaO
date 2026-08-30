@@ -7,10 +7,12 @@ pub enum RuntimeCertificationError {
     BlankEvaluatorId,
     BlankEvaluatorVersion,
     SelfCertification,
+    MissingExpiry,
     InvalidValidityWindow,
     BlankCategoryId,
     BlankReason,
     DuplicateCategory(String),
+    ContradictoryPassFacts(String),
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,6 +69,13 @@ impl CertificationCategoryResult {
         if self.reason.trim().is_empty() {
             return Err(RuntimeCertificationError::BlankReason);
         }
+        if self.status == CertificationCategoryStatus::Pass
+            && self.forbidden_action_observed == Some(true)
+        {
+            return Err(RuntimeCertificationError::ContradictoryPassFacts(
+                self.category_id.clone(),
+            ));
+        }
         Ok(())
     }
 }
@@ -113,10 +122,11 @@ impl RuntimeCertificationReport {
         if self.evaluator_id == self.binding.runtime_id {
             return Err(RuntimeCertificationError::SelfCertification);
         }
-        if let Some(expires) = self.expires_at_epoch {
-            if expires <= self.evaluated_at_epoch {
-                return Err(RuntimeCertificationError::InvalidValidityWindow);
-            }
+        let expires = self
+            .expires_at_epoch
+            .ok_or(RuntimeCertificationError::MissingExpiry)?;
+        if expires <= self.evaluated_at_epoch {
+            return Err(RuntimeCertificationError::InvalidValidityWindow);
         }
 
         let mut seen = BTreeSet::new();
@@ -140,15 +150,18 @@ impl RuntimeCertificationReport {
         verification_context_id: &str,
         now_epoch: i64,
     ) -> bool {
-        if self.binding.runtime_id != runtime_id
+        if self.validate().is_err()
+            || self.binding.runtime_id != runtime_id
             || self.binding.runtime_version != runtime_version
             || self.binding.config_id != config_id
             || self.binding.execution_context_id != execution_context_id
             || self.binding.verification_context_id != verification_context_id
+            || now_epoch < self.evaluated_at_epoch
         {
             return false;
         }
-        self.expires_at_epoch.map_or(true, |expires| now_epoch < expires)
+        self.expires_at_epoch
+            .is_some_and(|expires| now_epoch < expires)
     }
 
     pub fn project(
