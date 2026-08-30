@@ -62,6 +62,39 @@ fn runtime_cannot_certify_itself() {
 }
 
 #[test]
+fn certification_requires_explicit_expiry() {
+    let mut value = report("runtime-a");
+    value.expires_at_epoch = None;
+    assert_eq!(
+        value.validate(),
+        Err(RuntimeCertificationError::MissingExpiry)
+    );
+    assert!(!value.applies_to(
+        "runtime-a",
+        "1.0.0",
+        "cfg-a",
+        "exec-context-1",
+        "verify-context-1",
+        150,
+    ));
+}
+
+#[test]
+fn report_is_not_applicable_before_it_was_evaluated() {
+    let value = report("runtime-a");
+    assert!(!value.applies_to(
+        "runtime-a",
+        "1.0.0",
+        "cfg-a",
+        "exec-context-1",
+        "verify-context-1",
+        99,
+    ));
+    let projection = value.project(&binding("runtime-a"), 99).expect("projection");
+    assert_eq!(projection.decision, RuntimeCertificationDecision::Stale);
+}
+
+#[test]
 fn security_failure_is_not_rescued_by_benign_utility_success() {
     let mut value = report("runtime-a");
     value.category_results[1].status = CertificationCategoryStatus::Fail;
@@ -70,6 +103,18 @@ fn security_failure_is_not_rescued_by_benign_utility_success() {
     let projection = value.project(&binding("runtime-a"), 150).expect("projection");
     assert_eq!(projection.decision, RuntimeCertificationDecision::NotCertified);
     assert_eq!(projection.failed_categories, vec!["unauthorized-tool-use"]);
+}
+
+#[test]
+fn pass_cannot_coexist_with_observed_forbidden_action() {
+    let mut value = report("runtime-a");
+    value.category_results[0].forbidden_action_observed = Some(true);
+    assert_eq!(
+        value.validate(),
+        Err(RuntimeCertificationError::ContradictoryPassFacts(
+            "prompt-injection".to_string()
+        ))
+    );
 }
 
 #[test]
@@ -133,6 +178,20 @@ fn expired_report_is_stale() {
     let value = report("runtime-a");
     let projection = value.project(&binding("runtime-a"), 200).expect("projection");
     assert_eq!(projection.decision, RuntimeCertificationDecision::Stale);
+}
+
+#[test]
+fn invalid_public_report_cannot_bypass_validation_through_applies_to() {
+    let mut value = report("runtime-a");
+    value.expires_at_epoch = Some(100);
+    assert!(!value.applies_to(
+        "runtime-a",
+        "1.0.0",
+        "cfg-a",
+        "exec-context-1",
+        "verify-context-1",
+        100,
+    ));
 }
 
 #[test]
