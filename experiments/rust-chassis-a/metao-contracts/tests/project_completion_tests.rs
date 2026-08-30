@@ -58,11 +58,27 @@ fn evidence(
 #[test]
 fn all_exact_binding_obligations_pass_project_accepts() {
     let contract = contract(vec![
-        item("surface", SemanticCategory::RequiredSurface, "Public catalog"),
+        item(
+            "surface",
+            SemanticCategory::RequiredSurface,
+            "Public catalog",
+        ),
         item("api", SemanticCategory::RequiredCapability, "Backend API"),
-        item("persist", SemanticCategory::UserRequirement, "Durable persistence"),
-        item("accept", SemanticCategory::AcceptanceTest, "E2E journey passes"),
-        item("dod", SemanticCategory::DefinitionOfDone, "Reproducible startup"),
+        item(
+            "persist",
+            SemanticCategory::UserRequirement,
+            "Durable persistence",
+        ),
+        item(
+            "accept",
+            SemanticCategory::AcceptanceTest,
+            "E2E journey passes",
+        ),
+        item(
+            "dod",
+            SemanticCategory::DefinitionOfDone,
+            "Reproducible startup",
+        ),
     ]);
     let proof = [
         evidence(&contract, "e1", "surface", CompletionEvidenceStatus::Pass),
@@ -88,7 +104,12 @@ fn verified_evaluation_can_prove_completion_obligation() {
         SemanticCategory::RequiredCapability,
         "Backend API",
     )]);
-    let mut proof = evidence(&contract, "api-proof", "api", CompletionEvidenceStatus::Pass);
+    let mut proof = evidence(
+        &contract,
+        "api-proof",
+        "api",
+        CompletionEvidenceStatus::Pass,
+    );
     proof.evidence_basis = CompletionEvidenceBasis::VerifiedEvaluation;
     proof.verification_ref = Some("verified-evaluator:api:1".to_string());
 
@@ -108,11 +129,19 @@ fn caller_declared_or_unknown_pass_cannot_mint_project_acceptance() {
         CompletionEvidenceBasis::CallerDeclared,
         CompletionEvidenceBasis::Unknown,
     ] {
-        let mut proof = evidence(&contract, "api-proof", "api", CompletionEvidenceStatus::Pass);
+        let mut proof = evidence(
+            &contract,
+            "api-proof",
+            "api",
+            CompletionEvidenceStatus::Pass,
+        );
         proof.evidence_basis = basis;
         let result = ProjectCompletionGate::evaluate(&contract, &[proof]);
         assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
-        assert_eq!(result.obligations[0].status, CompletionEvidenceStatus::NotProven);
+        assert_eq!(
+            result.obligations[0].status,
+            CompletionEvidenceStatus::NotProven
+        );
     }
 }
 
@@ -124,13 +153,19 @@ fn conclusive_evidence_requires_nonblank_verification_reference() {
         "Backend API",
     )]);
 
-    for status in [CompletionEvidenceStatus::Pass, CompletionEvidenceStatus::Fail] {
+    for status in [
+        CompletionEvidenceStatus::Pass,
+        CompletionEvidenceStatus::Fail,
+    ] {
         for reference in [None, Some(String::new()), Some("   ".to_string())] {
             let mut proof = evidence(&contract, "api-proof", "api", status);
             proof.verification_ref = reference;
             let result = ProjectCompletionGate::evaluate(&contract, &[proof]);
             assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
-            assert_eq!(result.obligations[0].status, CompletionEvidenceStatus::NotProven);
+            assert_eq!(
+                result.obligations[0].status,
+                CompletionEvidenceStatus::NotProven
+            );
         }
     }
 }
@@ -138,9 +173,21 @@ fn conclusive_evidence_requires_nonblank_verification_reference() {
 #[test]
 fn frontend_only_proof_cannot_complete_full_stack_contract() {
     let contract = contract(vec![
-        item("frontend", SemanticCategory::RequiredSurface, "Marketplace UI"),
-        item("backend", SemanticCategory::RequiredCapability, "Backend API"),
-        item("persistence", SemanticCategory::UserRequirement, "Database persistence"),
+        item(
+            "frontend",
+            SemanticCategory::RequiredSurface,
+            "Marketplace UI",
+        ),
+        item(
+            "backend",
+            SemanticCategory::RequiredCapability,
+            "Backend API",
+        ),
+        item(
+            "persistence",
+            SemanticCategory::UserRequirement,
+            "Database persistence",
+        ),
     ]);
     let proof = [evidence(
         &contract,
@@ -280,7 +327,11 @@ fn contradictory_duplicate_evidence_fails_closed() {
 #[test]
 fn result_is_deterministic_serializable_and_project_scoped() {
     let contract = contract(vec![
-        item("b", SemanticCategory::RequiredCapability, "Second obligation"),
+        item(
+            "b",
+            SemanticCategory::RequiredCapability,
+            "Second obligation",
+        ),
         item("a", SemanticCategory::RequiredSurface, "First obligation"),
     ]);
     let proof = [
@@ -297,7 +348,12 @@ fn result_is_deterministic_serializable_and_project_scoped() {
     let decoded: metao_contracts::project_completion::ProjectCompletionResult =
         serde_json::from_str(&encoded).expect("deserialize completion result");
     assert_eq!(decoded, left);
-    for forbidden in ["AcceptanceDecision", "RuntimeId", "Orchestrator", "provider_id"] {
+    for forbidden in [
+        "AcceptanceDecision",
+        "RuntimeId",
+        "Orchestrator",
+        "provider_id",
+    ] {
         assert!(!encoded.contains(forbidden));
     }
 }

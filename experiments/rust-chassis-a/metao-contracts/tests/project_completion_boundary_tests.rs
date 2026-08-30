@@ -105,7 +105,10 @@ fn caller_declared_pass_is_not_independent_completion_evidence() {
 
     let result = ProjectCompletionGate::evaluate(&contract, &[forged]);
     assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
-    assert_eq!(result.obligations[0].status, CompletionEvidenceStatus::NotProven);
+    assert_eq!(
+        result.obligations[0].status,
+        CompletionEvidenceStatus::NotProven
+    );
 }
 
 #[test]
@@ -116,5 +119,8 @@ fn missing_verification_reference_cannot_prove_pass() {
 
     let result = ProjectCompletionGate::evaluate(&contract, &[malformed]);
     assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
-    assert_eq!(result.obligations[0].status, CompletionEvidenceStatus::NotProven);
+    assert_eq!(
+        result.obligations[0].status,
+        CompletionEvidenceStatus::NotProven
+    );
 }

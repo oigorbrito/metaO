@@ -1,4 +1,6 @@
-use crate::project_contract::{ItemId, ProjectContract, ProjectContractBinding, ProjectContractDto};
+use crate::project_contract::{
+    ItemId, ProjectContract, ProjectContractBinding, ProjectContractDto,
+};
 use serde::{Deserialize, Serialize};
 use std::collections::{BTreeMap, BTreeSet};
 
