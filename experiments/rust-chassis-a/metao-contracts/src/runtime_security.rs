@@ -5,6 +5,7 @@ use std::collections::BTreeSet;
 pub enum RuntimeSecurityError {
     BlankBindingField(&'static str),
     BlankEvidenceRef,
+    BlankSetEntry(&'static str),
     EmptyProfile,
 }
 
@@ -15,6 +16,14 @@ pub enum IsolationAssurance {
     Process,
     ContainerOrEquivalent,
     StrongerAttested,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeSecurityEvidenceBasis {
+    IndependentObservation,
+    AdapterVerified,
+    SelfReported,
+    Unknown,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -47,6 +56,7 @@ pub struct RuntimeSecurityFacts {
     pub secret_redaction_enforced: Option<bool>,
     pub untrusted_content_isolated_from_governance: Option<bool>,
     pub enforcement_capabilities: BTreeSet<String>,
+    pub evidence_basis: RuntimeSecurityEvidenceBasis,
     pub evidence_ref: String,
 }
 
@@ -55,6 +65,24 @@ impl RuntimeSecurityFacts {
         self.binding.validate()?;
         if self.evidence_ref.trim().is_empty() {
             return Err(RuntimeSecurityError::BlankEvidenceRef);
+        }
+        if self
+            .effective_permissions
+            .iter()
+            .any(|permission| permission.trim().is_empty())
+        {
+            return Err(RuntimeSecurityError::BlankSetEntry(
+                "effective_permissions",
+            ));
+        }
+        if self
+            .enforcement_capabilities
+            .iter()
+            .any(|capability| capability.trim().is_empty())
+        {
+            return Err(RuntimeSecurityError::BlankSetEntry(
+                "enforcement_capabilities",
+            ));
         }
         Ok(())
     }
@@ -78,6 +106,24 @@ impl RuntimeSecurityProfile {
             && self.required_capabilities.is_empty()
         {
             return Err(RuntimeSecurityError::EmptyProfile);
+        }
+        if self
+            .allowed_permissions
+            .iter()
+            .any(|permission| permission.trim().is_empty())
+        {
+            return Err(RuntimeSecurityError::BlankSetEntry(
+                "allowed_permissions",
+            ));
+        }
+        if self
+            .required_capabilities
+            .iter()
+            .any(|capability| capability.trim().is_empty())
+        {
+            return Err(RuntimeSecurityError::BlankSetEntry(
+                "required_capabilities",
+            ));
         }
         Ok(())
     }
@@ -109,6 +155,17 @@ pub fn evaluate_runtime_security(
 
     if &facts.binding != expected_binding {
         reasons.push("runtime security evidence binding does not match current runtime/version/config".to_string());
+    }
+
+    if !matches!(
+        facts.evidence_basis,
+        RuntimeSecurityEvidenceBasis::IndependentObservation
+            | RuntimeSecurityEvidenceBasis::AdapterVerified
+    ) {
+        reasons.push(
+            "runtime security enforcement is not backed by independent or adapter-verified evidence"
+                .to_string(),
+        );
     }
 
     if facts.isolation == IsolationAssurance::Unknown
