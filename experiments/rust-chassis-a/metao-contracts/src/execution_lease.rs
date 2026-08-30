@@ -66,7 +66,10 @@ impl ExecutionLease {
     }
 
     pub fn is_active_at(&self, now_epoch: i64) -> bool {
-        self.state == LeaseState::Active && now_epoch < self.expires_at_epoch
+        self.validate().is_ok()
+            && self.state == LeaseState::Active
+            && now_epoch >= self.renewed_at_epoch
+            && now_epoch < self.expires_at_epoch
     }
 
     pub fn authorizes(
@@ -97,14 +100,13 @@ impl ExecutionLease {
         if successor.fencing_token < self.fencing_token {
             return Err(ExecutionLeaseError::FenceRegression);
         }
-        if successor.holder_identity != self.holder_identity
-            && successor.generation <= self.generation
-        {
+
+        let holder_changed = successor.holder_identity != self.holder_identity;
+        let execution_changed = successor.execution_id != self.execution_id;
+        if (holder_changed || execution_changed) && successor.generation <= self.generation {
             return Err(ExecutionLeaseError::GenerationRegression);
         }
-        if successor.holder_identity != self.holder_identity
-            && successor.fencing_token <= self.fencing_token
-        {
+        if (holder_changed || execution_changed) && successor.fencing_token <= self.fencing_token {
             return Err(ExecutionLeaseError::FenceRegression);
         }
         Ok(())
