@@ -65,6 +65,42 @@ fn missing_verifier_provenance_rejects_attested_identity() {
 }
 
 #[test]
+fn attested_identity_requires_issued_expiry_and_verified_timestamps() {
+    let mut missing_issued = attested();
+    missing_issued.issued_at_epoch = None;
+    assert_eq!(
+        RuntimeWorkloadIdentity::new(missing_issued),
+        Err(WorkloadIdentityError::MissingIssuedAt)
+    );
+
+    let mut missing_expiry = attested();
+    missing_expiry.expires_at_epoch = None;
+    assert_eq!(
+        RuntimeWorkloadIdentity::new(missing_expiry),
+        Err(WorkloadIdentityError::MissingExpiresAt)
+    );
+
+    let mut missing_verified = attested();
+    missing_verified.verified_at_epoch = None;
+    assert_eq!(
+        RuntimeWorkloadIdentity::new(missing_verified),
+        Err(WorkloadIdentityError::MissingVerifiedAt)
+    );
+}
+
+#[test]
+fn verification_time_must_be_inside_credential_validity_window() {
+    for verified_at in [99, 200, 201] {
+        let mut value = attested();
+        value.verified_at_epoch = Some(verified_at);
+        assert_eq!(
+            RuntimeWorkloadIdentity::new(value),
+            Err(WorkloadIdentityError::InvalidValidityWindow)
+        );
+    }
+}
+
+#[test]
 fn development_identity_cannot_claim_attested_assurance() {
     let mut value = attested();
     value.credential_kind = WorkloadCredentialKind::Development;
@@ -97,6 +133,13 @@ fn expired_attested_identity_is_not_applicable() {
 fn not_yet_valid_attested_identity_is_not_applicable() {
     let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
     assert!(!value.is_currently_applicable(99));
+}
+
+#[test]
+fn invalid_public_struct_cannot_bypass_applicability_validation() {
+    let mut value = attested();
+    value.verified_at_epoch = None;
+    assert!(!value.is_currently_applicable(150));
 }
 
 #[test]
