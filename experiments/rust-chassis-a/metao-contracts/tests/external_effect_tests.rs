@@ -1,6 +1,6 @@
 use metao_contracts::external_effect::{
     evaluate_effect_retry, EffectHistoryEntry, EffectIntent, EffectRetryDisposition,
-    ExternalEffectError, ExternalEffectOutcome, IdempotencyAssurance,
+    ExternalEffectError, ExternalEffectOutcome, IdempotencyAssurance, PostconditionEvidenceBasis,
 };
 
 fn intent_with_assurance(
@@ -47,7 +47,8 @@ fn entry(
         idempotency_key: idempotency_key.map(str::to_string),
         execution_id: execution_id.to_string(),
         outcome,
-        external_postcondition_verified: false,
+        postcondition_evidence_basis: PostconditionEvidenceBasis::None,
+        postcondition_evidence_ref: None,
     }
 }
 
@@ -129,9 +130,59 @@ fn failover_changes_execution_but_preserves_logical_effect_identity() {
 #[test]
 fn independent_postcondition_proof_blocks_retry_even_when_ack_was_ambiguous() {
     let mut applied = entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, None);
-    applied.external_postcondition_verified = true;
+    applied.postcondition_evidence_basis = PostconditionEvidenceBasis::IndependentExternalObservation;
+    applied.postcondition_evidence_ref = Some("external-readback:message-42".to_string());
     let result = evaluate_effect_retry(&intent(None), &[applied]).expect("decision");
     assert_eq!(result.disposition, EffectRetryDisposition::AlreadyApplied);
+}
+
+#[test]
+fn adapter_verified_postcondition_with_evidence_blocks_retry() {
+    let mut applied = entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, None);
+    applied.postcondition_evidence_basis = PostconditionEvidenceBasis::AdapterVerified;
+    applied.postcondition_evidence_ref = Some("adapter-readback:provider-42".to_string());
+    let result = evaluate_effect_retry(&intent(None), &[applied]).expect("decision");
+    assert_eq!(result.disposition, EffectRetryDisposition::AlreadyApplied);
+}
+
+#[test]
+fn caller_declared_postcondition_does_not_mint_already_applied() {
+    let mut applied = entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, None);
+    applied.postcondition_evidence_basis = PostconditionEvidenceBasis::CallerDeclared;
+    applied.postcondition_evidence_ref = Some("caller-says-applied".to_string());
+    let result = evaluate_effect_retry(&intent(None), &[applied]).expect("decision");
+    assert_eq!(
+        result.disposition,
+        EffectRetryDisposition::RequireHumanOrPolicy
+    );
+}
+
+#[test]
+fn verified_postcondition_basis_requires_nonblank_evidence() {
+    for basis in [
+        PostconditionEvidenceBasis::IndependentExternalObservation,
+        PostconditionEvidenceBasis::AdapterVerified,
+    ] {
+        for evidence in [None, Some(String::new()), Some("   ".to_string())] {
+            let mut candidate = entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, None);
+            candidate.postcondition_evidence_basis = basis;
+            candidate.postcondition_evidence_ref = evidence;
+            assert_eq!(
+                evaluate_effect_retry(&intent(None), &[candidate]),
+                Err(ExternalEffectError::InvalidPostconditionEvidence)
+            );
+        }
+    }
+}
+
+#[test]
+fn no_postcondition_basis_cannot_carry_evidence_ref() {
+    let mut candidate = entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, None);
+    candidate.postcondition_evidence_ref = Some("unexpected-proof".to_string());
+    assert_eq!(
+        evaluate_effect_retry(&intent(None), &[candidate]),
+        Err(ExternalEffectError::InvalidPostconditionEvidence)
+    );
 }
 
 #[test]
