@@ -749,3 +749,277 @@ fn test_t49_public_revise_contract_output_serialize_deserialize_identical() {
         revision.binding().contract_digest
     );
 }
+
+#[test]
+fn test_t50_direct_project_reference_blank_desired_trait_id_fail() {
+    let mut ref1 = valid_ref("r1");
+    ref1.selected_desired_traits
+        .insert("   ".into(), "desc".into());
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert_eq!(
+        res.unwrap_err(),
+        ContractError::InvalidReferenceTrait("Blank desired trait id")
+    );
+}
+
+#[test]
+fn test_t51_direct_project_reference_blank_desired_description_fail() {
+    let mut ref1 = valid_ref("r1");
+    ref1.selected_desired_traits
+        .insert("t1".into(), "   ".into());
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert_eq!(
+        res.unwrap_err(),
+        ContractError::InvalidReferenceTrait("Blank desired trait description")
+    );
+}
+
+#[test]
+fn test_t52_direct_project_reference_blank_undesired_trait_id_fail() {
+    let mut ref1 = valid_ref("r1");
+    ref1.selected_undesired_traits
+        .insert("   ".into(), "desc".into());
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert_eq!(
+        res.unwrap_err(),
+        ContractError::InvalidReferenceTrait("Blank undesired trait id")
+    );
+}
+
+#[test]
+fn test_t53_direct_project_reference_blank_undesired_description_fail() {
+    let mut ref1 = valid_ref("r1");
+    ref1.selected_undesired_traits
+        .insert("t1".into(), "   ".into());
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert_eq!(
+        res.unwrap_err(),
+        ContractError::InvalidReferenceTrait("Blank undesired trait description")
+    );
+}
+
+#[test]
+fn test_t54_direct_desired_undesired_same_trait_fail() {
+    let mut ref1 = valid_ref("r1");
+    ref1.selected_desired_traits
+        .insert("t1".into(), "desc".into());
+    ref1.selected_undesired_traits
+        .insert("t1".into(), "desc".into());
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert_eq!(
+        res.unwrap_err(),
+        ContractError::ConflictingReferenceTrait("t1".into())
+    );
+}
+
+#[test]
+fn test_t55_direct_valid_project_reference_pass() {
+    let mut ref1 = valid_ref("r1");
+    ref1.selected_desired_traits
+        .insert("t1".into(), "desc".into());
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert!(res.is_ok());
+}
+
+#[test]
+fn test_t56_semantic_item_nested_authorization_blank_source_fail() {
+    let mut item = valid_item("i1", SemanticCategory::UserRequirement);
+    let mut bad_auth = mock_provenance();
+    bad_auth.source_id = "   ".into();
+    item.provenance.authorization = Some(Box::new(bad_auth));
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![item],
+        vec![],
+    );
+    assert_eq!(res.unwrap_err(), ContractError::InvalidProvenance);
+}
+
+#[test]
+fn test_t57_project_reference_nested_authorization_blank_source_fail() {
+    let mut ref1 = valid_ref("r1");
+    let mut bad_auth = mock_provenance();
+    bad_auth.source_id = "   ".into();
+    ref1.provenance.authorization = Some(Box::new(bad_auth));
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![ref1],
+    );
+    assert_eq!(res.unwrap_err(), ContractError::InvalidProvenance);
+}
+
+#[test]
+fn test_t58_revision_provenance_nested_authorization_blank_source_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut bad_auth = mock_provenance();
+    bad_auth.source_id = "   ".into();
+    let mut rev_prov = mock_provenance();
+    rev_prov.authorization = Some(Box::new(bad_auth));
+    let res = ProjectContract::revise_contract(
+        &contract,
+        "g2".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![],
+        "r".into(),
+        rev_prov,
+    );
+    assert_eq!(res.unwrap_err(), ContractError::InvalidProvenance);
+}
+
+#[test]
+fn test_t59_dto_nested_authorization_blank_source_fail() {
+    let contract = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![],
+        vec![],
+    )
+    .unwrap();
+    let mut dto: ProjectContractDto = contract.into();
+    let mut item = valid_item("i1", SemanticCategory::UserRequirement);
+    let mut bad_auth = mock_provenance();
+    bad_auth.source_id = "   ".into();
+    item.provenance.authorization = Some(Box::new(bad_auth));
+    dto.user_requirements.insert(item.item_id.clone(), item);
+    let res: Result<ProjectContract, _> = dto.try_into();
+    assert_eq!(res.unwrap_err(), ContractError::InvalidProvenance);
+}
+
+#[test]
+fn test_t60_nested_valid_authorization_pass() {
+    let mut item = valid_item("i1", SemanticCategory::UserRequirement);
+    let auth = mock_provenance();
+    item.provenance.authorization = Some(Box::new(auth));
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![item],
+        vec![],
+    );
+    assert!(res.is_ok());
+}
+
+#[test]
+fn test_t61_nested_nested_valid_authorization_pass() {
+    let mut item = valid_item("i1", SemanticCategory::UserRequirement);
+    let mut auth = mock_provenance();
+    let auth2 = mock_provenance();
+    auth.authorization = Some(Box::new(auth2));
+    item.provenance.authorization = Some(Box::new(auth));
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![item],
+        vec![],
+    );
+    assert!(res.is_ok());
+}
+
+#[test]
+fn test_t62_authorization_depth_boundary_valid_pass() {
+    let mut item = valid_item("i1", SemanticCategory::UserRequirement);
+    let mut current = item.provenance.clone();
+    for _ in 0..8 {
+        let mut next = mock_provenance();
+        next.authorization = Some(Box::new(current));
+        current = next;
+    }
+    item.provenance = current;
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![item],
+        vec![],
+    );
+    assert!(res.is_ok());
+}
+
+#[test]
+fn test_t63_authorization_depth_limit_fail() {
+    let mut item = valid_item("i1", SemanticCategory::UserRequirement);
+    let mut current = item.provenance.clone();
+    for _ in 0..9 {
+        let mut next = mock_provenance();
+        next.authorization = Some(Box::new(current));
+        current = next;
+    }
+    item.provenance = current;
+    let res = ProjectContract::new(
+        ProjectId("p1".into()),
+        ContractId("c1".into()),
+        "goal".into(),
+        std::collections::BTreeSet::new(),
+        vec![item],
+        vec![],
+    );
+    assert_eq!(
+        res.unwrap_err(),
+        ContractError::ProvenanceAuthorizationDepthExceeded
+    );
+}

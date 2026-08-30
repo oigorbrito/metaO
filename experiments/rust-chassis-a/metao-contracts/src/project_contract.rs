@@ -13,10 +13,13 @@ pub enum ContractError {
     EmptyGoal,
     EmptyDescription,
     InvalidProvenance,
+    ProvenanceAuthorizationDepthExceeded,
     InvalidBindingDigest,
     InvalidVersionLineage,
     InvalidPredecessorBinding,
     EmptyRevisionRationale,
+    InvalidReferenceTrait(&'static str),
+    ConflictingReferenceTrait(String),
 }
 
 impl fmt::Display for ContractError {
@@ -48,6 +51,8 @@ pub enum ProvenanceCategory {
     ImportedExistingConstraint,
 }
 
+const MAX_PROVENANCE_AUTHORIZATION_DEPTH: usize = 8;
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Provenance {
     pub category: ProvenanceCategory,
@@ -56,6 +61,25 @@ pub struct Provenance {
     pub derived_from: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub authorization: Option<Box<Provenance>>,
+}
+
+impl Provenance {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        self.validate_internal(0)
+    }
+
+    fn validate_internal(&self, depth: usize) -> Result<(), ContractError> {
+        if depth > MAX_PROVENANCE_AUTHORIZATION_DEPTH {
+            return Err(ContractError::ProvenanceAuthorizationDepthExceeded);
+        }
+        if self.source_id.trim().is_empty() {
+            return Err(ContractError::InvalidProvenance);
+        }
+        if let Some(auth) = &self.authorization {
+            auth.validate_internal(depth + 1)?;
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -90,6 +114,49 @@ pub struct ProjectReference {
     pub selected_desired_traits: BTreeMap<String, String>,
     pub selected_undesired_traits: BTreeMap<String, String>,
     pub provenance: Provenance,
+}
+
+impl ProjectReference {
+    pub fn validate(&self) -> Result<(), ContractError> {
+        if self.reference_id.0.trim().is_empty() {
+            return Err(ContractError::EmptyIdentity("reference_id"));
+        }
+        if self.locator.trim().is_empty() {
+            return Err(ContractError::EmptyIdentity("locator"));
+        }
+        self.provenance.validate()?;
+
+        for (id, desc) in &self.selected_desired_traits {
+            if id.trim().is_empty() {
+                return Err(ContractError::InvalidReferenceTrait(
+                    "Blank desired trait id",
+                ));
+            }
+            if desc.trim().is_empty() {
+                return Err(ContractError::InvalidReferenceTrait(
+                    "Blank desired trait description",
+                ));
+            }
+        }
+        for (id, desc) in &self.selected_undesired_traits {
+            if id.trim().is_empty() {
+                return Err(ContractError::InvalidReferenceTrait(
+                    "Blank undesired trait id",
+                ));
+            }
+            if desc.trim().is_empty() {
+                return Err(ContractError::InvalidReferenceTrait(
+                    "Blank undesired trait description",
+                ));
+            }
+        }
+        for id in self.selected_desired_traits.keys() {
+            if self.selected_undesired_traits.contains_key(id) {
+                return Err(ContractError::ConflictingReferenceTrait(id.clone()));
+            }
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -240,7 +307,7 @@ impl TryFrom<ProjectContractDto> for ProjectContract {
             if lineage.revision_rationale.trim().is_empty() {
                 return Err(ContractError::EmptyRevisionRationale);
             }
-            Self::validate_provenance(&lineage.revision_provenance)?;
+            lineage.revision_provenance.validate()?;
 
             let mut c = Self::new_internal(
                 dto.project_id,
@@ -276,13 +343,6 @@ impl TryFrom<ProjectContractDto> for ProjectContract {
 }
 
 impl ProjectContract {
-    fn validate_provenance(prov: &Provenance) -> Result<(), ContractError> {
-        if prov.source_id.trim().is_empty() {
-            return Err(ContractError::InvalidProvenance);
-        }
-        Ok(())
-    }
-
     fn new_internal(
         project_id: ProjectId,
         contract_id: ContractId,
@@ -367,7 +427,7 @@ impl ProjectContract {
         if item.description.trim().is_empty() {
             return Err(ContractError::EmptyDescription);
         }
-        Self::validate_provenance(&item.provenance)?;
+        item.provenance.validate()?;
 
         if self.contains_item(&item.item_id) {
             return Err(ContractError::DuplicateItemId(item.item_id.0.clone()));
@@ -420,13 +480,7 @@ impl ProjectContract {
     }
 
     fn add_reference(&mut self, reference: ProjectReference) -> Result<(), ContractError> {
-        if reference.reference_id.0.trim().is_empty() {
-            return Err(ContractError::EmptyIdentity("reference_id"));
-        }
-        if reference.locator.trim().is_empty() {
-            return Err(ContractError::EmptyIdentity("locator"));
-        }
-        Self::validate_provenance(&reference.provenance)?;
+        reference.validate()?;
 
         if self.references.contains_key(&reference.reference_id) {
             return Err(ContractError::DuplicateReferenceId(
@@ -485,7 +539,7 @@ impl ProjectContract {
         if previous.version < 1 {
             return Err(ContractError::VersionZero);
         }
-        Self::validate_provenance(&revision_provenance)?;
+        revision_provenance.validate()?;
 
         let mut new_contract = Self::new_internal(
             previous.project_id.clone(),

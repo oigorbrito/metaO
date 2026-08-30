@@ -78,24 +78,8 @@ impl ReferenceIntake {
     pub fn evaluate_reference(
         input: &ReferenceInput,
     ) -> Result<Result<ProjectReference, ReferenceConflict>, IntakeError> {
-        if input.reference_id.0.trim().is_empty() {
-            return Err(IntakeError::BlankReferenceId);
-        }
-        if input.locator.trim().is_empty() {
-            return Err(IntakeError::BlankLocator);
-        }
-        if input.provenance.source_id.trim().is_empty() {
-            return Err(IntakeError::InvalidReferenceProvenance);
-        }
-
         let mut desired = BTreeMap::new();
         for t in &input.desired_traits {
-            if t.trait_id.0.trim().is_empty() {
-                return Err(IntakeError::BlankTraitId);
-            }
-            if t.description.trim().is_empty() {
-                return Err(IntakeError::BlankTraitDescription);
-            }
             if let Some(existing_desc) = desired.get(&t.trait_id.0) {
                 if existing_desc != &t.description {
                     return Err(IntakeError::ConflictingDuplicateTrait);
@@ -107,12 +91,6 @@ impl ReferenceIntake {
 
         let mut undesired = BTreeMap::new();
         for t in &input.undesired_traits {
-            if t.trait_id.0.trim().is_empty() {
-                return Err(IntakeError::BlankTraitId);
-            }
-            if t.description.trim().is_empty() {
-                return Err(IntakeError::BlankTraitDescription);
-            }
             if let Some(existing_desc) = undesired.get(&t.trait_id.0) {
                 if existing_desc != &t.description {
                     return Err(IntakeError::ConflictingDuplicateTrait);
@@ -122,23 +100,49 @@ impl ReferenceIntake {
             }
         }
 
-        for d in desired.keys() {
-            if undesired.contains_key(d) {
-                return Ok(Err(ReferenceConflict {
-                    reference_id: input.reference_id.clone(),
-                    trait_id: TraitId(d.clone()),
-                    reason: "Trait is both desired and undesired on the same reference".into(),
-                }));
-            }
-        }
-
-        Ok(Ok(ProjectReference {
+        let proj_ref = ProjectReference {
             reference_id: input.reference_id.clone(),
             locator: input.locator.clone(),
             selected_desired_traits: desired,
             selected_undesired_traits: undesired,
             provenance: input.provenance.clone(),
-        }))
+        };
+
+        if let Err(e) = proj_ref.validate() {
+            return match e {
+                crate::project_contract::ContractError::EmptyIdentity("reference_id") => {
+                    Err(IntakeError::BlankReferenceId)
+                }
+                crate::project_contract::ContractError::EmptyIdentity("locator") => {
+                    Err(IntakeError::BlankLocator)
+                }
+                crate::project_contract::ContractError::InvalidProvenance => {
+                    Err(IntakeError::InvalidReferenceProvenance)
+                }
+                crate::project_contract::ContractError::InvalidReferenceTrait(
+                    "Blank desired trait id",
+                ) => Err(IntakeError::BlankTraitId),
+                crate::project_contract::ContractError::InvalidReferenceTrait(
+                    "Blank undesired trait id",
+                ) => Err(IntakeError::BlankTraitId),
+                crate::project_contract::ContractError::InvalidReferenceTrait(
+                    "Blank desired trait description",
+                ) => Err(IntakeError::BlankTraitDescription),
+                crate::project_contract::ContractError::InvalidReferenceTrait(
+                    "Blank undesired trait description",
+                ) => Err(IntakeError::BlankTraitDescription),
+                crate::project_contract::ContractError::ConflictingReferenceTrait(trait_id) => {
+                    Ok(Err(ReferenceConflict {
+                        reference_id: input.reference_id.clone(),
+                        trait_id: TraitId(trait_id),
+                        reason: "Trait is both desired and undesired on the same reference".into(),
+                    }))
+                }
+                _ => Err(IntakeError::InvalidReferenceProvenance), // Fallback for things like depth exceeded on reference provenance
+            };
+        }
+
+        Ok(Ok(proj_ref))
     }
 
     pub fn promote_reference_trait(
@@ -148,7 +152,7 @@ impl ReferenceIntake {
         new_item_id: ItemId,
         decision_provenance: Provenance,
     ) -> Result<SemanticItem, IntakeError> {
-        if decision_provenance.source_id.trim().is_empty() {
+        if decision_provenance.validate().is_err() {
             return Err(IntakeError::InvalidDecisionProvenance);
         }
 
