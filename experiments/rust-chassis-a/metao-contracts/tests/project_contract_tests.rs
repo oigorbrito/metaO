@@ -1,11 +1,12 @@
 use metao_contracts::project_contract::*;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 fn mock_provenance() -> Provenance {
     Provenance {
         category: ProvenanceCategory::UserExplicit,
         source_id: "user-123".to_string(),
         derived_from: None,
+        authorization: None,
     }
 }
 
@@ -22,8 +23,8 @@ fn valid_ref(id: &str) -> ProjectReference {
     ProjectReference {
         reference_id: ReferenceId(id.into()),
         locator: "loc".into(),
-        selected_desired_traits: BTreeSet::new(),
-        selected_undesired_traits: BTreeSet::new(),
+        selected_desired_traits: BTreeMap::new(),
+        selected_undesired_traits: BTreeMap::new(),
         provenance: mock_provenance(),
     }
 }

@@ -52,7 +52,10 @@ pub enum ProvenanceCategory {
 pub struct Provenance {
     pub category: ProvenanceCategory,
     pub source_id: String,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub derived_from: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub authorization: Option<Box<Provenance>>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -84,8 +87,8 @@ pub struct SemanticItem {
 pub struct ProjectReference {
     pub reference_id: ReferenceId,
     pub locator: String,
-    pub selected_desired_traits: BTreeSet<String>,
-    pub selected_undesired_traits: BTreeSet<String>,
+    pub selected_desired_traits: BTreeMap<String, String>,
+    pub selected_undesired_traits: BTreeMap<String, String>,
     pub provenance: Provenance,
 }
 
