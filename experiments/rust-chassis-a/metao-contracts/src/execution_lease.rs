@@ -6,6 +6,7 @@ pub enum ExecutionLeaseError {
     ZeroGeneration,
     ZeroFencingToken,
     InvalidTimeWindow,
+    LeaseBindingMismatch,
     GenerationRegression,
     FenceRegression,
 }
@@ -88,7 +89,7 @@ impl ExecutionLease {
         if successor.mission_id != self.mission_id
             || successor.logical_execution_key != self.logical_execution_key
         {
-            return Err(ExecutionLeaseError::BlankIdentity("successor_binding_mismatch"));
+            return Err(ExecutionLeaseError::LeaseBindingMismatch);
         }
         if successor.generation < self.generation {
             return Err(ExecutionLeaseError::GenerationRegression);
@@ -97,10 +98,14 @@ impl ExecutionLease {
             return Err(ExecutionLeaseError::FenceRegression);
         }
         if successor.holder_identity != self.holder_identity
-            && (successor.generation <= self.generation
-                || successor.fencing_token <= self.fencing_token)
+            && successor.generation <= self.generation
         {
             return Err(ExecutionLeaseError::GenerationRegression);
+        }
+        if successor.holder_identity != self.holder_identity
+            && successor.fencing_token <= self.fencing_token
+        {
+            return Err(ExecutionLeaseError::FenceRegression);
         }
         Ok(())
     }
