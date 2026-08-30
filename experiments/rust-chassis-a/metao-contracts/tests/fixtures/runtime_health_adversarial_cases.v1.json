@@ -9,8 +9,14 @@
       "role": "semantic donor only"
     }
   ],
+  "observation_evidence_contract": {
+    "basis": "ADAPTER_VERIFIED",
+    "evidence_ref_template": "runtime-health-fixture:{fixture_id}",
+    "meaning": "Scenario counters are fixture inputs representing adapter-verified observations. This declaration is test-fixture metadata, not runtime proof and not executable evidence."
+  },
   "authority_boundary": {
     "fixture_is_health_implementation": false,
+    "fixture_metadata_is_runtime_proof": false,
     "self_report_is_health_authority": false,
     "retry_pressure_fact_dispatches_retry": false,
     "fixture_expectation_is_product_acceptance": false
