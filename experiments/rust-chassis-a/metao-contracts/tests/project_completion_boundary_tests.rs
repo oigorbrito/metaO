@@ -1,6 +1,6 @@
 use metao_contracts::project_completion::{
-    CompletionEvidenceStatus, ProjectCompletionDecision, ProjectCompletionEvidence,
-    ProjectCompletionGate,
+    CompletionEvidenceBasis, CompletionEvidenceStatus, ProjectCompletionDecision,
+    ProjectCompletionEvidence, ProjectCompletionGate,
 };
 use metao_contracts::project_contract::{
     ContractId, ItemId, ProjectContract, ProjectId, Provenance, ProvenanceCategory,
@@ -38,6 +38,18 @@ fn required_capability() -> SemanticItem {
     }
 }
 
+fn pass_evidence(contract: &ProjectContract) -> ProjectCompletionEvidence {
+    ProjectCompletionEvidence {
+        evidence_id: "pass-proof".to_string(),
+        obligation_id: ItemId("api".to_string()),
+        contract_binding: contract.binding(),
+        status: CompletionEvidenceStatus::Pass,
+        evidence_basis: CompletionEvidenceBasis::IndependentAcceptance,
+        verification_ref: Some("independent-acceptance:api".to_string()),
+        reason: "independent pass".to_string(),
+    }
+}
+
 #[test]
 fn zero_completion_obligations_is_not_done() {
     let contract = contract(vec![SemanticItem {
@@ -67,13 +79,9 @@ fn malformed_pass_evidence_cannot_prove_obligation() {
         ("pass-proof", ""),
         ("pass-proof", "   "),
     ] {
-        let malformed = ProjectCompletionEvidence {
-            evidence_id: evidence_id.to_string(),
-            obligation_id: ItemId("api".to_string()),
-            contract_binding: contract.binding(),
-            status: CompletionEvidenceStatus::Pass,
-            reason: reason.to_string(),
-        };
+        let mut malformed = pass_evidence(&contract);
+        malformed.evidence_id = evidence_id.to_string();
+        malformed.reason = reason.to_string();
 
         let result = ProjectCompletionGate::evaluate(&contract, &[malformed]);
         assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
@@ -82,6 +90,31 @@ fn malformed_pass_evidence_cannot_prove_obligation() {
             result.obligations[0].status,
             CompletionEvidenceStatus::NotProven
         );
-        assert_eq!(result.obligations[0].reason, "missing exact-binding evidence");
+        assert_eq!(
+            result.obligations[0].reason,
+            "missing exact-binding verified evidence"
+        );
     }
+}
+
+#[test]
+fn caller_declared_pass_is_not_independent_completion_evidence() {
+    let contract = contract(vec![required_capability()]);
+    let mut forged = pass_evidence(&contract);
+    forged.evidence_basis = CompletionEvidenceBasis::CallerDeclared;
+
+    let result = ProjectCompletionGate::evaluate(&contract, &[forged]);
+    assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
+    assert_eq!(result.obligations[0].status, CompletionEvidenceStatus::NotProven);
+}
+
+#[test]
+fn missing_verification_reference_cannot_prove_pass() {
+    let contract = contract(vec![required_capability()]);
+    let mut malformed = pass_evidence(&contract);
+    malformed.verification_ref = None;
+
+    let result = ProjectCompletionGate::evaluate(&contract, &[malformed]);
+    assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
+    assert_eq!(result.obligations[0].status, CompletionEvidenceStatus::NotProven);
 }
