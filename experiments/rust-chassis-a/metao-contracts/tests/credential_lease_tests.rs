@@ -1,6 +1,6 @@
 use metao_contracts::credential_lease::{
     CredentialLease, CredentialLeaseAssurance, CredentialLeaseBinding, CredentialLeaseError,
-    CredentialRevocationStatus,
+    CredentialLeaseEvidenceBasis, CredentialRevocationStatus,
 };
 
 fn binding(runtime: &str, execution: &str) -> CredentialLeaseBinding {
@@ -25,6 +25,7 @@ fn lease() -> CredentialLease {
         renewable: true,
         max_expires_at_epoch: Some(300),
         assurance: CredentialLeaseAssurance::Brokered,
+        evidence_basis: CredentialLeaseEvidenceBasis::BrokerVerified,
         revocation_status: CredentialRevocationStatus::Active,
         revocation_evidence_ref: None,
     }
@@ -46,12 +47,48 @@ fn failover_runtime_must_obtain_its_own_lease() {
 }
 
 #[test]
-fn confirmed_revocation_requires_broker_evidence_and_invalidates_use() {
+fn caller_declared_or_unknown_origin_cannot_mint_brokered_lease() {
+    for basis in [
+        CredentialLeaseEvidenceBasis::CallerDeclared,
+        CredentialLeaseEvidenceBasis::Unknown,
+        CredentialLeaseEvidenceBasis::DevelopmentLocal,
+    ] {
+        let mut value = lease();
+        value.evidence_basis = basis;
+        assert_eq!(
+            value.validate(),
+            Err(CredentialLeaseError::InvalidEvidenceBasis)
+        );
+        assert!(!value.applies_to(&binding("runtime-a", "exec-a"), 150));
+    }
+}
+
+#[test]
+fn confirmed_revocation_requires_broker_verified_origin_and_evidence() {
     let mut value = lease();
     value.revocation_status = CredentialRevocationStatus::Revoked;
     value.revocation_evidence_ref = Some("broker-revoke:receipt-7".to_string());
     assert!(!value.applies_to(&binding("runtime-a", "exec-a"), 150));
     assert!(value.revocation_confirmed());
+}
+
+#[test]
+fn textual_revocation_receipt_without_broker_origin_is_not_confirmation() {
+    for basis in [
+        CredentialLeaseEvidenceBasis::CallerDeclared,
+        CredentialLeaseEvidenceBasis::Unknown,
+        CredentialLeaseEvidenceBasis::DevelopmentLocal,
+    ] {
+        let mut value = lease();
+        value.evidence_basis = basis;
+        value.revocation_status = CredentialRevocationStatus::Revoked;
+        value.revocation_evidence_ref = Some("broker-revoke:receipt-7".to_string());
+        assert_eq!(
+            value.validate(),
+            Err(CredentialLeaseError::InvalidEvidenceBasis)
+        );
+        assert!(!value.revocation_confirmed());
+    }
 }
 
 #[test]
@@ -129,9 +166,22 @@ fn nonrenewable_lease_has_no_renewal_bound_and_cannot_be_extended() {
 fn development_static_mode_is_explicit_lower_assurance() {
     let mut value = lease();
     value.assurance = CredentialLeaseAssurance::DevelopmentStatic;
+    value.evidence_basis = CredentialLeaseEvidenceBasis::DevelopmentLocal;
     let encoded = serde_json::to_string(&value).expect("serialize");
     assert!(encoded.contains("DevelopmentStatic"));
+    assert!(encoded.contains("DevelopmentLocal"));
     assert!(!encoded.contains("production_attested"));
+}
+
+#[test]
+fn development_static_requires_local_evidence_basis() {
+    let mut value = lease();
+    value.assurance = CredentialLeaseAssurance::DevelopmentStatic;
+    value.evidence_basis = CredentialLeaseEvidenceBasis::BrokerVerified;
+    assert_eq!(
+        value.validate(),
+        Err(CredentialLeaseError::InvalidEvidenceBasis)
+    );
 }
 
 #[test]
