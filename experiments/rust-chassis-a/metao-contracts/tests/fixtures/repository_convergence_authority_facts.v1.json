@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "accepted_decision_refs": [
+    "accepted-rust-adr"
+  ],
+  "satisfied_item_ids": [
+    "docs-only-composition-record"
+  ],
+  "external_blocker_refs": [
+    "external-runner-allocation-pre-step"
+  ],
+  "claim_boundary": {
+    "facts_are_explicit_inputs": true,
+    "similarity_is_authority": false,
+    "inactivity_is_authority": false,
+    "classifier_may_mutate_repository": false
+  }
+}
