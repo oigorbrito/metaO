@@ -33,7 +33,11 @@ pub struct ExecutionBudget {
 
 impl ExecutionBudget {
     pub fn validate(&self) -> Result<(), ExecutionGovernanceError> {
-        if self.money_limit < 0.0
+        if !self.money_limit.is_finite()
+            || !self.wall_time_limit_s.is_finite()
+            || !self.money_used.is_finite()
+            || !self.wall_time_used_s.is_finite()
+            || self.money_limit < 0.0
             || self.wall_time_limit_s < 0.0
             || self.money_used < 0.0
             || self.wall_time_used_s < 0.0
@@ -51,32 +55,60 @@ impl ExecutionBudget {
     }
 
     pub fn has_pre_runtime_capacity(&self, request: &ExecutionUsage) -> bool {
-        self.validate().is_ok()
-            && request.is_non_negative()
-            && self.money_used + request.money <= self.money_limit
-            && self.tokens_used.saturating_add(request.tokens) <= self.token_limit
-            && self.wall_time_used_s + request.wall_time_s <= self.wall_time_limit_s
-            && self.attempts_used.saturating_add(request.attempts) <= self.attempt_limit
+        if self.validate().is_err() || request.validate().is_err() {
+            return false;
+        }
+
+        let next_money = self.money_used + request.money;
+        let next_wall_time = self.wall_time_used_s + request.wall_time_s;
+        let Some(next_tokens) = self.tokens_used.checked_add(request.tokens) else {
+            return false;
+        };
+        let Some(next_attempts) = self.attempts_used.checked_add(request.attempts) else {
+            return false;
+        };
+
+        next_money.is_finite()
+            && next_wall_time.is_finite()
+            && next_money <= self.money_limit
+            && next_tokens <= self.token_limit
+            && next_wall_time <= self.wall_time_limit_s
+            && next_attempts <= self.attempt_limit
     }
 
-    pub fn observe_usage(&self, observed: &ExecutionUsage) -> ExecutionBudgetObservation {
-        let next_money = self.money_used + observed.money;
-        let next_tokens = self.tokens_used.saturating_add(observed.tokens);
-        let next_wall_time = self.wall_time_used_s + observed.wall_time_s;
-        let next_attempts = self.attempts_used.saturating_add(observed.attempts);
-        let over_limit = observed.is_non_negative()
-            && (next_money > self.money_limit
-                || next_tokens > self.token_limit
-                || next_wall_time > self.wall_time_limit_s
-                || next_attempts > self.attempt_limit);
+    pub fn observe_usage(
+        &self,
+        observed: &ExecutionUsage,
+    ) -> Result<ExecutionBudgetObservation, ExecutionGovernanceError> {
+        self.validate()?;
+        observed.validate()?;
 
-        ExecutionBudgetObservation {
+        let next_money = self.money_used + observed.money;
+        let next_wall_time = self.wall_time_used_s + observed.wall_time_s;
+        if !next_money.is_finite() || !next_wall_time.is_finite() {
+            return Err(ExecutionGovernanceError::InvalidUsage);
+        }
+        let next_tokens = self
+            .tokens_used
+            .checked_add(observed.tokens)
+            .ok_or(ExecutionGovernanceError::InvalidUsage)?;
+        let next_attempts = self
+            .attempts_used
+            .checked_add(observed.attempts)
+            .ok_or(ExecutionGovernanceError::InvalidUsage)?;
+
+        let over_limit = next_money > self.money_limit
+            || next_tokens > self.token_limit
+            || next_wall_time > self.wall_time_limit_s
+            || next_attempts > self.attempt_limit;
+
+        Ok(ExecutionBudgetObservation {
             money_observed: next_money,
             tokens_observed: next_tokens,
             wall_time_observed_s: next_wall_time,
             attempts_observed: next_attempts,
             over_limit,
-        }
+        })
     }
 }
 
@@ -89,8 +121,15 @@ pub struct ExecutionUsage {
 }
 
 impl ExecutionUsage {
-    fn is_non_negative(&self) -> bool {
-        self.money >= 0.0 && self.wall_time_s >= 0.0
+    pub fn validate(&self) -> Result<(), ExecutionGovernanceError> {
+        if !self.money.is_finite()
+            || !self.wall_time_s.is_finite()
+            || self.money < 0.0
+            || self.wall_time_s < 0.0
+        {
+            return Err(ExecutionGovernanceError::InvalidUsage);
+        }
+        Ok(())
     }
 }
 
