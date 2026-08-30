@@ -15,6 +15,7 @@ pub enum ExternalEffectError {
     EffectBindingMismatch,
     IdempotencyKeyMismatch,
     InvalidIdempotencyAssurance,
+    InvalidPostconditionEvidence,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -31,6 +32,14 @@ pub enum IdempotencyAssurance {
     None,
     KeyDeclared,
     EnforcementVerified,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum PostconditionEvidenceBasis {
+    None,
+    IndependentExternalObservation,
+    AdapterVerified,
+    CallerDeclared,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -113,7 +122,43 @@ pub struct EffectHistoryEntry {
     pub idempotency_key: Option<String>,
     pub execution_id: String,
     pub outcome: ExternalEffectOutcome,
-    pub external_postcondition_verified: bool,
+    pub postcondition_evidence_basis: PostconditionEvidenceBasis,
+    pub postcondition_evidence_ref: Option<String>,
+}
+
+impl EffectHistoryEntry {
+    fn has_independently_verified_postcondition(&self) -> bool {
+        matches!(
+            self.postcondition_evidence_basis,
+            PostconditionEvidenceBasis::IndependentExternalObservation
+                | PostconditionEvidenceBasis::AdapterVerified
+        ) && self
+            .postcondition_evidence_ref
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty())
+    }
+
+    fn validate_postcondition_evidence(&self) -> Result<(), ExternalEffectError> {
+        let has_ref = self
+            .postcondition_evidence_ref
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty());
+        match self.postcondition_evidence_basis {
+            PostconditionEvidenceBasis::None => {
+                if has_ref {
+                    return Err(ExternalEffectError::InvalidPostconditionEvidence);
+                }
+            }
+            PostconditionEvidenceBasis::IndependentExternalObservation
+            | PostconditionEvidenceBasis::AdapterVerified => {
+                if !has_ref {
+                    return Err(ExternalEffectError::InvalidPostconditionEvidence);
+                }
+            }
+            PostconditionEvidenceBasis::CallerDeclared => {}
+        }
+        Ok(())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -137,7 +182,7 @@ pub fn evaluate_effect_retry(
 
     let has_verified_applied_postcondition = history
         .iter()
-        .any(|entry| entry.external_postcondition_verified);
+        .any(EffectHistoryEntry::has_independently_verified_postcondition);
 
     let (disposition, reason) = if has_verified_applied_postcondition
         || history
@@ -146,7 +191,7 @@ pub fn evaluate_effect_retry(
     {
         (
             EffectRetryDisposition::AlreadyApplied,
-            "authoritative history or independent postcondition proves effect already applied",
+            "authoritative history or independently verified postcondition proves effect already applied",
         )
     } else {
         match latest.outcome {
@@ -227,6 +272,7 @@ fn validate_history(
         if entry.idempotency_key != intent.idempotency_key {
             return Err(ExternalEffectError::IdempotencyKeyMismatch);
         }
+        entry.validate_postcondition_evidence()?;
     }
     Ok(())
 }
