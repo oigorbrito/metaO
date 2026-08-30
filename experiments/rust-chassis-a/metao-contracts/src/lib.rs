@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-pub mod project_completion;
+pub mod clarification_policy;
 pub mod project_contract;
 pub mod reference_intake;
 pub mod tech_stack_intake;
@@ -262,6 +262,26 @@ pub struct AcceptanceBudget {
 }
 
 impl AcceptanceBudget {
+    fn finite_nonnegative(value: f64) -> bool {
+        value.is_finite() && value >= 0.0
+    }
+
+    fn validate_f64_field(value: f64) -> Result<(), ContractError> {
+        if Self::finite_nonnegative(value) {
+            Ok(())
+        } else {
+            Err(ContractError::NegativeBudget)
+        }
+    }
+
+    fn validate_state(&self) -> Result<(), ContractError> {
+        Self::validate_f64_field(self.money_limit)?;
+        Self::validate_f64_field(self.wall_time_limit_s)?;
+        Self::validate_f64_field(self.money_used)?;
+        Self::validate_f64_field(self.wall_time_used_s)?;
+        Ok(())
+    }
+
     pub fn new(
         money_limit: f64,
         token_limit: u64,
@@ -285,13 +305,10 @@ impl AcceptanceBudget {
     ) -> Result<Self, ContractError> {
         let (money_limit, token_limit, wall_time_limit_s, verifier_attempt_limit) = limits;
         let (money_used, tokens_used, wall_time_used_s, verifier_attempts_used) = usage;
-        if money_limit < 0.0
-            || wall_time_limit_s < 0.0
-            || money_used < 0.0
-            || wall_time_used_s < 0.0
-        {
-            return Err(ContractError::NegativeBudget);
-        }
+        Self::validate_f64_field(money_limit)?;
+        Self::validate_f64_field(wall_time_limit_s)?;
+        Self::validate_f64_field(money_used)?;
+        Self::validate_f64_field(wall_time_used_s)?;
         if money_used > money_limit
             || tokens_used > token_limit
             || wall_time_used_s > wall_time_limit_s
@@ -318,13 +335,22 @@ impl AcceptanceBudget {
         wall_time_s: f64,
         verifier_attempts: u64,
     ) -> Result<Self, ContractError> {
-        if money < 0.0 || wall_time_s < 0.0 {
-            return Err(ContractError::NegativeBudget);
-        }
+        self.validate_state()?;
+        Self::validate_f64_field(money)?;
+        Self::validate_f64_field(wall_time_s)?;
         let next_money = self.money_used + money;
-        let next_tokens = self.tokens_used + tokens;
         let next_wall_time = self.wall_time_used_s + wall_time_s;
-        let next_attempts = self.verifier_attempts_used + verifier_attempts;
+        if !Self::finite_nonnegative(next_money) || !Self::finite_nonnegative(next_wall_time) {
+            return Err(ContractError::BudgetExhausted);
+        }
+        let next_tokens = self
+            .tokens_used
+            .checked_add(tokens)
+            .ok_or(ContractError::BudgetExhausted)?;
+        let next_attempts = self
+            .verifier_attempts_used
+            .checked_add(verifier_attempts)
+            .ok_or(ContractError::BudgetExhausted)?;
         if next_money > self.money_limit
             || next_tokens > self.token_limit
             || next_wall_time > self.wall_time_limit_s
