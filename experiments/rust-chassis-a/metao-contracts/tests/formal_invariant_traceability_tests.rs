@@ -36,6 +36,7 @@ fn every_named_formal_invariant_has_one_unique_mapping() {
     let expected = BTreeSet::from([
         "AcceptedGenerationMatchesCurrent",
         "AcceptedRequiresIndependentFreshPass",
+        "BlockedRequiresIndependentFreshFail",
         "IncompleteRecoveryCannotEnableRetry",
         "OldGenerationDoneCannotAcceptCurrent",
         "OrchestratorDoneIsNotAcceptance",
@@ -79,6 +80,13 @@ fn implementation_targets_are_traceable_but_never_reported_as_executed() {
                     .expect("pending rust targets");
                 assert!(!pending_targets.is_empty());
             }
+            "GAP_PENDING_OWNER" => {
+                assert!(mapping["rust_targets"].as_array().is_some_and(Vec::is_empty));
+                assert!(mapping["gap_parent_issue"].as_u64().is_some());
+                assert!(mapping["gap_reason"]
+                    .as_str()
+                    .is_some_and(|value| !value.trim().is_empty()));
+            }
             state => panic!("unexpected implementation state: {state}"),
         }
     }
@@ -99,6 +107,22 @@ fn pending_branch_target_is_not_misreported_as_current_main_coverage() {
     assert_eq!(recovery["pending_owner"]["issue"], 315);
     assert_eq!(recovery["pending_owner"]["pull_request"], 318);
     assert_eq!(recovery["pending_branch"], "post-v0.1/failure-retry-causality-v1");
+}
+
+#[test]
+fn new_formal_invariant_can_remain_an_explicit_implementation_gap() {
+    let value = fixture();
+    let blocked = value["mappings"]
+        .as_array()
+        .expect("mappings")
+        .iter()
+        .find(|mapping| mapping["invariant_id"] == "BlockedRequiresIndependentFreshFail")
+        .expect("blocked invariant mapping");
+
+    assert_eq!(blocked["implementation_state"], "GAP_PENDING_OWNER");
+    assert_eq!(blocked["execution_state"], "EXECUTION_NOT_RUN");
+    assert_eq!(blocked["gap_parent_issue"], 161);
+    assert!(blocked["rust_targets"].as_array().is_some_and(Vec::is_empty));
 }
 
 #[test]
