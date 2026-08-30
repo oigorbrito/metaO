@@ -6,7 +6,9 @@ pub enum RuntimeCertificationError {
     BlankBindingField(&'static str),
     BlankEvaluatorId,
     BlankEvaluatorVersion,
+    BlankEvaluatorEvidenceRef,
     SelfCertification,
+    InvalidEvaluatorEvidenceBasis,
     MissingExpiry,
     InvalidValidityWindow,
     BlankCategoryId,
@@ -40,6 +42,14 @@ impl RuntimeCertificationBinding {
         }
         Ok(())
     }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeCertificationEvidenceBasis {
+    IndependentEvaluator,
+    TrustedHarness,
+    SelfReported,
+    Unknown,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -104,6 +114,8 @@ pub struct RuntimeCertificationReport {
     pub binding: RuntimeCertificationBinding,
     pub evaluator_id: String,
     pub evaluator_version: String,
+    pub evaluator_evidence_basis: RuntimeCertificationEvidenceBasis,
+    pub evaluator_evidence_ref: String,
     pub evaluated_at_epoch: i64,
     pub expires_at_epoch: Option<i64>,
     pub required_categories: BTreeSet<String>,
@@ -132,6 +144,16 @@ impl RuntimeCertificationReport {
         }
         if self.evaluator_id == self.binding.runtime_id {
             return Err(RuntimeCertificationError::SelfCertification);
+        }
+        if !matches!(
+            self.evaluator_evidence_basis,
+            RuntimeCertificationEvidenceBasis::IndependentEvaluator
+                | RuntimeCertificationEvidenceBasis::TrustedHarness
+        ) {
+            return Err(RuntimeCertificationError::InvalidEvaluatorEvidenceBasis);
+        }
+        if self.evaluator_evidence_ref.trim().is_empty() {
+            return Err(RuntimeCertificationError::BlankEvaluatorEvidenceRef);
         }
         let expires = self
             .expires_at_epoch
