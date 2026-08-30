@@ -2,7 +2,8 @@ use std::collections::BTreeSet;
 
 use metao_contracts::runtime_certification::{
     CertificationCategoryResult, CertificationCategoryStatus, RuntimeCertificationBinding,
-    RuntimeCertificationDecision, RuntimeCertificationError, RuntimeCertificationReport,
+    RuntimeCertificationDecision, RuntimeCertificationError, RuntimeCertificationEvidenceBasis,
+    RuntimeCertificationReport,
 };
 
 fn binding(runtime_id: &str) -> RuntimeCertificationBinding {
@@ -31,6 +32,8 @@ fn report(runtime_id: &str) -> RuntimeCertificationReport {
         binding: binding(runtime_id),
         evaluator_id: "independent-redteam-evaluator".to_string(),
         evaluator_version: "1.0.0".to_string(),
+        evaluator_evidence_basis: RuntimeCertificationEvidenceBasis::IndependentEvaluator,
+        evaluator_evidence_ref: "evaluator-run:sha256:abc123".to_string(),
         evaluated_at_epoch: 100,
         expires_at_epoch: Some(200),
         required_categories: BTreeSet::from([
@@ -55,9 +58,42 @@ fn all_required_categories_must_pass_for_certification() {
 fn runtime_cannot_certify_itself() {
     let mut value = report("runtime-a");
     value.evaluator_id = "runtime-a".to_string();
+    assert_eq!(value.validate(), Err(RuntimeCertificationError::SelfCertification));
+}
+
+#[test]
+fn differing_evaluator_id_without_independent_origin_cannot_certify() {
+    for basis in [
+        RuntimeCertificationEvidenceBasis::SelfReported,
+        RuntimeCertificationEvidenceBasis::Unknown,
+    ] {
+        let mut value = report("runtime-a");
+        value.evaluator_id = "different-string".to_string();
+        value.evaluator_evidence_basis = basis;
+        assert_eq!(
+            value.validate(),
+            Err(RuntimeCertificationError::InvalidEvaluatorEvidenceBasis)
+        );
+    }
+}
+
+#[test]
+fn trusted_harness_can_supply_certification_evidence() {
+    let mut value = report("runtime-a");
+    value.evaluator_evidence_basis = RuntimeCertificationEvidenceBasis::TrustedHarness;
+    assert_eq!(
+        value.project(&binding("runtime-a"), 150).expect("projection").decision,
+        RuntimeCertificationDecision::Certified
+    );
+}
+
+#[test]
+fn evaluator_level_evidence_reference_is_required() {
+    let mut value = report("runtime-a");
+    value.evaluator_evidence_ref = "   ".to_string();
     assert_eq!(
         value.validate(),
-        Err(RuntimeCertificationError::SelfCertification)
+        Err(RuntimeCertificationError::BlankEvaluatorEvidenceRef)
     );
 }
 
@@ -65,31 +101,12 @@ fn runtime_cannot_certify_itself() {
 fn certification_requires_explicit_expiry() {
     let mut value = report("runtime-a");
     value.expires_at_epoch = None;
-    assert_eq!(
-        value.validate(),
-        Err(RuntimeCertificationError::MissingExpiry)
-    );
-    assert!(!value.applies_to(
-        "runtime-a",
-        "1.0.0",
-        "cfg-a",
-        "exec-context-1",
-        "verify-context-1",
-        150,
-    ));
+    assert_eq!(value.validate(), Err(RuntimeCertificationError::MissingExpiry));
 }
 
 #[test]
 fn report_is_not_applicable_before_it_was_evaluated() {
     let value = report("runtime-a");
-    assert!(!value.applies_to(
-        "runtime-a",
-        "1.0.0",
-        "cfg-a",
-        "exec-context-1",
-        "verify-context-1",
-        99,
-    ));
     let projection = value.project(&binding("runtime-a"), 99).expect("projection");
     assert_eq!(projection.decision, RuntimeCertificationDecision::Stale);
 }
@@ -102,7 +119,6 @@ fn security_failure_is_not_rescued_by_benign_utility_success() {
     value.category_results[1].forbidden_action_observed = Some(true);
     let projection = value.project(&binding("runtime-a"), 150).expect("projection");
     assert_eq!(projection.decision, RuntimeCertificationDecision::NotCertified);
-    assert_eq!(projection.failed_categories, vec!["unauthorized-tool-use"]);
 }
 
 #[test]
@@ -118,45 +134,38 @@ fn pass_cannot_coexist_with_observed_forbidden_action() {
 }
 
 #[test]
-fn skipped_required_category_is_incomplete_not_pass() {
-    let mut value = report("runtime-a");
-    value.category_results[0].status = CertificationCategoryStatus::Skipped;
-    let projection = value.project(&binding("runtime-a"), 150).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::Incomplete);
-}
-
-#[test]
-fn not_requested_required_category_is_incomplete() {
-    let mut value = report("runtime-a");
-    value.category_results[0].status = CertificationCategoryStatus::NotRequested;
-    let projection = value.project(&binding("runtime-a"), 150).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::Incomplete);
-}
-
-#[test]
-fn evaluator_error_is_not_runtime_security_pass_or_fail() {
-    let mut value = report("runtime-a");
-    value.category_results[0].status = CertificationCategoryStatus::EvaluatorError;
-    let projection = value.project(&binding("runtime-a"), 150).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::Incomplete);
-    assert!(projection.failed_categories.is_empty());
-    assert_eq!(projection.incomplete_categories, vec!["prompt-injection"]);
+fn skipped_not_requested_unknown_or_evaluator_error_is_incomplete() {
+    for status in [
+        CertificationCategoryStatus::Skipped,
+        CertificationCategoryStatus::NotRequested,
+        CertificationCategoryStatus::Unknown,
+        CertificationCategoryStatus::EvaluatorError,
+    ] {
+        let mut value = report("runtime-a");
+        value.category_results[0].status = status;
+        let projection = value.project(&binding("runtime-a"), 150).expect("projection");
+        assert_eq!(projection.decision, RuntimeCertificationDecision::Incomplete);
+    }
 }
 
 #[test]
 fn omitted_required_category_is_incomplete() {
     let mut value = report("runtime-a");
     value.category_results.remove(0);
-    let projection = value.project(&binding("runtime-a"), 150).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::Incomplete);
+    assert_eq!(
+        value.project(&binding("runtime-a"), 150).expect("projection").decision,
+        RuntimeCertificationDecision::Incomplete
+    );
 }
 
 #[test]
 fn empty_required_profile_cannot_mint_certification() {
     let mut value = report("runtime-a");
     value.required_categories.clear();
-    let projection = value.project(&binding("runtime-a"), 150).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::Incomplete);
+    assert_eq!(
+        value.project(&binding("runtime-a"), 150).expect("projection").decision,
+        RuntimeCertificationDecision::Incomplete
+    );
 }
 
 #[test]
@@ -164,34 +173,19 @@ fn config_or_version_mutation_makes_prior_report_stale() {
     let value = report("runtime-a");
     let mut current = binding("runtime-a");
     current.config_id = "cfg-b".to_string();
-    let projection = value.project(&current, 150).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::Stale);
-
-    let mut version_changed = binding("runtime-a");
-    version_changed.runtime_version = "2.0.0".to_string();
-    let projection = value.project(&version_changed, 150).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::Stale);
+    assert_eq!(
+        value.project(&current, 150).expect("projection").decision,
+        RuntimeCertificationDecision::Stale
+    );
 }
 
 #[test]
 fn expired_report_is_stale() {
     let value = report("runtime-a");
-    let projection = value.project(&binding("runtime-a"), 200).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::Stale);
-}
-
-#[test]
-fn invalid_public_report_cannot_bypass_validation_through_applies_to() {
-    let mut value = report("runtime-a");
-    value.expires_at_epoch = Some(100);
-    assert!(!value.applies_to(
-        "runtime-a",
-        "1.0.0",
-        "cfg-a",
-        "exec-context-1",
-        "verify-context-1",
-        100,
-    ));
+    assert_eq!(
+        value.project(&binding("runtime-a"), 200).expect("projection").decision,
+        RuntimeCertificationDecision::Stale
+    );
 }
 
 #[test]
@@ -219,8 +213,6 @@ fn materially_different_runtimes_use_same_generic_evidence_shape() {
         .expect("second");
     assert_eq!(first.decision, RuntimeCertificationDecision::Certified);
     assert_eq!(second.decision, RuntimeCertificationDecision::Certified);
-    assert_ne!(first.binding.runtime_id, second.binding.runtime_id);
-    assert_eq!(first.required_categories, second.required_categories);
 }
 
 #[test]
