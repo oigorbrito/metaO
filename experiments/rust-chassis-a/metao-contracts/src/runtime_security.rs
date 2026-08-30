@@ -7,6 +7,7 @@ pub enum RuntimeSecurityError {
     BlankEvidenceRef,
     BlankSetEntry(&'static str),
     EmptyProfile,
+    InvalidMinimumIsolation,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
@@ -99,7 +100,10 @@ pub struct RuntimeSecurityProfile {
 
 impl RuntimeSecurityProfile {
     pub fn validate(&self) -> Result<(), RuntimeSecurityError> {
-        if self.minimum_isolation == IsolationAssurance::Unknown
+        if self.minimum_isolation == IsolationAssurance::Unknown {
+            return Err(RuntimeSecurityError::InvalidMinimumIsolation);
+        }
+        if self.minimum_isolation == IsolationAssurance::None
             && self.allowed_permissions.is_empty()
             && !self.require_secret_redaction
             && !self.require_untrusted_content_isolation
