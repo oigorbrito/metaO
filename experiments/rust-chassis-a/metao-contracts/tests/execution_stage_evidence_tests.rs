@@ -93,6 +93,35 @@ fn sequence_gap_fails_closed() {
 }
 
 #[test]
+fn sequence_must_start_at_one() {
+    let result = project_execution_stages(&[
+        stage("policy", 0, true, true, ExecutionStageStatus::Pass),
+    ]);
+    assert_eq!(
+        result,
+        Err(ExecutionStageEvidenceError::SequenceGap {
+            expected: 1,
+            actual: 0,
+        })
+    );
+}
+
+#[test]
+fn duplicate_sequence_fails_closed() {
+    let result = project_execution_stages(&[
+        stage("policy", 1, true, true, ExecutionStageStatus::Pass),
+        stage("runtime", 1, true, true, ExecutionStageStatus::Pass),
+    ]);
+    assert_eq!(
+        result,
+        Err(ExecutionStageEvidenceError::SequenceGap {
+            expected: 2,
+            actual: 1,
+        })
+    );
+}
+
+#[test]
 fn input_order_is_normalized_by_explicit_sequence() {
     let report = project_execution_stages(&[
         stage("runtime", 2, true, true, ExecutionStageStatus::Pass),
