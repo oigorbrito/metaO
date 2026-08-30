@@ -1,6 +1,6 @@
 use metao_contracts::project_completion::{
-    CompletionEvidenceStatus, ProjectCompletionDecision, ProjectCompletionEvidence,
-    ProjectCompletionGate,
+    CompletionEvidenceBasis, CompletionEvidenceStatus, ProjectCompletionDecision,
+    ProjectCompletionEvidence, ProjectCompletionGate,
 };
 use metao_contracts::project_contract::{
     ContractId, ItemId, ProjectContract, ProjectId, Provenance, ProvenanceCategory,
@@ -49,6 +49,8 @@ fn evidence(
         obligation_id: ItemId(obligation.to_string()),
         contract_binding: contract.binding(),
         status,
+        evidence_basis: CompletionEvidenceBasis::IndependentAcceptance,
+        verification_ref: Some(format!("independent-acceptance:{id}")),
         reason: "independent completion check".to_string(),
     }
 }
@@ -80,6 +82,60 @@ fn all_exact_binding_obligations_pass_project_accepts() {
 }
 
 #[test]
+fn verified_evaluation_can_prove_completion_obligation() {
+    let contract = contract(vec![item(
+        "api",
+        SemanticCategory::RequiredCapability,
+        "Backend API",
+    )]);
+    let mut proof = evidence(&contract, "api-proof", "api", CompletionEvidenceStatus::Pass);
+    proof.evidence_basis = CompletionEvidenceBasis::VerifiedEvaluation;
+    proof.verification_ref = Some("verified-evaluator:api:1".to_string());
+
+    let result = ProjectCompletionGate::evaluate(&contract, &[proof]);
+    assert_eq!(result.decision, ProjectCompletionDecision::ProjectAccepted);
+}
+
+#[test]
+fn caller_declared_or_unknown_pass_cannot_mint_project_acceptance() {
+    let contract = contract(vec![item(
+        "api",
+        SemanticCategory::RequiredCapability,
+        "Backend API",
+    )]);
+
+    for basis in [
+        CompletionEvidenceBasis::CallerDeclared,
+        CompletionEvidenceBasis::Unknown,
+    ] {
+        let mut proof = evidence(&contract, "api-proof", "api", CompletionEvidenceStatus::Pass);
+        proof.evidence_basis = basis;
+        let result = ProjectCompletionGate::evaluate(&contract, &[proof]);
+        assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
+        assert_eq!(result.obligations[0].status, CompletionEvidenceStatus::NotProven);
+    }
+}
+
+#[test]
+fn conclusive_evidence_requires_nonblank_verification_reference() {
+    let contract = contract(vec![item(
+        "api",
+        SemanticCategory::RequiredCapability,
+        "Backend API",
+    )]);
+
+    for status in [CompletionEvidenceStatus::Pass, CompletionEvidenceStatus::Fail] {
+        for reference in [None, Some(String::new()), Some("   ".to_string())] {
+            let mut proof = evidence(&contract, "api-proof", "api", status);
+            proof.verification_ref = reference;
+            let result = ProjectCompletionGate::evaluate(&contract, &[proof]);
+            assert_eq!(result.decision, ProjectCompletionDecision::NotDone);
+            assert_eq!(result.obligations[0].status, CompletionEvidenceStatus::NotProven);
+        }
+    }
+}
+
+#[test]
 fn frontend_only_proof_cannot_complete_full_stack_contract() {
     let contract = contract(vec![
         item("frontend", SemanticCategory::RequiredSurface, "Marketplace UI"),
@@ -106,7 +162,7 @@ fn frontend_only_proof_cannot_complete_full_stack_contract() {
 }
 
 #[test]
-fn explicit_failure_returns_not_done() {
+fn explicit_verified_failure_returns_not_done() {
     let contract = contract(vec![item(
         "api",
         SemanticCategory::RequiredCapability,
