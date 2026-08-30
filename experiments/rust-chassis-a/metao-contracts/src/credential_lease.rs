@@ -6,6 +6,7 @@ pub enum CredentialLeaseError {
     InvalidValidityWindow,
     InvalidRenewalBound,
     InvalidAssuranceStatusPair,
+    InvalidEvidenceBasis,
     MissingRevocationEvidence,
 }
 
@@ -14,6 +15,14 @@ pub enum CredentialLeaseAssurance {
     Brokered,
     DevelopmentStatic,
     Unsupported,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CredentialLeaseEvidenceBasis {
+    BrokerVerified,
+    DevelopmentLocal,
+    CallerDeclared,
+    Unknown,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -62,6 +71,7 @@ pub struct CredentialLease {
     pub renewable: bool,
     pub max_expires_at_epoch: Option<i64>,
     pub assurance: CredentialLeaseAssurance,
+    pub evidence_basis: CredentialLeaseEvidenceBasis,
     pub revocation_status: CredentialRevocationStatus,
     pub revocation_evidence_ref: Option<String>,
 }
@@ -92,19 +102,38 @@ impl CredentialLease {
             (false, Some(_)) => return Err(CredentialLeaseError::InvalidRenewalBound),
         }
 
-        if self.assurance == CredentialLeaseAssurance::Unsupported
-            && self.revocation_status == CredentialRevocationStatus::Active
-        {
-            return Err(CredentialLeaseError::InvalidAssuranceStatusPair);
+        match self.assurance {
+            CredentialLeaseAssurance::Brokered => {
+                if self.evidence_basis != CredentialLeaseEvidenceBasis::BrokerVerified {
+                    return Err(CredentialLeaseError::InvalidEvidenceBasis);
+                }
+            }
+            CredentialLeaseAssurance::DevelopmentStatic => {
+                if self.evidence_basis != CredentialLeaseEvidenceBasis::DevelopmentLocal {
+                    return Err(CredentialLeaseError::InvalidEvidenceBasis);
+                }
+            }
+            CredentialLeaseAssurance::Unsupported => {
+                if self.revocation_status == CredentialRevocationStatus::Active {
+                    return Err(CredentialLeaseError::InvalidAssuranceStatusPair);
+                }
+                if self.evidence_basis == CredentialLeaseEvidenceBasis::BrokerVerified {
+                    return Err(CredentialLeaseError::InvalidEvidenceBasis);
+                }
+            }
         }
 
-        if self.revocation_status == CredentialRevocationStatus::Revoked
-            && self
+        if self.revocation_status == CredentialRevocationStatus::Revoked {
+            if self.evidence_basis != CredentialLeaseEvidenceBasis::BrokerVerified {
+                return Err(CredentialLeaseError::InvalidEvidenceBasis);
+            }
+            if self
                 .revocation_evidence_ref
                 .as_deref()
                 .is_none_or(|value| value.trim().is_empty())
-        {
-            return Err(CredentialLeaseError::MissingRevocationEvidence);
+            {
+                return Err(CredentialLeaseError::MissingRevocationEvidence);
+            }
         }
         Ok(())
     }
@@ -131,6 +160,8 @@ impl CredentialLease {
 
     pub fn revocation_confirmed(&self) -> bool {
         self.validate().is_ok()
+            && self.assurance == CredentialLeaseAssurance::Brokered
+            && self.evidence_basis == CredentialLeaseEvidenceBasis::BrokerVerified
             && self.revocation_status == CredentialRevocationStatus::Revoked
             && self
                 .revocation_evidence_ref
