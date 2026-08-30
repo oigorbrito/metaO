@@ -1,4 +1,4 @@
-use crate::project_contract::{Provenance, SemanticCategory};
+use crate::project_contract::{Provenance, ProvenanceCategory, SemanticCategory};
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
@@ -80,9 +80,14 @@ impl UnresolvedDiscoveryItem {
         self.provenance
             .validate()
             .map_err(|_| ClarificationPolicyError::InvalidProvenance)?;
-        if self.materiality_reason.is_some() && self.materiality != Materiality::Material {
-            return Err(ClarificationPolicyError::InvalidMateriality);
+
+        match (self.materiality, self.materiality_reason) {
+            (Materiality::Material, None) | (Materiality::NonMaterial, Some(_)) => {
+                return Err(ClarificationPolicyError::InvalidMateriality);
+            }
+            _ => {}
         }
+
         if let Some(default) = &self.safe_default {
             default.validate()?;
         }
@@ -173,7 +178,14 @@ impl ExplicitResolution {
         }
         self.provenance
             .validate()
-            .map_err(|_| ClarificationPolicyError::InvalidResolution)
+            .map_err(|_| ClarificationPolicyError::InvalidResolution)?;
+        if !matches!(
+            self.provenance.category,
+            ProvenanceCategory::UserExplicit | ProvenanceCategory::UserConfirmed
+        ) {
+            return Err(ClarificationPolicyError::InvalidResolution);
+        }
+        Ok(())
     }
 }
 
