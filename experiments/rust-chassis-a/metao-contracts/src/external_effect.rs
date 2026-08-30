@@ -225,7 +225,9 @@ pub fn evaluate_effect_retry(
                     )
                 }
             }
-            ExternalEffectOutcome::Applied => unreachable!("handled by authoritative applied history"),
+            ExternalEffectOutcome::Applied => {
+                unreachable!("handled by authoritative applied history")
+            }
         }
     };
 

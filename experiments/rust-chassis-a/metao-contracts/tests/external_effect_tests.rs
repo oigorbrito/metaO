@@ -54,14 +54,24 @@ fn entry(
 
 #[test]
 fn applied_effect_blocks_duplicate_retry() {
-    let history = vec![entry(1, "exec-a", ExternalEffectOutcome::Applied, Some("idem-1"))];
+    let history = vec![entry(
+        1,
+        "exec-a",
+        ExternalEffectOutcome::Applied,
+        Some("idem-1"),
+    )];
     let result = evaluate_effect_retry(&intent(Some("idem-1")), &history).expect("decision");
     assert_eq!(result.disposition, EffectRetryDisposition::AlreadyApplied);
 }
 
 #[test]
 fn declared_key_alone_does_not_make_ambiguous_retry_safe() {
-    let history = vec![entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, Some("idem-1"))];
+    let history = vec![entry(
+        1,
+        "exec-a",
+        ExternalEffectOutcome::Ambiguous,
+        Some("idem-1"),
+    )];
     let result = evaluate_effect_retry(&intent(Some("idem-1")), &history).expect("decision");
     assert_eq!(
         result.disposition,
@@ -71,7 +81,12 @@ fn declared_key_alone_does_not_make_ambiguous_retry_safe() {
 
 #[test]
 fn independently_verified_idempotency_enforcement_allows_same_effect_retry() {
-    let history = vec![entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, Some("idem-1"))];
+    let history = vec![entry(
+        1,
+        "exec-a",
+        ExternalEffectOutcome::Ambiguous,
+        Some("idem-1"),
+    )];
     let result = evaluate_effect_retry(&verified_intent("idem-1"), &history).expect("decision");
     assert_eq!(result.disposition, EffectRetryDisposition::SafeToRetry);
     assert_eq!(result.effect_id, "effect-send-order-confirmation");
@@ -103,7 +118,12 @@ fn failed_attempt_without_verified_idempotency_does_not_prove_effect_absent() {
 
 #[test]
 fn failed_attempt_with_verified_idempotency_can_retry_same_effect() {
-    let history = vec![entry(1, "exec-a", ExternalEffectOutcome::Failed, Some("idem-1"))];
+    let history = vec![entry(
+        1,
+        "exec-a",
+        ExternalEffectOutcome::Failed,
+        Some("idem-1"),
+    )];
     let result = evaluate_effect_retry(&verified_intent("idem-1"), &history).expect("decision");
     assert_eq!(result.disposition, EffectRetryDisposition::SafeToRetry);
 }
@@ -118,8 +138,18 @@ fn authoritative_not_applied_outcome_allows_retry() {
 #[test]
 fn failover_changes_execution_but_preserves_logical_effect_identity() {
     let history = vec![
-        entry(1, "exec-runtime-a", ExternalEffectOutcome::NotApplied, Some("idem-1")),
-        entry(2, "exec-runtime-b", ExternalEffectOutcome::Ambiguous, Some("idem-1")),
+        entry(
+            1,
+            "exec-runtime-a",
+            ExternalEffectOutcome::NotApplied,
+            Some("idem-1"),
+        ),
+        entry(
+            2,
+            "exec-runtime-b",
+            ExternalEffectOutcome::Ambiguous,
+            Some("idem-1"),
+        ),
     ];
     let result = evaluate_effect_retry(&verified_intent("idem-1"), &history).expect("decision");
     assert_eq!(result.effect_id, "effect-send-order-confirmation");
@@ -130,7 +160,8 @@ fn failover_changes_execution_but_preserves_logical_effect_identity() {
 #[test]
 fn independent_postcondition_proof_blocks_retry_even_when_ack_was_ambiguous() {
     let mut applied = entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, None);
-    applied.postcondition_evidence_basis = PostconditionEvidenceBasis::IndependentExternalObservation;
+    applied.postcondition_evidence_basis =
+        PostconditionEvidenceBasis::IndependentExternalObservation;
     applied.postcondition_evidence_ref = Some("external-readback:message-42".to_string());
     let result = evaluate_effect_retry(&intent(None), &[applied]).expect("decision");
     assert_eq!(result.disposition, EffectRetryDisposition::AlreadyApplied);
@@ -190,9 +221,21 @@ fn invalid_idempotency_assurance_combinations_fail_closed() {
     let cases = [
         intent_with_assurance(Some("idem-1"), IdempotencyAssurance::None, None),
         intent_with_assurance(None, IdempotencyAssurance::KeyDeclared, None),
-        intent_with_assurance(Some("idem-1"), IdempotencyAssurance::KeyDeclared, Some("unexpected")),
-        intent_with_assurance(Some("idem-1"), IdempotencyAssurance::EnforcementVerified, None),
-        intent_with_assurance(None, IdempotencyAssurance::EnforcementVerified, Some("proof")),
+        intent_with_assurance(
+            Some("idem-1"),
+            IdempotencyAssurance::KeyDeclared,
+            Some("unexpected"),
+        ),
+        intent_with_assurance(
+            Some("idem-1"),
+            IdempotencyAssurance::EnforcementVerified,
+            None,
+        ),
+        intent_with_assurance(
+            None,
+            IdempotencyAssurance::EnforcementVerified,
+            Some("proof"),
+        ),
     ];
 
     for candidate in cases {
@@ -213,7 +256,12 @@ fn omission_of_authoritative_history_fails_closed() {
 
 #[test]
 fn history_sequence_gap_fails_closed() {
-    let history = vec![entry(2, "exec-a", ExternalEffectOutcome::NotApplied, Some("idem-1"))];
+    let history = vec![entry(
+        2,
+        "exec-a",
+        ExternalEffectOutcome::NotApplied,
+        Some("idem-1"),
+    )];
     assert_eq!(
         evaluate_effect_retry(&verified_intent("idem-1"), &history),
         Err(ExternalEffectError::HistorySequenceGap {
@@ -225,7 +273,12 @@ fn history_sequence_gap_fails_closed() {
 
 #[test]
 fn idempotency_key_mutation_is_rejected() {
-    let history = vec![entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, Some("different"))];
+    let history = vec![entry(
+        1,
+        "exec-a",
+        ExternalEffectOutcome::Ambiguous,
+        Some("different"),
+    )];
     assert_eq!(
         evaluate_effect_retry(&verified_intent("idem-1"), &history),
         Err(ExternalEffectError::IdempotencyKeyMismatch)
@@ -244,7 +297,12 @@ fn logical_effect_identity_mutation_is_rejected() {
 
 #[test]
 fn serialization_contains_no_exactly_once_or_acceptance_authority() {
-    let history = vec![entry(1, "exec-a", ExternalEffectOutcome::Ambiguous, Some("idem-1"))];
+    let history = vec![entry(
+        1,
+        "exec-a",
+        ExternalEffectOutcome::Ambiguous,
+        Some("idem-1"),
+    )];
     let result = evaluate_effect_retry(&verified_intent("idem-1"), &history).expect("decision");
     let encoded = serde_json::to_string(&result).expect("serialize");
     let decoded: metao_contracts::external_effect::EffectRetryDecision =
