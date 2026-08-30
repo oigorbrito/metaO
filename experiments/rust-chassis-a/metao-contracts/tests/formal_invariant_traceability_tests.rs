@@ -36,12 +36,12 @@ fn every_named_formal_invariant_has_one_unique_mapping() {
     let expected = BTreeSet::from([
         "AcceptedGenerationMatchesCurrent",
         "AcceptedRequiresIndependentFreshPass",
-        "BlockedRequiresIndependentFreshFail",
         "IncompleteRecoveryCannotEnableRetry",
         "OldGenerationDoneCannotAcceptCurrent",
         "OrchestratorDoneIsNotAcceptance",
         "StaleEvidenceCannotAcceptCurrentGeneration",
         "UnknownNeverAccepts",
+        "VerifierFailNeverAccepts",
     ]);
     let actual: BTreeSet<&str> = mappings
         .iter()
@@ -80,13 +80,6 @@ fn implementation_targets_are_traceable_but_never_reported_as_executed() {
                     .expect("pending rust targets");
                 assert!(!pending_targets.is_empty());
             }
-            "GAP_PENDING_OWNER" => {
-                assert!(mapping["rust_targets"].as_array().is_some_and(Vec::is_empty));
-                assert!(mapping["gap_parent_issue"].as_u64().is_some());
-                assert!(mapping["gap_reason"]
-                    .as_str()
-                    .is_some_and(|value| !value.trim().is_empty()));
-            }
             state => panic!("unexpected implementation state: {state}"),
         }
     }
@@ -110,19 +103,23 @@ fn pending_branch_target_is_not_misreported_as_current_main_coverage() {
 }
 
 #[test]
-fn new_formal_invariant_can_remain_an_explicit_implementation_gap() {
+fn verifier_fail_maps_to_existing_not_done_semantics() {
     let value = fixture();
-    let blocked = value["mappings"]
+    let failed = value["mappings"]
         .as_array()
         .expect("mappings")
         .iter()
-        .find(|mapping| mapping["invariant_id"] == "BlockedRequiresIndependentFreshFail")
-        .expect("blocked invariant mapping");
+        .find(|mapping| mapping["invariant_id"] == "VerifierFailNeverAccepts")
+        .expect("verifier-fail invariant mapping");
 
-    assert_eq!(blocked["implementation_state"], "GAP_PENDING_OWNER");
-    assert_eq!(blocked["execution_state"], "EXECUTION_NOT_RUN");
-    assert_eq!(blocked["gap_parent_issue"], 161);
-    assert!(blocked["rust_targets"].as_array().is_some_and(Vec::is_empty));
+    assert_eq!(failed["implementation_state"], "TEST_PATH_PRESENT");
+    assert_eq!(failed["execution_state"], "EXECUTION_NOT_RUN");
+    assert_eq!(
+        failed["rust_targets"].as_array().expect("targets"),
+        &vec![Value::String(
+            "experiments/rust-chassis-a/metao-kernel/tests/evidence_binding.rs".to_string()
+        )]
+    );
 }
 
 #[test]
