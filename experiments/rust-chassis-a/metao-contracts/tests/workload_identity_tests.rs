@@ -36,6 +36,41 @@ fn valid_attested_identity_requires_explicit_verification_facts() {
 }
 
 #[test]
+fn spiffe_svid_subject_must_match_declared_trust_domain() {
+    for credential_kind in [
+        WorkloadCredentialKind::X509Svid,
+        WorkloadCredentialKind::JwtSvid,
+    ] {
+        let mut value = attested();
+        value.credential_kind = credential_kind;
+        value.workload_subject = "spiffe://evil.example/runtime/a".to_string();
+        assert_eq!(
+            RuntimeWorkloadIdentity::new(value),
+            Err(WorkloadIdentityError::SpiffeTrustDomainMismatch)
+        );
+    }
+}
+
+#[test]
+fn spiffe_subject_without_path_separator_cannot_match_longer_domain_prefix() {
+    let mut value = attested();
+    value.workload_subject = "spiffe://example.org.evil/runtime/a".to_string();
+    assert_eq!(
+        RuntimeWorkloadIdentity::new(value),
+        Err(WorkloadIdentityError::SpiffeTrustDomainMismatch)
+    );
+}
+
+#[test]
+fn other_attested_identity_is_not_forced_into_spiffe_uri_shape() {
+    let mut value = attested();
+    value.credential_kind = WorkloadCredentialKind::OtherAttested;
+    value.workload_subject = "provider-neutral-workload-subject".to_string();
+    let value = RuntimeWorkloadIdentity::new(value).expect("provider-neutral attested identity");
+    assert_eq!(value.credential_kind, WorkloadCredentialKind::OtherAttested);
+}
+
+#[test]
 fn self_report_or_unknown_basis_cannot_mint_attested_identity() {
     for basis in [
         WorkloadIdentityEvidenceBasis::SelfReported,
