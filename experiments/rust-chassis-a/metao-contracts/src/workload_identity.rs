@@ -15,6 +15,7 @@ pub enum WorkloadIdentityError {
     MissingVerifiedAt,
     InvalidAttestedCredential,
     InvalidAssuranceCredentialPair,
+    InvalidVerificationBasis,
     InvalidValidityWindow,
 }
 
@@ -33,6 +34,14 @@ pub enum WorkloadIdentityAssurance {
     Unverified,
     Development,
     Unsupported,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum WorkloadIdentityEvidenceBasis {
+    IdentityProviderVerified,
+    IndependentVerifier,
+    SelfReported,
+    Unknown,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -64,6 +73,7 @@ pub struct RuntimeWorkloadIdentity {
     pub trust_domain: String,
     pub credential_kind: WorkloadCredentialKind,
     pub assurance: WorkloadIdentityAssurance,
+    pub evidence_basis: WorkloadIdentityEvidenceBasis,
     pub trust_root_ref: Option<String>,
     pub credential_ref: Option<String>,
     pub verifier_provenance: Option<String>,
@@ -110,6 +120,13 @@ impl RuntimeWorkloadIdentity {
                     WorkloadCredentialKind::Development | WorkloadCredentialKind::Unsupported
                 ) {
                     return Err(WorkloadIdentityError::InvalidAttestedCredential);
+                }
+                if !matches!(
+                    self.evidence_basis,
+                    WorkloadIdentityEvidenceBasis::IdentityProviderVerified
+                        | WorkloadIdentityEvidenceBasis::IndependentVerifier
+                ) {
+                    return Err(WorkloadIdentityError::InvalidVerificationBasis);
                 }
                 if self
                     .trust_root_ref
@@ -172,7 +189,8 @@ impl RuntimeWorkloadIdentity {
     }
 
     pub fn applies_to(&self, runtime_id: &str, runtime_version: &str, config_id: &str) -> bool {
-        self.binding.runtime_id == runtime_id
+        self.validate().is_ok()
+            && self.binding.runtime_id == runtime_id
             && self.binding.runtime_version == runtime_version
             && self.binding.config_id == config_id
     }
