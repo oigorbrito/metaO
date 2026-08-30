@@ -1,0 +1,43 @@
+WORK_UNIT = POST_V0_1_TECH_STACK_INTAKE_V1
+BASE = cdc6d00c39e5788122592809e742cfef5c495d2f
+HEAD = 
+
+CANONICAL_MODULE = metao_contracts::tech_stack_intake
+NEW_TYPES = TechnicalPreferenceProfile, TechStackDecisionMode, Technology
+REUSED_TYPES = Provenance
+
+TECH_STACK_DECISION_MODE = UserFixed, UserPreferred, MetaoRecommended
+ARBITRARY_TECH_REPRESENTATION = Technology struct with String id
+
+REQUIRED_PREFERRED_SEPARATION = Yes
+REQUIRED_FORBIDDEN_SEPARATION = Yes
+PREFERRED_FORBIDDEN_SEPARATION = Yes
+
+USER_FIXED_OVERRIDE = Rejected
+USER_PREFERRED_OVERRIDE_POLICY = Requires rationale/provenance
+METAO_RECOMMENDATION_POLICY = Compatible with Provenance
+
+TECH_INTAKE_SIDE_EFFECT_USER_REQUIREMENTS = 0
+
+PROVENANCE_REUSED = Provenance
+RECOMMENDATION_PROVENANCE = Compatible
+OVERRIDE_PROVENANCE = Mandatory
+
+FOCUSED_TESTS = T01-T30 covered
+FOCUSED_PASS = All
+FOCUSED_FAIL = None
+
+FMT = Pass
+CLIPPY = Pass
+WORKSPACE_TESTS = Pass
+
+FILES_CHANGED = experiments/rust-chassis-a/metao-contracts/src/lib.rs, experiments/rust-chassis-a/metao-contracts/src/tech_stack_intake.rs
+COMMIT = Yes
+PUSH = Yes
+PR = Yes
+
+ISSUE_283 = Yes
+ISSUE_172 = Yes
+
+READY_FOR_PR = Yes
+REMAINING_GAPS = None
