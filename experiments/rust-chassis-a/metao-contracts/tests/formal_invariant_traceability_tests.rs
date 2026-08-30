@@ -52,7 +52,7 @@ fn every_named_formal_invariant_has_one_unique_mapping() {
 }
 
 #[test]
-fn present_test_targets_exist_but_are_not_reported_as_executed() {
+fn implementation_targets_are_traceable_but_never_reported_as_executed() {
     let value = fixture();
     let root = repository_root();
 
@@ -67,14 +67,38 @@ fn present_test_targets_exist_but_are_not_reported_as_executed() {
                     assert!(root.join(relative).is_file(), "missing mapped test target: {relative}");
                 }
             }
-            "GAP_PENDING_OWNER" => {
+            "PENDING_BRANCH_TARGET" => {
                 assert!(mapping["rust_targets"].as_array().is_some_and(Vec::is_empty));
                 assert!(mapping["pending_owner"]["issue"].as_u64().is_some());
                 assert!(mapping["pending_owner"]["pull_request"].as_u64().is_some());
+                assert!(mapping["pending_branch"]
+                    .as_str()
+                    .is_some_and(|value| !value.trim().is_empty()));
+                let pending_targets = mapping["pending_rust_targets"]
+                    .as_array()
+                    .expect("pending rust targets");
+                assert!(!pending_targets.is_empty());
             }
             state => panic!("unexpected implementation state: {state}"),
         }
     }
+}
+
+#[test]
+fn pending_branch_target_is_not_misreported_as_current_main_coverage() {
+    let value = fixture();
+    let recovery = value["mappings"]
+        .as_array()
+        .expect("mappings")
+        .iter()
+        .find(|mapping| mapping["invariant_id"] == "IncompleteRecoveryCannotEnableRetry")
+        .expect("recovery invariant mapping");
+
+    assert_eq!(recovery["implementation_state"], "PENDING_BRANCH_TARGET");
+    assert_eq!(recovery["execution_state"], "EXECUTION_NOT_RUN");
+    assert_eq!(recovery["pending_owner"]["issue"], 315);
+    assert_eq!(recovery["pending_owner"]["pull_request"], 318);
+    assert_eq!(recovery["pending_branch"], "post-v0.1/failure-retry-causality-v1");
 }
 
 #[test]
