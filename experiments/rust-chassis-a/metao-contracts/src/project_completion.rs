@@ -64,6 +64,10 @@ impl ProjectCompletionGate {
         let mut obligation_results = Vec::new();
         let mut reasons = Vec::new();
 
+        if obligations.is_empty() {
+            reasons.push("project contract defines no completion obligations".to_string());
+        }
+
         for obligation_id in obligations {
             let records = indexed.get(&obligation_id).cloned().unwrap_or_default();
             let result = evaluate_obligation(&obligation_id, &records);
