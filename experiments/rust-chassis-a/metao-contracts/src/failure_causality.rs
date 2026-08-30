@@ -45,6 +45,7 @@ pub struct FailureCausalityFacts {
     pub failure_class: FailureClass,
     pub failure_class_basis: FailureClassificationBasis,
     pub failure_class_evidence_ref: Option<String>,
+    pub recovery_required: bool,
     pub recovery_status: RecoveryStatus,
     pub current_attempt: u64,
     pub max_attempts: u64,
@@ -59,6 +60,7 @@ pub struct RetryEligibilityProjection {
     pub failure_class: FailureClass,
     pub failure_class_basis: FailureClassificationBasis,
     pub failure_class_evidence_ref: Option<String>,
+    pub recovery_required: bool,
     pub recovery_status: RecoveryStatus,
     pub eligibility: RetryEligibility,
     pub next_attempt: Option<u64>,
@@ -76,12 +78,24 @@ fn has_factual_transient_evidence(facts: &FailureCausalityFacts) -> bool {
         .is_some_and(|value| !value.trim().is_empty())
 }
 
+fn recovery_allows_retry(facts: &FailureCausalityFacts) -> bool {
+    if facts.recovery_required {
+        facts.recovery_status == RecoveryStatus::Complete
+    } else {
+        matches!(
+            facts.recovery_status,
+            RecoveryStatus::NotRequired | RecoveryStatus::Complete
+        )
+    }
+}
+
 pub fn evaluate_retry_eligibility(facts: &FailureCausalityFacts) -> RetryEligibilityProjection {
     let ineligible = |reason: &str| RetryEligibilityProjection {
         original_outcome: facts.original_outcome,
         failure_class: facts.failure_class,
         failure_class_basis: facts.failure_class_basis,
         failure_class_evidence_ref: facts.failure_class_evidence_ref.clone(),
+        recovery_required: facts.recovery_required,
         recovery_status: facts.recovery_status,
         eligibility: RetryEligibility::Ineligible,
         next_attempt: None,
@@ -106,11 +120,8 @@ pub fn evaluate_retry_eligibility(facts: &FailureCausalityFacts) -> RetryEligibi
     ) {
         return ineligible("original execution outcome is not retryable");
     }
-    if matches!(
-        facts.recovery_status,
-        RecoveryStatus::Incomplete | RecoveryStatus::Failed
-    ) {
-        return ineligible("recovery did not complete successfully");
+    if !recovery_allows_retry(facts) {
+        return ineligible("required recovery is absent, incomplete, failed, or inconsistent");
     }
     if facts.failure_class != FailureClass::Transient {
         return ineligible("failure is not factually classified as transient");
@@ -124,6 +135,7 @@ pub fn evaluate_retry_eligibility(facts: &FailureCausalityFacts) -> RetryEligibi
         failure_class: facts.failure_class,
         failure_class_basis: facts.failure_class_basis,
         failure_class_evidence_ref: facts.failure_class_evidence_ref.clone(),
+        recovery_required: facts.recovery_required,
         recovery_status: facts.recovery_status,
         eligibility: RetryEligibility::Eligible,
         next_attempt: Some(facts.current_attempt + 1),
