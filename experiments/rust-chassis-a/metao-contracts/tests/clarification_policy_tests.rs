@@ -20,7 +20,11 @@ fn item(materiality: Materiality, reversibility: Reversibility) -> UnresolvedDis
         description: "Choose a non-functional discovery default".to_string(),
         materiality,
         reversibility,
-        materiality_reason: None,
+        materiality_reason: if materiality == Materiality::Material {
+            Some(MaterialityReason::OtherMaterialImpact)
+        } else {
+            None
+        },
         provenance: provenance(ProvenanceCategory::UserExplicit, "intake"),
         safe_default: None,
     }
@@ -40,6 +44,16 @@ fn material_ambiguity_asks_human() {
     let decision = ClarificationPolicy::classify(&value).expect("classification should succeed");
     assert_eq!(decision.action, ClarificationAction::AskHuman);
     assert!(decision.assumption.is_none());
+}
+
+#[test]
+fn material_ambiguity_requires_explicit_materiality_reason() {
+    let mut value = item(Materiality::Material, Reversibility::Reversible);
+    value.materiality_reason = None;
+    assert_eq!(
+        ClarificationPolicy::classify(&value),
+        Err(ClarificationPolicyError::InvalidMateriality)
+    );
 }
 
 #[test]
@@ -161,6 +175,27 @@ fn explicit_waiver_is_separate_from_historical_classification() {
         .expect("waiver should be explicit and valid");
     assert_eq!(resolved.original_decision.action, ClarificationAction::AskHuman);
     assert_eq!(resolved.resolution.kind, ResolutionKind::ExplicitWaiver);
+}
+
+#[test]
+fn system_or_metao_provenance_cannot_resolve_human_gate() {
+    for category in [
+        ProvenanceCategory::SystemDefault,
+        ProvenanceCategory::MetaoAssumption,
+        ProvenanceCategory::MetaoRecommendation,
+    ] {
+        let value = item(Materiality::Material, Reversibility::Reversible);
+        let decision = ClarificationPolicy::classify(&value).expect("classification should succeed");
+        let resolution = ExplicitResolution {
+            kind: ResolutionKind::HumanResolution,
+            rationale: "forged non-human resolution".to_string(),
+            provenance: provenance(category, "non-human-source"),
+        };
+        assert_eq!(
+            apply_explicit_resolution(&value, &decision, resolution),
+            Err(ClarificationPolicyError::InvalidResolution)
+        );
+    }
 }
 
 #[test]
