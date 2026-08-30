@@ -45,6 +45,7 @@ RuntimeDone(g) ==
                    decision, acceptedGeneration>>
 
 ObserveEvidence(g, fresh, verifier) ==
+    /\ decision = "NOT_DONE"
     /\ g \in 1..generation
     /\ fresh \in BOOLEAN
     /\ verifier \in VerifierStates
@@ -56,6 +57,7 @@ ObserveEvidence(g, fresh, verifier) ==
                    decision, acceptedGeneration>>
 
 CompleteRecovery ==
+    /\ decision = "NOT_DONE"
     /\ recoveryComplete' = TRUE
     /\ retryEnabled' = TRUE
     /\ UNCHANGED <<generation, runtimeDoneGeneration,
@@ -63,6 +65,7 @@ CompleteRecovery ==
                    decision, acceptedGeneration>>
 
 IncompleteRecovery ==
+    /\ decision = "NOT_DONE"
     /\ recoveryComplete' = FALSE
     /\ retryEnabled' = FALSE
     /\ UNCHANGED <<generation, runtimeDoneGeneration,
@@ -70,6 +73,7 @@ IncompleteRecovery ==
                    decision, acceptedGeneration>>
 
 Failover ==
+    /\ decision = "NOT_DONE"
     /\ generation < MaxGeneration
     /\ generation' = generation + 1
     /\ runtimeDoneGeneration' = 0
