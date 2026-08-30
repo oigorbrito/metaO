@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+pub mod clarification_policy;
 pub mod project_contract;
 pub mod reference_intake;
 
