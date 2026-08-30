@@ -4,6 +4,7 @@ pub mod clarification_policy;
 pub mod project_contract;
 pub mod project_completion;
 pub mod reference_intake;
+pub mod runtime_health;
 pub mod tech_stack_intake;
 
 pub const CONTRACT_VERSION: u32 = 1;
