@@ -5,6 +5,8 @@ pub enum RuntimeHealthError {
     BlankRuntimeIdentity,
     BlankRuntimeVersion,
     BlankConfigIdentity,
+    BlankEvidenceRef,
+    InvalidEvidenceBasis,
     InvalidObservationWindow,
     InvalidCounters,
     InvalidPolicy,
@@ -18,6 +20,14 @@ pub enum RuntimeHealthState {
     Unhealthy,
     Quarantined,
     Recovering,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeHealthEvidenceBasis {
+    IndependentObservation,
+    AdapterVerified,
+    SelfReported,
+    Unknown,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,6 +56,8 @@ pub struct RuntimeHealthObservation {
     pub runtime_id: String,
     pub runtime_version: String,
     pub config_id: String,
+    pub evidence_basis: RuntimeHealthEvidenceBasis,
+    pub evidence_ref: String,
     pub window_start_sequence: u64,
     pub window_end_sequence: u64,
     pub attempts: u32,
@@ -70,6 +82,16 @@ impl RuntimeHealthObservation {
         }
         if self.config_id.trim().is_empty() {
             return Err(RuntimeHealthError::BlankConfigIdentity);
+        }
+        if !matches!(
+            self.evidence_basis,
+            RuntimeHealthEvidenceBasis::IndependentObservation
+                | RuntimeHealthEvidenceBasis::AdapterVerified
+        ) {
+            return Err(RuntimeHealthError::InvalidEvidenceBasis);
+        }
+        if self.evidence_ref.trim().is_empty() {
+            return Err(RuntimeHealthError::BlankEvidenceRef);
         }
         if self.window_end_sequence < self.window_start_sequence {
             return Err(RuntimeHealthError::InvalidObservationWindow);
