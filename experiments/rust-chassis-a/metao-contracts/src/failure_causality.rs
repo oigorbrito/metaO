@@ -17,6 +17,14 @@ pub enum FailureClass {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FailureClassificationBasis {
+    AuthoritativeObservation,
+    AdapterNormalization,
+    CallerDeclared,
+    Missing,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecoveryStatus {
     NotRequired,
     NotAttempted,
@@ -35,6 +43,8 @@ pub enum RetryEligibility {
 pub struct FailureCausalityFacts {
     pub original_outcome: FactualExecutionOutcome,
     pub failure_class: FailureClass,
+    pub failure_class_basis: FailureClassificationBasis,
+    pub failure_class_evidence_ref: Option<String>,
     pub recovery_status: RecoveryStatus,
     pub current_attempt: u64,
     pub max_attempts: u64,
@@ -47,16 +57,31 @@ pub struct FailureCausalityFacts {
 pub struct RetryEligibilityProjection {
     pub original_outcome: FactualExecutionOutcome,
     pub failure_class: FailureClass,
+    pub failure_class_basis: FailureClassificationBasis,
+    pub failure_class_evidence_ref: Option<String>,
     pub recovery_status: RecoveryStatus,
     pub eligibility: RetryEligibility,
     pub next_attempt: Option<u64>,
     pub reason: String,
 }
 
+fn has_factual_transient_evidence(facts: &FailureCausalityFacts) -> bool {
+    matches!(
+        facts.failure_class_basis,
+        FailureClassificationBasis::AuthoritativeObservation
+            | FailureClassificationBasis::AdapterNormalization
+    ) && facts
+        .failure_class_evidence_ref
+        .as_deref()
+        .is_some_and(|value| !value.trim().is_empty())
+}
+
 pub fn evaluate_retry_eligibility(facts: &FailureCausalityFacts) -> RetryEligibilityProjection {
     let ineligible = |reason: &str| RetryEligibilityProjection {
         original_outcome: facts.original_outcome,
         failure_class: facts.failure_class,
+        failure_class_basis: facts.failure_class_basis,
+        failure_class_evidence_ref: facts.failure_class_evidence_ref.clone(),
         recovery_status: facts.recovery_status,
         eligibility: RetryEligibility::Ineligible,
         next_attempt: None,
@@ -75,22 +100,34 @@ pub fn evaluate_retry_eligibility(facts: &FailureCausalityFacts) -> RetryEligibi
     if facts.budget_blocked {
         return ineligible("execution budget blocks retry");
     }
-    if matches!(facts.original_outcome, FactualExecutionOutcome::Succeeded | FactualExecutionOutcome::Cancelled) {
+    if matches!(
+        facts.original_outcome,
+        FactualExecutionOutcome::Succeeded | FactualExecutionOutcome::Cancelled
+    ) {
         return ineligible("original execution outcome is not retryable");
     }
-    if matches!(facts.recovery_status, RecoveryStatus::Incomplete | RecoveryStatus::Failed) {
+    if matches!(
+        facts.recovery_status,
+        RecoveryStatus::Incomplete | RecoveryStatus::Failed
+    ) {
         return ineligible("recovery did not complete successfully");
     }
     if facts.failure_class != FailureClass::Transient {
         return ineligible("failure is not factually classified as transient");
     }
+    if !has_factual_transient_evidence(facts) {
+        return ineligible("transient classification lacks authoritative factual evidence");
+    }
 
     RetryEligibilityProjection {
         original_outcome: facts.original_outcome,
         failure_class: facts.failure_class,
+        failure_class_basis: facts.failure_class_basis,
+        failure_class_evidence_ref: facts.failure_class_evidence_ref.clone(),
         recovery_status: facts.recovery_status,
         eligibility: RetryEligibility::Eligible,
         next_attempt: Some(facts.current_attempt + 1),
-        reason: "factual transient failure is eligible for a later controlled retry decision".to_string(),
+        reason: "factual transient failure is eligible for a later controlled retry decision"
+            .to_string(),
     }
 }
