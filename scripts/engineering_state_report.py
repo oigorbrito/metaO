@@ -76,16 +76,14 @@ def _validate_repo(repo: Path) -> None:
         raise ReportError("repository path is not a Git work tree")
 
 
+def _split_nul_paths(output: str) -> list[str]:
+    return [entry for entry in output.split("\0") if entry]
+
+
 def _changed_paths(repo: Path) -> list[str]:
-    tracked = _git(repo, ["diff", "--name-only", "HEAD", "--"]) or ""
-    untracked = _git(repo, ["ls-files", "--others", "--exclude-standard"]) or ""
-    return sorted(
-        {
-            line.strip()
-            for line in [*tracked.splitlines(), *untracked.splitlines()]
-            if line.strip()
-        }
-    )
+    tracked = _git(repo, ["diff", "--name-only", "-z", "HEAD", "--"]) or ""
+    untracked = _git(repo, ["ls-files", "-z", "--others", "--exclude-standard"]) or ""
+    return sorted(set(_split_nul_paths(tracked) + _split_nul_paths(untracked)))
 
 
 def _branch(repo: Path) -> str:
@@ -132,11 +130,15 @@ def inspect_document(repo: Path, relative_path: str, head: str) -> dict[str, obj
         return {"path": relative_path, "state": "MISSING", "recorded_head": None}
 
     text = candidate.read_text(encoding="utf-8")
-    match = HEAD_MARKER.search(text)
-    if not match:
+    markers = [match.lower() for match in HEAD_MARKER.findall(text)]
+    if not markers:
         return {"path": relative_path, "state": "NO_MARKER", "recorded_head": None}
 
-    recorded = match.group(1).lower()
+    distinct_markers = sorted(set(markers))
+    if len(distinct_markers) != 1:
+        raise ReportError(f"document contains conflicting HEAD markers: {relative_path}")
+
+    recorded = distinct_markers[0]
     return {
         "path": relative_path,
         "state": "CURRENT" if recorded == head.lower() else "STALE",
