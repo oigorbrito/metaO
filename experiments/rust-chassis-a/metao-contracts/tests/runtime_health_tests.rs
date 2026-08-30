@@ -1,6 +1,6 @@
 use metao_contracts::runtime_health::{
-    derive_runtime_health, RuntimeHealthError, RuntimeHealthObservation, RuntimeHealthPolicy,
-    RuntimeHealthState,
+    derive_runtime_health, RuntimeHealthError, RuntimeHealthEvidenceBasis,
+    RuntimeHealthObservation, RuntimeHealthPolicy, RuntimeHealthState,
 };
 
 fn policy() -> RuntimeHealthPolicy {
@@ -17,6 +17,8 @@ fn observation() -> RuntimeHealthObservation {
         runtime_id: "runtime-a".to_string(),
         runtime_version: "1.0.0".to_string(),
         config_id: "config-a".to_string(),
+        evidence_basis: RuntimeHealthEvidenceBasis::AdapterVerified,
+        evidence_ref: "runtime-health:runtime-a:window-1".to_string(),
         window_start_sequence: 1,
         window_end_sequence: 10,
         attempts: 4,
@@ -30,6 +32,43 @@ fn observation() -> RuntimeHealthObservation {
         prior_state: None,
         self_reported_healthy: None,
     }
+}
+
+#[test]
+fn self_reported_or_unknown_observation_cannot_mint_health_state() {
+    for basis in [
+        RuntimeHealthEvidenceBasis::SelfReported,
+        RuntimeHealthEvidenceBasis::Unknown,
+    ] {
+        let mut value = observation();
+        value.evidence_basis = basis;
+        assert_eq!(
+            derive_runtime_health(&value, &policy()),
+            Err(RuntimeHealthError::InvalidEvidenceBasis)
+        );
+    }
+}
+
+#[test]
+fn observation_requires_nonblank_evidence_reference() {
+    for evidence in ["", "   "] {
+        let mut value = observation();
+        value.evidence_ref = evidence.to_string();
+        assert_eq!(
+            derive_runtime_health(&value, &policy()),
+            Err(RuntimeHealthError::BlankEvidenceRef)
+        );
+    }
+}
+
+#[test]
+fn independent_observation_can_support_health_projection() {
+    let mut value = observation();
+    value.evidence_basis = RuntimeHealthEvidenceBasis::IndependentObservation;
+    assert_eq!(
+        derive_runtime_health(&value, &policy()).expect("projection").state,
+        RuntimeHealthState::Healthy
+    );
 }
 
 #[test]
@@ -112,10 +151,7 @@ fn lying_self_report_does_not_override_factual_state() {
     value.self_reported_healthy = Some(true);
     let result = derive_runtime_health(&value, &policy()).expect("projection");
     assert_eq!(result.state, RuntimeHealthState::Quarantined);
-    assert!(result
-        .reasons
-        .iter()
-        .any(|reason| reason.contains("did not override")));
+    assert!(result.reasons.iter().any(|reason| reason.contains("did not override")));
 }
 
 #[test]
@@ -138,10 +174,7 @@ fn recovering_state_cannot_flap_to_healthy_without_threshold() {
     value.fresh_successes_since_unhealthy = 1;
     let result = derive_runtime_health(&value, &policy()).expect("projection");
     assert_eq!(result.state, RuntimeHealthState::Recovering);
-    assert!(result
-        .reasons
-        .iter()
-        .any(|reason| reason.contains("fresh successes 1/2")));
+    assert!(result.reasons.iter().any(|reason| reason.contains("fresh successes 1/2")));
 }
 
 #[test]
@@ -174,6 +207,7 @@ fn different_runtime_histories_produce_distinct_projections() {
     degraded.runtime_id = "runtime-b".to_string();
     degraded.runtime_version = "2.0.0".to_string();
     degraded.config_id = "config-b".to_string();
+    degraded.evidence_ref = "runtime-health:runtime-b:window-1".to_string();
     degraded.attempts = 5;
     degraded.successes = 4;
     degraded.failures = 1;
