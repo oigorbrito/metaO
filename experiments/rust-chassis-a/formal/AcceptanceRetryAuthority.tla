@@ -111,6 +111,8 @@ Accept ==
 
 Block ==
     /\ decision = "NOT_DONE"
+    /\ evidenceGeneration = generation
+    /\ evidenceFresh = TRUE
     /\ verifierState = "FAIL"
     /\ decision' = "BLOCKED"
     /\ UNCHANGED <<generation, runtimeDoneGeneration,
@@ -139,6 +141,12 @@ AcceptedRequiresIndependentFreshPass ==
         /\ evidenceGeneration = generation
         /\ evidenceFresh = TRUE
         /\ verifierState = "PASS"
+
+BlockedRequiresIndependentFreshFail ==
+    decision = "BLOCKED" =>
+        /\ evidenceGeneration = generation
+        /\ evidenceFresh = TRUE
+        /\ verifierState = "FAIL"
 
 StaleEvidenceCannotAcceptCurrentGeneration ==
     (evidenceGeneration # generation \/ ~evidenceFresh) => decision # "ACCEPTED"
