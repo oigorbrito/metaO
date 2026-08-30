@@ -1,6 +1,6 @@
 use metao_contracts::workload_identity::{
     RuntimeIdentityBinding, RuntimeWorkloadIdentity, WorkloadCredentialKind,
-    WorkloadIdentityAssurance, WorkloadIdentityError,
+    WorkloadIdentityAssurance, WorkloadIdentityError, WorkloadIdentityEvidenceBasis,
 };
 
 fn binding() -> RuntimeIdentityBinding {
@@ -18,6 +18,7 @@ fn attested() -> RuntimeWorkloadIdentity {
         trust_domain: "example.org".to_string(),
         credential_kind: WorkloadCredentialKind::X509Svid,
         assurance: WorkloadIdentityAssurance::Attested,
+        evidence_basis: WorkloadIdentityEvidenceBasis::IdentityProviderVerified,
         trust_root_ref: Some("bundle:example.org:v4".to_string()),
         credential_ref: Some("sha256:credential-fingerprint".to_string()),
         verifier_provenance: Some("spire-agent:v1.15.3".to_string()),
@@ -31,6 +32,29 @@ fn attested() -> RuntimeWorkloadIdentity {
 fn valid_attested_identity_requires_explicit_verification_facts() {
     let value = RuntimeWorkloadIdentity::new(attested()).expect("valid attested identity");
     assert_eq!(value.assurance, WorkloadIdentityAssurance::Attested);
+    assert!(value.is_currently_applicable(150));
+}
+
+#[test]
+fn self_report_or_unknown_basis_cannot_mint_attested_identity() {
+    for basis in [
+        WorkloadIdentityEvidenceBasis::SelfReported,
+        WorkloadIdentityEvidenceBasis::Unknown,
+    ] {
+        let mut value = attested();
+        value.evidence_basis = basis;
+        assert_eq!(
+            RuntimeWorkloadIdentity::new(value),
+            Err(WorkloadIdentityError::InvalidVerificationBasis)
+        );
+    }
+}
+
+#[test]
+fn independent_verifier_can_support_attested_identity() {
+    let mut value = attested();
+    value.evidence_basis = WorkloadIdentityEvidenceBasis::IndependentVerifier;
+    let value = RuntimeWorkloadIdentity::new(value).expect("independently verified identity");
     assert!(value.is_currently_applicable(150));
 }
 
@@ -115,6 +139,7 @@ fn development_fallback_is_explicitly_lower_assurance() {
     let mut value = attested();
     value.credential_kind = WorkloadCredentialKind::Development;
     value.assurance = WorkloadIdentityAssurance::Development;
+    value.evidence_basis = WorkloadIdentityEvidenceBasis::Unknown;
     value.trust_root_ref = None;
     value.credential_ref = None;
     value.verifier_provenance = Some("local-development".to_string());
@@ -140,6 +165,7 @@ fn invalid_public_struct_cannot_bypass_applicability_validation() {
     let mut value = attested();
     value.verified_at_epoch = None;
     assert!(!value.is_currently_applicable(150));
+    assert!(!value.applies_to("runtime-a", "1.2.3", "config-7"));
 }
 
 #[test]
@@ -166,6 +192,7 @@ fn unsupported_identity_remains_explicit() {
     let mut value = attested();
     value.credential_kind = WorkloadCredentialKind::Unsupported;
     value.assurance = WorkloadIdentityAssurance::Unsupported;
+    value.evidence_basis = WorkloadIdentityEvidenceBasis::Unknown;
     value.trust_root_ref = None;
     value.credential_ref = None;
     value.verifier_provenance = Some("adapter:no-identity-support".to_string());
