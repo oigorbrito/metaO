@@ -113,7 +113,7 @@ pub fn evaluate_effect_retry(
                 if intent
                     .idempotency_key
                     .as_deref()
-                    .is_some_and(|value| !value.trim().is_empty())
+                    .map_or(false, |value| !value.trim().is_empty())
                 {
                     (
                         EffectRetryDisposition::SafeToRetry,
