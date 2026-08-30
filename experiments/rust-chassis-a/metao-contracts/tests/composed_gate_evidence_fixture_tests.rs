@@ -55,7 +55,42 @@ fn blocked_fail_and_skipped_require_reason_and_classification() {
 }
 
 #[test]
-fn skipped_and_not_requested_are_distinct() {
+fn pass_and_fail_require_actual_executed_repository_steps_and_evidence() {
+    let value = fixture();
+    for record in value["records"].as_array().expect("records") {
+        let result = record["result"].as_str().expect("result");
+        if matches!(result, "PASS" | "FAIL") {
+            assert_eq!(record["repository_steps_executed"], true);
+            assert!(record["commands"]
+                .as_array()
+                .is_some_and(|commands| !commands.is_empty()));
+            assert!(record["evidence_ids"]
+                .as_array()
+                .is_some_and(|evidence| !evidence.is_empty()));
+        }
+    }
+}
+
+#[test]
+fn pre_step_blocker_is_not_misreported_as_executed_gate() {
+    let value = fixture();
+    let blocked = value["records"]
+        .as_array()
+        .expect("records")
+        .iter()
+        .find(|record| record["result"] == "BLOCKED")
+        .expect("blocked fixture");
+
+    assert_eq!(blocked["repository_steps_executed"], false);
+    assert!(blocked["commands"].as_array().is_some_and(Vec::is_empty));
+    assert_eq!(blocked["classification"], "BLOCKED_EXTERNAL_PRE_STEP");
+    assert!(blocked["evidence_ids"]
+        .as_array()
+        .is_some_and(|evidence| !evidence.is_empty()));
+}
+
+#[test]
+fn skipped_and_not_requested_are_distinct_and_not_executed() {
     let value = fixture();
     let records = value["records"].as_array().expect("records");
     let skipped = records.iter().find(|record| record["result"] == "SKIPPED").expect("skipped");
@@ -67,6 +102,8 @@ fn skipped_and_not_requested_are_distinct() {
     assert_ne!(skipped["record_id"], not_requested["record_id"]);
     assert!(skipped["reason"].is_string());
     assert!(not_requested["reason"].is_null());
+    assert_eq!(skipped["repository_steps_executed"], false);
+    assert_eq!(not_requested["repository_steps_executed"], false);
 }
 
 #[test]
@@ -99,6 +136,7 @@ fn gate_level_and_timing_fields_are_machine_readable() {
         assert!(record["ended_at"].as_str().is_some());
         assert!(record["duration_ms"].as_u64().is_some());
         assert!(record["commands"].as_array().is_some());
+        assert!(record["repository_steps_executed"].as_bool().is_some());
         assert!(record["environment"].is_object());
         assert!(record["evidence_ids"].as_array().is_some());
     }
