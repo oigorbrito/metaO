@@ -102,21 +102,21 @@ impl RuntimeWorkloadIdentity {
                 if self
                     .trust_root_ref
                     .as_deref()
-                    .is_none_or(|value| value.trim().is_empty())
+                    .map_or(true, |value| value.trim().is_empty())
                 {
                     return Err(WorkloadIdentityError::BlankTrustRootRef);
                 }
                 if self
                     .credential_ref
                     .as_deref()
-                    .is_none_or(|value| value.trim().is_empty())
+                    .map_or(true, |value| value.trim().is_empty())
                 {
                     return Err(WorkloadIdentityError::BlankCredentialRef);
                 }
                 if self
                     .verifier_provenance
                     .as_deref()
-                    .is_none_or(|value| value.trim().is_empty())
+                    .map_or(true, |value| value.trim().is_empty())
                 {
                     return Err(WorkloadIdentityError::BlankVerifierProvenance);
                 }
