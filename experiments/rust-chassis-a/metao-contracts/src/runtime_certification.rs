@@ -11,6 +11,7 @@ pub enum RuntimeCertificationError {
     InvalidValidityWindow,
     BlankCategoryId,
     BlankReason,
+    BlankEvidenceRef,
     DuplicateCategory(String),
     ContradictoryPassFacts(String),
 }
@@ -68,6 +69,16 @@ impl CertificationCategoryResult {
         }
         if self.reason.trim().is_empty() {
             return Err(RuntimeCertificationError::BlankReason);
+        }
+        if matches!(
+            self.status,
+            CertificationCategoryStatus::Pass | CertificationCategoryStatus::Fail
+        ) && self
+            .evidence_ref
+            .as_deref()
+            .is_none_or(|value| value.trim().is_empty())
+        {
+            return Err(RuntimeCertificationError::BlankEvidenceRef);
         }
         if self.status == CertificationCategoryStatus::Pass
             && self.forbidden_action_observed == Some(true)
