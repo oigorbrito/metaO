@@ -111,6 +111,21 @@ fn prior_quarantine_requires_fresh_successes_before_healthy() {
 }
 
 #[test]
+fn recovering_state_cannot_flap_to_healthy_without_threshold() {
+    let mut value = observation();
+    value.attempts = 1;
+    value.successes = 1;
+    value.prior_state = Some(RuntimeHealthState::Recovering);
+    value.fresh_successes_since_unhealthy = 1;
+    let result = derive_runtime_health(&value, &policy()).expect("projection");
+    assert_eq!(result.state, RuntimeHealthState::Recovering);
+    assert!(result
+        .reasons
+        .iter()
+        .any(|reason| reason.contains("fresh successes 1/2")));
+}
+
+#[test]
 fn enough_fresh_successes_allow_controlled_recovery() {
     let mut value = observation();
     value.attempts = 2;
@@ -120,6 +135,17 @@ fn enough_fresh_successes_allow_controlled_recovery() {
     let result = derive_runtime_health(&value, &policy()).expect("projection");
     assert_eq!(result.state, RuntimeHealthState::Healthy);
     assert_eq!(result.failures, 0);
+}
+
+#[test]
+fn retry_pressure_alone_degrades_but_never_quarantines() {
+    let mut value = observation();
+    value.active_retries = 100;
+    let result = derive_runtime_health(&value, &policy()).expect("projection");
+    assert!(result.retry_pressure_exceeded);
+    assert_eq!(result.failures, 0);
+    assert_eq!(result.consecutive_failures, 0);
+    assert_eq!(result.state, RuntimeHealthState::Degraded);
 }
 
 #[test]
