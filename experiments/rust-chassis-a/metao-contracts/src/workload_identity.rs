@@ -10,6 +10,9 @@ pub enum WorkloadIdentityError {
     BlankTrustRootRef,
     BlankCredentialRef,
     BlankVerifierProvenance,
+    MissingIssuedAt,
+    MissingExpiresAt,
+    MissingVerifiedAt,
     InvalidAttestedCredential,
     InvalidAssuranceCredentialPair,
     InvalidValidityWindow,
@@ -90,6 +93,15 @@ impl RuntimeWorkloadIdentity {
                 return Err(WorkloadIdentityError::InvalidValidityWindow);
             }
         }
+        if let (Some(issued), Some(expires), Some(verified)) = (
+            self.issued_at_epoch,
+            self.expires_at_epoch,
+            self.verified_at_epoch,
+        ) {
+            if verified < issued || verified >= expires {
+                return Err(WorkloadIdentityError::InvalidValidityWindow);
+            }
+        }
 
         match self.assurance {
             WorkloadIdentityAssurance::Attested => {
@@ -120,6 +132,15 @@ impl RuntimeWorkloadIdentity {
                 {
                     return Err(WorkloadIdentityError::BlankVerifierProvenance);
                 }
+                if self.issued_at_epoch.is_none() {
+                    return Err(WorkloadIdentityError::MissingIssuedAt);
+                }
+                if self.expires_at_epoch.is_none() {
+                    return Err(WorkloadIdentityError::MissingExpiresAt);
+                }
+                if self.verified_at_epoch.is_none() {
+                    return Err(WorkloadIdentityError::MissingVerifiedAt);
+                }
             }
             WorkloadIdentityAssurance::Development => {
                 if self.credential_kind != WorkloadCredentialKind::Development {
@@ -138,20 +159,16 @@ impl RuntimeWorkloadIdentity {
     }
 
     pub fn is_currently_applicable(&self, now_epoch: i64) -> bool {
-        if self.assurance != WorkloadIdentityAssurance::Attested {
+        if self.validate().is_err() || self.assurance != WorkloadIdentityAssurance::Attested {
             return false;
         }
-        if let Some(issued) = self.issued_at_epoch {
-            if now_epoch < issued {
-                return false;
-            }
-        }
-        if let Some(expires) = self.expires_at_epoch {
-            if now_epoch >= expires {
-                return false;
-            }
-        }
-        true
+        let Some(issued) = self.issued_at_epoch else {
+            return false;
+        };
+        let Some(expires) = self.expires_at_epoch else {
+            return false;
+        };
+        now_epoch >= issued && now_epoch < expires
     }
 
     pub fn applies_to(&self, runtime_id: &str, runtime_version: &str, config_id: &str) -> bool {
