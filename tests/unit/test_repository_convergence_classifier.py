@@ -36,10 +36,18 @@ class RepositoryConvergenceClassifierTests(unittest.TestCase):
         cls.authority = json.loads(AUTHORITY_PATH.read_text(encoding="utf-8"))
 
     def classify(self, cases=None, authority=None):
-        return classifier.classify_cases(
-            self.fixture["cases"] if cases is None else cases,
-            self.authority if authority is None else authority,
-        )
+        selected_cases = self.fixture["cases"] if cases is None else cases
+        if authority is None:
+            effective_authority = copy.deepcopy(self.authority)
+            selected_ids = {case["id"] for case in selected_cases}
+            effective_authority["satisfied_item_ids"] = [
+                item_id
+                for item_id in effective_authority["satisfied_item_ids"]
+                if item_id in selected_ids
+            ]
+        else:
+            effective_authority = authority
+        return classifier.classify_cases(selected_cases, effective_authority)
 
     def test_ground_truth_replay_matches_every_expected_disposition(self) -> None:
         results = self.classify()
