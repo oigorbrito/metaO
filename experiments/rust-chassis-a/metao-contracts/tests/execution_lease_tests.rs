@@ -28,6 +28,23 @@ fn exact_current_holder_generation_and_fence_are_required() {
 }
 
 #[test]
+fn lease_cannot_authorize_before_renewal_or_after_expiry() {
+    let current = lease("owner-a", 1, 10);
+    assert!(!current.authorizes("owner-a", 1, 10, 99));
+    assert!(!current.authorizes("owner-a", 1, 10, 109));
+    assert!(current.authorizes("owner-a", 1, 10, 110));
+    assert!(!current.authorizes("owner-a", 1, 10, 200));
+}
+
+#[test]
+fn invalid_public_lease_cannot_bypass_authorization_validation() {
+    let mut current = lease("owner-a", 1, 10);
+    current.expires_at_epoch = current.renewed_at_epoch;
+    assert_eq!(current.validate(), Err(ExecutionLeaseError::InvalidTimeWindow));
+    assert!(!current.authorizes("owner-a", 1, 10, 110));
+}
+
+#[test]
 fn expired_or_released_lease_never_authorizes() {
     let current = lease("owner-a", 1, 10);
     assert!(!current.authorizes("owner-a", 1, 10, 200));
@@ -51,6 +68,38 @@ fn takeover_requires_strictly_newer_generation_and_fence() {
 }
 
 #[test]
+fn execution_id_change_requires_new_generation_and_fence_even_for_same_holder() {
+    let current = lease("owner-a", 5, 50);
+
+    let mut same_generation = current.clone();
+    same_generation.execution_id = "exec-new".to_string();
+    same_generation.renewed_at_epoch = 120;
+    same_generation.expires_at_epoch = 220;
+    assert_eq!(
+        current.validate_successor(&same_generation),
+        Err(ExecutionLeaseError::GenerationRegression)
+    );
+
+    let mut same_fence = current.clone();
+    same_fence.execution_id = "exec-new".to_string();
+    same_fence.generation = 6;
+    same_fence.renewed_at_epoch = 120;
+    same_fence.expires_at_epoch = 220;
+    assert_eq!(
+        current.validate_successor(&same_fence),
+        Err(ExecutionLeaseError::FenceRegression)
+    );
+
+    let mut valid = current.clone();
+    valid.execution_id = "exec-new".to_string();
+    valid.generation = 6;
+    valid.fencing_token = 51;
+    valid.renewed_at_epoch = 120;
+    valid.expires_at_epoch = 220;
+    assert_eq!(current.validate_successor(&valid), Ok(()));
+}
+
+#[test]
 fn stale_owner_returning_after_takeover_is_rejected() {
     let old = lease("owner-a", 7, 70);
     let current = lease("owner-b", 8, 80);
@@ -69,7 +118,7 @@ fn late_done_from_old_owner_has_no_ownership_authority() {
 #[test]
 fn same_holder_renewal_cannot_move_generation_or_fence_backwards() {
     let current = lease("owner-a", 5, 50);
-    let mut renewed = lease("owner-a", 5, 50);
+    let mut renewed = current.clone();
     renewed.renewed_at_epoch = 120;
     renewed.expires_at_epoch = 220;
     assert_eq!(current.validate_successor(&renewed), Ok(()));
