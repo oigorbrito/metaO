@@ -138,7 +138,8 @@ fn high_impact_reasons_are_representable_as_material() {
     ] {
         let mut value = item(Materiality::Material, Reversibility::Reversible);
         value.materiality_reason = Some(reason);
-        let decision = ClarificationPolicy::classify(&value).expect("classification should succeed");
+        let decision =
+            ClarificationPolicy::classify(&value).expect("classification should succeed");
         assert_eq!(decision.action, ClarificationAction::AskHuman);
     }
 }
@@ -173,7 +174,10 @@ fn explicit_waiver_is_separate_from_historical_classification() {
     };
     let resolved = apply_explicit_resolution(&value, &decision, resolution)
         .expect("waiver should be explicit and valid");
-    assert_eq!(resolved.original_decision.action, ClarificationAction::AskHuman);
+    assert_eq!(
+        resolved.original_decision.action,
+        ClarificationAction::AskHuman
+    );
     assert_eq!(resolved.resolution.kind, ResolutionKind::ExplicitWaiver);
 }
 
@@ -185,7 +189,8 @@ fn system_or_metao_provenance_cannot_resolve_human_gate() {
         ProvenanceCategory::MetaoRecommendation,
     ] {
         let value = item(Materiality::Material, Reversibility::Reversible);
-        let decision = ClarificationPolicy::classify(&value).expect("classification should succeed");
+        let decision =
+            ClarificationPolicy::classify(&value).expect("classification should succeed");
         let resolution = ExplicitResolution {
             kind: ResolutionKind::HumanResolution,
             rationale: "forged non-human resolution".to_string(),
