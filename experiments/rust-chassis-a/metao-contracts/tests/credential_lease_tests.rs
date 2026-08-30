@@ -1,5 +1,6 @@
 use metao_contracts::credential_lease::{
-    CredentialLease, CredentialLeaseAssurance, CredentialLeaseBinding, CredentialRevocationStatus,
+    CredentialLease, CredentialLeaseAssurance, CredentialLeaseBinding, CredentialLeaseError,
+    CredentialRevocationStatus,
 };
 
 fn binding(runtime: &str, execution: &str) -> CredentialLeaseBinding {
@@ -25,6 +26,7 @@ fn lease() -> CredentialLease {
         max_expires_at_epoch: Some(300),
         assurance: CredentialLeaseAssurance::Brokered,
         revocation_status: CredentialRevocationStatus::Active,
+        revocation_evidence_ref: None,
     }
 }
 
@@ -44,11 +46,26 @@ fn failover_runtime_must_obtain_its_own_lease() {
 }
 
 #[test]
-fn confirmed_revocation_invalidates_future_use() {
+fn confirmed_revocation_requires_broker_evidence_and_invalidates_use() {
     let mut value = lease();
     value.revocation_status = CredentialRevocationStatus::Revoked;
+    value.revocation_evidence_ref = Some("broker-revoke:receipt-7".to_string());
     assert!(!value.applies_to(&binding("runtime-a", "exec-a"), 150));
     assert!(value.revocation_confirmed());
+}
+
+#[test]
+fn revoked_enum_without_confirmation_evidence_fails_closed() {
+    for evidence in [None, Some(String::new()), Some("   ".to_string())] {
+        let mut value = lease();
+        value.revocation_status = CredentialRevocationStatus::Revoked;
+        value.revocation_evidence_ref = evidence;
+        assert_eq!(
+            value.validate(),
+            Err(CredentialLeaseError::MissingRevocationEvidence)
+        );
+        assert!(!value.revocation_confirmed());
+    }
 }
 
 #[test]
@@ -67,18 +84,45 @@ fn expired_status_is_not_usable_even_before_timestamp_expiry() {
 }
 
 #[test]
-fn renewal_respects_provider_maximum() {
+fn renewable_lease_requires_explicit_future_maximum() {
+    let mut missing = lease();
+    missing.max_expires_at_epoch = None;
+    assert_eq!(
+        missing.validate(),
+        Err(CredentialLeaseError::InvalidRenewalBound)
+    );
+
+    let mut no_extension = lease();
+    no_extension.max_expires_at_epoch = Some(no_extension.expires_at_epoch);
+    assert_eq!(
+        no_extension.validate(),
+        Err(CredentialLeaseError::InvalidRenewalBound)
+    );
+}
+
+#[test]
+fn renewal_is_monotonic_and_respects_provider_maximum() {
     let value = lease();
+    assert!(!value.can_renew_to(199, 150));
+    assert!(!value.can_renew_to(200, 150));
     assert!(value.can_renew_to(250, 150));
     assert!(value.can_renew_to(300, 150));
     assert!(!value.can_renew_to(301, 150));
 }
 
 #[test]
-fn nonrenewable_lease_cannot_be_extended() {
+fn nonrenewable_lease_has_no_renewal_bound_and_cannot_be_extended() {
     let mut value = lease();
     value.renewable = false;
+    value.max_expires_at_epoch = None;
+    assert!(value.validate().is_ok());
     assert!(!value.can_renew_to(250, 150));
+
+    value.max_expires_at_epoch = Some(300);
+    assert_eq!(
+        value.validate(),
+        Err(CredentialLeaseError::InvalidRenewalBound)
+    );
 }
 
 #[test]
