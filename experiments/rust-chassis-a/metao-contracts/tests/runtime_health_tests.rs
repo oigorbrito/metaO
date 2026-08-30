@@ -68,6 +68,25 @@ fn repeated_failures_cross_quarantine_threshold_deterministically() {
 }
 
 #[test]
+fn exact_failure_ratio_threshold_does_not_depend_on_integer_truncation() {
+    let mut value = observation();
+    value.attempts = 3;
+    value.successes = 1;
+    value.failures = 2;
+    value.consecutive_failures = 2;
+
+    let mut threshold_67 = policy();
+    threshold_67.unhealthy_failure_percent = 67;
+    let below = derive_runtime_health(&value, &threshold_67).expect("projection");
+    assert_eq!(below.state, RuntimeHealthState::Degraded);
+
+    let mut threshold_66 = policy();
+    threshold_66.unhealthy_failure_percent = 66;
+    let reached = derive_runtime_health(&value, &threshold_66).expect("projection");
+    assert_eq!(reached.state, RuntimeHealthState::Unhealthy);
+}
+
+#[test]
 fn timeout_and_transport_failures_are_factual_failures() {
     let mut value = observation();
     value.attempts = 5;
@@ -182,6 +201,19 @@ fn invalid_counter_relationships_fail_closed() {
     value.attempts = 2;
     value.successes = 2;
     value.failures = 1;
+    assert_eq!(
+        derive_runtime_health(&value, &policy()),
+        Err(RuntimeHealthError::InvalidCounters)
+    );
+}
+
+#[test]
+fn counter_overflow_cannot_saturate_into_valid_attempt_total() {
+    let mut value = observation();
+    value.attempts = u32::MAX;
+    value.successes = u32::MAX;
+    value.failures = 1;
+    value.consecutive_failures = 1;
     assert_eq!(
         derive_runtime_health(&value, &policy()),
         Err(RuntimeHealthError::InvalidCounters)
