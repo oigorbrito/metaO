@@ -9,6 +9,7 @@ pub enum ExecutionLeaseError {
     LeaseBindingMismatch,
     GenerationRegression,
     FenceRegression,
+    TimeRegression,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -103,12 +104,23 @@ impl ExecutionLease {
 
         let holder_changed = successor.holder_identity != self.holder_identity;
         let execution_changed = successor.execution_id != self.execution_id;
-        if (holder_changed || execution_changed) && successor.generation <= self.generation {
+        let reactivated = self.state != LeaseState::Active && successor.state == LeaseState::Active;
+        let requires_new_generation = holder_changed || execution_changed || reactivated;
+
+        if requires_new_generation && successor.generation <= self.generation {
             return Err(ExecutionLeaseError::GenerationRegression);
         }
-        if (holder_changed || execution_changed) && successor.fencing_token <= self.fencing_token {
+        if requires_new_generation && successor.fencing_token <= self.fencing_token {
             return Err(ExecutionLeaseError::FenceRegression);
         }
+
+        if !requires_new_generation
+            && (successor.renewed_at_epoch < self.renewed_at_epoch
+                || successor.expires_at_epoch < self.expires_at_epoch)
+        {
+            return Err(ExecutionLeaseError::TimeRegression);
+        }
+
         Ok(())
     }
 }
