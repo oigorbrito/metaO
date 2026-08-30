@@ -135,7 +135,9 @@ pub fn derive_runtime_health(
             RuntimeHealthState::Unhealthy
         } else if matches!(
             observation.prior_state,
-            Some(RuntimeHealthState::Quarantined) | Some(RuntimeHealthState::Unhealthy)
+            Some(RuntimeHealthState::Quarantined)
+                | Some(RuntimeHealthState::Unhealthy)
+                | Some(RuntimeHealthState::Recovering)
         ) {
             if observation.failures == 0
                 && observation.fresh_successes_since_unhealthy
