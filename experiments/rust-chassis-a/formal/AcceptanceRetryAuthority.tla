@@ -4,7 +4,7 @@ EXTENDS Naturals, TLC
 CONSTANT MaxGeneration
 
 VerifierStates == {"UNKNOWN", "PASS", "FAIL"}
-Decisions == {"NOT_DONE", "ACCEPTED", "BLOCKED"}
+Decisions == {"NOT_DONE", "ACCEPTED"}
 
 VARIABLES generation,
           runtimeDoneGeneration,
@@ -109,16 +109,6 @@ Accept ==
                    evidenceGeneration, evidenceFresh, verifierState,
                    recoveryComplete, retryEnabled>>
 
-Block ==
-    /\ decision = "NOT_DONE"
-    /\ evidenceGeneration = generation
-    /\ evidenceFresh = TRUE
-    /\ verifierState = "FAIL"
-    /\ decision' = "BLOCKED"
-    /\ UNCHANGED <<generation, runtimeDoneGeneration,
-                   evidenceGeneration, evidenceFresh, verifierState,
-                   recoveryComplete, retryEnabled, acceptedGeneration>>
-
 Next ==
     \/ \E g \in 1..generation: RuntimeDone(g)
     \/ \E g \in 1..generation, fresh \in BOOLEAN, v \in VerifierStates:
@@ -127,7 +117,6 @@ Next ==
     \/ IncompleteRecovery
     \/ Failover
     \/ Accept
-    \/ Block
 
 Spec == Init /\ [][Next]_vars
 
@@ -142,12 +131,6 @@ AcceptedRequiresIndependentFreshPass ==
         /\ evidenceFresh = TRUE
         /\ verifierState = "PASS"
 
-BlockedRequiresIndependentFreshFail ==
-    decision = "BLOCKED" =>
-        /\ evidenceGeneration = generation
-        /\ evidenceFresh = TRUE
-        /\ verifierState = "FAIL"
-
 StaleEvidenceCannotAcceptCurrentGeneration ==
     (evidenceGeneration # generation \/ ~evidenceFresh) => decision # "ACCEPTED"
 
@@ -156,6 +139,9 @@ IncompleteRecoveryCannotEnableRetry ==
 
 UnknownNeverAccepts ==
     verifierState = "UNKNOWN" => decision # "ACCEPTED"
+
+VerifierFailNeverAccepts ==
+    verifierState = "FAIL" => decision # "ACCEPTED"
 
 OldGenerationDoneCannotAcceptCurrent ==
     (runtimeDoneGeneration > 0 /\ runtimeDoneGeneration # generation) =>
