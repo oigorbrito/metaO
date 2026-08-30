@@ -9,6 +9,7 @@ fn transient_failure() -> FailureCausalityFacts {
         failure_class: FailureClass::Transient,
         failure_class_basis: FailureClassificationBasis::AdapterNormalization,
         failure_class_evidence_ref: Some("adapter-error:RUNTIME_ADAPTER_FAILED".to_string()),
+        recovery_required: true,
         recovery_status: RecoveryStatus::Complete,
         current_attempt: 1,
         max_attempts: 3,
@@ -116,8 +117,13 @@ fn permanent_failure_is_ineligible() {
 }
 
 #[test]
-fn incomplete_or_failed_recovery_blocks_retry() {
-    for recovery in [RecoveryStatus::Incomplete, RecoveryStatus::Failed] {
+fn required_recovery_must_be_complete_before_retry() {
+    for recovery in [
+        RecoveryStatus::NotRequired,
+        RecoveryStatus::NotAttempted,
+        RecoveryStatus::Incomplete,
+        RecoveryStatus::Failed,
+    ] {
         let mut facts = transient_failure();
         facts.recovery_status = recovery;
         assert_eq!(
@@ -128,9 +134,32 @@ fn incomplete_or_failed_recovery_blocks_retry() {
 }
 
 #[test]
+fn no_recovery_requirement_allows_explicit_not_required_state() {
+    let mut facts = transient_failure();
+    facts.recovery_required = false;
+    facts.recovery_status = RecoveryStatus::NotRequired;
+    assert_eq!(
+        evaluate_retry_eligibility(&facts).eligibility,
+        RetryEligibility::Eligible
+    );
+}
+
+#[test]
+fn no_recovery_requirement_does_not_make_not_attempted_ambiguous_state_eligible() {
+    let mut facts = transient_failure();
+    facts.recovery_required = false;
+    facts.recovery_status = RecoveryStatus::NotAttempted;
+    assert_eq!(
+        evaluate_retry_eligibility(&facts).eligibility,
+        RetryEligibility::Ineligible
+    );
+}
+
+#[test]
 fn successful_recovery_does_not_rewrite_original_failure() {
     let facts = transient_failure();
     let result = evaluate_retry_eligibility(&facts);
+    assert!(result.recovery_required);
     assert_eq!(result.recovery_status, RecoveryStatus::Complete);
     assert_eq!(result.original_outcome, FactualExecutionOutcome::Failed);
 }
