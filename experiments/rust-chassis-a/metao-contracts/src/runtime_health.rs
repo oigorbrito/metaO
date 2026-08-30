@@ -74,7 +74,7 @@ impl RuntimeHealthObservation {
         if self.window_end_sequence < self.window_start_sequence {
             return Err(RuntimeHealthError::InvalidObservationWindow);
         }
-        if self.successes.saturating_add(self.failures) != self.attempts
+        if self.successes.checked_add(self.failures) != Some(self.attempts)
             || self.consecutive_failures > self.failures
             || self.timeouts > self.failures
             || self.transport_failures > self.failures
@@ -124,13 +124,14 @@ pub fn derive_runtime_health(
         ));
         RuntimeHealthState::Quarantined
     } else {
-        let failure_percent =
-            (u64::from(observation.failures) * 100) / u64::from(observation.attempts);
+        let failure_scaled = u64::from(observation.failures) * 100;
+        let unhealthy_scaled =
+            u64::from(observation.attempts) * u64::from(policy.unhealthy_failure_percent);
 
-        if failure_percent >= u64::from(policy.unhealthy_failure_percent) {
+        if failure_scaled >= unhealthy_scaled {
             reasons.push(format!(
-                "failure percentage {} reached unhealthy threshold {}",
-                failure_percent, policy.unhealthy_failure_percent
+                "failure ratio {}/{} reached unhealthy threshold {}%",
+                observation.failures, observation.attempts, policy.unhealthy_failure_percent
             ));
             RuntimeHealthState::Unhealthy
         } else if matches!(
