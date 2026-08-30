@@ -26,6 +26,24 @@ fn schema_and_envoy_pin_are_explicit() {
 }
 
 #[test]
+fn observation_fixture_contract_matches_verified_health_boundary_without_claiming_proof() {
+    let value = fixture();
+    let evidence = &value["observation_evidence_contract"];
+    assert_eq!(evidence["basis"], "ADAPTER_VERIFIED");
+    assert_eq!(
+        evidence["evidence_ref_template"],
+        "runtime-health-fixture:{fixture_id}"
+    );
+    assert!(evidence["meaning"]
+        .as_str()
+        .is_some_and(|text| text.contains("not runtime proof")));
+    assert_eq!(
+        value["authority_boundary"]["fixture_metadata_is_runtime_proof"],
+        false
+    );
+}
+
+#[test]
 fn scenario_order_and_ids_are_deterministic() {
     let value = fixture();
     let scenarios = value["scenarios"].as_array().expect("scenarios must be array");
@@ -39,6 +57,9 @@ fn scenario_order_and_ids_are_deterministic() {
     assert_eq!(ids.len(), unique.len());
     for (index, scenario) in scenarios.iter().enumerate() {
         assert_eq!(scenario["sequence"], (index + 1) as u64);
+        assert!(scenario["fixture_id"]
+            .as_str()
+            .is_some_and(|id| !id.trim().is_empty()));
     }
 }
 
@@ -134,6 +155,7 @@ fn fixture_has_no_dispatch_failover_or_acceptance_authority() {
     let value = fixture();
     let authority = &value["authority_boundary"];
     assert_eq!(authority["fixture_is_health_implementation"], false);
+    assert_eq!(authority["fixture_metadata_is_runtime_proof"], false);
     assert_eq!(authority["retry_pressure_fact_dispatches_retry"], false);
     assert_eq!(authority["fixture_expectation_is_product_acceptance"], false);
 
