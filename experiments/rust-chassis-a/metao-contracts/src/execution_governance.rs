@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 pub enum ExecutionGovernanceError {
     InvalidBudget,
     InvalidUsage,
+    BlankEvidenceRef,
+    InvalidEvidenceBasis,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -17,6 +19,14 @@ pub enum ExecutionRiskDecision {
 pub enum ExecutionPolicyEffect {
     Allow,
     Deny,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExecutionUsageEvidenceBasis {
+    IndependentObservation,
+    AdapterVerified,
+    SelfReported,
+    Unknown,
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -58,7 +68,6 @@ impl ExecutionBudget {
         if self.validate().is_err() || request.validate().is_err() {
             return false;
         }
-
         let next_money = self.money_used + request.money;
         let next_wall_time = self.wall_time_used_s + request.wall_time_s;
         let Some(next_tokens) = self.tokens_used.checked_add(request.tokens) else {
@@ -67,7 +76,6 @@ impl ExecutionBudget {
         let Some(next_attempts) = self.attempts_used.checked_add(request.attempts) else {
             return false;
         };
-
         next_money.is_finite()
             && next_wall_time.is_finite()
             && next_money <= self.money_limit
@@ -78,23 +86,23 @@ impl ExecutionBudget {
 
     pub fn observe_usage(
         &self,
-        observed: &ExecutionUsage,
+        observed: &ExecutionObservedUsage,
     ) -> Result<ExecutionBudgetObservation, ExecutionGovernanceError> {
         self.validate()?;
         observed.validate()?;
 
-        let next_money = self.money_used + observed.money;
-        let next_wall_time = self.wall_time_used_s + observed.wall_time_s;
+        let next_money = self.money_used + observed.usage.money;
+        let next_wall_time = self.wall_time_used_s + observed.usage.wall_time_s;
         if !next_money.is_finite() || !next_wall_time.is_finite() {
             return Err(ExecutionGovernanceError::InvalidUsage);
         }
         let next_tokens = self
             .tokens_used
-            .checked_add(observed.tokens)
+            .checked_add(observed.usage.tokens)
             .ok_or(ExecutionGovernanceError::InvalidUsage)?;
         let next_attempts = self
             .attempts_used
-            .checked_add(observed.attempts)
+            .checked_add(observed.usage.attempts)
             .ok_or(ExecutionGovernanceError::InvalidUsage)?;
 
         let over_limit = next_money > self.money_limit
@@ -128,6 +136,30 @@ impl ExecutionUsage {
             || self.wall_time_s < 0.0
         {
             return Err(ExecutionGovernanceError::InvalidUsage);
+        }
+        Ok(())
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ExecutionObservedUsage {
+    pub usage: ExecutionUsage,
+    pub evidence_basis: ExecutionUsageEvidenceBasis,
+    pub evidence_ref: String,
+}
+
+impl ExecutionObservedUsage {
+    pub fn validate(&self) -> Result<(), ExecutionGovernanceError> {
+        self.usage.validate()?;
+        if !matches!(
+            self.evidence_basis,
+            ExecutionUsageEvidenceBasis::IndependentObservation
+                | ExecutionUsageEvidenceBasis::AdapterVerified
+        ) {
+            return Err(ExecutionGovernanceError::InvalidEvidenceBasis);
+        }
+        if self.evidence_ref.trim().is_empty() {
+            return Err(ExecutionGovernanceError::BlankEvidenceRef);
         }
         Ok(())
     }
