@@ -14,6 +14,7 @@ pub enum ExternalEffectError {
     HistorySequenceGap { expected: u64, actual: u64 },
     EffectBindingMismatch,
     IdempotencyKeyMismatch,
+    InvalidIdempotencyAssurance,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -23,6 +24,13 @@ pub enum ExternalEffectOutcome {
     NotApplied,
     Ambiguous,
     Failed,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum IdempotencyAssurance {
+    None,
+    KeyDeclared,
+    EnforcementVerified,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -39,6 +47,8 @@ pub struct EffectIntent {
     pub mission_id: String,
     pub logical_operation: String,
     pub idempotency_key: Option<String>,
+    pub idempotency_assurance: IdempotencyAssurance,
+    pub idempotency_evidence_ref: Option<String>,
     pub expected_postcondition: String,
 }
 
@@ -56,7 +66,42 @@ impl EffectIntent {
         if self.expected_postcondition.trim().is_empty() {
             return Err(ExternalEffectError::BlankExpectedPostcondition);
         }
+
+        let has_key = self
+            .idempotency_key
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty());
+        let has_evidence = self
+            .idempotency_evidence_ref
+            .as_deref()
+            .is_some_and(|value| !value.trim().is_empty());
+
+        match self.idempotency_assurance {
+            IdempotencyAssurance::None => {
+                if has_key || has_evidence {
+                    return Err(ExternalEffectError::InvalidIdempotencyAssurance);
+                }
+            }
+            IdempotencyAssurance::KeyDeclared => {
+                if !has_key || has_evidence {
+                    return Err(ExternalEffectError::InvalidIdempotencyAssurance);
+                }
+            }
+            IdempotencyAssurance::EnforcementVerified => {
+                if !has_key || !has_evidence {
+                    return Err(ExternalEffectError::InvalidIdempotencyAssurance);
+                }
+            }
+        }
         Ok(())
+    }
+
+    fn has_verified_idempotency_enforcement(&self) -> bool {
+        self.idempotency_assurance == IdempotencyAssurance::EnforcementVerified
+            && self
+                .idempotency_evidence_ref
+                .as_deref()
+                .is_some_and(|value| !value.trim().is_empty())
     }
 }
 
@@ -109,20 +154,24 @@ pub fn evaluate_effect_retry(
                 EffectRetryDisposition::SafeToRetry,
                 "authoritative history proves effect was not applied",
             ),
-            ExternalEffectOutcome::Ambiguous | ExternalEffectOutcome::Failed => {
-                if intent
-                    .idempotency_key
-                    .as_deref()
-                    .map_or(false, |value| !value.trim().is_empty())
-                {
+            ExternalEffectOutcome::Ambiguous => {
+                if intent.has_verified_idempotency_enforcement() {
                     (
                         EffectRetryDisposition::SafeToRetry,
-                        "external outcome is ambiguous but a stable idempotency key is preserved",
+                        "external outcome is ambiguous but external idempotency enforcement is independently evidenced",
                     )
-                } else if latest.outcome == ExternalEffectOutcome::Ambiguous {
+                } else {
                     (
                         EffectRetryDisposition::RequireHumanOrPolicy,
-                        "ambiguous external outcome has no idempotency mechanism or proof",
+                        "ambiguous external outcome lacks verified idempotency enforcement or postcondition proof",
+                    )
+                }
+            }
+            ExternalEffectOutcome::Failed => {
+                if intent.has_verified_idempotency_enforcement() {
+                    (
+                        EffectRetryDisposition::SafeToRetry,
+                        "failed attempt remains ambiguous, but external idempotency enforcement is independently evidenced",
                     )
                 } else {
                     (
