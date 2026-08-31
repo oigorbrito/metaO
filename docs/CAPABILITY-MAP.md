@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `tihotm/metaO`
-Last reconciled commit: `ffc1aae`
+Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
 
 This matrix is the primary convergence view for current implementation truth.
 
@@ -30,6 +30,14 @@ Legend:
 | C12 | Two-runtime / three-runtime proof | #176 / #177 / #149 | partially implemented | Python | integration tests | P | Y | Y | Y | N | P | N | P | L5-L6 | provider/runtime availability | current runtime set still supported on exact candidate | multiple runtimes pass through same Core |
 | C13 | Hostile boundary / adversarial closure | #165 / #167 / #92 | partially implemented | Python | `src/metao/security.py`, acceptance tests | P | Y | Y | P | N | N | P | P | L4-L5 | gap in end-to-end hostile external-system closure | adversarial matrix reaches terminal path | hostile trust fails closed |
 | C14 | Hosted CI execution | #71 | blocked externally | n/a | GitHub Actions | B | N | N | N | N | N | N | N | L0-L1 | external pre-step blocker | hosted runner reaches configured steps | product truth remains separated from hosted CI |
+| C15 | Rust Project Discovery composition | #170 / #175 / #176 / #177 | implemented | Rust | `metao-contracts`, `metao-testkit` | Y | Y | Y | Y | N | N | N | P | L6 | none | remote issue reconciliation | vague intent reaches SPEC_READY/ProjectCompletionGate only through explicit evidence |
+| C16 | Rust governed execution composition | #140 / #141 / #142 / #160 | implemented | Rust | `execution_governance`, `runtime_health`, `failure_causality`, `execution_stage_evidence` | Y | Y | Y | Y | N | N | N | Y | L6 | none | Strategy/runtime integration beyond contract level | policy/risk/budget/health/failure/stage facts compose without authority leakage |
+| C17 | Rust external-effect dedup with restart | #158 | implemented | Rust | `metao-testkit` local effect service | Y | Y | Y | Y | N | N | Y | P | L6 + REAL_EXTERNAL_SYSTEM | none | broader external provider coverage | tested logical effect deduplicates under lost ACK and restart |
+| C18 | Rust multiprocess fencing | #164 | implemented | Rust | `metao-testkit` fence service | Y | Y | Y | Y | Y | N | N | P | L6 + MULTIPROCESS | none | distributed/hosted HA remains outside local proof | stale owner and stale DONE-like mutation are rejected |
+| C19 | Rust two-runtime conformance | #145 | implemented | Rust | `metao-registry`, `metao-testkit` | Y | Y | Y | Y | N | N | N | P | L6 | real provider execution unavailable locally | real-runtime execution with external SDK/provider if required | two material runtime implementations share the same Core acceptance path |
+| C20 | Rust composed closure system proof | #168 | implemented on final-closure branch | Rust | `metao-testkit/tests/composed_system_closure_tests.rs` | Y | Y | Y | Y | Y | N | Y | Y | L6 + MULTIPROCESS + REAL_EXTERNAL_SYSTEM + FAULT_INJECTION | real external orchestrator/provider not configured | final gates on exact branch SHA and remote landing | governance, lost ACK, health degradation, fencing, dedup, stage evidence and independent acceptance compose |
+| C21 | Formal model execution | #161 / #327 | specified | TLA+ | `experiments/rust-chassis-a/formal` | S | N | N | N | N | N | N | N | L1 | `tlc`/`java` not available locally | run bounded TLC/equivalent checker | model invariants checked without treating them as implementation proof |
+| C22 | Real credential broker lifecycle | #165 | specified/contracted | Rust/Python | credential lease contracts and historical docs | P | Y | Y | P | N | N | N | P | L4-L6 depending slice | no real broker configured locally | issue/renew/revoke lifecycle against safe broker | secret material absent from canonical evidence and lease binding enforced |
 
 ## Notes
 
