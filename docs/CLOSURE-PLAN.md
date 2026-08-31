@@ -224,4 +224,3 @@ Remaining non-local closure items:
 - bounded formal model execution is blocked because TLC/java are unavailable;
 - hosted GitHub Actions remains governed by issue #71 until a hosted run reaches configured repository steps;
 - SWE-RPG executable publication/pinning remains external under issue #180.
-

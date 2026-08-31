@@ -32,4 +32,3 @@ This document defines the operational rules for the post-MVP baseline.
 ## Operational readiness
 
 Operational readiness means the current baseline can be repeated locally and reasoned about from durable evidence, with external infrastructure blockers explicitly separated.
-

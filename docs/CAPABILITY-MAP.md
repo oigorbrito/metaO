@@ -45,4 +45,3 @@ Legend:
 - `REAL_RUNTIME` is reserved for real runtime evidence, not deterministic test doubles.
 - `REAL_EXTERNAL_SYSTEM` is only `P` where the repo explicitly documents provider/external-system reach.
 - `MULTIPROCESS_TEST` is only `Y` when more than one process boundary is evidenced, not when two objects exist.
-

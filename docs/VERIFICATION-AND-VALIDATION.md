@@ -130,4 +130,3 @@ The following relevant PR heads were fetched from `origin` and compared against 
 - integration tests must exist before claiming composed boundaries;
 - real-runtime evidence must exist before claiming runtime truth;
 - operational evidence must exist before claiming current operational readiness.
-

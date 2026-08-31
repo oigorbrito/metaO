@@ -205,4 +205,3 @@ Rules:
 - requirements changes require baseline revision;
 - evidence claims must bind exact commit/test identity;
 - this baseline supersedes prior mixed-purpose roadmap authority for current operational planning.
-

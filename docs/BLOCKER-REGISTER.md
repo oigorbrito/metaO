@@ -37,4 +37,3 @@ Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
 - product blockers must not be collapsed into historical notes;
 - external blockers must remain separate from implementation defects;
 - a blocker is resolved only when the documented resolution condition is met.
-
