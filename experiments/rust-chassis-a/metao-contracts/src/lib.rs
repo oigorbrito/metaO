@@ -1,9 +1,18 @@
 use serde::{Deserialize, Serialize};
 
 pub mod clarification_policy;
+pub mod credential_lease;
+pub mod execution_governance;
+pub mod execution_stage_evidence;
+pub mod failure_causality;
+pub mod project_completion;
 pub mod project_contract;
 pub mod reference_intake;
+pub mod runtime_certification;
+pub mod runtime_health;
+pub mod runtime_security;
 pub mod tech_stack_intake;
+pub mod workload_identity;
 
 pub const CONTRACT_VERSION: u32 = 1;
 

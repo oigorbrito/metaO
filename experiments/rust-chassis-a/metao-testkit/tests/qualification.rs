@@ -183,6 +183,53 @@ fn whole_orchestrator_replacement_changes_no_kernel_contract() {
 }
 
 #[test]
+fn two_material_runtimes_share_the_same_core_conformance_path() {
+    let mut registry = Registry::default();
+    registry.register(Box::new(Alpha)).unwrap();
+    registry.register(Box::new(Beta)).unwrap();
+
+    let request = request();
+    let alpha_result = registry
+        .execute_contained(&runtime_id("alpha"), &request)
+        .expect("alpha runtime should execute");
+    let beta_result = registry
+        .execute_contained(&runtime_id("beta"), &request)
+        .expect("beta runtime should execute");
+
+    assert_eq!(alpha_result.execution_id, request.execution_id);
+    assert_eq!(beta_result.execution_id, request.execution_id);
+    assert_eq!(alpha_result.status, ExecutionStatus::Succeeded);
+    assert_eq!(beta_result.status, ExecutionStatus::Succeeded);
+    assert_eq!(alpha_result.runtime_id, runtime_id("alpha"));
+    assert_eq!(beta_result.runtime_id, runtime_id("beta"));
+
+    let alpha_evidence = evidence("alpha");
+    let beta_evidence = evidence("beta");
+    assert_eq!(
+        evaluate_acceptance(
+            &request,
+            &alpha_result,
+            Some(&alpha_evidence),
+            PolicyEffect::Allow,
+            NOW
+        ),
+        AcceptanceDecision::Accept
+    );
+    assert_eq!(
+        evaluate_acceptance(
+            &request,
+            &beta_result,
+            Some(&beta_evidence),
+            PolicyEffect::Allow,
+            NOW
+        ),
+        AcceptanceDecision::Accept
+    );
+    assert_eq!(alpha_evidence.policy_version, beta_evidence.policy_version);
+    assert_eq!(alpha_evidence.verified, beta_evidence.verified);
+}
+
+#[test]
 fn duplicate_and_version_conflict_fail_deterministically() {
     let mut duplicate = Registry::default();
     duplicate.register(Box::new(Alpha)).unwrap();
