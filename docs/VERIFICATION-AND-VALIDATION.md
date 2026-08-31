@@ -62,6 +62,26 @@ Current claim boundaries:
 - Python runtime tests requiring `agents` or `crewai` did not execute in this environment because those dependencies are unavailable;
 - the formal model is present, but TLC/java execution is blocked by missing local tooling.
 
+## Remote reconciliation snapshot
+
+Date: `2026-08-31`
+
+The remote repository remains reachable through Git transport even though the `gh` GraphQL path returned `401` in this environment.
+
+Evidence collected from `origin`:
+
+- `origin/main` is still `19152a5451a55bdf354b14d4ac88f08f0c335187`;
+- PR head refs were fetched directly with `git ls-remote` / `git fetch` for the relevant closure families;
+- the relevant PR heads for the discovery, governed-execution, durability, fencing, security, adversarial, and acceptance-budget families are not ancestors of current `origin/main`, so they cannot be treated as absorbed solely by ancestry;
+- protected evidence refs remain preserved for `#200`, `#201`, `#202`, and `#217`;
+- `#217` still carries the `PRODUCT_MIGRATION = NOT_AUTHORIZED` disposition.
+
+Current reconciliation boundary:
+
+- remote refs can be inspected and preserved with Git transport;
+- API-driven PR/issue closure was not executed in this environment because the GitHub API path remained unavailable here;
+- no PR was auto-closed on ancestry alone.
+
 ## Evidence to keep exact
 
 - branch
