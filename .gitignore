@@ -30,3 +30,4 @@ venv/
 /issues.json
 /open_issues.json
 /final-language-tiebreak.json
+experiments/rust-chassis-a/target/
