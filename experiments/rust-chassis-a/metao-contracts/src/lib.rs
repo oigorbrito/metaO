@@ -2,8 +2,11 @@ use serde::{Deserialize, Serialize};
 
 pub mod clarification_policy;
 pub mod credential_lease;
+pub mod discovery_coordinator;
 pub mod execution_governance;
+pub mod execution_lease;
 pub mod execution_stage_evidence;
+pub mod external_effect;
 pub mod failure_causality;
 pub mod project_completion;
 pub mod project_contract;
