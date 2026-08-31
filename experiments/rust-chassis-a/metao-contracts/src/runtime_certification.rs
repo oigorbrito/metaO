@@ -34,7 +34,10 @@ impl RuntimeCertificationBinding {
             ("runtime_version", self.runtime_version.as_str()),
             ("config_id", self.config_id.as_str()),
             ("execution_context_id", self.execution_context_id.as_str()),
-            ("verification_context_id", self.verification_context_id.as_str()),
+            (
+                "verification_context_id",
+                self.verification_context_id.as_str(),
+            ),
         ] {
             if value.trim().is_empty() {
                 return Err(RuntimeCertificationError::BlankBindingField(name));
@@ -254,7 +257,9 @@ impl RuntimeCertificationReport {
                 },
                 None => {
                     incomplete.push(required.clone());
-                    reasons.push(format!("required category {required} has no evaluator result"));
+                    reasons.push(format!(
+                        "required category {required} has no evaluator result"
+                    ));
                 }
             }
         }

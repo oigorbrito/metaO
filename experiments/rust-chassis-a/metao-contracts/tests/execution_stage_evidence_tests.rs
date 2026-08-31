@@ -10,7 +10,10 @@ fn stage(
     executed: bool,
     status: ExecutionStageStatus,
 ) -> ExecutionStageEvidence {
-    let conclusive = matches!(status, ExecutionStageStatus::Pass | ExecutionStageStatus::Failed);
+    let conclusive = matches!(
+        status,
+        ExecutionStageStatus::Pass | ExecutionStageStatus::Failed
+    );
     ExecutionStageEvidence {
         stage_id: id.to_string(),
         sequence,
@@ -32,7 +35,13 @@ fn skipped_and_not_requested_are_distinct_facts() {
     let report = project_execution_stages(&[
         stage("policy", 1, true, true, ExecutionStageStatus::Pass),
         stage("runtime", 2, true, false, ExecutionStageStatus::Skipped),
-        stage("optional-export", 3, false, false, ExecutionStageStatus::NotRequested),
+        stage(
+            "optional-export",
+            3,
+            false,
+            false,
+            ExecutionStageStatus::NotRequested,
+        ),
     ])
     .expect("report");
     assert_eq!(report.skipped, 1);
@@ -77,7 +86,10 @@ fn executed_conclusive_stage_requires_verified_origin_and_evidence() {
 fn independent_observation_can_support_conclusive_stage() {
     let mut value = stage("runtime", 1, true, true, ExecutionStageStatus::Pass);
     value.evidence_basis = ExecutionStageEvidenceBasis::IndependentObservation;
-    assert_eq!(project_execution_stages(&[value]).expect("report").passed, 1);
+    assert_eq!(
+        project_execution_stages(&[value]).expect("report").passed,
+        1
+    );
 }
 
 #[test]
@@ -97,7 +109,9 @@ fn duplicate_stage_id_fails_closed() {
     ]);
     assert_eq!(
         result,
-        Err(ExecutionStageEvidenceError::DuplicateStage("runtime".to_string()))
+        Err(ExecutionStageEvidenceError::DuplicateStage(
+            "runtime".to_string()
+        ))
     );
 }
 
@@ -109,18 +123,23 @@ fn sequence_gap_fails_closed() {
     ]);
     assert_eq!(
         result,
-        Err(ExecutionStageEvidenceError::SequenceGap { expected: 2, actual: 3 })
+        Err(ExecutionStageEvidenceError::SequenceGap {
+            expected: 2,
+            actual: 3
+        })
     );
 }
 
 #[test]
 fn sequence_must_start_at_one() {
-    let result = project_execution_stages(&[
-        stage("policy", 0, true, true, ExecutionStageStatus::Pass),
-    ]);
+    let result =
+        project_execution_stages(&[stage("policy", 0, true, true, ExecutionStageStatus::Pass)]);
     assert_eq!(
         result,
-        Err(ExecutionStageEvidenceError::SequenceGap { expected: 1, actual: 0 })
+        Err(ExecutionStageEvidenceError::SequenceGap {
+            expected: 1,
+            actual: 0
+        })
     );
 }
 
@@ -132,7 +151,10 @@ fn duplicate_sequence_fails_closed() {
     ]);
     assert_eq!(
         result,
-        Err(ExecutionStageEvidenceError::SequenceGap { expected: 2, actual: 1 })
+        Err(ExecutionStageEvidenceError::SequenceGap {
+            expected: 2,
+            actual: 1
+        })
     );
 }
 
@@ -149,9 +171,13 @@ fn input_order_is_normalized_by_explicit_sequence() {
 
 #[test]
 fn blocked_stage_is_requested_but_not_executed() {
-    let report = project_execution_stages(&[
-        stage("policy", 1, true, false, ExecutionStageStatus::Blocked),
-    ])
+    let report = project_execution_stages(&[stage(
+        "policy",
+        1,
+        true,
+        false,
+        ExecutionStageStatus::Blocked,
+    )])
     .expect("report");
     assert_eq!(report.blocked, 1);
     assert_eq!(report.passed, 0);
@@ -168,7 +194,12 @@ fn deterministic_projection_has_no_acceptance_or_telemetry_authority() {
     assert_eq!(left, right);
 
     let encoded = serde_json::to_string(&left).expect("serialize");
-    for forbidden in ["AcceptanceDecision", "telemetry_authority", "dispatch", "provider_sdk"] {
+    for forbidden in [
+        "AcceptanceDecision",
+        "telemetry_authority",
+        "dispatch",
+        "provider_sdk",
+    ] {
         assert!(!encoded.contains(forbidden));
     }
 }

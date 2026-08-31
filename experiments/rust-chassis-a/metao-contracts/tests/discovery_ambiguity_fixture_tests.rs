@@ -17,8 +17,7 @@ fn fixture_schema_and_source_pins_are_explicit() {
         .expect("sources must be an array");
     assert!(sources.iter().any(|source| {
         source["reference"] == "fangz-cs/ClarifyCodeBench"
-            && source["pinned_revision"]
-                == "5e2d5b5ce6259daa034cebb69f65e5e4c6dec3e9"
+            && source["pinned_revision"] == "5e2d5b5ce6259daa034cebb69f65e5e4c6dec3e9"
     }));
     assert!(sources
         .iter()

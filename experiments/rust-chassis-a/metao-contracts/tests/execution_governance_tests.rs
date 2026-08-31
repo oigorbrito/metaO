@@ -126,7 +126,10 @@ fn non_finite_or_negative_budget_values_fail_closed() {
     for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0] {
         let mut value = budget();
         value.money_limit = invalid;
-        assert_eq!(value.validate(), Err(ExecutionGovernanceError::InvalidBudget));
+        assert_eq!(
+            value.validate(),
+            Err(ExecutionGovernanceError::InvalidBudget)
+        );
         assert_eq!(
             evaluate_pre_runtime_gate(
                 ExecutionPolicyEffect::Allow,
@@ -146,7 +149,10 @@ fn non_finite_or_negative_requested_usage_blocks() {
     for invalid in [f64::NAN, f64::INFINITY, f64::NEG_INFINITY, -1.0] {
         let mut requested = request();
         requested.money = invalid;
-        assert_eq!(requested.validate(), Err(ExecutionGovernanceError::InvalidUsage));
+        assert_eq!(
+            requested.validate(),
+            Err(ExecutionGovernanceError::InvalidUsage)
+        );
         assert_eq!(
             evaluate_pre_runtime_gate(
                 ExecutionPolicyEffect::Allow,
@@ -225,7 +231,12 @@ fn observed_usage_requires_nonblank_evidence_reference() {
 fn independent_observation_can_support_post_runtime_usage() {
     let mut value = observed(request());
     value.evidence_basis = ExecutionUsageEvidenceBasis::IndependentObservation;
-    assert!(!budget().observe_usage(&value).expect("observation").over_limit);
+    assert!(
+        !budget()
+            .observe_usage(&value)
+            .expect("observation")
+            .over_limit
+    );
 }
 
 #[test]

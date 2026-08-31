@@ -121,16 +121,20 @@ fn payment_logistics_and_native_mobile_are_explicitly_out_of_scope() {
 fn minimum_e2e_journeys_and_definition_of_done_are_explicit() {
     let value = fixture();
     let projection = &value["expected_contract_projection"];
-    assert!(projection["minimum_e2e_journeys"]
-        .as_array()
-        .expect("journeys")
-        .len()
-        >= 3);
-    assert!(projection["definition_of_done"]
-        .as_array()
-        .expect("definition of done")
-        .len()
-        >= 6);
+    assert!(
+        projection["minimum_e2e_journeys"]
+            .as_array()
+            .expect("journeys")
+            .len()
+            >= 3
+    );
+    assert!(
+        projection["definition_of_done"]
+            .as_array()
+            .expect("definition of done")
+            .len()
+            >= 6
+    );
 }
 
 #[test]

@@ -118,11 +118,26 @@ pub fn project_execution_stages(
         }
     }
 
-    let passed = ordered.iter().filter(|stage| stage.status == ExecutionStageStatus::Pass).count();
-    let blocked = ordered.iter().filter(|stage| stage.status == ExecutionStageStatus::Blocked).count();
-    let failed = ordered.iter().filter(|stage| stage.status == ExecutionStageStatus::Failed).count();
-    let skipped = ordered.iter().filter(|stage| stage.status == ExecutionStageStatus::Skipped).count();
-    let not_requested = ordered.iter().filter(|stage| stage.status == ExecutionStageStatus::NotRequested).count();
+    let passed = ordered
+        .iter()
+        .filter(|stage| stage.status == ExecutionStageStatus::Pass)
+        .count();
+    let blocked = ordered
+        .iter()
+        .filter(|stage| stage.status == ExecutionStageStatus::Blocked)
+        .count();
+    let failed = ordered
+        .iter()
+        .filter(|stage| stage.status == ExecutionStageStatus::Failed)
+        .count();
+    let skipped = ordered
+        .iter()
+        .filter(|stage| stage.status == ExecutionStageStatus::Skipped)
+        .count();
+    let not_requested = ordered
+        .iter()
+        .filter(|stage| stage.status == ExecutionStageStatus::NotRequested)
+        .count();
 
     Ok(ExecutionStageReport {
         stages: ordered,
