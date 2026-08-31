@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `tihotm/metaO`
-Last reconciled commit: `ffc1aae`
+Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
 
 ## Verification ladder
 
@@ -42,6 +42,25 @@ Last reconciled commit: `ffc1aae`
 ## Current release-path interpretation
 
 The repository has a validated local release path on the historical canonical candidate documented in the release-readiness artifacts. Hosted CI is separately blocked and must not be conflated with product correctness.
+
+## Post-PR-343 final-closure delta
+
+PR #343 was merged into `main` at `19152a5451a55bdf354b14d4ac88f08f0c335187`. The Rust chassis is now the primary current-head evidence path for the post-MVP operationalization wave.
+
+Additional evidence added on branch `post-mvp/final-closure-v1`:
+
+- `cargo test -p metao-testkit --test composed_system_closure_tests`
+- `cargo test -p metao-testkit --test scientific_fault_evidence_tests`
+- `cargo test -p metao-contracts --test acceptance_budget_tests --release`
+- `cargo clippy --workspace --all-targets -- -D warnings`
+
+Current claim boundaries:
+
+- the composed system proof uses simulated runtimes, real local OS processes, a real local external-effect service, durable file-backed state, multiprocess fencing, and fault injection;
+- it does not claim real external orchestrator/provider execution;
+- AcceptanceBudget debug/release parity is supported only for the executed `acceptance_budget_tests` target;
+- Python runtime tests requiring `agents` or `crewai` did not execute in this environment because those dependencies are unavailable;
+- the formal model is present, but TLC/java execution is blocked by missing local tooling.
 
 ## Evidence to keep exact
 

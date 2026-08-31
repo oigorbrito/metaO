@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `tihotm/metaO`
-Last reconciled commit: `ffc1aae`
+Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
 
 This is the master closure plan for the post-MVP baseline. It replaces issue-by-issue ping-pong as the primary planning view.
 
@@ -201,4 +201,27 @@ This is the master closure plan for the post-MVP baseline. It replaces issue-by-
 - WHAT_CAN_RUN_IN_PARALLEL: none essential.
 - WHAT_MUST_REMAIN_OPEN: anything still externally blocked or not executed.
 - EXTERNAL_BLOCKERS: external systems and pending evidence.
+
+## Final-Closure Wave Delta
+
+Status: ACTIVE_RECONCILIATION
+
+Current integrated `main`: `19152a5451a55bdf354b14d4ac88f08f0c335187`.
+
+Current closure branch: `post-mvp/final-closure-v1`.
+
+New executable closure evidence:
+
+- `metao-testkit/tests/composed_system_closure_tests.rs` composes policy/risk/budget admission, runtime-health degradation, durable lost-ACK external effect recovery, multiprocess fencing, stale-owner rejection, execution-stage evidence, usage preservation, retry causality, machine-readable gate evidence, and independent acceptance for the current lineage.
+- `metao-testkit/tests/scientific_fault_evidence_tests.rs` records an executable fault/evidence matrix for the currently covered closure gates and explicitly separates blocked external/toolchain cases.
+- `metao-contracts/tests/acceptance_budget_tests.rs` has been executed in release mode for the current boundary regressions.
+
+Remaining non-local closure items:
+
+- real external provider runtime execution is not proven by the Rust closure branch;
+- real credential broker issue/renew/revoke lifecycle is not configured locally;
+- Python historical runtime tests requiring `agents` and `crewai` dependencies did not execute in this environment;
+- bounded formal model execution is blocked because TLC/java are unavailable;
+- hosted GitHub Actions remains governed by issue #71 until a hosted run reaches configured repository steps;
+- SWE-RPG executable publication/pinning remains external under issue #180.
 
