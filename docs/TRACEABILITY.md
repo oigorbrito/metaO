@@ -25,4 +25,3 @@ Stakeholder goal -> requirement -> architecture component -> implementation -> t
 - documentation-only claims do not create implementation authority;
 - old release evidence cannot be reused for a different head;
 - issue/PR links are informative, not authoritative by themselves.
-

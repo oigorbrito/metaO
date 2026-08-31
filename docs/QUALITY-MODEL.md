@@ -116,4 +116,3 @@ CURRENT_EVIDENCE_LEVEL: L5.
 MISSING_EVIDENCE: final operational closure across all blocker classes.
 
 CLOSURE_GATE: no hidden acceptance rescue path exists.
-

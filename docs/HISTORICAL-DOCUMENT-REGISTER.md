@@ -20,4 +20,3 @@ The following documents are historical evidence or superseded planning records, 
 ## Supersession rule
 
 Historical documents remain immutable evidence of prior state. If they need to explain present context, they should point to the canonical baseline rather than competing with it.
-

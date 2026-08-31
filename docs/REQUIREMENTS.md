@@ -74,4 +74,3 @@ metaO provides a control plane for selecting, governing, supervising, and indepe
 - broader runtime diversity beyond current supported set;
 - external hosted CI recovery;
 - parity proofs for the Rust-native future product direction where not yet established.
-

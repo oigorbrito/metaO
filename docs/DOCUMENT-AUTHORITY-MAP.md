@@ -76,4 +76,3 @@ Last reconciled commit: `ffc1aae`
 - reference documents may be used as evidence but not as mutable authority for current status;
 - historical documents are immutable except for pointer updates and supersession notices;
 - closure-plan status does not silently redefine requirements.
-

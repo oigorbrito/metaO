@@ -55,4 +55,3 @@ Current repository surface:
 - no cloud/Kubernetes/distributed DB requirement for current baseline;
 - no hand-rolled cryptography;
 - no acceptance authority in orchestrator runtimes.
-
