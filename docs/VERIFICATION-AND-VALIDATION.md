@@ -82,6 +82,37 @@ Current reconciliation boundary:
 - API-driven PR/issue closure was not executed in this environment because the GitHub API path remained unavailable here;
 - no PR was auto-closed on ancestry alone.
 
+## PR ref classification snapshot
+
+Date: `2026-08-31`
+
+The following relevant PR heads were fetched from `origin` and compared against `origin/main` with `git diff origin/main...refs/tmp/pr<N>`. Each one has a non-empty diff against current `origin/main`, so none can be treated as absorbed solely by local ancestry checks:
+
+| PR | DIFF FILES | CURRENT CLASSIFICATION |
+|---|---:|---|
+| #291 | 4 | STILL_HAS_UNIQUE_CODE |
+| #294 | 2 | STILL_HAS_UNIQUE_CODE |
+| #297 | 2 | STILL_HAS_UNIQUE_CODE |
+| #299 | 4 | STILL_HAS_UNIQUE_CODE |
+| #305 | 3 | STILL_HAS_UNIQUE_CODE |
+| #307 | 3 | STILL_HAS_UNIQUE_CODE |
+| #311 | 4 | STILL_HAS_UNIQUE_CODE |
+| #312 | 3 | STILL_HAS_UNIQUE_CODE |
+| #313 | 3 | STILL_HAS_UNIQUE_CODE |
+| #317 | 3 | STILL_HAS_UNIQUE_CODE |
+| #318 | 3 | STILL_HAS_UNIQUE_CODE |
+| #319 | 3 | STILL_HAS_UNIQUE_CODE |
+| #322 | 3 | STILL_HAS_UNIQUE_CODE |
+| #324 | 2 | STILL_HAS_UNIQUE_CODE |
+| #326 | 2 | STILL_HAS_UNIQUE_CODE |
+| #328 | 2 | STILL_HAS_UNIQUE_CODE |
+| #339 | 3 | STILL_HAS_UNIQUE_CODE |
+| #341 | 1 | STILL_HAS_UNIQUE_CODE |
+| #200 | preserved evidence ref | PROTECTED_EVIDENCE |
+| #201 | preserved evidence ref | PROTECTED_EVIDENCE |
+| #202 | preserved evidence ref | PROTECTED_EVIDENCE |
+| #217 | preserved evidence ref | PROTECTED_EVIDENCE / PRODUCT_MIGRATION_NOT_AUTHORIZED |
+
 ## Evidence to keep exact
 
 - branch
