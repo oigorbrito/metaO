@@ -15,6 +15,7 @@ Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
 | Real credential broker lifecycle | external/local infrastructure | blocked locally | provider-neutral credential lease contracts are not a real issue/renew/revoke broker lifecycle |
 | Formal model execution | local toolchain | blocked | TLC/java are not available in the current environment |
 | GitHub PR/issue API reconciliation | external API / auth | blocked in this environment | `gh` GraphQL and the GitHub MCP route could not close or enumerate PR/issue state even though Git transport worked |
+| PR #344 landing authority | GitHub PR authority | blocked in this environment | PR `#344` is mergeable with exact head `6e7b42015ce38f79ac5f16eb97648a3bfe142252`, but the agent cannot complete the merge through GitHub API/CLI from this session |
 
 ## Current operational blockers
 

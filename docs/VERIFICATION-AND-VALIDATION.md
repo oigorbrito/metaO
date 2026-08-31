@@ -76,6 +76,21 @@ Evidence collected from `origin`:
 - protected evidence refs remain preserved for `#200`, `#201`, `#202`, and `#217`;
 - `#217` still carries the `PRODUCT_MIGRATION = NOT_AUTHORIZED` disposition.
 
+## PR #344 current state
+
+Date: `2026-08-31`
+
+The closure branch is now represented by PR `#344` with exact head `6e7b42015ce38f79ac5f16eb97648a3bfe142252`.
+
+Current observed state from the local and remote evidence available in this session:
+
+- `mergeable=true`;
+- `draft=false`;
+- `open`;
+- merge ref exists and resolves to merge commit `e8b48ecc3ad1c3453f9bf318545427abef54a3cd` against `main @ 19152a5451a55bdf354b14d4ac88f08f0c335187`;
+- no conflict markers appeared in local merge-tree inspection;
+- no PR checks were observable from the GitHub API path in this environment, so check status remains unproven here rather than failed.
+
 Current reconciliation boundary:
 
 - remote refs can be inspected and preserved with Git transport;
