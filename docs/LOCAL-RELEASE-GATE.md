@@ -2,6 +2,8 @@
 
 Status: OPERATIONAL AND EXECUTED SUCCESSFULLY FOR THE ROADMAPS 2-7 CANONICAL CANDIDATE — HOSTED RUNNERS REMAIN EXTERNALLY BLOCKED.
 
+Historical note: this document remains the local-gate evidence record for the validated v0.1 lineage. It does not override `docs/POST-MVP-OPERATIONAL-BASELINE-V1.md` for current baseline authority.
+
 The local release gate exists to produce reproducible executable evidence when GitHub-hosted Actions cannot reach repository execution. It does not convert local execution into a production-readiness claim and it does not turn an external hosted-runner failure into a metaO functional failure.
 
 ## Validated Roadmaps 2-7 run

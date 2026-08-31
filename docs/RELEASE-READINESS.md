@@ -2,6 +2,8 @@
 
 Status: POST-MIGRATION RUST A RELEASE READINESS VALIDATED LOCALLY — RC ARTIFACT REPRODUCTION PASS — HOSTED ACTIONS REMAINS EXTERNALLY BLOCKED — EXACT JSON RE-VALIDATION PASS.
 
+Historical note: this document captures the release-readiness state for the validated v0.1 lineage. Current post-MVP baseline authority is `docs/POST-MVP-OPERATIONAL-BASELINE-V1.md`.
+
 This document separates current executable evidence, historical failed attempts, external infrastructure blockers, and claims that remain intentionally unmade.
 
 ## Current canonical state

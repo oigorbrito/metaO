@@ -1,5 +1,7 @@
 # Post-v0.1 Product Roadmap Reconciliation
 
+Historical note: this document records the post-v0.1 roadmap reconciliation for the v0.1 cycle. Current baseline authority has moved to `docs/POST-MVP-OPERATIONAL-BASELINE-V1.md`.
+
 This document establishes the canonical execution order for the metaO repository following the v0.1 acceptance closure.
 
 ## 1. Classification Matrix
