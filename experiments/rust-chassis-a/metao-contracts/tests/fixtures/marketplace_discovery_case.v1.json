@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "fixture_id": "marketplace-discovery-v1",
+  "initial_intent": "Build a marketplace.",
+  "initial_readiness": "NOT_READY",
+  "material_questions": [
+    {
+      "id": "q-market-model",
+      "topic": "marketplace_model",
+      "question": "Who can sell and what transaction model is expected?",
+      "answer": "Third-party sellers list products; buyers contact/order through the platform.",
+      "materiality": "MATERIAL",
+      "reversibility": "IRREVERSIBLE_FOR_MVP_SCOPE"
+    },
+    {
+      "id": "q-payment",
+      "topic": "payment_scope",
+      "question": "Is in-platform payment part of the MVP?",
+      "answer": "No. Payment processing is out of scope for the MVP.",
+      "materiality": "MATERIAL",
+      "reversibility": "REVERSIBLE_BY_NEW_CONTRACT_VERSION"
+    },
+    {
+      "id": "q-admin",
+      "topic": "admin_backoffice",
+      "question": "Is an admin/backoffice required?",
+      "answer": "Yes. Admin must moderate listings and users.",
+      "materiality": "MATERIAL",
+      "reversibility": "REVERSIBLE_BY_NEW_CONTRACT_VERSION"
+    },
+    {
+      "id": "q-surface",
+      "topic": "web_mobile_scope",
+      "question": "Is the MVP web, mobile, or both?",
+      "answer": "Responsive web only; native mobile is out of scope.",
+      "materiality": "MATERIAL",
+      "reversibility": "REVERSIBLE_BY_NEW_CONTRACT_VERSION"
+    },
+    {
+      "id": "q-stack",
+      "topic": "technical_stack_mode",
+      "question": "Is the technical stack fixed, preferred, or delegated to metaO?",
+      "answer": "User prefers Rust backend and TypeScript frontend but allows an explicit evidence-backed override.",
+      "materiality": "MATERIAL",
+      "reversibility": "REVERSIBLE_WITH_EXPLICIT_DECISION"
+    }
+  ],
+  "references": [
+    {
+      "reference_id": "ref-olx",
+      "name": "OLX",
+      "selected_traits": [
+        "simple listing creation",
+        "public catalog and search"
+      ]
+    },
+    {
+      "reference_id": "ref-mercado-livre",
+      "name": "Mercado Livre",
+      "selected_traits": [
+        "seller dashboard",
+        "structured listing detail"
+      ]
+    },
+    {
+      "reference_id": "ref-facebook-marketplace",
+      "name": "Facebook Marketplace",
+      "selected_traits": [
+        "fast buyer-to-seller contact flow"
+      ]
+    }
+  ],
+  "technical_preference": {
+    "mode": "USER_PREFERRED",
+    "preferred_languages": ["rust", "typescript/node"],
+    "required_languages": [],
+    "forbidden_technologies": [],
+    "rationale": "User preference; explicit evidence-backed override allowed.",
+    "source": "fixture-answer-q-stack"
+  },
+  "assumptions": [
+    {
+      "id": "assumption-local-time-display",
+      "description": "Use browser locale for non-contractual display formatting.",
+      "rationale": "Low-impact and reversible presentation default.",
+      "source": "safe-default-policy"
+    }
+  ],
+  "expected_contract_projection": {
+    "target_actors": ["admin", "buyer", "seller"],
+    "required_surfaces": [
+      "admin moderation surface",
+      "buyer public catalog/search surface",
+      "seller dashboard surface"
+    ],
+    "required_capabilities": [
+      "authentication",
+      "buyer-to-seller contact or order flow",
+      "listing creation and editing",
+      "listing moderation",
+      "public catalog and search"
+    ],
+    "technical_constraints": [
+      "durable backend persistence",
+      "responsive web delivery",
+      "server-side authorization for protected actions"
+    ],
+    "out_of_scope": [
+      "in-platform payment processing",
+      "logistics/fulfillment integration",
+      "native mobile application"
+    ],
+    "minimum_e2e_journeys": [
+      "seller signs in, creates a listing, and sees it in seller dashboard",
+      "admin reviews/moderates a listing",
+      "buyer searches catalog, opens listing detail, and initiates contact/order flow"
+    ],
+    "definition_of_done": [
+      "required frontend surfaces are usable",
+      "backend/API behavior required by the contract exists",
+      "durable persistence works for users and listings",
+      "authentication and authorization work for protected flows",
+      "minimum end-to-end journeys pass",
+      "application starts reproducibly from documented instructions",
+      "required migrations/bootstrap are reproducible",
+      "required acceptance tests pass"
+    ]
+  },
+  "fixture_authority": {
+    "can_mint_spec_ready": false,
+    "can_mint_plan_ready": false,
+    "can_mint_project_accepted": false
+  }
+}
