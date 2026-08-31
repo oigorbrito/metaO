@@ -11,6 +11,8 @@ pub mod failure_causality;
 pub mod execution_stage_evidence;
 pub mod credential_lease;
 pub mod workload_identity;
+pub mod runtime_security;
+pub mod runtime_certification;
 
 pub const CONTRACT_VERSION: u32 = 1;
 
