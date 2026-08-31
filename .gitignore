@@ -18,12 +18,16 @@ venv/
 
 # Local state
 .metao/
+.smag/
 
 # Local worktree data
 .worktrees/
 
 # CI / Test virtual environments
 .venv-ci/
+
+# Cargo build output
+**/target/
 
 # Specific local artifacts
 /gate0-local-before-manual-test.patch

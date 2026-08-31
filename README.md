@@ -4,6 +4,14 @@ metaO is a meta-orchestrator / control plane for selecting, governing, supervisi
 
 Architecture and implementation decisions are evidence-driven and documented under `docs/`.
 
+Current canonical baseline:
+
+- [`docs/POST-MVP-OPERATIONAL-BASELINE-V1.md`](docs/POST-MVP-OPERATIONAL-BASELINE-V1.md)
+- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
+- [`docs/CAPABILITY-MAP.md`](docs/CAPABILITY-MAP.md)
+- [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md)
+- [`docs/QUALITY-MODEL.md`](docs/QUALITY-MODEL.md)
+
 ## Engineering workflow
 
 metaO uses GitHub as the persistent engineering ledger and follows an **Issue-first** workflow:
