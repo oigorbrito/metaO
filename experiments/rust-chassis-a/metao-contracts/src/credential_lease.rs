@@ -95,8 +95,7 @@ impl CredentialLease {
 
         match (self.renewable, self.max_expires_at_epoch) {
             (true, Some(max_expires))
-                if max_expires > self.expires_at_epoch
-                    && max_expires > self.issued_at_epoch => {}
+                if max_expires > self.expires_at_epoch && max_expires > self.issued_at_epoch => {}
             (true, _) => return Err(CredentialLeaseError::InvalidRenewalBound),
             (false, None) => {}
             (false, Some(_)) => return Err(CredentialLeaseError::InvalidRenewalBound),

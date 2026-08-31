@@ -66,7 +66,9 @@ fn independent_observation_can_support_health_projection() {
     let mut value = observation();
     value.evidence_basis = RuntimeHealthEvidenceBasis::IndependentObservation;
     assert_eq!(
-        derive_runtime_health(&value, &policy()).expect("projection").state,
+        derive_runtime_health(&value, &policy())
+            .expect("projection")
+            .state,
         RuntimeHealthState::Healthy
     );
 }
@@ -151,7 +153,10 @@ fn lying_self_report_does_not_override_factual_state() {
     value.self_reported_healthy = Some(true);
     let result = derive_runtime_health(&value, &policy()).expect("projection");
     assert_eq!(result.state, RuntimeHealthState::Quarantined);
-    assert!(result.reasons.iter().any(|reason| reason.contains("did not override")));
+    assert!(result
+        .reasons
+        .iter()
+        .any(|reason| reason.contains("did not override")));
 }
 
 #[test]
@@ -174,7 +179,10 @@ fn recovering_state_cannot_flap_to_healthy_without_threshold() {
     value.fresh_successes_since_unhealthy = 1;
     let result = derive_runtime_health(&value, &policy()).expect("projection");
     assert_eq!(result.state, RuntimeHealthState::Recovering);
-    assert!(result.reasons.iter().any(|reason| reason.contains("fresh successes 1/2")));
+    assert!(result
+        .reasons
+        .iter()
+        .any(|reason| reason.contains("fresh successes 1/2")));
 }
 
 #[test]

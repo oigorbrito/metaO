@@ -16,7 +16,10 @@ fn binding() -> RuntimeCertificationBinding {
     }
 }
 
-fn category(status: CertificationCategoryStatus, evidence_ref: Option<&str>) -> CertificationCategoryResult {
+fn category(
+    status: CertificationCategoryStatus,
+    evidence_ref: Option<&str>,
+) -> CertificationCategoryResult {
     CertificationCategoryResult {
         category_id: "prompt-injection".to_string(),
         status,
@@ -43,10 +46,16 @@ fn report(result: CertificationCategoryResult) -> RuntimeCertificationReport {
 
 #[test]
 fn conclusive_pass_or_fail_requires_nonblank_evidence_reference() {
-    for status in [CertificationCategoryStatus::Pass, CertificationCategoryStatus::Fail] {
+    for status in [
+        CertificationCategoryStatus::Pass,
+        CertificationCategoryStatus::Fail,
+    ] {
         for evidence in [None, Some(""), Some("   ")] {
             let value = report(category(status, evidence));
-            assert_eq!(value.validate(), Err(RuntimeCertificationError::BlankEvidenceRef));
+            assert_eq!(
+                value.validate(),
+                Err(RuntimeCertificationError::BlankEvidenceRef)
+            );
         }
     }
 }
@@ -58,13 +67,19 @@ fn evidence_backed_pass_can_certify_but_incomplete_state_need_not_fake_evidence(
         Some("evidence:prompt-injection:1"),
     ));
     assert_eq!(
-        passed.project(&binding(), 150).expect("projection").decision,
+        passed
+            .project(&binding(), 150)
+            .expect("projection")
+            .decision,
         RuntimeCertificationDecision::Certified
     );
 
     let skipped = report(category(CertificationCategoryStatus::Skipped, None));
     assert_eq!(
-        skipped.project(&binding(), 150).expect("projection").decision,
+        skipped
+            .project(&binding(), 150)
+            .expect("projection")
+            .decision,
         RuntimeCertificationDecision::Incomplete
     );
 }

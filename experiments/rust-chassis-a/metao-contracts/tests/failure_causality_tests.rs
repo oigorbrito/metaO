@@ -38,7 +38,9 @@ fn caller_declared_transience_is_not_retry_authority() {
     let result = evaluate_retry_eligibility(&facts);
     assert_eq!(result.eligibility, RetryEligibility::Ineligible);
     assert_eq!(result.next_attempt, None);
-    assert!(result.reason.contains("lacks authoritative factual evidence"));
+    assert!(result
+        .reason
+        .contains("lacks authoritative factual evidence"));
 }
 
 #[test]

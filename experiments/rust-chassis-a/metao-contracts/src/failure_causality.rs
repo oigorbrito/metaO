@@ -102,7 +102,10 @@ pub fn evaluate_retry_eligibility(facts: &FailureCausalityFacts) -> RetryEligibi
         reason: reason.to_string(),
     };
 
-    if facts.current_attempt == 0 || facts.max_attempts == 0 || facts.current_attempt >= facts.max_attempts {
+    if facts.current_attempt == 0
+        || facts.max_attempts == 0
+        || facts.current_attempt >= facts.max_attempts
+    {
         return ineligible("execution attempt budget is exhausted or invalid");
     }
     if facts.policy_blocked {

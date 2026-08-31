@@ -72,9 +72,7 @@ impl RuntimeSecurityFacts {
             .iter()
             .any(|permission| permission.trim().is_empty())
         {
-            return Err(RuntimeSecurityError::BlankSetEntry(
-                "effective_permissions",
-            ));
+            return Err(RuntimeSecurityError::BlankSetEntry("effective_permissions"));
         }
         if self
             .enforcement_capabilities
@@ -116,18 +114,14 @@ impl RuntimeSecurityProfile {
             .iter()
             .any(|permission| permission.trim().is_empty())
         {
-            return Err(RuntimeSecurityError::BlankSetEntry(
-                "allowed_permissions",
-            ));
+            return Err(RuntimeSecurityError::BlankSetEntry("allowed_permissions"));
         }
         if self
             .required_capabilities
             .iter()
             .any(|capability| capability.trim().is_empty())
         {
-            return Err(RuntimeSecurityError::BlankSetEntry(
-                "required_capabilities",
-            ));
+            return Err(RuntimeSecurityError::BlankSetEntry("required_capabilities"));
         }
         Ok(())
     }
@@ -158,7 +152,10 @@ pub fn evaluate_runtime_security(
     let mut reasons = Vec::new();
 
     if &facts.binding != expected_binding {
-        reasons.push("runtime security evidence binding does not match current runtime/version/config".to_string());
+        reasons.push(
+            "runtime security evidence binding does not match current runtime/version/config"
+                .to_string(),
+        );
     }
 
     if !matches!(
@@ -172,8 +169,7 @@ pub fn evaluate_runtime_security(
         );
     }
 
-    if facts.isolation == IsolationAssurance::Unknown
-        || facts.isolation < profile.minimum_isolation
+    if facts.isolation == IsolationAssurance::Unknown || facts.isolation < profile.minimum_isolation
     {
         reasons.push(format!(
             "isolation assurance {:?} does not satisfy minimum {:?}",
@@ -183,7 +179,9 @@ pub fn evaluate_runtime_security(
 
     for permission in &facts.effective_permissions {
         if !profile.allowed_permissions.contains(permission) {
-            reasons.push(format!("effective permission {permission} is outside authorized profile"));
+            reasons.push(format!(
+                "effective permission {permission} is outside authorized profile"
+            ));
         }
     }
 
@@ -194,12 +192,15 @@ pub fn evaluate_runtime_security(
     if profile.require_untrusted_content_isolation
         && facts.untrusted_content_isolated_from_governance != Some(true)
     {
-        reasons.push("untrusted content is not proven isolated from governance authority".to_string());
+        reasons
+            .push("untrusted content is not proven isolated from governance authority".to_string());
     }
 
     for capability in &profile.required_capabilities {
         if !facts.enforcement_capabilities.contains(capability) {
-            reasons.push(format!("required enforcement capability {capability} is missing"));
+            reasons.push(format!(
+                "required enforcement capability {capability} is missing"
+            ));
         }
     }
 
