@@ -273,20 +273,32 @@ def evaluate_acceptance(
             )
         seen_obligations[item.obligation_id] = item
 
-        for gate in (
-            _binding_gate(item, context),
-            check_freshness(item, now_epoch=now_epoch),
-            check_provenance(item, context),
-            check_authority(item, context),
-            check_policy(item, context),
-        ):
-            if not gate.passed:
-                reasons = (gate.reason,)
-                return AcceptanceResult(
-                    gate.decision,
-                    reasons,
-                    _make_proof(gate.decision, reasons, items),
-                )
+        # Evaluate gate checks sequentially to avoid tuple allocation per item
+        # and short-circuit immediately when a gate check fails.
+        gate = _binding_gate(item, context)
+        if not gate.passed:
+            reasons = (gate.reason,)
+            return AcceptanceResult(gate.decision, reasons, _make_proof(gate.decision, reasons, items))
+
+        gate = check_freshness(item, now_epoch=now_epoch)
+        if not gate.passed:
+            reasons = (gate.reason,)
+            return AcceptanceResult(gate.decision, reasons, _make_proof(gate.decision, reasons, items))
+
+        gate = check_provenance(item, context)
+        if not gate.passed:
+            reasons = (gate.reason,)
+            return AcceptanceResult(gate.decision, reasons, _make_proof(gate.decision, reasons, items))
+
+        gate = check_authority(item, context)
+        if not gate.passed:
+            reasons = (gate.reason,)
+            return AcceptanceResult(gate.decision, reasons, _make_proof(gate.decision, reasons, items))
+
+        gate = check_policy(item, context)
+        if not gate.passed:
+            reasons = (gate.reason,)
+            return AcceptanceResult(gate.decision, reasons, _make_proof(gate.decision, reasons, items))
 
     aggregation = aggregate_evidence(
         RequiredEvidenceSet(context.required_obligations), items
