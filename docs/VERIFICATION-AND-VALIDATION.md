@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `tihotm/metaO`
-Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
+Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
 
 ## Verification ladder
 
@@ -54,6 +54,15 @@ Additional evidence added on branch `post-mvp/final-closure-v1`:
 - `cargo test -p metao-contracts --test acceptance_budget_tests --release`
 - `cargo clippy --workspace --all-targets -- -D warnings`
 
+Additional current-main evidence after PRs #347, #348 and #349:
+
+- `cargo test -p metao-contracts --test discovery_persistence_tests`
+- `cargo test -p metao-contracts --test discovery_coordinator_tests`
+- `cargo test -p metao-contracts --test control_plane_stateful_property_tests`
+- `cargo test -p metao-testkit --test composed_system_closure_tests`
+
+The current local closure branch adds a product `DiscoveryStateStore` boundary and a filesystem-backed implementation. This upgrades #176 from test-only durable serialization evidence to a framework-neutral product persistence/resume path while preserving the claim boundary that this is not a mandated production database.
+
 Current claim boundaries:
 
 - the composed system proof uses simulated runtimes, real local OS processes, a real local external-effect service, durable file-backed state, multiprocess fencing, and fault injection;
@@ -70,9 +79,10 @@ The remote repository remains reachable through Git transport even though the `g
 
 Evidence collected from `origin`:
 
-- `origin/main` is still `19152a5451a55bdf354b14d4ac88f08f0c335187`;
+- current `origin/main` for this reconciliation is `5348605cbcfb3bc02f3076fe1723447feff3ecdd`;
 - PR head refs were fetched directly with `git ls-remote` / `git fetch` for the relevant closure families;
-- the relevant PR heads for the discovery, governed-execution, durability, fencing, security, adversarial, and acceptance-budget families are not ancestors of current `origin/main`, so they cannot be treated as absorbed solely by ancestry;
+- PRs #347, #348 and #349 are ancestors of current `origin/main`;
+- older PR-head comparisons remain historical and must not override current ancestry checks;
 - protected evidence refs remain preserved for `#200`, `#201`, `#202`, and `#217`;
 - `#217` still carries the `PRODUCT_MIGRATION = NOT_AUTHORIZED` disposition.
 

@@ -3,14 +3,16 @@ use metao_contracts::clarification_policy::{
     UnresolvedDiscoveryItem,
 };
 use metao_contracts::discovery_coordinator::{
-    DiscoveryCoordinator, DiscoveryCoordinatorInput, DiscoveryEvaluation, DiscoveryState,
+    DiscoveryCoordinator, DiscoveryCoordinatorInput, DiscoveryState,
+};
+use metao_contracts::discovery_persistence::{
+    DiscoveryPersistenceError, DiscoverySnapshot, DiscoveryStateStore, FileDiscoveryStateStore,
 };
 use metao_contracts::project_contract::{
-    ContractId, ItemId, ProjectContract, ProjectId, Provenance, ProvenanceCategory,
-    SemanticCategory, SemanticItem,
+    ContractId, ItemId, ProjectContract, ProjectId, ProjectReference, Provenance,
+    ProvenanceCategory, ReferenceId, SemanticCategory, SemanticItem,
 };
 use metao_contracts::tech_stack_intake::{TechStackDecisionMode, TechnicalPreferenceProfile};
-use serde_json::Value;
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -36,6 +38,16 @@ fn semantic_item(id: &str, category: SemanticCategory, description: &str) -> Sem
 fn ready_contract() -> ProjectContract {
     let mut users = BTreeSet::new();
     users.insert("buyer".to_string());
+    let reference = ProjectReference {
+        reference_id: ReferenceId("marketplace-reference".to_string()),
+        locator: "https://example.test/marketplace-reference".to_string(),
+        selected_desired_traits: BTreeMap::from([(
+            "durable-listings".to_string(),
+            "Listings survive process restart".to_string(),
+        )]),
+        selected_undesired_traits: BTreeMap::new(),
+        provenance: provenance(ProvenanceCategory::UserExplicit, "reference-intake"),
+    };
     ProjectContract::new(
         ProjectId("project-persisted-discovery".to_string()),
         ContractId("contract-persisted-discovery".to_string()),
@@ -58,7 +70,7 @@ fn ready_contract() -> ProjectContract {
                 "Frontend, backend and persistence obligations are integrated",
             ),
         ],
-        vec![],
+        vec![reference],
     )
     .expect("valid test contract")
 }
@@ -96,6 +108,22 @@ fn material_item() -> UnresolvedDiscoveryItem {
     }
 }
 
+fn safe_assumption_item() -> UnresolvedDiscoveryItem {
+    UnresolvedDiscoveryItem {
+        item_id: "visual-label".to_string(),
+        description: "Choose whether the listing card label says newest or recent".to_string(),
+        materiality: Materiality::NonMaterial,
+        reversibility: Reversibility::Reversible,
+        materiality_reason: None,
+        provenance: provenance(ProvenanceCategory::UserExplicit, "initial-request"),
+        safe_default: Some(metao_contracts::clarification_policy::SafeDefault {
+            value: "Use Recent listings".to_string(),
+            rationale: "Copy can change later without changing product scope".to_string(),
+            provenance: provenance(ProvenanceCategory::SystemDefault, "safe-default-policy"),
+        }),
+    }
+}
+
 fn explicit_resolution() -> ExplicitResolution {
     ExplicitResolution {
         kind: ResolutionKind::HumanResolution,
@@ -107,60 +135,171 @@ fn explicit_resolution() -> ExplicitResolution {
 fn persisted_input() -> DiscoveryCoordinatorInput {
     DiscoveryCoordinatorInput {
         contract: ready_contract(),
-        discovery_items: vec![material_item()],
+        discovery_items: vec![material_item(), safe_assumption_item()],
         explicit_resolutions: BTreeMap::from([("mobile-scope".to_string(), explicit_resolution())]),
         reference_intake_pending: false,
         technical_profile: Some(technical_profile()),
     }
 }
 
-#[test]
-fn discovery_input_and_audit_evaluation_survive_durable_reopen() {
-    let input = persisted_input();
-    let evaluation = DiscoveryCoordinator::evaluate(&input).expect("initial discovery evaluation");
-    assert_eq!(evaluation.state, DiscoveryState::SpecReady);
+fn unresolved_input() -> DiscoveryCoordinatorInput {
+    DiscoveryCoordinatorInput {
+        contract: ready_contract(),
+        discovery_items: vec![material_item(), safe_assumption_item()],
+        explicit_resolutions: BTreeMap::new(),
+        reference_intake_pending: false,
+        technical_profile: Some(technical_profile()),
+    }
+}
 
-    let payload = serde_json::json!({
-        "input": input,
-        "evaluation": evaluation,
-    });
-
+fn temp_store() -> FileDiscoveryStateStore {
     let unique = SystemTime::now()
         .duration_since(UNIX_EPOCH)
         .expect("clock")
         .as_nanos();
-    let path = std::env::temp_dir().join(format!("metao-discovery-{unique}.json"));
-    fs::write(
-        &path,
-        serde_json::to_vec_pretty(&payload).expect("serialize snapshot"),
+    FileDiscoveryStateStore::new(
+        std::env::temp_dir().join(format!("metao-discovery-store-{unique}")),
     )
-    .expect("persist discovery snapshot");
+}
 
-    let reopened: Value =
-        serde_json::from_slice(&fs::read(&path).expect("read snapshot")).expect("decode snapshot");
-    let reopened_input: DiscoveryCoordinatorInput =
-        serde_json::from_value(reopened["input"].clone()).expect("decode input");
-    let reopened_evaluation: DiscoveryEvaluation =
-        serde_json::from_value(reopened["evaluation"].clone()).expect("decode evaluation");
+#[test]
+fn discovery_save_reopen_and_resume_survive_durable_store_boundary() {
+    let input = persisted_input();
+    let snapshot = DiscoverySnapshot::capture(input.clone()).expect("capture discovery snapshot");
+    let store = temp_store();
+    let path = store.snapshot_path(&snapshot.binding);
+    store.save(&snapshot).expect("persist discovery snapshot");
+    assert!(path.exists(), "snapshot must cross the filesystem boundary");
 
-    let reevaluated =
-        DiscoveryCoordinator::evaluate(&reopened_input).expect("reevaluate reopened discovery");
+    drop(snapshot);
 
-    assert_eq!(reopened_evaluation, reevaluated);
-    assert_eq!(reevaluated.state, DiscoveryState::SpecReady);
-    assert!(reevaluated.applies_to(&reopened_input.contract.binding()));
-    assert_eq!(reevaluated.transitions.len(), 1);
+    let reopened_store = FileDiscoveryStateStore::new(store.root().to_path_buf());
+    let reopened = reopened_store
+        .load(&input.contract.binding())
+        .expect("load persisted discovery snapshot")
+        .expect("snapshot exists");
+    let resumed = reopened.resume().expect("resume from reopened snapshot");
+    let expected =
+        DiscoveryCoordinator::evaluate(&input).expect("canonical deterministic reevaluation");
 
-    fs::remove_file(path).expect("remove test snapshot");
+    assert_eq!(reopened.evaluation, expected);
+    assert_eq!(resumed, expected);
+    assert_eq!(resumed.state, DiscoveryState::SpecReady);
+    assert!(resumed.applies_to(&input.contract.binding()));
+    assert_eq!(resumed.assumptions.len(), 1);
+    assert_eq!(resumed.transitions.len(), 1);
+    assert_eq!(
+        reopened
+            .input
+            .explicit_resolutions
+            .get("mobile-scope")
+            .expect("human answer survives")
+            .rationale,
+        "User selected responsive web only for the MVP"
+    );
+
+    let repeated = reopened_store
+        .load(&input.contract.binding())
+        .expect("load persisted discovery snapshot again")
+        .expect("snapshot exists")
+        .resume()
+        .expect("repeat resume");
+    assert_eq!(repeated, resumed);
+
+    fs::remove_dir_all(store.root()).expect("remove test store");
 }
 
 #[test]
 fn reopened_contract_revision_cannot_reuse_old_readiness() {
     let input = persisted_input();
-    let evaluation = DiscoveryCoordinator::evaluate(&input).expect("initial discovery evaluation");
+    let snapshot = DiscoverySnapshot::capture(input.clone()).expect("capture discovery snapshot");
+    let store = temp_store();
+    store.save(&snapshot).expect("persist discovery snapshot");
+
     let mut newer_binding = input.contract.binding();
     newer_binding.version += 1;
     newer_binding.contract_digest = "different-contract-generation".to_string();
 
-    assert!(!evaluation.applies_to(&newer_binding));
+    assert_eq!(
+        store
+            .load(&newer_binding)
+            .expect("mismatched binding is absent"),
+        None
+    );
+    assert!(!snapshot
+        .resume()
+        .expect("old snapshot still resumes for old binding")
+        .applies_to(&newer_binding));
+
+    fs::remove_dir_all(store.root()).expect("remove test store");
+}
+
+#[test]
+fn corrupt_persisted_payload_fails_closed() {
+    let input = persisted_input();
+    let snapshot = DiscoverySnapshot::capture(input.clone()).expect("capture discovery snapshot");
+    let store = temp_store();
+    store.save(&snapshot).expect("persist discovery snapshot");
+    fs::write(
+        store.snapshot_path(&input.contract.binding()),
+        b"{not valid json",
+    )
+    .expect("corrupt snapshot");
+
+    let result = store.load(&input.contract.binding());
+
+    assert!(matches!(result, Err(DiscoveryPersistenceError::Decode(_))));
+    fs::remove_dir_all(store.root()).expect("remove test store");
+}
+
+#[test]
+fn missing_persisted_state_is_explicit_and_not_spec_ready() {
+    let input = persisted_input();
+    let store = temp_store();
+
+    assert_eq!(
+        store
+            .load(&input.contract.binding())
+            .expect("missing is explicit"),
+        None
+    );
+}
+
+#[test]
+fn unresolved_material_decision_still_blocks_after_reopen() {
+    let input = unresolved_input();
+    let snapshot = DiscoverySnapshot::capture(input.clone()).expect("capture blocked snapshot");
+    assert_eq!(
+        snapshot.evaluation.state,
+        DiscoveryState::NeedsClarification
+    );
+
+    let store = temp_store();
+    store
+        .save(&snapshot)
+        .expect("persist blocked discovery snapshot");
+    let reopened = FileDiscoveryStateStore::new(store.root().to_path_buf())
+        .load(&input.contract.binding())
+        .expect("load persisted blocked snapshot")
+        .expect("snapshot exists");
+    let resumed = reopened.resume().expect("resume blocked snapshot");
+
+    assert_eq!(resumed.state, DiscoveryState::NeedsClarification);
+    assert!(resumed
+        .blockers
+        .iter()
+        .any(|blocker| blocker.blocker_id == "discovery:mobile-scope"));
+
+    fs::remove_dir_all(store.root()).expect("remove test store");
+}
+
+#[test]
+fn persistence_contract_contains_no_runtime_or_framework_authority() {
+    let input = persisted_input();
+    let snapshot = DiscoverySnapshot::capture(input).expect("capture discovery snapshot");
+    let json = serde_json::to_string(&snapshot).expect("serialize snapshot");
+
+    assert!(!json.contains("runtime_id"));
+    assert!(!json.contains("orchestrator"));
+    assert!(!json.contains("sdk"));
 }
