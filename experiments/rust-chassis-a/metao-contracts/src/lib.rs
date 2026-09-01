@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 pub mod clarification_policy;
 pub mod credential_lease;
 pub mod discovery_coordinator;
+pub mod discovery_persistence;
 pub mod execution_governance;
 pub mod execution_lease;
 pub mod execution_stage_evidence;

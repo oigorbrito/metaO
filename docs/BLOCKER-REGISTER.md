@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `tihotm/metaO`
-Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
+Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
 
 ## Current product blockers
 
@@ -14,7 +14,7 @@ Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
 | Real external runtime/provider execution | external provider / secret | blocked locally | Rust and Python conformance paths are not real provider execution without configured SDK dependencies/secrets |
 | Real credential broker lifecycle | external/local infrastructure | blocked locally | provider-neutral credential lease contracts are not a real issue/renew/revoke broker lifecycle |
 | Formal model execution | local toolchain | blocked | TLC/java are not available in the current environment |
-| GitHub PR/issue API reconciliation | external API / auth | blocked in this environment | `gh` GraphQL and the GitHub MCP route could not close or enumerate PR/issue state even though Git transport worked |
+| GitHub PR/issue API reconciliation | external API / auth | blocked in this environment | `gh` issue/PR API calls returned `401` or `404` even though Git transport and `gh auth status` worked |
 
 ## Current operational blockers
 
