@@ -5,11 +5,15 @@ use std::path::Path;
 const TRACEABILITY: &str = include_str!("fixtures/formal_invariant_traceability.v1.json");
 
 fn fixture() -> Value {
-    serde_json::from_str(TRACEABILITY).expect("formal invariant traceability fixture must be valid JSON")
+    serde_json::from_str(TRACEABILITY)
+        .expect("formal invariant traceability fixture must be valid JSON")
 }
 
 fn repository_root() -> std::path::PathBuf {
-    Path::new(env!("CARGO_MANIFEST_DIR")).join("..").join("..").join("..")
+    Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("..")
 }
 
 #[test]
@@ -17,7 +21,10 @@ fn model_identity_and_claim_boundary_are_explicit() {
     let value = fixture();
     assert_eq!(value["schema_version"], 1);
     assert_eq!(value["source_model"]["model"], "AcceptanceRetryAuthority");
-    assert_eq!(value["source_model"]["model_evidence_state"], "MODEL_NOT_CHECKED");
+    assert_eq!(
+        value["source_model"]["model_evidence_state"],
+        "MODEL_NOT_CHECKED"
+    );
     let boundary = &value["authority_boundary"];
     assert_eq!(boundary["traceability_is_execution"], false);
     assert_eq!(boundary["model_invariant_is_implementation_proof"], false);
@@ -28,14 +35,23 @@ fn model_identity_and_claim_boundary_are_explicit() {
 #[test]
 fn every_named_formal_invariant_has_one_unique_mapping() {
     let value = fixture();
-    let mappings = value["mappings"].as_array().expect("mappings must be array");
+    let mappings = value["mappings"]
+        .as_array()
+        .expect("mappings must be array");
     let expected = BTreeSet::from([
-        "AcceptedGenerationMatchesCurrent", "AcceptedRequiresIndependentFreshPass",
-        "IncompleteRecoveryCannotEnableRetry", "OldGenerationDoneCannotAcceptCurrent",
-        "OrchestratorDoneIsNotAcceptance", "StaleEvidenceCannotAcceptCurrentGeneration",
-        "UnknownNeverAccepts", "VerifierFailNeverAccepts",
+        "AcceptedGenerationMatchesCurrent",
+        "AcceptedRequiresIndependentFreshPass",
+        "IncompleteRecoveryCannotEnableRetry",
+        "OldGenerationDoneCannotAcceptCurrent",
+        "OrchestratorDoneIsNotAcceptance",
+        "StaleEvidenceCannotAcceptCurrentGeneration",
+        "UnknownNeverAccepts",
+        "VerifierFailNeverAccepts",
     ]);
-    let actual: BTreeSet<&str> = mappings.iter().map(|mapping| mapping["invariant_id"].as_str().expect("invariant id")).collect();
+    let actual: BTreeSet<&str> = mappings
+        .iter()
+        .map(|mapping| mapping["invariant_id"].as_str().expect("invariant id"))
+        .collect();
     assert_eq!(actual, expected);
     assert_eq!(actual.len(), mappings.len());
 }
@@ -51,7 +67,10 @@ fn implementation_targets_are_traceable_but_never_reported_as_executed() {
         assert!(!targets.is_empty());
         for target in targets {
             let relative = target.as_str().expect("target path");
-            assert!(root.join(relative).is_file(), "missing mapped test target: {relative}");
+            assert!(
+                root.join(relative).is_file(),
+                "missing mapped test target: {relative}"
+            );
         }
     }
 }
@@ -59,12 +78,21 @@ fn implementation_targets_are_traceable_but_never_reported_as_executed() {
 #[test]
 fn recovery_invariant_maps_to_current_main_failure_causality_test() {
     let value = fixture();
-    let recovery = value["mappings"].as_array().expect("mappings").iter()
+    let recovery = value["mappings"]
+        .as_array()
+        .expect("mappings")
+        .iter()
         .find(|mapping| mapping["invariant_id"] == "IncompleteRecoveryCannotEnableRetry")
         .expect("recovery invariant mapping");
     assert_eq!(recovery["implementation_state"], "TEST_PATH_PRESENT");
     assert_eq!(recovery["execution_state"], "EXECUTION_NOT_RUN");
-    assert_eq!(recovery["rust_targets"].as_array().expect("targets"), &vec![Value::String("experiments/rust-chassis-a/metao-contracts/tests/failure_causality_tests.rs".to_string())]);
+    assert_eq!(
+        recovery["rust_targets"].as_array().expect("targets"),
+        &vec![Value::String(
+            "experiments/rust-chassis-a/metao-contracts/tests/failure_causality_tests.rs"
+                .to_string()
+        )]
+    );
     assert!(recovery.get("pending_owner").is_none());
     assert!(recovery.get("pending_branch").is_none());
 }
@@ -72,12 +100,20 @@ fn recovery_invariant_maps_to_current_main_failure_causality_test() {
 #[test]
 fn verifier_fail_maps_to_existing_not_done_semantics() {
     let value = fixture();
-    let failed = value["mappings"].as_array().expect("mappings").iter()
+    let failed = value["mappings"]
+        .as_array()
+        .expect("mappings")
+        .iter()
         .find(|mapping| mapping["invariant_id"] == "VerifierFailNeverAccepts")
         .expect("verifier-fail invariant mapping");
     assert_eq!(failed["implementation_state"], "TEST_PATH_PRESENT");
     assert_eq!(failed["execution_state"], "EXECUTION_NOT_RUN");
-    assert_eq!(failed["rust_targets"].as_array().expect("targets"), &vec![Value::String("experiments/rust-chassis-a/metao-kernel/tests/evidence_binding.rs".to_string())]);
+    assert_eq!(
+        failed["rust_targets"].as_array().expect("targets"),
+        &vec![Value::String(
+            "experiments/rust-chassis-a/metao-kernel/tests/evidence_binding.rs".to_string()
+        )]
+    );
 }
 
 #[test]
@@ -85,11 +121,24 @@ fn python_oracle_targets_are_present_but_never_rust_authority() {
     let value = fixture();
     let root = repository_root();
     for mapping in value["mappings"].as_array().expect("mappings") {
-        for target in mapping["python_oracle_targets"].as_array().expect("python oracle targets") {
+        for target in mapping["python_oracle_targets"]
+            .as_array()
+            .expect("python oracle targets")
+        {
             let relative = target.as_str().expect("python target path");
-            assert!(root.join(relative).is_file(), "missing oracle target: {relative}");
+            assert!(
+                root.join(relative).is_file(),
+                "missing oracle target: {relative}"
+            );
         }
     }
     let serialized = serde_json::to_string(&value).expect("serialize traceability");
-    for forbidden in ["EXECUTED_PASS", "PENDING_BRANCH_TARGET", "AcceptanceDecisionAuthority", "provider_sdk"] { assert!(!serialized.contains(forbidden)); }
+    for forbidden in [
+        "EXECUTED_PASS",
+        "PENDING_BRANCH_TARGET",
+        "AcceptanceDecisionAuthority",
+        "provider_sdk",
+    ] {
+        assert!(!serialized.contains(forbidden));
+    }
 }
