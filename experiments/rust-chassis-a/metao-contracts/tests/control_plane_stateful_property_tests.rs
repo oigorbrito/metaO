@@ -2,6 +2,10 @@ use metao_contracts::failure_causality::{
     evaluate_retry_eligibility, FactualExecutionOutcome, FailureCausalityFacts, FailureClass,
     FailureClassificationBasis, RecoveryStatus, RetryEligibility,
 };
+use metao_contracts::runtime_health::{
+    derive_runtime_health, RuntimeHealthEvidenceBasis, RuntimeHealthObservation,
+    RuntimeHealthPolicy, RuntimeHealthState,
+};
 use proptest::prelude::*;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -25,6 +29,15 @@ struct LifecycleModel {
     evidence_generation: Option<u64>,
     accepted: bool,
     retry_history_len: u64,
+    health_attempts: u32,
+    health_successes: u32,
+    health_failures: u32,
+    health_consecutive_failures: u32,
+    health_timeouts: u32,
+    health_transport_failures: u32,
+    health_active_retries: u32,
+    health_fresh_successes_since_unhealthy: u32,
+    health_prior_state: Option<RuntimeHealthState>,
 }
 
 impl LifecycleModel {
@@ -37,6 +50,60 @@ impl LifecycleModel {
             evidence_generation: None,
             accepted: false,
             retry_history_len: 0,
+            health_attempts: 0,
+            health_successes: 0,
+            health_failures: 0,
+            health_consecutive_failures: 0,
+            health_timeouts: 0,
+            health_transport_failures: 0,
+            health_active_retries: 0,
+            health_fresh_successes_since_unhealthy: 0,
+            health_prior_state: None,
+        }
+    }
+
+    fn runtime_health_observation(&self) -> RuntimeHealthObservation {
+        RuntimeHealthObservation {
+            runtime_id: "runtime-a".to_string(),
+            runtime_version: "1.0.0".to_string(),
+            config_id: "config-a".to_string(),
+            evidence_basis: RuntimeHealthEvidenceBasis::IndependentObservation,
+            evidence_ref: format!("stateful-health:gen-{}", self.generation),
+            window_start_sequence: 0,
+            window_end_sequence: u64::from(self.health_attempts),
+            attempts: self.health_attempts,
+            successes: self.health_successes,
+            failures: self.health_failures,
+            consecutive_failures: self.health_consecutive_failures,
+            timeouts: self.health_timeouts,
+            transport_failures: self.health_transport_failures,
+            active_retries: self.health_active_retries,
+            fresh_successes_since_unhealthy: self.health_fresh_successes_since_unhealthy,
+            prior_state: self.health_prior_state,
+            self_reported_healthy: Some(false),
+        }
+    }
+
+    fn health_policy() -> RuntimeHealthPolicy {
+        RuntimeHealthPolicy {
+            quarantine_consecutive_failures: 3,
+            unhealthy_failure_percent: 60,
+            recovery_successes_required: 2,
+            retry_pressure_limit: 2,
+        }
+    }
+
+    fn assert_canonical_health(&self) {
+        let observed = self.runtime_health_observation();
+        let projection = derive_runtime_health(&observed, &Self::health_policy())
+            .expect("canonical runtime health projection");
+
+        if self.health_attempts == 0 {
+            assert_eq!(projection.state, RuntimeHealthState::Unknown);
+        } else if self.health_consecutive_failures >= 3 {
+            assert_eq!(projection.state, RuntimeHealthState::Quarantined);
+        } else if self.health_failures * 100 >= self.health_attempts * 60 {
+            assert_eq!(projection.state, RuntimeHealthState::Unhealthy);
         }
     }
 
@@ -50,9 +117,17 @@ impl LifecycleModel {
             Event::Timeout => {
                 self.recovery_complete = false;
                 self.evidence_generation = None;
+                self.health_attempts += 1;
+                self.health_failures += 1;
+                self.health_consecutive_failures += 1;
+                self.health_timeouts += 1;
+                self.health_prior_state = Some(RuntimeHealthState::Degraded);
             }
             Event::RecoveryComplete => {
                 self.recovery_complete = true;
+                self.health_attempts += 1;
+                self.health_successes += 1;
+                self.health_fresh_successes_since_unhealthy += 1;
             }
             Event::Retry => {
                 let facts = FailureCausalityFacts {
@@ -74,10 +149,14 @@ impl LifecycleModel {
                 };
                 let projection = evaluate_retry_eligibility(&facts);
                 if projection.eligibility == RetryEligibility::Eligible {
-                    self.attempt = projection.next_attempt.expect("eligible retry has next attempt");
+                    self.attempt = projection
+                        .next_attempt
+                        .expect("eligible retry has next attempt");
                     self.retry_history_len += 1;
                     self.recovery_complete = false;
                     self.evidence_generation = None;
+                    self.health_active_retries += 1;
+                    self.health_prior_state = Some(RuntimeHealthState::Recovering);
                 }
             }
             Event::Failover => {
@@ -85,12 +164,17 @@ impl LifecycleModel {
                 self.attempt = 1;
                 self.recovery_complete = false;
                 self.evidence_generation = None;
+                self.health_prior_state = Some(RuntimeHealthState::Recovering);
+                self.health_fresh_successes_since_unhealthy = 0;
             }
             Event::OldRuntimeDone => {
                 // Runtime completion is a factual observation, never acceptance authority.
             }
             Event::FreshEvidence => {
                 self.evidence_generation = Some(self.generation);
+                self.health_attempts += 1;
+                self.health_successes += 1;
+                self.health_fresh_successes_since_unhealthy += 1;
             }
             Event::Accept => {
                 self.accepted = self.evidence_generation == Some(self.generation);
@@ -99,6 +183,8 @@ impl LifecycleModel {
                 // Caller omission cannot shrink authoritative retry history.
             }
         }
+
+        self.assert_canonical_health();
     }
 }
 
@@ -135,6 +221,8 @@ proptest! {
             let recovery_before = model.recovery_complete;
 
             model.apply(event);
+            let canonical = derive_runtime_health(&model.runtime_health_observation(), &LifecycleModel::health_policy())
+                .expect("canonical runtime health projection");
 
             prop_assert!(model.generation >= previous_generation);
             prop_assert!(model.retry_history_len >= previous_retry_history);
@@ -157,6 +245,16 @@ proptest! {
                 prop_assert_eq!(model.evidence_generation, Some(model.generation));
             }
 
+            prop_assert!(matches!(
+                canonical.state,
+                RuntimeHealthState::Unknown
+                    | RuntimeHealthState::Healthy
+                    | RuntimeHealthState::Degraded
+                    | RuntimeHealthState::Unhealthy
+                    | RuntimeHealthState::Quarantined
+                    | RuntimeHealthState::Recovering
+            ));
+
             previous_generation = model.generation;
             previous_retry_history = model.retry_history_len;
         }
@@ -170,14 +268,20 @@ fn regression_incomplete_recovery_late_done_and_omission_cannot_accept() {
     model.apply(Event::Timeout);
     let attempt_before = model.attempt;
     model.apply(Event::Retry);
-    assert_eq!(model.attempt, attempt_before, "incomplete recovery must block retry");
+    assert_eq!(
+        model.attempt, attempt_before,
+        "incomplete recovery must block retry"
+    );
 
     model.apply(Event::OldRuntimeDone);
     assert!(!model.accepted, "runtime DONE must not mint acceptance");
 
     let history_before = model.retry_history_len;
     model.apply(Event::OmitHistoryAttack);
-    assert_eq!(model.retry_history_len, history_before, "omission must not erase retry history");
+    assert_eq!(
+        model.retry_history_len, history_before,
+        "omission must not erase retry history"
+    );
 
     model.apply(Event::RecoveryComplete);
     model.apply(Event::Retry);
@@ -186,7 +290,10 @@ fn regression_incomplete_recovery_late_done_and_omission_cannot_accept() {
     model.apply(Event::Failover);
     let current_generation = model.generation;
     model.apply(Event::Accept);
-    assert!(!model.accepted, "failover without current-generation evidence cannot accept");
+    assert!(
+        !model.accepted,
+        "failover without current-generation evidence cannot accept"
+    );
 
     model.apply(Event::FreshEvidence);
     model.apply(Event::Accept);

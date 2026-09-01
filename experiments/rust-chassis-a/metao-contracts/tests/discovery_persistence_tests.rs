@@ -130,11 +130,14 @@ fn discovery_input_and_audit_evaluation_survive_durable_reopen() {
         .expect("clock")
         .as_nanos();
     let path = std::env::temp_dir().join(format!("metao-discovery-{unique}.json"));
-    fs::write(&path, serde_json::to_vec_pretty(&payload).expect("serialize snapshot"))
-        .expect("persist discovery snapshot");
+    fs::write(
+        &path,
+        serde_json::to_vec_pretty(&payload).expect("serialize snapshot"),
+    )
+    .expect("persist discovery snapshot");
 
-    let reopened: Value = serde_json::from_slice(&fs::read(&path).expect("read snapshot"))
-        .expect("decode snapshot");
+    let reopened: Value =
+        serde_json::from_slice(&fs::read(&path).expect("read snapshot")).expect("decode snapshot");
     let reopened_input: DiscoveryCoordinatorInput =
         serde_json::from_value(reopened["input"].clone()).expect("decode input");
     let reopened_evaluation: DiscoveryEvaluation =

@@ -15,11 +15,23 @@ pub enum ExecutionLeaseError {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum LeaseState { Active, Released, Expired }
+pub enum LeaseState {
+    Active,
+    Released,
+    Expired,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum LeaseAssurance { AuthoritativeStore, SingleInstanceDevelopment }
+pub enum LeaseAssurance {
+    AuthoritativeStore,
+    SingleInstanceDevelopment,
+}
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum LeaseEvidenceBasis { AuthoritativeStoreRead, DevelopmentLocal, CallerDeclared, Unknown }
+pub enum LeaseEvidenceBasis {
+    AuthoritativeStoreRead,
+    DevelopmentLocal,
+    CallerDeclared,
+    Unknown,
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExecutionLease {
@@ -46,48 +58,88 @@ impl ExecutionLease {
             ("execution_id", self.execution_id.as_str()),
             ("holder_identity", self.holder_identity.as_str()),
         ] {
-            if value.trim().is_empty() { return Err(ExecutionLeaseError::BlankIdentity(name)); }
+            if value.trim().is_empty() {
+                return Err(ExecutionLeaseError::BlankIdentity(name));
+            }
         }
         match (self.assurance, self.evidence_basis) {
             (LeaseAssurance::AuthoritativeStore, LeaseEvidenceBasis::AuthoritativeStoreRead) => {
-                if self.evidence_ref.as_deref().is_none_or(|value| value.trim().is_empty()) {
+                if self
+                    .evidence_ref
+                    .as_deref()
+                    .is_none_or(|value| value.trim().is_empty())
+                {
                     return Err(ExecutionLeaseError::BlankEvidenceRef);
                 }
             }
             (LeaseAssurance::SingleInstanceDevelopment, LeaseEvidenceBasis::DevelopmentLocal) => {}
             _ => return Err(ExecutionLeaseError::InvalidEvidenceBasis),
         }
-        if self.generation == 0 { return Err(ExecutionLeaseError::ZeroGeneration); }
-        if self.fencing_token == 0 { return Err(ExecutionLeaseError::ZeroFencingToken); }
-        if self.renewed_at_epoch < self.acquired_at_epoch || self.expires_at_epoch <= self.renewed_at_epoch {
+        if self.generation == 0 {
+            return Err(ExecutionLeaseError::ZeroGeneration);
+        }
+        if self.fencing_token == 0 {
+            return Err(ExecutionLeaseError::ZeroFencingToken);
+        }
+        if self.renewed_at_epoch < self.acquired_at_epoch
+            || self.expires_at_epoch <= self.renewed_at_epoch
+        {
             return Err(ExecutionLeaseError::InvalidTimeWindow);
         }
         Ok(())
     }
 
     pub fn is_active_at(&self, now_epoch: i64) -> bool {
-        self.validate().is_ok() && self.state == LeaseState::Active && now_epoch >= self.renewed_at_epoch && now_epoch < self.expires_at_epoch
+        self.validate().is_ok()
+            && self.state == LeaseState::Active
+            && now_epoch >= self.renewed_at_epoch
+            && now_epoch < self.expires_at_epoch
     }
 
-    pub fn authorizes(&self, presented_holder: &str, presented_generation: u64, presented_fence: u64, now_epoch: i64) -> bool {
-        self.is_active_at(now_epoch) && self.holder_identity == presented_holder && self.generation == presented_generation && self.fencing_token == presented_fence
+    pub fn authorizes(
+        &self,
+        presented_holder: &str,
+        presented_generation: u64,
+        presented_fence: u64,
+        now_epoch: i64,
+    ) -> bool {
+        self.is_active_at(now_epoch)
+            && self.holder_identity == presented_holder
+            && self.generation == presented_generation
+            && self.fencing_token == presented_fence
     }
 
-    pub fn validate_successor(&self, successor: &ExecutionLease) -> Result<(), ExecutionLeaseError> {
+    pub fn validate_successor(
+        &self,
+        successor: &ExecutionLease,
+    ) -> Result<(), ExecutionLeaseError> {
         self.validate()?;
         successor.validate()?;
-        if successor.mission_id != self.mission_id || successor.logical_execution_key != self.logical_execution_key {
+        if successor.mission_id != self.mission_id
+            || successor.logical_execution_key != self.logical_execution_key
+        {
             return Err(ExecutionLeaseError::LeaseBindingMismatch);
         }
-        if successor.generation < self.generation { return Err(ExecutionLeaseError::GenerationRegression); }
-        if successor.fencing_token < self.fencing_token { return Err(ExecutionLeaseError::FenceRegression); }
+        if successor.generation < self.generation {
+            return Err(ExecutionLeaseError::GenerationRegression);
+        }
+        if successor.fencing_token < self.fencing_token {
+            return Err(ExecutionLeaseError::FenceRegression);
+        }
         let holder_changed = successor.holder_identity != self.holder_identity;
         let execution_changed = successor.execution_id != self.execution_id;
         let reactivated = self.state != LeaseState::Active && successor.state == LeaseState::Active;
         let requires_new_generation = holder_changed || execution_changed || reactivated;
-        if requires_new_generation && successor.generation <= self.generation { return Err(ExecutionLeaseError::GenerationRegression); }
-        if requires_new_generation && successor.fencing_token <= self.fencing_token { return Err(ExecutionLeaseError::FenceRegression); }
-        if !requires_new_generation && (successor.renewed_at_epoch < self.renewed_at_epoch || successor.expires_at_epoch < self.expires_at_epoch) {
+        if requires_new_generation && successor.generation <= self.generation {
+            return Err(ExecutionLeaseError::GenerationRegression);
+        }
+        if requires_new_generation && successor.fencing_token <= self.fencing_token {
+            return Err(ExecutionLeaseError::FenceRegression);
+        }
+        if !requires_new_generation
+            && (successor.renewed_at_epoch < self.renewed_at_epoch
+                || successor.expires_at_epoch < self.expires_at_epoch)
+        {
             return Err(ExecutionLeaseError::TimeRegression);
         }
         Ok(())

@@ -45,7 +45,7 @@ Current repository surface:
 
 - Frozen structure: yes.
 - Product direction: Rust-native.
-- Current executable repository: Python.
+- Current executable repository: Rust-native chassis A; Python remains historical oracle/reference.
 - Architecture change required for additional framework support: no, if the adapter boundary is respected.
 
 ## Explicit non-goals
