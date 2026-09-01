@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `tihotm/metaO`
-Last reconciled commit: `19152a5451a55bdf354b14d4ac88f08f0c335187`
+Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
 
 This is the master closure plan for the post-MVP baseline. It replaces issue-by-issue ping-pong as the primary planning view.
 
@@ -204,17 +204,19 @@ This is the master closure plan for the post-MVP baseline. It replaces issue-by-
 
 ## Final-Closure Wave Delta
 
-Status: ACTIVE_RECONCILIATION
+Status: LOCAL_IMPLEMENTATION_RECONCILIATION
 
-Current integrated `main`: `19152a5451a55bdf354b14d4ac88f08f0c335187`.
+Current integrated `main`: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`.
 
-Current closure branch: `post-mvp/final-closure-v1`.
+Current closure branch: `post-mvp/final-local-closure-v2`.
 
 New executable closure evidence:
 
 - `metao-testkit/tests/composed_system_closure_tests.rs` composes policy/risk/budget admission, runtime-health degradation, durable lost-ACK external effect recovery, multiprocess fencing, stale-owner rejection, execution-stage evidence, usage preservation, retry causality, machine-readable gate evidence, and independent acceptance for the current lineage.
 - `metao-testkit/tests/scientific_fault_evidence_tests.rs` records an executable fault/evidence matrix for the currently covered closure gates and explicitly separates blocked external/toolchain cases.
 - `metao-contracts/tests/acceptance_budget_tests.rs` has been executed in release mode for the current boundary regressions.
+- `metao-contracts/src/discovery_persistence.rs` provides the #176 product persistence boundary and filesystem implementation for durable Discovery save/reopen/resume.
+- `metao-contracts/tests/discovery_persistence_tests.rs` covers reopen, deterministic resume, explicit missing state, corrupt payload fail-closed, contract binding mismatch and unresolved-decision persistence.
 
 Remaining non-local closure items:
 
