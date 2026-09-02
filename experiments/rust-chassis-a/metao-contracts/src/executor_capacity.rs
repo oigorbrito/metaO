@@ -114,6 +114,15 @@ pub struct ExecutionPolicy {
     pub max_wait_for_free_s: u64,
 }
 
+impl ExecutionPolicy {
+    pub fn validate(&self) -> Result<(), ExecutorCapacityError> {
+        if !self.paid_fallback_allowed && self.max_paid_cost_microunits > 0 {
+            return Err(ExecutorCapacityError::InvalidBudgetPolicy);
+        }
+        Ok(())
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct VerifiedCheckpoint {
     pub task_id: String,
@@ -167,11 +176,9 @@ pub fn supervision_decision(
         CapacityState::TemporarilyQuotaExhausted
         | CapacityState::DailyQuotaExhausted
         | CapacityState::ConcurrencyExhausted => match &executor.recovery {
-            Some(recovery) if recovery.recoverable => {
-                SupervisionDecision::ParkUntil {
-                    epoch_s: recovery.available_at_epoch_s.unwrap_or(now_epoch_s),
-                }
-            }
+            Some(recovery) if recovery.recoverable => SupervisionDecision::ParkUntil {
+                epoch_s: recovery.available_at_epoch_s.unwrap_or(now_epoch_s),
+            },
             _ => SupervisionDecision::Failover,
         },
         CapacityState::CreditExhausted
@@ -191,6 +198,7 @@ fn hard_eligible(
     policy: &ExecutionPolicy,
 ) -> Result<bool, ExecutorCapacityError> {
     executor.validate()?;
+    policy.validate()?;
 
     if !executor.can_receive_project_data() {
         return Ok(false);
@@ -214,6 +222,7 @@ pub fn select_executor<'a>(
     executors: &'a [ExecutorRecord],
     policy: &ExecutionPolicy,
 ) -> Result<Option<&'a ExecutorRecord>, ExecutorCapacityError> {
+    policy.validate()?;
     let mut candidates = Vec::new();
     for executor in executors {
         if hard_eligible(executor, policy)? {
@@ -226,12 +235,81 @@ pub fn select_executor<'a>(
         let right_paid_penalty = if policy.prefer_free && right.paid { 1u8 } else { 0u8 };
         left_paid_penalty
             .cmp(&right_paid_penalty)
-            .then_with(|| right.reliability_score_basis_points.cmp(&left.reliability_score_basis_points))
-            .then_with(|| left.estimated_cost_microunits.cmp(&right.estimated_cost_microunits))
+            .then_with(|| {
+                right
+                    .reliability_score_basis_points
+                    .cmp(&left.reliability_score_basis_points)
+            })
+            .then_with(|| {
+                left.estimated_cost_microunits
+                    .cmp(&right.estimated_cost_microunits)
+            })
             .then_with(|| left.executor_id.cmp(&right.executor_id))
     });
 
     Ok(candidates.into_iter().next())
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExecutionTransition {
+    ContinueCurrent,
+    WaitForRecovery {
+        executor_id: String,
+        available_at_epoch_s: u64,
+    },
+    Reassign {
+        executor_id: String,
+    },
+    Block,
+}
+
+pub fn plan_execution_transition(
+    current: &ExecutorRecord,
+    alternatives: &[ExecutorRecord],
+    policy: &ExecutionPolicy,
+    now_epoch_s: u64,
+) -> Result<ExecutionTransition, ExecutorCapacityError> {
+    current.validate()?;
+    policy.validate()?;
+
+    if matches!(current.capacity, CapacityState::Available) {
+        return Ok(ExecutionTransition::ContinueCurrent);
+    }
+
+    let free_alternatives: Vec<ExecutorRecord> = alternatives
+        .iter()
+        .filter(|candidate| !candidate.paid)
+        .cloned()
+        .collect();
+    if let Some(candidate) = select_executor(&free_alternatives, policy)? {
+        return Ok(ExecutionTransition::Reassign {
+            executor_id: candidate.executor_id.clone(),
+        });
+    }
+
+    if !current.paid {
+        if let Some(recovery) = &current.recovery {
+            if recovery.recoverable {
+                if let Some(available_at_epoch_s) = recovery.available_at_epoch_s {
+                    let wait_s = available_at_epoch_s.saturating_sub(now_epoch_s);
+                    if wait_s <= policy.max_wait_for_free_s {
+                        return Ok(ExecutionTransition::WaitForRecovery {
+                            executor_id: current.executor_id.clone(),
+                            available_at_epoch_s,
+                        });
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some(candidate) = select_executor(alternatives, policy)? {
+        return Ok(ExecutionTransition::Reassign {
+            executor_id: candidate.executor_id.clone(),
+        });
+    }
+
+    Ok(ExecutionTransition::Block)
 }
 
 pub fn authorize_handoff(checkpoint: &VerifiedCheckpoint) -> Result<(), ExecutorCapacityError> {
