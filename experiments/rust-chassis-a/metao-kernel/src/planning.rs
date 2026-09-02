@@ -45,7 +45,7 @@ pub struct DispatchAuthorization {
 
 impl WorkGraph {
     pub fn draft(contract: &ProjectContract, units: Vec<WorkUnit>) -> Result<Self, PlanningError> {
-        let dto = contract.clone().into();
+        let dto: metao_contracts::ProjectContractDto = contract.clone().into();
         let binding = ProjectContractBinding {
             project_id: dto.project_id.clone(),
             contract_id: dto.contract_id.clone(),
@@ -150,7 +150,7 @@ impl WorkGraph {
         if !self.sealed {
             return Err(PlanningError::GraphNotSealed);
         }
-        let dto = contract.clone().into();
+        let dto: metao_contracts::ProjectContractDto = contract.clone().into();
         let current = ProjectContractBinding {
             project_id: dto.project_id,
             contract_id: dto.contract_id,
