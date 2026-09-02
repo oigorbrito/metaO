@@ -1,0 +1,152 @@
+name: Architecture Survival V1
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/architecture-survival-v1.yml'
+      - 'docs/ARCHITECTURE-SURVIVAL-V1.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  donor-qualification:
+    name: donor-${{ matrix.name }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: pactrail
+            repo: AKMessi/pactrail
+            ref: main
+            test: |
+              cargo fmt --all --check
+              cargo clippy --workspace --all-targets --all-features -- -D warnings
+              cargo test --workspace --all-targets --all-features
+          - name: vigla
+            repo: Kilbex/Vigla
+            ref: main
+            test: |
+              cargo fmt --all --check
+              cargo test -p orchestrator -p vigla-event-schema
+          - name: duroxide
+            repo: microsoft/duroxide
+            ref: main
+            test: |
+              cargo fmt --all --check
+              cargo clippy --all-targets --features sqlite,provider-test,test-hooks -- -D warnings
+              cargo test --all-targets --features sqlite,provider-test,test-hooks
+          - name: durare
+            repo: SamuelXing/durare
+            ref: main
+            test: |
+              cargo fmt --all --check
+              cargo clippy --all-targets --all-features -- -D warnings
+              cargo test --all-targets --all-features
+          - name: acp-rust-sdk
+            repo: agentclientprotocol/rust-sdk
+            ref: main
+            test: |
+              cargo fmt --all --check
+              cargo clippy --workspace --all-targets --all-features -- -D warnings
+              cargo test --workspace --all-targets --all-features
+
+    steps:
+      - name: Checkout metaO harness
+        uses: actions/checkout@v4
+
+      - name: Install current stable Rust
+        run: |
+          rustup update stable
+          rustup default stable
+          rustc --version
+          cargo --version
+
+      - name: Clone donor at exact observed head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone --depth 1 --branch '${{ matrix.ref }}' 'https://github.com/${{ matrix.repo }}.git' donor
+          cd donor
+          git rev-parse HEAD | tee ../donor-head.txt
+          git status --porcelain=v1
+          cargo metadata --format-version 1 --no-deps > ../cargo-metadata.json
+
+      - name: Run donor qualification gates
+        id: gates
+        shell: bash
+        working-directory: donor
+        run: |
+          set -euo pipefail
+          started=$(date +%s)
+          cat > ../gate-command.sh <<'EOF'
+          ${{ matrix.test }}
+          EOF
+          bash ../gate-command.sh 2>&1 | tee ../gate.log
+          ended=$(date +%s)
+          printf '%s\n' "$((ended-started))" > ../elapsed-seconds.txt
+
+      - name: Record machine-readable receipt
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          result='${{ steps.gates.outcome }}'
+          head='UNKNOWN'
+          [ -f donor-head.txt ] && head=$(cat donor-head.txt)
+          elapsed='UNKNOWN'
+          [ -f elapsed-seconds.txt ] && elapsed=$(cat elapsed-seconds.txt)
+          python3 - <<PY
+          import json, os
+          data = {
+            'schema': 'metao.architecture-survival.donor-receipt.v1',
+            'donor': '${{ matrix.repo }}',
+            'ref_requested': '${{ matrix.ref }}',
+            'donor_head': '''$head'''.strip(),
+            'runner_os': os.environ.get('RUNNER_OS'),
+            'workflow_run_id': os.environ.get('GITHUB_RUN_ID'),
+            'workflow_run_attempt': os.environ.get('GITHUB_RUN_ATTEMPT'),
+            'result': '''$result'''.strip(),
+            'elapsed_seconds': '''$elapsed'''.strip(),
+            'claim_scope': 'format/lint/test gates only; no production fitness inferred',
+          }
+          open('receipt.json','w').write(json.dumps(data, indent=2, sort_keys=True) + '\n')
+          PY
+          cat receipt.json
+
+      - name: Upload qualification evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: architecture-survival-${{ matrix.name }}-${{ github.run_id }}
+          if-no-files-found: warn
+          path: |
+            donor-head.txt
+            cargo-metadata.json
+            gate-command.sh
+            gate.log
+            elapsed-seconds.txt
+            receipt.json
+
+  metao-baseline:
+    name: metao-current-baseline
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install current stable Rust
+        run: |
+          rustup update stable
+          rustup default stable
+      - name: Rust chassis qualification
+        id: metao-gates
+        working-directory: experiments/rust-chassis-a
+        run: |
+          set -euo pipefail
+          cargo fmt --check
+          cargo clippy --workspace --all-targets --all-features -- -D warnings
+          cargo test --workspace --all-targets --all-features
