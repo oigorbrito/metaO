@@ -1,0 +1,26 @@
+name: GitHub Adapter Validation
+
+on:
+  push:
+    branches:
+      - feat/github-governed-adapter
+    paths:
+      - "src/metao/github_adapter.py"
+      - "tests/unit/test_github_adapter*.py"
+      - "docs/validation/GITHUB-ADAPTER-VALIDATION.md"
+      - ".github/workflows/github-adapter-validation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  adapter-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run governed GitHub adapter tests
+        run: python -m unittest discover -s tests/unit -p 'test_github_adapter*.py' -v
