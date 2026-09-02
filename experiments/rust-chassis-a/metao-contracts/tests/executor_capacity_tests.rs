@@ -245,3 +245,121 @@ fn higher_reliability_wins_after_hard_filters() {
         "higher"
     );
 }
+
+#[test]
+fn available_free_alternative_beats_waiting_for_current_free_reset() {
+    let mut current = executor(
+        "free-current",
+        "provider-a",
+        None,
+        QualificationState::Qualified,
+        CapacityState::DailyQuotaExhausted,
+        false,
+        0,
+        9500,
+    );
+    current.recovery = Some(RecoveryObservation {
+        recoverable: true,
+        available_at_epoch_s: Some(1_120),
+        evidence_basis: RecoveryEvidenceBasis::ProviderApi,
+        evidence_ref: "quota-reset".to_string(),
+    });
+    let alternative = executor(
+        "free-ready",
+        "provider-b",
+        None,
+        QualificationState::Qualified,
+        CapacityState::Available,
+        false,
+        0,
+        8500,
+    );
+
+    assert_eq!(
+        plan_execution_transition(&current, &[alternative], &policy(), 1_000).unwrap(),
+        ExecutionTransition::Reassign {
+            executor_id: "free-ready".to_string()
+        }
+    );
+}
+
+#[test]
+fn short_free_reset_waits_before_using_paid_fallback() {
+    let mut current = executor(
+        "free-current",
+        "provider-a",
+        None,
+        QualificationState::Qualified,
+        CapacityState::DailyQuotaExhausted,
+        false,
+        0,
+        9500,
+    );
+    current.recovery = Some(RecoveryObservation {
+        recoverable: true,
+        available_at_epoch_s: Some(1_120),
+        evidence_basis: RecoveryEvidenceBasis::ProviderDocumentation,
+        evidence_ref: "documented-reset".to_string(),
+    });
+    let paid = executor(
+        "paid-ready",
+        "provider-paid",
+        None,
+        QualificationState::Qualified,
+        CapacityState::Available,
+        true,
+        500_000,
+        9900,
+    );
+    let mut allowed = policy();
+    allowed.paid_fallback_allowed = true;
+    allowed.max_paid_cost_microunits = 600_000;
+
+    assert_eq!(
+        plan_execution_transition(&current, &[paid], &allowed, 1_000).unwrap(),
+        ExecutionTransition::WaitForRecovery {
+            executor_id: "free-current".to_string(),
+            available_at_epoch_s: 1_120,
+        }
+    );
+}
+
+#[test]
+fn long_free_reset_uses_authorized_paid_fallback() {
+    let mut current = executor(
+        "free-current",
+        "provider-a",
+        None,
+        QualificationState::Qualified,
+        CapacityState::DailyQuotaExhausted,
+        false,
+        0,
+        9500,
+    );
+    current.recovery = Some(RecoveryObservation {
+        recoverable: true,
+        available_at_epoch_s: Some(2_000),
+        evidence_basis: RecoveryEvidenceBasis::ProviderApi,
+        evidence_ref: "quota-reset".to_string(),
+    });
+    let paid = executor(
+        "paid-ready",
+        "provider-paid",
+        None,
+        QualificationState::Qualified,
+        CapacityState::Available,
+        true,
+        500_000,
+        9900,
+    );
+    let mut allowed = policy();
+    allowed.paid_fallback_allowed = true;
+    allowed.max_paid_cost_microunits = 600_000;
+
+    assert_eq!(
+        plan_execution_transition(&current, &[paid], &allowed, 1_000).unwrap(),
+        ExecutionTransition::Reassign {
+            executor_id: "paid-ready".to_string()
+        }
+    );
+}
