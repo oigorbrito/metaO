@@ -28,6 +28,7 @@ pub enum PlanningError {
     UnknownRequirement(ItemId),
     UnknownDependency { unit: WorkUnitId, dependency: WorkUnitId },
     SelfDependency(WorkUnitId),
+    DuplicateWorkUnitId(WorkUnitId),
     DependencyCycle,
     BindingMismatch,
     GraphNotSealed,
@@ -70,8 +71,9 @@ impl WorkGraph {
             if unit.dependency_ids.contains(&unit.work_unit_id) {
                 return Err(PlanningError::SelfDependency(unit.work_unit_id));
             }
-            if map.insert(unit.work_unit_id.clone(), unit).is_some() {
-                return Err(PlanningError::DependencyCycle);
+            let unit_id = unit.work_unit_id.clone();
+            if map.insert(unit_id.clone(), unit).is_some() {
+                return Err(PlanningError::DuplicateWorkUnitId(unit_id));
             }
         }
 
@@ -294,6 +296,13 @@ mod tests {
     }
 
     #[test]
+    fn ac06_duplicate_work_unit_id_is_rejected() {
+        let contract = contract();
+        let result = WorkGraph::draft(&contract, vec![unit("a", &[]), unit("a", &[])]);
+        assert_eq!(result, Err(PlanningError::DuplicateWorkUnitId(WorkUnitId("a".into()))));
+    }
+
+    #[test]
     fn ac06_dispatch_fails_closed_without_accepted_prerequisite() {
         let contract = contract();
         let graph = WorkGraph::draft(&contract, vec![unit("a", &[]), unit("b", &["a"])])
@@ -322,7 +331,7 @@ mod tests {
     }
 
     #[test]
-    fn ac06_sealed_graph_has_no_deserialization_mutation_surface() {
+    fn ac06_serialized_graph_has_no_deserialization_surface() {
         let contract = contract();
         let graph = WorkGraph::draft(&contract, vec![unit("a", &[])])
             .expect("valid draft")
