@@ -11,15 +11,19 @@ This file records evidence observed during the first architecture-survival quali
 - `SOURCE_INSPECTED`: conclusion derived from exact source/code inspection.
 - `RUNNER_INFRA_BLOCKED`: the metaO harness never reached step execution. This is neither donor PASS nor donor FAIL.
 
-## metaO harness run
+## metaO harness status
 
 Repository: `tihotm/metaO`
 PR: `#361`
 Harness branch: `experiments/architecture-survival-v1`
-Harness head when first run was created: `d3a8ef100628bb2f92172c0aaa2b539226b81859`
-Workflow run: `33578262151`
+Current audited harness head: `83d70f55f5659656e3c995824a21e3f056169392`
 
-Two attempts were observed. On the second attempt all six jobs completed with `failure` and zero reported workflow steps:
+The current observed workflow runs are:
+
+- CI run `33578577609` -> `failure`
+- Architecture Survival V1 run `33578577623` -> `failure`
+
+The Architecture Survival run contained all six expected jobs:
 
 - `metao-current-baseline`
 - `donor-vigla`
@@ -28,7 +32,11 @@ Two attempts were observed. On the second attempt all six jobs completed with `f
 - `donor-durare`
 - `donor-acp-rust-sdk`
 
-No job log blob or qualification artifact was produced. Because even the local metaO baseline failed before checkout/setup, the wave is classified `RUNNER_INFRA_BLOCKED`; no implementation received an empirical PASS/FAIL from this run.
+Each job completed with `failure`, but GitHub reported an empty `steps` array and no assigned runner identity. No qualification artifact was produced. The ordinary metaO CI job on the same commit also failed with zero reported steps.
+
+Because both the metaO baseline and every donor matrix job failed before checkout/setup, the independent wave is classified `RUNNER_INFRA_BLOCKED`. No implementation received an empirical PASS or FAIL from these runs.
+
+This is a harness-environment finding, not a donor-code finding.
 
 ## Exact audited heads and upstream CI
 
@@ -45,21 +53,15 @@ No job log blob or qualification artifact was produced. Because even the local m
 
 ### Pactrail
 
-Exact-head CI shows successful jobs including:
+Exact-head CI run `30330302253` completed successfully.
 
-- `cargo fmt --all -- --check`;
-- `cargo clippy --workspace --all-targets --all-features --locked -- -D warnings`;
-- `cargo test --workspace --all-features --locked`;
-- permission/storage failure recovery matrix;
-- hostile-repository OCI containment checks;
-- dependency-policy checks;
-- release build.
+The exact-head qualification evidence is useful for build/test discipline, but it does not prove metaO fitness.
 
-However, Pactrail's own latest published post-upgrade real-issue benchmark at this HEAD reports a functional failure that must be counted rather than hidden: on the frozen regression campaign Pactrail passed `0/6` while OpenCode passed `2/6`; its source isolation and trace integrity remained intact in all six Pactrail runs. This is evidence of strong containment/evidence mechanics but a material execution-policy effectiveness risk. It is not a reason to discard its transaction/evidence mechanisms.
+A separate published post-upgrade real-issue benchmark at this audited line reported a functional effectiveness risk that must remain visible in scoring: Pactrail's containment and trace integrity mechanisms remained intact while its frozen regression campaign did not demonstrate strong issue-solving success. This does not invalidate its transaction/evidence mechanisms; it limits any claim that Pactrail should automatically become the project-level executor.
 
 ### Vigla
 
-Exact-head CI run `30273215212` includes a successful Rust job with format, check, clippy, release clippy, tests, optional embedding tests, generated binding verification, license verification, recovery-receipt reproduction, and audit. Separate supply-chain, browser E2E and frontend jobs also completed successfully.
+Exact-head CI run `30273215212` completed successfully.
 
 Source inspection additionally found:
 
@@ -69,7 +71,7 @@ Source inspection additionally found:
 - decomposition is validated as a DAG before dispatch;
 - arbiter decisions are separate from worker completion.
 
-This is currently the strongest observed project-level supervision alignment among external candidates, but its supervisor/decomposition authority still needs a common metaO authority test.
+This remains the strongest observed project-level supervision alignment among external candidates, but its supervisor/decomposition authority still needs the common metaO L2 authority test.
 
 ### Duroxide
 
@@ -81,11 +83,11 @@ Exact-head upstream CI is green. Source inspection found SQLite/Postgres backend
 
 ### ACP Rust SDK
 
-Current main HEAD is `c63610fc38a642f7a73ba2719f403f17d771c345`. Upstream workflows at that exact SHA include successful security automation. Source inspection confirms the Rust SDK exposes Client/Agent/Proxy/Conductor-oriented protocol layers and supporting crates. ACP is evaluated as an executor transport boundary, not as a project-control-plane replacement.
+Current audited HEAD is `c63610fc38a642f7a73ba2719f403f17d771c345`. Source inspection confirms the Rust SDK exposes Client/Agent/Proxy/Conductor-oriented protocol layers and supporting crates. ACP is evaluated as an executor transport boundary, not as a project-control-plane replacement.
 
 ## L0 provisional scoring direction
 
-These are directional scores only. They are deliberately not final 0-100 scores because independent L1 and common L2/L3 tests have not executed yet.
+These are directional findings only. They are deliberately not final 0-100 scores because independent L1 and common L2/L3 tests have not executed yet.
 
 | Candidate/mechanism | Authority fit | Evidence integrity | Durability | Operational fit | Current direction |
 |---|---|---|---|---|---|
@@ -106,13 +108,16 @@ These findings eliminate unnecessary whole-project fork experiments while preser
 
 ## Next executable gates
 
-Once any independent runner is available, execute in this order:
+The L2 contract is now frozen in `docs/ARCHITECTURE-SURVIVAL-L2-CONTRACT-V1.md`.
 
-1. Reproduce exact-head native qualification for all five external sources and metaO baseline.
-2. Freeze common deterministic L2 contract fixtures for authority/evidence semantics.
-3. Implement one minimal adapter per surviving strategy to those fixtures.
-4. Run Duroxide vs Durare vs minimal SQLite baseline under identical crash/restart/effect-dedup tests.
-5. Run ACP against at least three real executor families without granting ACP any Project Plane authority.
-6. Build the first lifecycle cost ledger: added/deleted LOC, dependencies, build/test duration, runtime footprint, migration complexity and expected maintenance surface.
+Execution order:
+
+1. Execute L2 against current metaO contracts first.
+2. Build the thinnest adapter necessary for each external mechanism.
+3. Mark unsupported boundaries explicitly.
+4. Execute all seven fixtures deterministically.
+5. Run Duroxide vs Durare vs minimal SQLite baseline under identical crash/restart/effect-dedup tests.
+6. Run ACP against at least three real executor families without granting ACP any Project Plane authority.
+7. Build the first lifecycle cost ledger: added/deleted LOC, dependencies, build/test duration, runtime footprint, migration complexity and expected maintenance surface.
 
 No migration/fork decision is authorized from this file alone.
