@@ -7,6 +7,7 @@ to the repository, operation, execution and policy bundle.
 
 from __future__ import annotations
 
+import base64
 import json
 from dataclasses import dataclass
 from typing import Any, Mapping, Protocol
@@ -114,6 +115,12 @@ class GitHubRepositoryAdapter:
     def pull_request(self, repository: str, number: int) -> Any:
         return self._transport.request("GET", f"repos/{repository}/pulls/{number}")
 
+    def pull_request_reviews(self, repository: str, number: int) -> Any:
+        return self._transport.request("GET", f"repos/{repository}/pulls/{number}/reviews")
+
+    def pull_request_review_comments(self, repository: str, number: int) -> Any:
+        return self._transport.request("GET", f"repos/{repository}/pulls/{number}/comments")
+
     def workflow_run(self, repository: str, run_id: int) -> Any:
         return self._transport.request("GET", f"repos/{repository}/actions/runs/{run_id}")
 
@@ -152,7 +159,6 @@ class GitHubRepositoryAdapter:
         authorization: MutationAuthorization | None = None,
     ) -> GitHubOperationResult:
         require_mutation(authorization, repository=repository, operation="file.create")
-        import base64
         result = self._transport.request(
             "PUT", f"repos/{repository}/contents/{path}",
             {"message": message, "content": base64.b64encode(content.encode()).decode(), "branch": branch},
@@ -184,6 +190,24 @@ class GitHubRepositoryAdapter:
         require_mutation(authorization, repository=repository, operation="pull_request.comment")
         result = self._transport.request("POST", f"repos/{repository}/issues/{number}/comments", {"body": body})
         return self._result("pull_request.comment", repository, result)
+
+    def submit_review(
+        self,
+        repository: str,
+        *,
+        number: int,
+        body: str = "",
+        event: str = "COMMENT",
+        authorization: MutationAuthorization | None = None,
+    ) -> GitHubOperationResult:
+        require_mutation(authorization, repository=repository, operation="pull_request.review.submit")
+        if event not in {"APPROVE", "REQUEST_CHANGES", "COMMENT"}:
+            raise ValueError("unsupported review event")
+        result = self._transport.request(
+            "POST", f"repos/{repository}/pulls/{number}/reviews",
+            {"body": body, "event": event},
+        )
+        return self._result("pull_request.review.submit", repository, result)
 
     def merge_pr(
         self,
