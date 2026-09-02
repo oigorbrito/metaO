@@ -6,6 +6,10 @@ on:
     paths:
       - '.github/workflows/architecture-survival-v1.yml'
       - 'docs/ARCHITECTURE-SURVIVAL-V1.md'
+      - 'docs/ARCHITECTURE-SURVIVAL-L2-CONTRACT-V1.md'
+      - 'docs/ARCHITECTURE-SURVIVAL-LIFECYCLE-COST-V1.md'
+      - 'docs/ARCHITECTURE-SURVIVAL-RESULTS-V1.md'
+      - 'experiments/rust-chassis-a/**'
   workflow_dispatch:
 
 permissions:
