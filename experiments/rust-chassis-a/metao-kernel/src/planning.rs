@@ -13,7 +13,7 @@ pub struct WorkUnit {
     pub dependency_ids: BTreeSet<WorkUnitId>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize)]
 pub struct WorkGraph {
     binding: ProjectContractBinding,
     units: BTreeMap<WorkUnitId, WorkUnit>,
@@ -305,5 +305,31 @@ mod tests {
             result,
             Err(PlanningError::PrerequisiteNotAccepted(WorkUnitId("a".into())))
         );
+    }
+
+    #[test]
+    fn ac06_executor_owned_input_mutation_cannot_mutate_sealed_graph() {
+        let contract = contract();
+        let mut executor_units = vec![unit("a", &[])];
+        let graph = WorkGraph::draft(&contract, executor_units.clone())
+            .expect("valid draft")
+            .seal()
+            .expect("sealed graph");
+        executor_units[0].dependency_ids.insert(WorkUnitId("b".into()));
+        assert!(graph.is_sealed());
+        assert!(graph.units().get(&WorkUnitId("a".into())).unwrap().dependency_ids.is_empty());
+        assert_eq!(graph.validate_dag(), Ok(()));
+    }
+
+    #[test]
+    fn ac06_sealed_graph_has_no_deserialization_mutation_surface() {
+        let contract = contract();
+        let graph = WorkGraph::draft(&contract, vec![unit("a", &[])])
+            .expect("valid draft")
+            .seal()
+            .expect("sealed graph");
+        let json = serde_json::to_string(&graph).expect("serializable graph");
+        assert!(json.contains("graph_digest"));
+        assert!(json.contains("sealed"));
     }
 }
