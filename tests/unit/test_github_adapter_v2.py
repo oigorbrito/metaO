@@ -25,6 +25,12 @@ class GitHubRepositoryAdapterTests(unittest.TestCase):
         self.adapter.repository("tihotm/metaO")
         self.assertEqual(self.transport.calls[0][:2], ("GET", "repos/tihotm/metaO"))
 
+    def test_review_reads_do_not_require_mutation_authority(self):
+        self.adapter.pull_request_reviews("tihotm/metaO", 12)
+        self.adapter.pull_request_review_comments("tihotm/metaO", 12)
+        self.assertEqual(self.transport.calls[0][:2], ("GET", "repos/tihotm/metaO/pulls/12/reviews"))
+        self.assertEqual(self.transport.calls[1][:2], ("GET", "repos/tihotm/metaO/pulls/12/comments"))
+
     def test_mutation_fails_closed_without_authority(self):
         with self.assertRaises(MutationDenied):
             self.adapter.create_issue("tihotm/metaO", title="x")
@@ -41,6 +47,24 @@ class GitHubRepositoryAdapterTests(unittest.TestCase):
         self.assertEqual(result.operation, "issue.create")
         self.assertEqual(result.evidence["number"], 12)
         self.assertNotIn("token", result.evidence)
+
+    def test_review_submission_requires_exact_authority(self):
+        with self.assertRaises(MutationDenied):
+            self.adapter.submit_review("tihotm/metaO", number=12, event="COMMENT", authorization=self.auth)
+        self.assertEqual(self.transport.calls, [])
+
+    def test_review_submission_sends_allowed_event(self):
+        auth = MutationAuthorization("tihotm/metaO", "pull_request.review.submit", "exec-1", "policy-1", "operator-1")
+        result = self.adapter.submit_review("tihotm/metaO", number=12, body="validation", event="COMMENT", authorization=auth)
+        self.assertEqual(result.operation, "pull_request.review.submit")
+        self.assertEqual(self.transport.calls[0][0:2], ("POST", "repos/tihotm/metaO/pulls/12/reviews"))
+        self.assertEqual(self.transport.calls[0][2]["event"], "COMMENT")
+
+    def test_review_submission_rejects_unsupported_event_before_transport(self):
+        auth = MutationAuthorization("tihotm/metaO", "pull_request.review.submit", "exec-1", "policy-1", "operator-1")
+        with self.assertRaises(ValueError):
+            self.adapter.submit_review("tihotm/metaO", number=12, event="MERGE", authorization=auth)
+        self.assertEqual(self.transport.calls, [])
 
     def test_merge_binds_expected_head_sha(self):
         auth = MutationAuthorization("tihotm/metaO", "pull_request.merge", "exec-1", "policy-1", "operator-1")
