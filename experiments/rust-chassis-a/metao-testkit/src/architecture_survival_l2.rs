@@ -6,8 +6,11 @@
 use metao_contracts::{
     evaluate_pre_runtime_gate, CompletionEvidenceBasis, CompletionEvidenceStatus,
     ExecutionBudget, ExecutionGateDecision, ExecutionPolicyEffect, ExecutionRiskDecision,
-    ExecutionUsage, ProjectCompletionDecision, ProjectCompletionGate,
+    ExecutionUsage, ItemId, ProjectContract, ProjectCompletionDecision, ProjectCompletionGate,
+    Provenance, ProvenanceCategory, SemanticCategory, SemanticItem,
 };
+use metao_kernel::planning::{WorkGraph, WorkUnit, WorkUnitId};
+use std::collections::BTreeSet;
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum L2Outcome {
@@ -113,6 +116,61 @@ pub fn a05_unauthorized_paid_fallback_blocks() -> L2Receipt {
     }
 }
 
+pub fn a06_authoritative_work_graph() -> L2Receipt {
+    let contract = ProjectContract::new(
+        "p".into(),
+        "c".into(),
+        "goal".into(),
+        BTreeSet::new(),
+        vec![SemanticItem {
+            item_id: ItemId("req".into()),
+            category: SemanticCategory::UserRequirement,
+            description: "required behavior".into(),
+            provenance: Provenance {
+                category: ProvenanceCategory::UserExplicit,
+                source_id: "user".into(),
+                derived_from: None,
+                authorization: None,
+            },
+        }],
+        vec![],
+    )
+    .expect("valid contract");
+
+    let make_unit = |id: &str, deps: &[&str]| WorkUnit {
+        work_unit_id: WorkUnitId(id.into()),
+        requirement_ids: BTreeSet::from([ItemId("req".into())]),
+        dependency_ids: deps.iter().map(|dep| WorkUnitId((*dep).into())).collect(),
+    };
+
+    let graph = WorkGraph::draft(
+        &contract,
+        vec![make_unit("prepare", &[]), make_unit("implement", &["prepare"])],
+    )
+    .and_then(WorkGraph::seal);
+
+    let outcome = match graph {
+        Ok(graph) => graph
+            .authorize_dispatch(
+                &WorkUnitId("implement".into()),
+                &BTreeSet::from([WorkUnitId("prepare".into())]),
+                &contract,
+            )
+            .map(|_| L2Outcome::Pass)
+            .unwrap_or(L2Outcome::Block),
+        Err(_) => L2Outcome::Block,
+    };
+
+    L2Receipt {
+        fixture_id: "L2-A06",
+        strategy_id: "metao-current-kernel",
+        outcome,
+        authority_owner: "planning-work-graph",
+        evidence_binding: "exact-project-contract-binding",
+        reason_code: "SEALED_VALIDATED_GRAPH_REQUIRED_FOR_DISPATCH",
+    }
+}
+
 pub fn a07_unproven_obligation_is_not_done() -> L2Receipt {
     // The completion gate is the authoritative mechanism. The concrete project
     // construction lives in contract integration tests; this fixture freezes the
@@ -148,6 +206,11 @@ mod tests {
     #[test]
     fn a05_rejects_unauthorized_cost() {
         assert_eq!(a05_unauthorized_paid_fallback_blocks().outcome, L2Outcome::Reject);
+    }
+
+    #[test]
+    fn a06_requires_validated_authoritative_graph() {
+        assert_eq!(a06_authoritative_work_graph().outcome, L2Outcome::Pass);
     }
 
     #[test]
