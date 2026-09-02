@@ -15,9 +15,9 @@ pub struct WorkUnit {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct WorkGraph {
-    pub binding: ProjectContractBinding,
-    pub units: BTreeMap<WorkUnitId, WorkUnit>,
-    pub graph_digest: String,
+    binding: ProjectContractBinding,
+    units: BTreeMap<WorkUnitId, WorkUnit>,
+    graph_digest: String,
     sealed: bool,
 }
 
@@ -84,6 +84,18 @@ impl WorkGraph {
         graph.validate_dag()?;
         graph.graph_digest = graph.calculate_digest();
         Ok(graph)
+    }
+
+    pub fn binding(&self) -> &ProjectContractBinding {
+        &self.binding
+    }
+
+    pub fn units(&self) -> &BTreeMap<WorkUnitId, WorkUnit> {
+        &self.units
+    }
+
+    pub fn graph_digest(&self) -> &str {
+        &self.graph_digest
     }
 
     pub fn validate_dag(&self) -> Result<(), PlanningError> {
@@ -255,6 +267,7 @@ mod tests {
             .authorize_dispatch(&WorkUnitId("b".into()), &BTreeSet::from([WorkUnitId("a".into())]), &contract)
             .expect("dispatch authorized");
         assert_eq!(auth.work_unit_id, WorkUnitId("b".into()));
+        assert_eq!(auth.graph_digest, graph.graph_digest());
         assert!(graph.is_sealed());
     }
 
