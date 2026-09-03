@@ -16,10 +16,11 @@ This is observation evidence for the connected GitHub path. It is not execution 
 
 ## Read operations executed
 
-Two connector-level read invocations were executed:
+Three connector-level read invocations were attempted:
 
 1. fetch jobs for workflow run `33760147938`;
-2. fetch steps for workflow job `100665907672`.
+2. fetch steps for workflow job `100665907672`;
+3. fetch decoded logs for workflow job `100665907672`.
 
 Observed jobs response:
 
@@ -39,6 +40,16 @@ Observed job-steps response:
 steps = []
 ```
 
+Observed job-log response:
+
+```text
+HTTP = 404
+ERROR_CODE = BlobNotFound
+LOG_RECEIPT_AVAILABLE = NO
+```
+
+The log read failed because the backing log blob does not exist. This is retained as an observed read failure; it is not a repository functional failure.
+
 No workflow/job re-run was requested. No repository mutation was requested.
 
 ## Frozen F2 classification supported by this boundary
@@ -56,6 +67,7 @@ Rationale:
 
 - the workflow job itself completed with conclusion `failure`;
 - the connected job listing exposes no steps and the dedicated step read returns an empty list;
+- no job log receipt is available (`404 BlobNotFound`);
 - therefore there is no evidence that configured repository test steps executed;
 - a failed workflow job before configured steps is not evidence that repository tests failed;
 - product functional failure is therefore not established by this observation.
@@ -83,10 +95,13 @@ RUNNER_ALLOCATED = NOT_TESTED_AT_THIS_BOUNDARY
 Observed connector/tool invocations:
 
 ```text
-CONNECTED_WRAPPER_INVOCATIONS = 2
+CONNECTED_WRAPPER_INVOCATIONS_SUCCESSFUL = 2
+CONNECTED_WRAPPER_INVOCATIONS_FAILED = 1
 ```
 
-Do not convert that automatically into `UNDERLYING_GITHUB_CALLS = 2` unless the connector implementation or authoritative transport instrumentation proves one GitHub request per wrapper invocation.
+The failed log read is not part of the minimum functional F2 acquisition path; it was an evidence-probing read after the classification-relevant job/steps observations.
+
+Do not convert connector invocations automatically into underlying GitHub request counts unless the connector implementation or authoritative transport instrumentation proves the mapping.
 
 Therefore:
 
@@ -110,9 +125,10 @@ Consequently the qualification should distinguish:
 ```text
 PR364_MINIMUM_CANDIDATE_PATH = 2_DIRECT_GITHUB_READS
 PR364_OPTIONAL_CONFIRMATORY_JOB_DETAIL_OR_STEPS_READ = ONLY_IF_REQUIRED_BY_OBSERVED_PAYLOAD
+LOG_READ = NOT_REQUIRED_FOR_MINIMUM_F2_AND_CURRENTLY_UNAVAILABLE
 ```
 
-Adding a third request merely because the connected wrapper offers a dedicated steps action would bias the adapter cost upward if its two existing responses are already sufficient.
+Adding a third request merely because another observation surface exists would bias the adapter cost upward if its two existing responses are already sufficient.
 
 ## Cost and placement impact
 
@@ -120,6 +136,7 @@ This observation strengthens functional decomposition:
 
 - deterministic F2 classification requires no LLM call at this observed mechanical boundary;
 - exact job failure versus repository-test execution can be preserved deterministically;
+- lack of logs does not require an LLM fallback and must remain an evidence-state condition;
 - no cross-placement cost winner follows because underlying request counts, common-boundary timing, and authoritative token telemetry remain incomplete.
 
 Current disposition:
@@ -128,6 +145,7 @@ Current disposition:
 CONNECTED_F2_LIVE_MECHANICS = PASS_FOR_OBSERVED_FIELDS
 CONNECTED_F2_LIVE_FULL_FIXTURE = PARTIAL
 CONNECTED_F2_MODEL_CALLS = 0_FOR_MECHANICAL_READ_CLASSIFICATION_PATH
+CONNECTED_F2_LOG_READ = BLOCKED_MISSING_BLOB
 PR364_LIVE_EXECUTION = NOT_TESTED
 P1_P3_TOTAL_COST_WINNER = NOT_TESTED
 PRODUCT_PLACEMENT_DECISION = NOT_AUTHORIZED
