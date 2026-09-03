@@ -1,0 +1,13 @@
+﻿{
+    "benchmark":  "P1xP3 F2",
+    "repetitions_per_placement":  5,
+    "placement_results":  {
+                              "P1":  "PASS",
+                              "P3":  "PASS"
+                          },
+    "p3_model_calls":  0,
+    "live_github_metrics":  "NOT_TESTED",
+    "tokens":  "NOT_TESTED",
+    "winner_declared":  false,
+    "note":  "measures semantic/idempotency/orchestration control, not live GitHub cost/reliability/latency"
+}
