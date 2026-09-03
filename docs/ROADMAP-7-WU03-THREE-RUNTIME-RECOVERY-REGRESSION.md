@@ -159,3 +159,7 @@ Then runs WU03 real recovery, WU01/WU02 focused regressions, Roadmap 6 three-run
 ## Execution blocker
 
 GitHub-hosted Actions still fails before job steps materialize. The local compatibility correction has not yet been followed by a complete functional gate run. Therefore the regression remains PREPARED and no PASS/FAIL is claimed until actual test commands execute.
+
+---
+
+Qualification trigger note (2026-08-26): this documentation-only change intentionally re-runs the existing Roadmap 7 recovery workflow for chassis qualification issue #197. It changes no product semantics or CI commands.
