@@ -3,6 +3,7 @@
 Status: CONTROLLED_ISOLATED_EXECUTION
 Governing research: #365
 Qualification branch: `research/issue-365-pr364-f2-qualification`
+Qualification head after evidence correction: `a2be902dcf45f0bdb9d10614e94986d3478eea8f`
 Internal donor pin: `1c9a9728ec4ba69a59c7ae722e06d13616b73fb0`
 
 ## Scope
