@@ -1,0 +1,16 @@
+﻿{
+    "issue_number":  367,
+    "issue_identity":  "tihotm/metaO#367",
+    "evidence_payload":  {
+                             "protocol":  "FROZEN_PROTOCOL_V1",
+                             "placement":  "F3",
+                             "fixture":  "bounded issue update",
+                             "authority":  "local-controlled-replay",
+                             "idempotency_key":  "issue-367-f3-bounded-update-v1"
+                         },
+    "comment_update":  {
+                           "body":  "F3 controlled update: issue-specific evidence recorded with exactly one intentional mutation.",
+                           "mutation_id":  "F3-MUTATION-001",
+                           "updated_state":  "audit-ready"
+                       }
+}

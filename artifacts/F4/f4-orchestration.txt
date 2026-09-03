@@ -1,0 +1,11 @@
+﻿{
+    "issue_number":  367,
+    "issue_identity":  "tihotm/metaO#367",
+    "fixture":  "issue -\u003e branch/worktree -\u003e commit -\u003e draft PR",
+    "base_sha":  "0f05957456f553a4bcea0506880ff4108d5a1118",
+    "branch_name":  "research/issue-367-controlled-local",
+    "worktree_path":  "C:\\Projetos\\metao-gate\\.worktrees\\issue-367-f3f4",
+    "draft_pr_mode":  true,
+    "no_merge":  true,
+    "no_authority_escalation":  true
+}

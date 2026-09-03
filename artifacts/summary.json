@@ -1,0 +1,9 @@
+﻿{
+    "protocol":  "FROZEN_PROTOCOL_V1",
+    "execution_mode":  "CONTROLLED_REPLAY_CONTROLLED_ORCHESTRATION",
+    "f3":  "PASS",
+    "f4":  "PASS",
+    "tokens":  "NOT_TESTED",
+    "live_github_metrics":  "NOT_TESTED",
+    "winner_declared":  false
+}

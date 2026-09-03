@@ -1,0 +1,21 @@
+﻿{
+    "RUN_ID":  "F4-001",
+    "PLACEMENT":  "F4",
+    "FIXTURE":  "issue -\u003e branch/worktree -\u003e commit -\u003e draft PR",
+    "TARGET":  "issue #367 / PR #366",
+    "BASE_SHA":  "0f05957456f553a4bcea0506880ff4108d5a1118",
+    "BRANCH":  "research/issue-367-controlled-local",
+    "COMMIT_MESSAGE":  "docs: controlled F4 orchestration bundle",
+    "DRAFT_PR":  366,
+    "EXACTLY_ONE_COMMIT":  true,
+    "NO_MERGE":  true,
+    "NO_AUTHORITY_ESCALATION":  true,
+    "CORRECTNESS_RESULT":  "PASS",
+    "LLM_INPUT_TOKENS":  "NOT_TESTED",
+    "LLM_OUTPUT_TOKENS":  "NOT_TESTED",
+    "UNDERLYING_GITHUB_CALLS":  "NOT_APPLICABLE",
+    "LIVE_GITHUB_METRICS":  "NOT_TESTED",
+    "BLOCKERS":  [
+                     "live GitHub execution intentionally excluded from this controlled fixture"
+                 ]
+}

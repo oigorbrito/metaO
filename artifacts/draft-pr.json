@@ -1,0 +1,11 @@
+{
+  "issue_number": 367,
+  "pr_number": 366,
+  "draft": true,
+  "base_sha": "0f05957456f553a4bcea0506880ff4108d5a1118",
+  "head_branch": "research/issue-367-controlled-local",
+  "head_commit": "a00e8e81f0b9329b8be3fa97e84b909c89118e2c",
+  "merge": false,
+  "authority_escalation": false,
+  "notes": "local-only controlled draft PR artifact; no live GitHub mutation performed"
+}
