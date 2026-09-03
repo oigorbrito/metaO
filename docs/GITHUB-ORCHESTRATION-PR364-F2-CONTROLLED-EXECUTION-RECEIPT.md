@@ -3,7 +3,7 @@
 Status: CONTROLLED_ISOLATED_EXECUTION_WITH_HOSTED_CI_BLOCKER_OBSERVED
 Governing research: #365
 Qualification branch: `research/issue-365-pr364-f2-qualification`
-Qualification head carrying the hosted-CI evidence before this receipt update: `8ea61e3a70862c0ebe6870e51b350d09cecd8f30`
+Latest qualification evidence head before this metadata-only receipt commit: `a8320d6a2920bef26af9be64314226582ebeea2f`
 Internal donor pin: `1c9a9728ec4ba69a59c7ae722e06d13616b73fb0`
 
 ## Scope
