@@ -1,3 +1,5 @@
+pub mod planning;
+
 use metao_contracts::{
     AcceptanceBudget, AcceptanceContext, AcceptanceDecision, AcceptanceResult, AggregationResult,
     ApprovalAuthorityPort, ApprovalAuthorityTicket, ApprovalRecord, ApprovalRequest,
