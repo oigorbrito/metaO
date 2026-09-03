@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `tihotm/metaO`
-Last reconciled commit: `ffc1aae`
+Last reconciled commit: `56251c97f3cb119a0891cc08dcf14df8a897f470`
 
 ## Canonical documents
 
@@ -16,6 +16,9 @@ Last reconciled commit: `ffc1aae`
 - `docs/OPERATIONS.md`
 - `docs/CLOSURE-PLAN.md`
 - `docs/TRACEABILITY.md`
+- `docs/EMPIRICAL-RESEARCH-AND-REPRODUCIBILITY.md`
+- `docs/CHASSIS-SCORECARD-SCHEMA-2026-08-26.md`
+- `docs/CANONICAL-DONOR-EVALUATION-MATRIX.md`
 
 ## Operational documents
 
@@ -72,6 +75,9 @@ Last reconciled commit: `ffc1aae`
 ## Governance rules
 
 - canonical documents own current authority;
+- `EMPIRICAL-RESEARCH-AND-REPRODUCIBILITY.md` owns cross-cutting empirical-method and reproducibility rules, but does not mint architecture, policy, evidence, or acceptance authority;
+- `CHASSIS-SCORECARD-SCHEMA-2026-08-26.md` owns the frozen chassis comparison contract; methodological guidance must not silently change its hard gates or weights;
+- `CANONICAL-DONOR-EVALUATION-MATRIX.md` owns current donor research dispositions; donor claims remain bounded by their recorded evidence grade;
 - operational documents own execution/run-state and blocker descriptions;
 - reference documents may be used as evidence but not as mutable authority for current status;
 - historical documents are immutable except for pointer updates and supersession notices;
