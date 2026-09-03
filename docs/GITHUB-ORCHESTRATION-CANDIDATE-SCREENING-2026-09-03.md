@@ -18,6 +18,7 @@ README_CLAIM != CODE_CONFIRMED
 CODE_SEARCH_MISS != EVIDENCE_OF_ABSENCE
 WORKFLOW_AUTOMATION != COMPARABLE_GITHUB_API_ADAPTER
 OPAQUE_EXTERNAL_ACTION != ONE_GITHUB_API_CALL
+SUBSCRIBED_WEBHOOK_EVENT != REGISTERED_RUNTIME_HANDLER
 ```
 
 ## Screening criteria
@@ -34,21 +35,32 @@ Observed repository evidence:
 
 - local setup requires a GitHub App;
 - repository permissions include Actions read-only, Checks read/write, Issues read/write, Pull requests read/write, and Commit statuses read/write;
-- subscribed webhook events include Issues, Pull request, Status, Workflow dispatch, Workflow job, and Workflow run;
-- repository contains agent/rule logic around PR and repository analysis.
+- documented subscribed webhook events include Issues, Pull request, Status, Workflow dispatch, Workflow job, and Workflow run;
+- `src/webhooks/router.py` receives `X-GitHub-Event`, validates the payload, converts the event name to the project's `EventType`, and dispatches it;
+- `src/core/models.py` defines `EventType.WORKFLOW_RUN`, but does not define `WORKFLOW_JOB` at the inspected pin;
+- `src/rules/conditions/workflow.py` consumes `workflow_run` fields directly from the incoming event payload to calculate duration; this is webhook-payload evaluation, not arbitrary Actions run/job REST acquisition;
+- `src/main.py` registers runtime handlers for PR, PR review/thread, push, check-run, issue-comment and deployment families, but does not register a `WORKFLOW_RUN` handler at the inspected pin;
+- `src/integrations/github/service.py` uses direct `httpx` requests to `https://api.github.com`, but the observed methods are repository metadata and contents/governance-file checks; no Actions run/job acquisition method is present in that inspected service.
 
 Interpretation:
 
-Watchflow is directly relevant as a GitHub App/webhook/policy-system donor. The inspected evidence establishes a broad event/permission surface, but this screening did not identify an exact reusable API method for arbitrary Actions workflow-run-by-id plus workflow-job-by-id acquisition matching frozen F2.
+Watchflow is directly relevant as a GitHub App/webhook/policy-system donor. The deeper source inspection narrows the earlier uncertainty: the repository has a real `workflow_run` semantic consumer, but that consumer evaluates webhook payload already supplied by GitHub. The runtime bootstrap inspected at the same immutable pin does not register a `workflow_run` handler, and the inspected REST service does not expose arbitrary Actions run/job acquisition.
 
-Code-search attempts for exact workflow-run/job client/acquisition terms returned no match. Because search-index absence is not authoritative, this is classified as `NOT_IDENTIFIED_IN_SCREENING`, not `ABSENT`.
+This is stronger than a code-search miss but still does not justify a repository-wide absence claim: another uninspected path could exist. The defensible F2 classification remains `NOT_IDENTIFIED_AT_INSPECTED_PIN/PATHS`, not `ABSENT`.
+
+For frozen F2, this distinction is material. F2 starts from exact repository/run/job identities and must acquire current GitHub Actions state while preserving workflow/job failure versus configured-step execution. A webhook-only payload path is not operationally equivalent to arbitrary run/job lookup.
 
 Disposition:
 
 ```text
-GITHUB_APP_INTEGRATION = DOCUMENTED_AND_REPOSITORY_CONFIRMED
-WORKFLOW_RUN_JOB_EVENTS = DOCUMENTED
-F2_EXACT_RUN_JOB_API_PATH = NOT_IDENTIFIED_IN_SCREENING
+GITHUB_APP_INTEGRATION = DOCUMENTED_AND_CODE_CONFIRMED
+WORKFLOW_RUN_EVENT_MODEL = CODE_CONFIRMED
+WORKFLOW_RUN_PAYLOAD_CONDITION = CODE_CONFIRMED
+WORKFLOW_RUN_RUNTIME_HANDLER_REGISTRATION = NOT_IDENTIFIED_AT_INSPECTED_BOOTSTRAP
+WORKFLOW_JOB_EVENT_MODEL = NOT_IDENTIFIED_AT_INSPECTED_PIN
+DIRECT_GITHUB_REST_SERVICE = CODE_CONFIRMED_FOR_REPO_METADATA_AND_CONTENTS
+F2_EXACT_RUN_JOB_API_PATH = NOT_IDENTIFIED_AT_INSPECTED_PIN/PATHS
+F2_OPERATIONAL_EQUIVALENCE = NOT_ESTABLISHED
 FORMAL_COST_CANDIDATE = NOT_ADMITTED
 POTENTIAL_ROLE = REFERENCE/ADAPT_FOR_GITHUB_APP_WEBHOOK_POLICY_BOUNDARY
 ```
@@ -106,11 +118,14 @@ FORMAL_COST_CANDIDATE = NOT_ADMITTED
 
 No newly screened subject is admitted to the frozen cost experiment in this document.
 
-Most useful new subject by repository evidence is Watchflow, but its likely value is currently architectural/semantic around GitHub App events, permissions and policy handling rather than an already-proven replacement for the exact F2 run/job acquisition path.
+The deeper Watchflow inspection changes the precision, not the decision. It confirms useful GitHub webhook/policy mechanics but does not establish the arbitrary Actions run/job lookup required by F2. Therefore there is no scientific basis to spend a formal comparative-cost arm on Watchflow F2 yet.
+
+Watchflow remains potentially useful as a donor for event ingestion, signature verification, dedup/routing and policy-trigger semantics. Those capabilities must remain below metaO authority boundaries if ever adapted.
 
 The next formal-candidate step, if warranted, is to freeze a protocol extension for one subject only after identifying a concrete implementation path and response boundary. Until then:
 
 ```text
 ADDITIONAL_FORMAL_CANDIDATES = 0
+WATCHFLOW_F2_EXTENSION = NOT_JUSTIFIED_BY_CURRENT_EVIDENCE
 PRODUCT_PLACEMENT_DECISION = NOT_AUTHORIZED
 ```
