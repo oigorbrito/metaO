@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from metao.github_adapter import GitHubAdapterError, GitHubRepositoryAdapter
+from metao.github_adapter import GitHubAdapterError, GitHubRepositoryAdapter, UrllibGitHubTransport
 
 
 REPOSITORY = "tihotm/metaO"
@@ -142,15 +142,15 @@ class GitHubAdapterF2QualificationTests(unittest.TestCase):
             self.adapter.list_workflow_jobs(REPOSITORY, RUN_ID, per_page=101)
         self.assertEqual(self.transport.calls, [])
 
-    def test_read_only_transport_contract_rejects_mutation_method(self) -> None:
-        class ReadOnlyTransport:
-            def request(self, method: str, path: str, body=None):
-                if method != "GET":
-                    raise GitHubAdapterError("qualification transport is read-only")
-                return {}
-
+    def test_real_urllib_transport_rejects_mutation_before_network(self) -> None:
+        transport = UrllibGitHubTransport("qualification-token")
         with self.assertRaises(GitHubAdapterError):
-            ReadOnlyTransport().request("POST", "repos/tihotm/metaO/issues", {"title": "x"})
+            transport.request("POST", "repos/tihotm/metaO/issues", {"title": "x"})
+
+    def test_real_urllib_transport_rejects_get_body_before_network(self) -> None:
+        transport = UrllibGitHubTransport("qualification-token")
+        with self.assertRaises(GitHubAdapterError):
+            transport.request("GET", f"repos/{REPOSITORY}", {"unexpected": True})
 
 
 if __name__ == "__main__":
