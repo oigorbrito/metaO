@@ -85,6 +85,27 @@ Each hard-gate and weighted-dimension cell must carry one evidence grade.
 
 A higher evidence grade increases confidence in the score. It does not automatically increase the score.
 
+Grades 4 and 5 additionally require a reproducibility record: exact subject pin, protocol/fixture version, command, material environment/dependency versions, raw output, exit status, and disclosed deviations. Grade 5 requires the same response-variable definitions and analysis rule across candidates. A measurement that cannot be traced to these records cannot be promoted to grade 4 or 5.
+
+## Empirical comparison protocol
+
+Before executing a candidate comparison, record and freeze:
+
+1. research question;
+2. candidate and baseline pins;
+3. independent variable(s);
+4. response variables, units, and scoring transformation;
+5. controlled variables and fixture version/digest;
+6. run procedure and repetition count;
+7. environment and material dependency versions;
+8. exclusion/abort rules;
+9. analysis rule;
+10. known threats or limitations.
+
+Changing these after observing outcomes creates a new protocol version. Results from different protocol versions may be reported together only when the difference is explicit; they must not be pooled as though generated under one design.
+
+For stochastic or materially variable measurements, preserve individual-run observations rather than only aggregates. Record seeds when controllable. Report the aggregation rule and dispersion/uncertainty measure appropriate to the response variable; do not select the best run as the representative result without a predeclared rule.
+
 ## Status Values
 
 | Status | Meaning |
@@ -150,6 +171,18 @@ Every candidate report must include this structure before final scoring.
 
 Scores are ordinal within the contracted comparison only. They are not claims of general language, framework or ecosystem superiority.
 
+## Evidence-to-claim rule
+
+Every decision-bearing score or gate verdict must support this chain:
+
+```text
+CLAIM -> SCORE/GATE RULE -> OBSERVATION -> RAW ARTIFACT -> EXECUTION RECORD -> SUBJECT PIN
+```
+
+The evidence pointer must identify the artifact, not merely an issue comment summarizing it. Missing evidence lowers the evidence grade; it must not be imputed from reputation, ecosystem familiarity, expected architecture, or a different candidate's behavior.
+
+Negative and inconclusive results are retained. Candidate-specific failures may justify a candidate-specific rerun only under a recorded protocol rule; rerunning until success and reporting only the successful execution is not admissible evidence.
+
 ## Sensitivity Rule
 
 If the top two viable candidates differ by less than five weighted points, the final report must include a sensitivity check that removes any dimension with evidence grade below 4 and recomputes the ranking.
@@ -159,6 +192,19 @@ If the winner changes under that check, #195 must classify the decision as:
 ```text
 DEFER_DECISION_AND_CLOSE_EVIDENCE_GAPS
 ```
+
+This sensitivity check addresses evidence weakness only; it is not a substitute for uncertainty analysis of measured response variables or for disclosure of threats to validity.
+
+## Reproducibility classification
+
+Use precise language in reports:
+
+- `RERUN_REPRODUCED`: same pinned artifacts/protocol were independently rerun and the decision-relevant result was obtained again;
+- `REPLICATION_CONSISTENT`: materially independent implementation/environment or protocol variation produced a result consistent with the claim;
+- `REPLICATION_DIVERGENT`: such a replication produced a materially inconsistent result;
+- `NOT_INDEPENDENTLY_CHECKED`: only the original execution is available.
+
+Do not claim independent reproduction when the same author/process merely repeats its own run.
 
 ## Freeze Result
 
@@ -171,4 +217,11 @@ PYTHON_L5_GAPS_PRESERVED = YES
 NO_LANGUAGE_POINTS = YES
 NO_POPULARITY_POINTS = YES
 NO_OUT_OF_SCOPE_FEATURE_POINTS = YES
+EMPIRICAL_PROTOCOL_REQUIRED_FOR_GRADE_4_5 = YES
+RAW_ARTIFACT_TRACEABILITY_REQUIRED = YES
+POST_HOC_PROTOCOL_MUTATION_FORBIDDEN = YES
 ```
+
+## Method basis
+
+The added methodological constraints are limited to established empirical-software-engineering and computational-reproducibility practices: explicit study design, variables and protocol; complete execution reporting; comparable treatment of alternatives; preservation of raw artifacts and deviations; chain of evidence; and independently exercisable artifacts. These rules strengthen how metaO evaluates its own architectural requirements; they do not convert project-specific weights or gates into scientific standards.
