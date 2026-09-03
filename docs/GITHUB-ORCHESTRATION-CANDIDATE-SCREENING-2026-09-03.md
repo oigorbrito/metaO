@@ -41,6 +41,7 @@ Observed repository evidence:
 - `src/rules/conditions/workflow.py` consumes `workflow_run` fields directly from the incoming event payload to calculate duration; this is webhook-payload evaluation, not arbitrary Actions run/job REST acquisition;
 - `src/main.py` registers runtime handlers for PR, PR review/thread, push, check-run, issue-comment and deployment families, but does not register a `WORKFLOW_RUN` handler at the inspected pin;
 - `src/webhooks/dispatcher.py` stores handler keys as provided but dispatches lookup using `event.event_type.value` (a string). `src/main.py` supplies `EventType` enum members as registration keys. Because `EventType` subclasses `str`, equality/hash behavior must be execution-tested before claiming this is a routing defect; source inspection alone is insufficient for a FAIL classification;
+- upstream integration tests exercise Router -> Dispatcher -> TaskQueue and deduplication with string handler keys such as `"pull_request"` and `"push"`; the inspected tests do not establish enum-key registration compatibility used by `src/main.py`;
 - `src/integrations/github/service.py` uses direct `httpx` requests to `https://api.github.com`, but the observed methods are repository metadata and contents/governance-file checks; no Actions run/job acquisition method is present in that inspected service.
 
 Interpretation:
@@ -60,7 +61,8 @@ WORKFLOW_RUN_PAYLOAD_CONDITION = CODE_CONFIRMED
 WORKFLOW_RUN_RUNTIME_HANDLER_REGISTRATION = NOT_IDENTIFIED_AT_INSPECTED_BOOTSTRAP
 WORKFLOW_JOB_EVENT_MODEL = NOT_IDENTIFIED_AT_INSPECTED_PIN
 DIRECT_GITHUB_REST_SERVICE = CODE_CONFIRMED_FOR_REPO_METADATA_AND_CONTENTS
-DISPATCHER_ENUM_STRING_KEY_COMPATIBILITY = NOT_TESTED
+DISPATCHER_STRING_KEY_PATH = TEST_PRESENT_UPSTREAM
+DISPATCHER_ENUM_KEY_COMPATIBILITY = NOT_TESTED
 F2_EXACT_RUN_JOB_API_PATH = NOT_IDENTIFIED_AT_INSPECTED_PIN/PATHS
 F2_OPERATIONAL_EQUIVALENCE = NOT_ESTABLISHED
 FORMAL_COST_CANDIDATE = NOT_ADMITTED
