@@ -1,14 +1,14 @@
 # PR #364 F2 Minimal Slice — Controlled Execution Receipt
 
-Status: CONTROLLED_ISOLATED_EXECUTION
+Status: CONTROLLED_ISOLATED_EXECUTION_WITH_HOSTED_CI_BLOCKER_OBSERVED
 Governing research: #365
 Qualification branch: `research/issue-365-pr364-f2-qualification`
-Qualification head after evidence correction: `a2be902dcf45f0bdb9d10614e94986d3478eea8f`
+Qualification head before hosted-CI evidence commit: `155c6e7f6e8b05f619977efeee74d2bab522e31b`
 Internal donor pin: `1c9a9728ec4ba69a59c7ae722e06d13616b73fb0`
 
 ## Scope
 
-This receipt records isolated Python execution of the ported minimal read-only F2 adapter and its frozen semantic fixture. It is not a full metaO worktree regression and is not a live authenticated execution through `UrllibGitHubTransport`.
+This receipt records isolated Python execution of the ported minimal read-only F2 adapter and its frozen semantic fixture, plus direct observation of the canonical hosted CI attempt created for the qualification PR. It is not a successful hosted regression receipt and is not a live authenticated execution through `UrllibGitHubTransport`.
 
 ## Ported production slice
 
@@ -80,11 +80,72 @@ FOCUSED_CONTROLLED_EXECUTION = PASS
 REAL_URLLIB_READ_ONLY_NEGATIVE_BOUNDARY = PASS_CONTROLLED
 ```
 
+## Hosted CI observation for PR #376
+
+The canonical pull-request CI was created for qualification head `155c6e7f6e8b05f619977efeee74d2bab522e31b`:
+
+```text
+workflow_run_id = 33815181047
+workflow = CI
+run_number = 699
+event = pull_request
+status = completed
+conclusion = failure
+head_sha = 155c6e7f6e8b05f619977efeee74d2bab522e31b
+pull_request = 376
+run_attempt = 1
+```
+
+The run contained one job:
+
+```text
+job_id = 100845630350
+job_name = test
+job_status = completed
+job_conclusion = failure
+steps = []
+runner_id = 0
+runner_name = ""
+runner_group_id = 0
+runner_group_name = ""
+```
+
+A dedicated step read also returned `steps = []`.
+
+A job-log read returned:
+
+```text
+HTTP = 404
+ERROR_CODE = BlobNotFound
+LOG_RECEIPT_AVAILABLE = NO
+```
+
+Therefore:
+
+```text
+HOSTED_CI_RUN_CREATED = YES
+HOSTED_RUNNER_ALLOCATED = NO
+HOSTED_CONFIGURED_STEPS_EXECUTED = NO
+HOSTED_REPOSITORY_TESTS = NOT_TESTED
+HOSTED_CI_FOR_QUALIFICATION_HEAD = BLOCKED_EXTERNAL_PRE_STEP
+HOSTED_PRODUCT_FUNCTIONAL_FAILURE = NOT_PROVEN
+```
+
+This is a new independent reproduction of the already-known hosted-runner pre-step blocker. It is not evidence that the qualification tests failed.
+
+The commit-status surface returned `statuses=[]`; that surface alone was insufficient to establish whether a workflow run existed. Direct workflow-run acquisition resolved the ambiguity. Hence:
+
+```text
+EMPTY_COMMIT_STATUS != NO_WORKFLOW_RUN
+```
+
 ## Evidence correction
 
 The earlier receipt wording could imply that `READ_ONLY_BOUNDARY = PASS_CONTROLLED` was supported by direct execution of the real transport. Before the correction, it was not: that case used a local test double.
 
 The corrected test now directly exercises `UrllibGitHubTransport`, so the current classification below is supported. The earlier over-strong implication is retained here as a documented evidence correction rather than silently overwritten.
+
+A later remote inspection also corrected an independent observability mistake: `statuses=[]` had initially been treated as no hosted CI observed. Direct commit-associated workflow lookup showed that CI run `33815181047` did exist and failed before runner allocation. The corrected classification is preserved above.
 
 ## Environment
 
@@ -98,7 +159,8 @@ F2_FAKE_TRANSPORT_SEMANTICS = PASS_CONTROLLED
 REAL_URLLIB_READ_ONLY_NEGATIVE_BOUNDARY = PASS_CONTROLLED
 WRONG_IDENTITY_NEGATIVE_CASES = PASS_CONTROLLED
 CURRENT_METAO_UNIT_REGRESSION = NOT_TESTED
-HOSTED_CI_FOR_QUALIFICATION_HEAD = NOT_EXECUTED
+HOSTED_CI_FOR_QUALIFICATION_HEAD = BLOCKED_EXTERNAL_PRE_STEP
+HOSTED_REPOSITORY_TESTS = NOT_TESTED
 LIVE_AUTHENTICATED_URLLIB_F2 = NOT_TESTED
 LIVE_REQUEST_COUNT = NOT_TESTED
 LIVE_LATENCY = NOT_TESTED
@@ -106,13 +168,13 @@ MODEL_CALLS_IN_CONTROLLED_FIXTURE = 0
 PRODUCT_PLACEMENT_DECISION = NOT_AUTHORIZED
 ```
 
-## Remote CI observation
+## Operational deviation
 
-At qualification head inspection, the commit-status surface returned no statuses. Absence of statuses is not PASS and is recorded as `HOSTED_CI_FOR_QUALIFICATION_HEAD = NOT_EXECUTED/NOT_OBSERVED`.
+The job-log read was issued twice while confirming the missing blob. Both attempts returned `404 BlobNotFound`; the duplicate read caused no repository mutation and adds no independent evidence. Only the first failure is needed for the substantive claim.
 
 ## Required next execution
 
-The next executor step is repository-integrated qualification:
+Because hosted CI is blocked before configured steps, repository-integrated qualification remains local:
 
 ```text
 python -m unittest tests.unit.test_github_adapter_f2_qualification -v
