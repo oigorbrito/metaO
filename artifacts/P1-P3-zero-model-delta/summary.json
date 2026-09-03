@@ -1,0 +1,14 @@
+﻿{
+    "benchmark":  "P1 vs P3 zero-model delta",
+    "repetitions_per_placement":  5,
+    "placement_results":  {
+                              "P1":  "PASS",
+                              "P3":  "PASS"
+                          },
+    "p1_model_calls":  0,
+    "p3_model_calls":  0,
+    "live_github_metrics":  "NOT_TESTED",
+    "tokens":  "NOT_TESTED",
+    "winner_declared":  false,
+    "interpretation":  "measures operational delta only; no semantic nondeterministic reasoning and no live GitHub cost"
+}
