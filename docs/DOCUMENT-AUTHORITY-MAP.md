@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `tihotm/metaO`
-Last reconciled commit: `56251c97f3cb119a0891cc08dcf14df8a897f470`
+Last reconciled commit: `7c8fef9a841dbc454cabc6a0b5b1bed49afbda02`
 
 ## Canonical documents
 
@@ -28,6 +28,7 @@ Last reconciled commit: `56251c97f3cb119a0891cc08dcf14df8a897f470`
 - `docs/GITHUB-LABEL-TAXONOMY.md`
 - `docs/GITHUB-ACTIONS-SUPPORT-PACKET.md`
 - `docs/RELEASE-EVIDENCE-VALIDATOR.md`
+- `docs/EMPIRICAL-EVIDENCE-AUDIT.md`
 
 ## Reference / historical documents
 
@@ -79,6 +80,7 @@ Last reconciled commit: `56251c97f3cb119a0891cc08dcf14df8a897f470`
 - `CHASSIS-SCORECARD-SCHEMA-2026-08-26.md` owns the frozen chassis comparison contract; methodological guidance must not silently change its hard gates or weights;
 - `CANONICAL-DONOR-EVALUATION-MATRIX.md` owns current donor research dispositions; donor claims remain bounded by their recorded evidence grade;
 - operational documents own execution/run-state and blocker descriptions;
+- `EMPIRICAL-EVIDENCE-AUDIT.md` records traceability/reproducibility gaps and must not silently rewrite historical evidence or architecture decisions;
 - reference documents may be used as evidence but not as mutable authority for current status;
 - historical documents are immutable except for pointer updates and supersession notices;
 - closure-plan status does not silently redefine requirements.
