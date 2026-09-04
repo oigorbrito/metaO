@@ -23,6 +23,11 @@ class OrchestratorStatus(str, Enum):
     QUARANTINED = "quarantined"
 
 
+class CapacityStatus(str, Enum):
+    AVAILABLE = "available"
+    TEMPORARILY_QUOTA_EXHAUSTED = "temporarily_quota_exhausted"
+
+
 @dataclass(frozen=True)
 class BudgetState:
     money_remaining: float
@@ -41,6 +46,7 @@ class BudgetState:
 class OrchestratorPoolState:
     orchestrator_id: str
     status: OrchestratorStatus
+    capacity_status: CapacityStatus = CapacityStatus.AVAILABLE
     capabilities: frozenset[str] = frozenset()
     success_rate: float = 0.5
     quality: float = 0.5
@@ -181,7 +187,12 @@ class CostQualityRouter:
     def rank(self, pools: Iterable[OrchestratorPoolState]) -> Tuple[RoutingCandidate, ...]:
         candidates = []
         for pool in pools:
-            if pool.status not in {OrchestratorStatus.HEALTHY, OrchestratorStatus.DEGRADED}:
+            if pool.capacity_status is CapacityStatus.TEMPORARILY_QUOTA_EXHAUSTED:
+                continue
+            if pool.status not in {
+                OrchestratorStatus.HEALTHY,
+                OrchestratorStatus.DEGRADED,
+            }:
                 continue
             score = self.scorer.score(
                 outcome=pool.success_rate,
@@ -209,6 +220,7 @@ __all__ = [
     "OrchestratorPoolState",
     "BudgetState",
     "OrchestratorStatus",
+    "CapacityStatus",
     "HistoricalScore",
     "ScoreBreakdown",
     "DeterministicScorer",
