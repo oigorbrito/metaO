@@ -77,12 +77,21 @@ class GitHubRepositoryAdapter:
     def __init__(self, transport: GitHubTransport) -> None:
         self._transport = transport
 
+    @staticmethod
+    def _validate_workflow_identity(repository: str, run_id: int) -> None:
+        if not repository:
+            raise ValueError("repository cannot be empty")
+        if run_id <= 0:
+            raise ValueError("run_id must be positive")
+
     def repository(self, repository: str) -> Any: return self._transport.request("GET", f"repos/{repository}")
     def issue(self, repository: str, number: int) -> Any: return self._transport.request("GET", f"repos/{repository}/issues/{number}")
     def pull_request(self, repository: str, number: int) -> Any: return self._transport.request("GET", f"repos/{repository}/pulls/{number}")
     def pull_request_reviews(self, repository: str, number: int) -> Any: return self._transport.request("GET", f"repos/{repository}/pulls/{number}/reviews")
     def pull_request_review_comments(self, repository: str, number: int) -> Any: return self._transport.request("GET", f"repos/{repository}/pulls/{number}/comments")
-    def workflow_run(self, repository: str, run_id: int) -> Any: return self._transport.request("GET", f"repos/{repository}/actions/runs/{run_id}")
+    def workflow_run(self, repository: str, run_id: int) -> Any:
+        self._validate_workflow_identity(repository, run_id)
+        return self._transport.request("GET", f"repos/{repository}/actions/runs/{run_id}")
     def list_workflow_runs(self, repository: str, *, workflow_id: str | int | None = None, branch: str | None = None, event: str | None = None, status: str | None = None, per_page: int = 30) -> Any:
         if not 1 <= per_page <= 100: raise ValueError("per_page must be between 1 and 100")
         query = [f"per_page={per_page}"]
@@ -91,6 +100,7 @@ class GitHubRepositoryAdapter:
         base = f"repos/{repository}/actions/workflows/{workflow_id}/runs" if workflow_id is not None else f"repos/{repository}/actions/runs"
         return self._transport.request("GET", base + "?" + "&".join(query))
     def list_workflow_jobs(self, repository: str, run_id: int, *, filter: str = "latest", per_page: int = 100) -> Any:
+        self._validate_workflow_identity(repository, run_id)
         if filter not in {"latest", "all"}: raise ValueError("unsupported jobs filter")
         if not 1 <= per_page <= 100: raise ValueError("per_page must be between 1 and 100")
         return self._transport.request("GET", f"repos/{repository}/actions/runs/{run_id}/jobs?filter={filter}&per_page={per_page}")
