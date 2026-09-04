@@ -22,6 +22,7 @@ from metao.core import (
 )
 from metao.governance import AcceptanceBudget, evaluate_policy
 from metao.strategy import OrchestratorPoolState, OrchestratorStatus
+from metao.supervision import apply_capacity_observation
 
 
 class _RateLimitedPrimary:
@@ -107,7 +108,7 @@ def _normalizer(**kwargs):
 
 
 class CapacitySupervisionRedTests(unittest.TestCase):
-    def test_evidenced_rate_limit_persists_across_mission_cycles_until_recovery(self):
+    def test_evidenced_rate_limit_updates_explicit_supervision_until_recovery(self):
         primary = _RateLimitedPrimary()
         fallback = _SuccessfulFallback()
         registry = OrchestratorRegistry()
@@ -132,6 +133,16 @@ class CapacitySupervisionRedTests(unittest.TestCase):
         )
         budget = AcceptanceBudget(10.0, 10_000, 600.0, 10)
 
+        supervised_pools = pools
+
+        def on_attempt_finished(attempt_context, execution, ended_at_epoch):
+            nonlocal supervised_pools
+            supervised_pools = apply_capacity_observation(
+                supervised_pools,
+                orchestrator_id=attempt_context.orchestrator_id,
+                observation=execution.capacity_observation,
+            )
+
         first = execute_mission(
             mission=mission,
             registry=registry,
@@ -143,14 +154,19 @@ class CapacitySupervisionRedTests(unittest.TestCase):
             execution_id_prefix="wave5-first",
             now_epoch=100.0,
             max_attempts=2,
+            on_attempt_finished=on_attempt_finished,
         )
         self.assertEqual(first.attempted_orchestrators[:2], ("primary", "fallback"))
         self.assertEqual(primary.calls, 1)
 
+        primary_state = next(pool for pool in supervised_pools if pool.orchestrator_id == "primary")
+        self.assertEqual(primary_state.capacity_status, CapacityStatus.TEMPORARILY_RATE_LIMITED)
+        self.assertEqual(primary_state.recovery.recover_at_epoch, 110.0)
+
         second = execute_mission(
             mission=mission,
             registry=registry,
-            pools=pools,
+            pools=supervised_pools,
             normalizers={"primary": _normalizer, "fallback": _normalizer},
             policy=policy,
             budget=budget,
@@ -160,12 +176,24 @@ class CapacitySupervisionRedTests(unittest.TestCase):
             max_attempts=1,
         )
 
-        self.assertEqual(
-            primary.calls,
-            1,
-            "valid capacity observation must suppress reselection in a later mission cycle before recover_at_epoch",
-        )
+        self.assertEqual(primary.calls, 1)
         self.assertEqual(second.orchestrator_id, "fallback")
+
+        third = execute_mission(
+            mission=mission,
+            registry=registry,
+            pools=supervised_pools,
+            normalizers={"primary": _normalizer, "fallback": _normalizer},
+            policy=policy,
+            budget=budget,
+            acceptance_context=context,
+            execution_id_prefix="wave5-third",
+            now_epoch=110.0,
+            max_attempts=1,
+        )
+
+        self.assertEqual(third.orchestrator_id, "primary")
+        self.assertEqual(primary.calls, 2)
 
 
 if __name__ == "__main__":
