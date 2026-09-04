@@ -12,7 +12,13 @@ from metao.core import (
     OrchestratorRegistry,
 )
 from metao.governance import AcceptanceBudget, evaluate_policy
-from metao.strategy import CapacityStatus, OrchestratorPoolState, OrchestratorStatus
+from metao.strategy import (
+    CapacityRecovery,
+    CapacityStatus,
+    OrchestratorPoolState,
+    OrchestratorStatus,
+    RecoveryEvidenceBasis,
+)
 
 
 class CountingRuntime:
@@ -70,6 +76,11 @@ class CapacityControlPlaneDispatchTests(unittest.TestCase):
         }
 
     def _pools(self):
+        recovery = CapacityRecovery(
+            recover_at_epoch=200.0,
+            evidence_basis=RecoveryEvidenceBasis.PROVIDER_API,
+            evidence_ref="provider://rate-limit/reset/primary",
+        )
         return (
             OrchestratorPoolState(
                 "primary",
@@ -80,7 +91,7 @@ class CapacityControlPlaneDispatchTests(unittest.TestCase):
                 latency_ms=10,
                 cost=0.0,
                 capacity_status=CapacityStatus.TEMPORARILY_RATE_LIMITED,
-                recover_at_epoch=200.0,
+                recovery=recovery,
             ),
             OrchestratorPoolState(
                 "fallback",
@@ -115,7 +126,7 @@ class CapacityControlPlaneDispatchTests(unittest.TestCase):
         self.assertEqual(len(self.fallback.calls), 1)
         self.assertEqual(self.fallback.calls[0].context["created_at_epoch"], 199.999)
 
-    def test_primary_reenters_and_is_dispatched_at_exact_recovery_boundary(self):
+    def test_primary_reenters_and_is_dispatched_at_exact_evidenced_recovery_boundary(self):
         outcome = self._execute(200.0)
 
         self.assertEqual(outcome.orchestrator_id, "primary")
