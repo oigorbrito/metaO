@@ -12,6 +12,12 @@ import json
 from typing import Any
 
 from metao.acceptance import EvidenceEnvelope
+from metao.capacity import (
+    CapacityObservation,
+    CapacityRecovery,
+    CapacityStatus,
+    RecoveryEvidenceBasis,
+)
 from metao.core import (
     ExecutionRequest,
     ExecutionResult,
@@ -39,6 +45,40 @@ def _runtime_input(request: ExecutionRequest) -> str:
         sort_keys=True,
         default=str,
         separators=(",", ":"),
+    )
+
+
+def _capacity_observation_from_exception(
+    exc: Exception,
+    *,
+    created_at_epoch: float,
+) -> CapacityObservation | None:
+    status_code = getattr(exc, "status_code", None)
+    if status_code == 503:
+        return CapacityObservation(
+            capacity_status=CapacityStatus.PROVIDER_UNAVAILABLE,
+            recovery=None,
+        )
+    if status_code != 429:
+        return None
+    headers = getattr(exc, "headers", None)
+    if not isinstance(headers, dict):
+        return None
+    retry_after_raw = headers.get("retry-after") or headers.get("Retry-After")
+    try:
+        retry_after_s = float(retry_after_raw)
+    except (TypeError, ValueError):
+        return None
+    if retry_after_s < 0:
+        return None
+    recovery = CapacityRecovery(
+        recover_at_epoch=created_at_epoch + retry_after_s,
+        evidence_basis=RecoveryEvidenceBasis.ADAPTER_VERIFIED,
+        evidence_ref=f"http:429:retry-after:{retry_after_raw}",
+    )
+    return CapacityObservation(
+        capacity_status=CapacityStatus.TEMPORARILY_RATE_LIMITED,
+        recovery=recovery,
     )
 
 
@@ -133,11 +173,16 @@ class OpenAIAgentsOrchestratorAdapter:
                 output=output,
             )
         except Exception as exc:
+            created_at_epoch = float(request.context.get("created_at_epoch", 0.0))
             return ExecutionResult(
                 request.execution_id,
                 self.descriptor.orchestrator_id,
                 ExecutionStatus.FAILED,
                 error=str(exc),
+                capacity_observation=_capacity_observation_from_exception(
+                    exc,
+                    created_at_epoch=created_at_epoch,
+                ),
             )
 
     def cancel(self, execution_id: str) -> None:

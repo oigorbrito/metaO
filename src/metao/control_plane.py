@@ -248,7 +248,7 @@ def execute_mission_once(
         return MissionOutcome(mission.mission_id, None, None, _blocked("budget_exhausted"), budget, state=state)
 
     eligible = _eligible_pools(mission, pools)
-    selected = select_orchestrator(eligible)
+    selected = select_orchestrator(eligible, now_epoch=now_epoch)
     selecting_history = base_history + (MissionStatus.SELECTING,)
     if selected is None:
         state = _state(
