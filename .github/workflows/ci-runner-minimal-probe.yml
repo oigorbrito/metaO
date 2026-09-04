@@ -1,0 +1,14 @@
+name: CI Runner Minimal Probe
+
+on:
+  push:
+    branches:
+      - research/ci-runner-minimal-probe
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe runner execution
+        run: echo METAO_CI_PROBE_OK
