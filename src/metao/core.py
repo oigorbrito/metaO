@@ -5,6 +5,8 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Any, Mapping, Protocol, runtime_checkable
 
+from .capacity import CapacityObservation
+
 
 class HealthStatus(StrEnum):
     HEALTHY = "HEALTHY"
@@ -104,6 +106,7 @@ class ExecutionResult:
     output: Mapping[str, Any] = field(default_factory=dict)
     evidence: tuple[EvidenceEnvelope, ...] = ()
     error: str = ""
+    capacity_observation: CapacityObservation | None = None
 
     def __post_init__(self) -> None:
         if not self.execution_id or not self.orchestrator_id:

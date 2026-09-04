@@ -10,10 +10,13 @@ No orchestrator SDK types are imported here.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from math import exp
-from typing import Dict, Iterable, Mapping, Optional, Sequence, Tuple
+from time import time
+from typing import Dict, Iterable, Optional, Tuple
+
+from .capacity import CapacityRecovery, CapacityStatus, RecoveryEvidenceBasis
 
 
 class OrchestratorStatus(str, Enum):
@@ -47,6 +50,30 @@ class OrchestratorPoolState:
     reliability: float = 0.5
     latency_ms: float = 1_000.0
     cost: float = 0.0
+    capacity_status: CapacityStatus = CapacityStatus.AVAILABLE
+    recover_at_epoch: float | None = None
+    recovery: CapacityRecovery | None = None
+
+    def capacity_available(self, *, now_epoch: float | None = None) -> bool:
+        """Return dispatch capacity without conflating it with runtime health.
+
+        Temporary rate limiting and temporary quota exhaustion may become
+        dispatchable only after a recovery deadline carrying explicit, valid
+        evidence. A raw timestamp is retained for compatibility/observation but
+        cannot manufacture evidenced recovery by itself. Other non-available
+        capacity states require an explicit refreshed capacity observation.
+        """
+        if self.capacity_status is CapacityStatus.AVAILABLE:
+            return True
+        if self.capacity_status not in {
+            CapacityStatus.TEMPORARILY_RATE_LIMITED,
+            CapacityStatus.TEMPORARILY_QUOTA_EXHAUSTED,
+        }:
+            return False
+        if self.recovery is None or not self.recovery.valid():
+            return False
+        observed_now = time() if now_epoch is None else now_epoch
+        return observed_now >= self.recovery.recover_at_epoch
 
 
 @dataclass(frozen=True)
@@ -178,10 +205,17 @@ class CostQualityRouter:
     def __init__(self, scorer: Optional[DeterministicScorer] = None) -> None:
         self.scorer = scorer or DeterministicScorer()
 
-    def rank(self, pools: Iterable[OrchestratorPoolState]) -> Tuple[RoutingCandidate, ...]:
+    def rank(
+        self,
+        pools: Iterable[OrchestratorPoolState],
+        *,
+        now_epoch: float | None = None,
+    ) -> Tuple[RoutingCandidate, ...]:
         candidates = []
         for pool in pools:
             if pool.status not in {OrchestratorStatus.HEALTHY, OrchestratorStatus.DEGRADED}:
+                continue
+            if not pool.capacity_available(now_epoch=now_epoch):
                 continue
             score = self.scorer.score(
                 outcome=pool.success_rate,
@@ -192,16 +226,23 @@ class CostQualityRouter:
             candidates.append(RoutingCandidate(pool.orchestrator_id, score))
         return tuple(sorted(candidates, key=lambda item: (-item.score, item.orchestrator_id)))
 
-    def select(self, pools: Iterable[OrchestratorPoolState]) -> Optional[str]:
-        ranked = self.rank(pools)
+    def select(
+        self,
+        pools: Iterable[OrchestratorPoolState],
+        *,
+        now_epoch: float | None = None,
+    ) -> Optional[str]:
+        ranked = self.rank(pools, now_epoch=now_epoch)
         return ranked[0].orchestrator_id if ranked else None
 
 
 def select_orchestrator(
     pools: Iterable[OrchestratorPoolState],
     scorer: Optional[DeterministicScorer] = None,
+    *,
+    now_epoch: float | None = None,
 ) -> Optional[str]:
-    return CostQualityRouter(scorer).select(pools)
+    return CostQualityRouter(scorer).select(pools, now_epoch=now_epoch)
 
 
 __all__ = [
@@ -209,6 +250,9 @@ __all__ = [
     "OrchestratorPoolState",
     "BudgetState",
     "OrchestratorStatus",
+    "CapacityStatus",
+    "RecoveryEvidenceBasis",
+    "CapacityRecovery",
     "HistoricalScore",
     "ScoreBreakdown",
     "DeterministicScorer",
