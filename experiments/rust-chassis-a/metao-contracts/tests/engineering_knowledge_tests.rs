@@ -63,8 +63,8 @@ fn stale_authorized_source_requires_refresh_for_material_decision() {
         9000,
     )];
 
-    let decision = evaluate_engineering_authority(&sources, &claims, DecisionRisk::Material, 200)
-        .unwrap();
+    let decision =
+        evaluate_engineering_authority(&sources, &claims, DecisionRisk::Material, 200).unwrap();
     assert_eq!(decision.action, EngineeringAuthorityAction::RequireRefresh);
     assert_eq!(decision.stale_source_ids, vec!["nist"]);
 }
@@ -108,14 +108,16 @@ fn stronger_empirical_evidence_can_override_project_documentation() {
         ),
     ];
 
-    let decision = evaluate_engineering_authority(&sources, &claims, DecisionRisk::High, 200)
-        .unwrap();
+    let decision =
+        evaluate_engineering_authority(&sources, &claims, DecisionRisk::High, 200).unwrap();
     assert_eq!(
         decision.action,
         EngineeringAuthorityAction::RequireConfirmation
     );
     assert_eq!(decision.required_confirmations, 2);
-    assert!(decision.conflicting_claim_ids.contains(&"test-conflict".to_string()));
+    assert!(decision
+        .conflicting_claim_ids
+        .contains(&"test-conflict".to_string()));
 }
 
 #[test]
@@ -137,8 +139,8 @@ fn hard_safety_or_policy_conflict_cannot_be_user_overridden() {
         9500,
     )];
 
-    let decision = evaluate_engineering_authority(&sources, &claims, DecisionRisk::High, 200)
-        .unwrap();
+    let decision =
+        evaluate_engineering_authority(&sources, &claims, DecisionRisk::High, 200).unwrap();
     assert_eq!(decision.action, EngineeringAuthorityAction::Block);
     assert_eq!(
         apply_user_override(
@@ -172,8 +174,8 @@ fn explicit_override_can_authorize_non_hard_deviation_and_preserves_conflict() {
         9900,
     )];
 
-    let decision = evaluate_engineering_authority(&sources, &claims, DecisionRisk::Irreversible, 200)
-        .unwrap();
+    let decision =
+        evaluate_engineering_authority(&sources, &claims, DecisionRisk::Irreversible, 200).unwrap();
     assert_eq!(decision.required_confirmations, 3);
 
     let overridden = apply_user_override(
@@ -231,10 +233,10 @@ fn vendor_or_country_identity_has_no_authority_effect() {
         9000,
     );
 
-    let cn_decision = evaluate_engineering_authority(&[cn], &[cn_claim], DecisionRisk::Low, 200)
-        .unwrap();
-    let us_decision = evaluate_engineering_authority(&[us], &[us_claim], DecisionRisk::Low, 200)
-        .unwrap();
+    let cn_decision =
+        evaluate_engineering_authority(&[cn], &[cn_claim], DecisionRisk::Low, 200).unwrap();
+    let us_decision =
+        evaluate_engineering_authority(&[us], &[us_claim], DecisionRisk::Low, 200).unwrap();
     assert_eq!(cn_decision.action, us_decision.action);
 }
 
