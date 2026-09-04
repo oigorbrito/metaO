@@ -76,11 +76,13 @@ Run on the exact convergence branch HEAD and retain raw outputs:
 
 ```text
 python -m unittest tests.unit.test_github_adapter tests.unit.test_github_adapter_v2 -v
-cargo fmt --check --manifest-path experiments/rust-chassis-a/Cargo.toml
+cargo fmt --all --check --manifest-path experiments/rust-chassis-a/Cargo.toml
 cargo clippy --manifest-path experiments/rust-chassis-a/Cargo.toml --workspace --all-targets --all-features -- -D warnings
 cargo test --manifest-path experiments/rust-chassis-a/Cargo.toml -p metao-contracts --test executor_capacity_tests --test engineering_knowledge_tests
 cargo test --manifest-path experiments/rust-chassis-a/Cargo.toml --workspace --all-targets --all-features
 ```
+
+The root `experiments/rust-chassis-a/Cargo.toml` is a virtual workspace manifest. The earlier `cargo fmt --check --manifest-path ...` form could fail with `Failed to find targets` because no root package is selected. `--all` is therefore part of the reproducible formatting gate and selects all workspace packages without weakening the scope.
 
 ## Remaining wiring before product promotion
 
