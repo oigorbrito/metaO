@@ -184,7 +184,10 @@ pub fn evaluate_engineering_authority(
     let mut authoritative_claims = 0usize;
 
     for claim in claims {
-        let Some(source) = sources.iter().find(|source| source.source_id == claim.source_id) else {
+        let Some(source) = sources
+            .iter()
+            .find(|source| source.source_id == claim.source_id)
+        else {
             continue;
         };
         if !source.authorized {
@@ -210,28 +213,39 @@ pub fn evaluate_engineering_authority(
             ClaimDisposition::ConflictsWithRequestedAction => {
                 conflicting.push(claim.claim_id.clone());
                 strongest_conflict = strongest_conflict.max(score);
-                hard_conflict |= matches!(claim.constraint_class, ConstraintClass::HardSafetyOrPolicy);
+                hard_conflict |=
+                    matches!(claim.constraint_class, ConstraintClass::HardSafetyOrPolicy);
             }
         }
     }
 
     let mut rationale = Vec::new();
     let action = if hard_conflict {
-        rationale.push("fresh authorized evidence establishes a hard safety/policy conflict".to_string());
+        rationale.push(
+            "fresh authorized evidence establishes a hard safety/policy conflict".to_string(),
+        );
         EngineeringAuthorityAction::Block
     } else if authoritative_claims == 0 {
         if !stale.is_empty() {
-            rationale.push("material decision depends on stale evidence and requires refresh".to_string());
+            rationale.push(
+                "material decision depends on stale evidence and requires refresh".to_string(),
+            );
             EngineeringAuthorityAction::RequireRefresh
         } else if matches!(risk, DecisionRisk::Low) {
-            rationale.push("no authoritative evidence is available; low-risk action may proceed with warning".to_string());
+            rationale.push(
+                "no authoritative evidence is available; low-risk action may proceed with warning"
+                    .to_string(),
+            );
             EngineeringAuthorityAction::Warn
         } else {
-            rationale.push("no authoritative evidence is available for a material decision".to_string());
+            rationale
+                .push("no authoritative evidence is available for a material decision".to_string());
             EngineeringAuthorityAction::Block
         }
     } else if strongest_conflict > strongest_support {
-        rationale.push("stronger current engineering evidence conflicts with the requested action".to_string());
+        rationale.push(
+            "stronger current engineering evidence conflicts with the requested action".to_string(),
+        );
         if matches!(risk, DecisionRisk::Low) {
             EngineeringAuthorityAction::Warn
         } else {
@@ -247,7 +261,8 @@ pub fn evaluate_engineering_authority(
         supporting_claim_ids: supporting,
         conflicting_claim_ids: conflicting,
         stale_source_ids: stale,
-        required_confirmations: if matches!(action, EngineeringAuthorityAction::RequireConfirmation) {
+        required_confirmations: if matches!(action, EngineeringAuthorityAction::RequireConfirmation)
+        {
             confirmation_depth(risk)
         } else {
             0
@@ -270,7 +285,10 @@ pub fn apply_user_override(
     if override_record.rationale.trim().is_empty() || !override_record.evidence_acknowledged {
         return Err(EngineeringKnowledgeError::InvalidOverride);
     }
-    if matches!(decision.action, EngineeringAuthorityAction::Block | EngineeringAuthorityAction::RequireRefresh) {
+    if matches!(
+        decision.action,
+        EngineeringAuthorityAction::Block | EngineeringAuthorityAction::RequireRefresh
+    ) {
         return Err(EngineeringKnowledgeError::InvalidOverride);
     }
     if decision.action != EngineeringAuthorityAction::RequireConfirmation {
