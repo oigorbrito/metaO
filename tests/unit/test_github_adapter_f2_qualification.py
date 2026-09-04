@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+import io
 import unittest
+from urllib.error import HTTPError
+from unittest.mock import patch
 
 from metao.github_adapter import GitHubAdapterError, GitHubRepositoryAdapter, UrllibGitHubTransport
 
@@ -151,6 +154,24 @@ class GitHubAdapterF2QualificationTests(unittest.TestCase):
         transport = UrllibGitHubTransport("qualification-token")
         with self.assertRaises(GitHubAdapterError):
             transport.request("GET", f"repos/{REPOSITORY}", {"unexpected": True})
+
+    def test_real_urllib_transport_converts_http_error_and_preserves_cause(self) -> None:
+        transport = UrllibGitHubTransport("qualification-token")
+        error = HTTPError(
+            url=f"https://api.github.com/repos/{REPOSITORY}/actions/runs/{RUN_ID}",
+            code=403,
+            msg="Forbidden",
+            hdrs=None,
+            fp=io.BytesIO(b'{"message":"denied"}'),
+        )
+
+        with patch("metao.github_adapter.urlopen", side_effect=error):
+            with self.assertRaises(GitHubAdapterError) as caught:
+                transport.request("GET", f"repos/{REPOSITORY}/actions/runs/{RUN_ID}")
+
+        self.assertIn("GitHub API 403", str(caught.exception))
+        self.assertIn('{"message":"denied"}', str(caught.exception))
+        self.assertIsInstance(caught.exception.__cause__, HTTPError)
 
 
 if __name__ == "__main__":
