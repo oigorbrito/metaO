@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import unittest
 
-from metao.acceptance import AcceptanceContext
+from metao.acceptance import AcceptanceContext, EvidenceEnvelope
 from metao.capacity import (
     CapacityObservation,
     CapacityRecovery,
@@ -84,26 +84,25 @@ class _SuccessfulFallback:
 
 
 def _normalizer(**kwargs):
-    # This RED is about selection/supervision, not acceptance proof construction.
-    # Returning no authoritative evidence keeps ORCHESTRATOR_DONE != METAO_ACCEPTED.
-    from metao.acceptance import EvidenceEnvelope
-
     request = kwargs["request"]
     return EvidenceEnvelope(
+        evidence_id=f"{request.execution_id}:result",
+        obligation_id=str(request.context["obligation_id"]),
         mission_id=request.mission.mission_id,
         execution_id=request.execution_id,
         orchestrator_id=kwargs["orchestrator_id"],
-        adapter_id="test",
         adapter_version=kwargs["adapter_version"],
         attempt_id=kwargs["attempt_id"],
-        subject_id=request.context["subject_id"],
-        subject_state_id=request.context["subject_state_id"],
-        verification_context_id=request.context["verification_context_id"],
-        policy_bundle_id=request.context["policy_bundle_id"],
-        obligation_ids=frozenset(),
-        evidence_payload_digest="not-authoritative",
-        provenance="test",
-        verifier_id=request.context["verifier_id"],
+        subject_id=str(request.context["subject_id"]),
+        subject_state_id=str(request.context["subject_state_id"]),
+        verification_context_id=str(request.context["verification_context_id"]),
+        policy_bundle_id=str(request.context["policy_bundle_id"]),
+        verifier_id=str(request.context["verifier_id"]),
+        payload_digest="fixture-digest",
+        provenance_root="fixture:wave5",
+        authority_id=str(request.context["authority_id"]),
+        passed=True,
+        created_at_epoch=float(request.context["created_at_epoch"]),
     )
 
 
