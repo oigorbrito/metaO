@@ -10,11 +10,13 @@ No orchestrator SDK types are imported here.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from math import exp
 from time import time
-from typing import Dict, Iterable, Mapping, Optional, Sequence, Tuple
+from typing import Dict, Iterable, Optional, Tuple
+
+from .capacity import CapacityRecovery, CapacityStatus, RecoveryEvidenceBasis
 
 
 class OrchestratorStatus(str, Enum):
@@ -22,37 +24,6 @@ class OrchestratorStatus(str, Enum):
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
     QUARANTINED = "quarantined"
-
-
-class CapacityStatus(str, Enum):
-    AVAILABLE = "available"
-    TEMPORARILY_RATE_LIMITED = "temporarily_rate_limited"
-    TEMPORARILY_QUOTA_EXHAUSTED = "temporarily_quota_exhausted"
-    PROVIDER_UNAVAILABLE = "provider_unavailable"
-
-
-class RecoveryEvidenceBasis(str, Enum):
-    PROVIDER_API = "provider_api"
-    PROVIDER_DOCUMENTATION = "provider_documentation"
-    ADAPTER_VERIFIED = "adapter_verified"
-    INDEPENDENT_OBSERVATION = "independent_observation"
-    CONFIGURED_POLICY = "configured_policy"
-    UNKNOWN = "unknown"
-
-
-@dataclass(frozen=True)
-class CapacityRecovery:
-    recover_at_epoch: float
-    evidence_basis: RecoveryEvidenceBasis
-    evidence_ref: str
-
-    def valid(self) -> bool:
-        return (
-            self.recover_at_epoch >= 0
-            and isinstance(self.evidence_basis, RecoveryEvidenceBasis)
-            and self.evidence_basis is not RecoveryEvidenceBasis.UNKNOWN
-            and bool(self.evidence_ref.strip())
-        )
 
 
 @dataclass(frozen=True)
