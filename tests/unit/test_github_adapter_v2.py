@@ -32,6 +32,16 @@ class GitHubRepositoryAdapterTests(unittest.TestCase):
         with self.assertRaises(ValueError): self.adapter.list_workflow_runs("tihotm/metaO", per_page=101)
         with self.assertRaises(ValueError): self.adapter.list_workflow_jobs("tihotm/metaO", 1, filter="bad")
         self.assertEqual(self.transport.calls, [])
+    def test_workflow_identity_validation_is_fail_closed_before_transport(self):
+        for operation in (
+            lambda: self.adapter.workflow_run("", 77),
+            lambda: self.adapter.workflow_run("tihotm/metaO", 0),
+            lambda: self.adapter.list_workflow_jobs("", 77),
+            lambda: self.adapter.list_workflow_jobs("tihotm/metaO", 0),
+        ):
+            with self.assertRaises(ValueError):
+                operation()
+        self.assertEqual(self.transport.calls, [])
     def test_mutation_fails_closed_without_authority(self):
         with self.assertRaises(MutationDenied): self.adapter.create_issue("tihotm/metaO", title="x")
         self.assertEqual(self.transport.calls, [])
