@@ -49,6 +49,7 @@ class CapacityRecovery:
     def valid(self) -> bool:
         return (
             self.recover_at_epoch >= 0
+            and isinstance(self.evidence_basis, RecoveryEvidenceBasis)
             and self.evidence_basis is not RecoveryEvidenceBasis.UNKNOWN
             and bool(self.evidence_ref.strip())
         )
