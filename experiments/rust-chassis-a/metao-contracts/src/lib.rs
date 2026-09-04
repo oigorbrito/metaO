@@ -717,3 +717,5 @@ pub trait VerifierPort: Send + Sync {
     fn descriptor(&self) -> VerifierDescriptor;
     fn verify(&self, request: &VerificationRequest) -> VerifierResult;
 }
+pub mod engineering_knowledge;
+pub mod executor_capacity;
