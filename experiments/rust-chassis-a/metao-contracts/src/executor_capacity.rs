@@ -88,7 +88,11 @@ impl ExecutorRecord {
         if self.executor_id.trim().is_empty() {
             return Err(ExecutorCapacityError::BlankExecutorId);
         }
-        if self.capabilities.iter().any(|capability| capability.trim().is_empty()) {
+        if self
+            .capabilities
+            .iter()
+            .any(|capability| capability.trim().is_empty())
+        {
             return Err(ExecutorCapacityError::BlankCapability);
         }
         if let Some(recovery) = &self.recovery {
@@ -206,7 +210,10 @@ fn hard_eligible(
     if executor.reliability_score_basis_points > 10_000 {
         return Ok(false);
     }
-    if !policy.required_capabilities.is_subset(&executor.capabilities) {
+    if !policy
+        .required_capabilities
+        .is_subset(&executor.capabilities)
+    {
         return Ok(false);
     }
     if executor.paid
@@ -231,8 +238,16 @@ pub fn select_executor<'a>(
     }
 
     candidates.sort_by(|left, right| {
-        let left_paid_penalty = if policy.prefer_free && left.paid { 1u8 } else { 0u8 };
-        let right_paid_penalty = if policy.prefer_free && right.paid { 1u8 } else { 0u8 };
+        let left_paid_penalty = if policy.prefer_free && left.paid {
+            1u8
+        } else {
+            0u8
+        };
+        let right_paid_penalty = if policy.prefer_free && right.paid {
+            1u8
+        } else {
+            0u8
+        };
         left_paid_penalty
             .cmp(&right_paid_penalty)
             .then_with(|| {
