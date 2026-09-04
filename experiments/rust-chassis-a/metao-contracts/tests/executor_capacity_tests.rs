@@ -90,15 +90,11 @@ fn quota_exhaustion_does_not_fail_task_when_free_alternative_exists() {
         0,
         8500,
     );
-<<<<<<< HEAD
-    let executors = [exhausted, available];
 
-    let selected = select_executor(&executors, &policy()).unwrap().unwrap();
-=======
     let candidates = [exhausted, available];
 
     let selected = select_executor(&candidates, &policy()).unwrap().unwrap();
->>>>>>> 0446c07 (test: fix executor capacity temporary borrow fixtures)
+
     assert_eq!(selected.executor_id, "free-b");
 }
 
@@ -215,15 +211,11 @@ fn provider_or_country_identity_does_not_change_selection_authority() {
         0,
         9000,
     );
-<<<<<<< HEAD
-    let executors = [b, a];
 
-    let selected = select_executor(&executors, &policy()).unwrap().unwrap();
-=======
     let candidates = [b, a];
 
     let selected = select_executor(&candidates, &policy()).unwrap().unwrap();
->>>>>>> 0446c07 (test: fix executor capacity temporary borrow fixtures)
+
     assert_eq!(selected.executor_id, "executor-a");
 }
 
