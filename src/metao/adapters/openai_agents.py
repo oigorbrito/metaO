@@ -53,7 +53,13 @@ def _capacity_observation_from_exception(
     *,
     created_at_epoch: float,
 ) -> CapacityObservation | None:
-    if getattr(exc, "status_code", None) != 429:
+    status_code = getattr(exc, "status_code", None)
+    if status_code == 503:
+        return CapacityObservation(
+            capacity_status=CapacityStatus.PROVIDER_UNAVAILABLE,
+            recovery=None,
+        )
+    if status_code != 429:
         return None
     headers = getattr(exc, "headers", None)
     if not isinstance(headers, dict):
