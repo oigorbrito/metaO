@@ -31,6 +31,29 @@ class CapacityStatus(str, Enum):
     PROVIDER_UNAVAILABLE = "provider_unavailable"
 
 
+class RecoveryEvidenceBasis(str, Enum):
+    PROVIDER_API = "provider_api"
+    PROVIDER_DOCUMENTATION = "provider_documentation"
+    ADAPTER_VERIFIED = "adapter_verified"
+    INDEPENDENT_OBSERVATION = "independent_observation"
+    CONFIGURED_POLICY = "configured_policy"
+    UNKNOWN = "unknown"
+
+
+@dataclass(frozen=True)
+class CapacityRecovery:
+    recover_at_epoch: float
+    evidence_basis: RecoveryEvidenceBasis
+    evidence_ref: str
+
+    def valid(self) -> bool:
+        return (
+            self.recover_at_epoch >= 0
+            and self.evidence_basis is not RecoveryEvidenceBasis.UNKNOWN
+            and bool(self.evidence_ref.strip())
+        )
+
+
 @dataclass(frozen=True)
 class BudgetState:
     money_remaining: float
@@ -57,22 +80,25 @@ class OrchestratorPoolState:
     cost: float = 0.0
     capacity_status: CapacityStatus = CapacityStatus.AVAILABLE
     recover_at_epoch: float | None = None
+    recovery: CapacityRecovery | None = None
 
     def capacity_available(self, *, now_epoch: float | None = None) -> bool:
         """Return dispatch capacity without conflating it with runtime health.
 
-        Temporary rate limiting is the only state in this wave that may become
-        dispatchable purely by passage of an evidenced recovery deadline. Other
-        non-available capacity states require an explicit refreshed observation.
+        Temporary rate limiting may become dispatchable only after a recovery
+        deadline that carries explicit, valid evidence binding. A raw timestamp
+        is retained for compatibility/observation but cannot manufacture
+        evidenced recovery by itself. Other non-available capacity states
+        require an explicit refreshed capacity observation in this wave.
         """
         if self.capacity_status is CapacityStatus.AVAILABLE:
             return True
         if self.capacity_status is not CapacityStatus.TEMPORARILY_RATE_LIMITED:
             return False
-        if self.recover_at_epoch is None:
+        if self.recovery is None or not self.recovery.valid():
             return False
         observed_now = time() if now_epoch is None else now_epoch
-        return observed_now >= self.recover_at_epoch
+        return observed_now >= self.recovery.recover_at_epoch
 
 
 @dataclass(frozen=True)
@@ -250,6 +276,8 @@ __all__ = [
     "BudgetState",
     "OrchestratorStatus",
     "CapacityStatus",
+    "RecoveryEvidenceBasis",
+    "CapacityRecovery",
     "HistoricalScore",
     "ScoreBreakdown",
     "DeterministicScorer",
