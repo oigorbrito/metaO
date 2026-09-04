@@ -86,15 +86,18 @@ class OrchestratorPoolState:
     def capacity_available(self, *, now_epoch: float | None = None) -> bool:
         """Return dispatch capacity without conflating it with runtime health.
 
-        Temporary rate limiting may become dispatchable only after a recovery
-        deadline that carries explicit, valid evidence binding. A raw timestamp
-        is retained for compatibility/observation but cannot manufacture
-        evidenced recovery by itself. Other non-available capacity states
-        require an explicit refreshed capacity observation in this wave.
+        Temporary rate limiting and temporary quota exhaustion may become
+        dispatchable only after a recovery deadline carrying explicit, valid
+        evidence. A raw timestamp is retained for compatibility/observation but
+        cannot manufacture evidenced recovery by itself. Other non-available
+        capacity states require an explicit refreshed capacity observation.
         """
         if self.capacity_status is CapacityStatus.AVAILABLE:
             return True
-        if self.capacity_status is not CapacityStatus.TEMPORARILY_RATE_LIMITED:
+        if self.capacity_status not in {
+            CapacityStatus.TEMPORARILY_RATE_LIMITED,
+            CapacityStatus.TEMPORARILY_QUOTA_EXHAUSTED,
+        }:
             return False
         if self.recovery is None or not self.recovery.valid():
             return False
