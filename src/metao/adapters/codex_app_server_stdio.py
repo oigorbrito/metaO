@@ -20,11 +20,16 @@ from .codex_app_server import CodexAppServerProtocolError, CodexAppServerRpcErro
 
 
 ServerRequestHandler = Callable[[str, Mapping[str, Any] | None], Any]
+RpcId = int | str
 
 
 class _ReaderClosed:
     def __init__(self, error: BaseException | None = None) -> None:
         self.error = error
+
+
+def _is_rpc_id(value: Any) -> bool:
+    return not isinstance(value, bool) and isinstance(value, (int, str))
 
 
 class CodexAppServerStdioTransport:
@@ -145,7 +150,7 @@ class CodexAppServerStdioTransport:
         request_id = message.get("id")
         method = message.get("method")
         params = message.get("params")
-        if not isinstance(request_id, int) or not isinstance(method, str):
+        if not _is_rpc_id(request_id) or not isinstance(method, str):
             raise CodexAppServerProtocolError("invalid server request envelope")
         params_mapping = params if isinstance(params, Mapping) else None
         handler = self._server_request_handler
@@ -188,10 +193,10 @@ class CodexAppServerStdioTransport:
 
                 has_method = isinstance(value.get("method"), str)
                 request_id = value.get("id")
-                if has_method and isinstance(request_id, int):
+                if has_method and _is_rpc_id(request_id):
                     self._handle_server_request(value)
                     continue
-                if isinstance(request_id, int):
+                if isinstance(request_id, int) and not isinstance(request_id, bool):
                     with self._condition:
                         self._responses[request_id] = value
                         self._condition.notify_all()
