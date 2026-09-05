@@ -8,6 +8,7 @@ running metaO execution can still be interrupted concurrently.
 
 from __future__ import annotations
 
+from collections import deque
 from collections.abc import Callable, Mapping, Sequence
 import json
 from queue import Queue
@@ -35,16 +36,21 @@ class CodexAppServerStdioTransport:
         *,
         server_request_handler: ServerRequestHandler | None = None,
         popen_factory: Callable[..., subprocess.Popen[str]] = subprocess.Popen,
+        stderr_tail_lines: int = 200,
     ) -> None:
         if not command:
             raise ValueError("Codex App Server command must be non-empty")
+        if stderr_tail_lines <= 0:
+            raise ValueError("stderr_tail_lines must be positive")
         self._server_request_handler = server_request_handler
         self._write_lock = Lock()
         self._condition = Condition(Lock())
+        self._stderr_lock = Lock()
         self._next_id = 1
         self._responses: dict[int, Mapping[str, Any]] = {}
         self._reader_error: BaseException | None = None
         self._notifications: Queue[Mapping[str, Any] | _ReaderClosed] = Queue()
+        self._stderr_tail: deque[str] = deque(maxlen=stderr_tail_lines)
         self._process = popen_factory(
             list(command),
             stdin=subprocess.PIPE,
@@ -58,6 +64,12 @@ class CodexAppServerStdioTransport:
             raise CodexAppServerProtocolError("Codex App Server stdio pipes were not created")
         self._reader = Thread(target=self._reader_loop, name="metao-codex-app-server", daemon=True)
         self._reader.start()
+        self._stderr_reader = Thread(
+            target=self._stderr_loop,
+            name="metao-codex-app-server-stderr",
+            daemon=True,
+        )
+        self._stderr_reader.start()
 
     def _send(self, message: Mapping[str, Any]) -> None:
         encoded = json.dumps(message, separators=(",", ":"), default=str)
@@ -124,6 +136,10 @@ class CodexAppServerStdioTransport:
                 f"Codex App Server reader failed: {item.error}"
             ) from item.error
         return item
+
+    def stderr_tail(self) -> tuple[str, ...]:
+        with self._stderr_lock:
+            return tuple(self._stderr_tail)
 
     def _handle_server_request(self, message: Mapping[str, Any]) -> None:
         request_id = message.get("id")
@@ -203,6 +219,19 @@ class CodexAppServerStdioTransport:
             )
             self._condition.notify_all()
         self._notifications.put(_ReaderClosed(error))
+
+    def _stderr_loop(self) -> None:
+        stderr = self._process.stderr
+        if stderr is None:
+            return
+        try:
+            for raw_line in stderr:
+                line = raw_line.rstrip("\r\n")
+                with self._stderr_lock:
+                    self._stderr_tail.append(line)
+        except Exception as exc:
+            with self._stderr_lock:
+                self._stderr_tail.append(f"<stderr reader failed: {exc}>")
 
     def close(self) -> None:
         process = self._process
