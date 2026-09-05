@@ -60,15 +60,18 @@ jobs:
           metao --help
           python -c "import metao; import metao.runtime_factory; import metao.runtime_certification; import metao.runtime_certification_revocation"
       - name: Real Codex App Server binary smoke
-        run: python scripts/codex_app_server_real_binary_smoke.py | tee "$RUNNER_TEMP/codex-app-server-smoke.json"
+        run: |
+          python scripts/codex_app_server_real_binary_smoke.py | tee "$RUNNER_TEMP/codex-app-server-smoke.json"
       - name: Validate Codex evidence boundary
         run: |
           python - <<'PY'
-          import json, os
+          import json
+          import os
           from pathlib import Path
+
           path = Path(os.environ['RUNNER_TEMP']) / 'codex-app-server-smoke.json'
           lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
-          assert lines
+          assert lines, 'smoke produced no evidence output'
           evidence = json.loads(lines[-1])
           assert evidence['initialize'] == 'PASS'
           assert evidence['thread_start'] == 'PASS'
@@ -80,15 +83,18 @@ jobs:
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
       - name: DeepSeek live authentication smoke
-        run: python scripts/deepseek_live_auth_smoke.py | tee "$RUNNER_TEMP/deepseek-live-auth-smoke.json"
+        run: |
+          python scripts/deepseek_live_auth_smoke.py | tee "$RUNNER_TEMP/deepseek-live-auth-smoke.json"
       - name: Validate DeepSeek live evidence boundary
         run: |
           python - <<'PY'
-          import json, os
+          import json
+          import os
           from pathlib import Path
+
           path = Path(os.environ['RUNNER_TEMP']) / 'deepseek-live-auth-smoke.json'
           lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
-          assert lines
+          assert lines, 'DeepSeek live auth smoke produced no evidence output'
           evidence = json.loads(lines[-1])
           assert evidence['base_url'] == 'https://api.deepseek.com'
           assert evidence['endpoint'] == '/chat/completions'
@@ -102,12 +108,15 @@ jobs:
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
       - name: Gemini live authentication smoke
-        run: python scripts/gemini_live_auth_smoke.py | tee "$RUNNER_TEMP/gemini-live-auth-smoke.json"
+        run: |
+          python scripts/gemini_live_auth_smoke.py | tee "$RUNNER_TEMP/gemini-live-auth-smoke.json"
       - name: Validate Gemini live evidence boundary
         run: |
           python - <<'PY'
-          import json, os
+          import json
+          import os
           from pathlib import Path
+
           path = Path(os.environ['RUNNER_TEMP']) / 'gemini-live-auth-smoke.json'
           lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
           assert lines, 'Gemini live auth smoke produced no evidence output'
