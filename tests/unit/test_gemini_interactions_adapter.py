@@ -158,6 +158,17 @@ class GeminiInteractionsAdapterTests(unittest.TestCase):
         self.assertIsNone(result.capacity_observation.recovery)
         transport.assert_complete()
 
+    def test_failed_precondition_is_preserved_as_unknown_account_or_prerequisite_state(self):
+        transport = _ScriptedTransport(
+            [("POST", "/interactions", _error("failed_precondition", status=400))]
+        )
+
+        result = _adapter(transport).execute(_request())
+
+        self.assertIs(result.capacity_observation.capacity_status, CapacityStatus.UNKNOWN)
+        self.assertIsNone(result.capacity_observation.recovery)
+        transport.assert_complete()
+
     def test_rate_limit_code_is_distinct_from_quota_and_does_not_invent_recovery(self):
         transport = _ScriptedTransport(
             [("POST", "/interactions", _error("rate_limit_exceeded"))]
@@ -172,7 +183,7 @@ class GeminiInteractionsAdapterTests(unittest.TestCase):
         self.assertIsNone(result.capacity_observation.recovery)
         transport.assert_complete()
 
-    def test_quota_exceeded_uses_documented_next_midnight_pacific_reset(self):
+    def test_quota_exceeded_is_distinct_from_rate_limit_without_invented_reset(self):
         transport = _ScriptedTransport(
             [("POST", "/interactions", _error("quota_exceeded"))]
         )
@@ -186,16 +197,7 @@ class GeminiInteractionsAdapterTests(unittest.TestCase):
             observation.capacity_status,
             CapacityStatus.TEMPORARILY_QUOTA_EXHAUSTED,
         )
-        self.assertIsNotNone(observation.recovery)
-        self.assertEqual(observation.recovery.recover_at_epoch, 1768550400.0)
-        self.assertIs(
-            observation.recovery.evidence_basis,
-            RecoveryEvidenceBasis.PROVIDER_DOCUMENTATION,
-        )
-        self.assertEqual(
-            observation.recovery.evidence_ref,
-            "gemini:quota_exceeded:rpd-reset-midnight-pacific",
-        )
+        self.assertIsNone(observation.recovery)
         transport.assert_complete()
 
     def test_quota_exceeded_without_observation_time_stays_fail_closed_without_recovery(self):
@@ -212,7 +214,7 @@ class GeminiInteractionsAdapterTests(unittest.TestCase):
         self.assertIsNone(result.capacity_observation.recovery)
         transport.assert_complete()
 
-    def test_quota_retry_after_overrides_documented_daily_reset_when_explicit(self):
+    def test_quota_retry_after_creates_only_explicitly_evidenced_recovery(self):
         transport = _ScriptedTransport(
             [
                 (
@@ -232,6 +234,26 @@ class GeminiInteractionsAdapterTests(unittest.TestCase):
             recovery.evidence_ref,
             "gemini:quota_exceeded:retry-after:30",
         )
+        transport.assert_complete()
+
+    def test_retry_after_without_observation_timestamp_does_not_fabricate_absolute_recovery(self):
+        transport = _ScriptedTransport(
+            [
+                (
+                    "POST",
+                    "/interactions",
+                    _error("rate_limit_exceeded", headers={"Retry-After": "10"}),
+                )
+            ]
+        )
+
+        result = _adapter(transport).execute(_request(created_at_epoch=None))
+
+        self.assertIs(
+            result.capacity_observation.capacity_status,
+            CapacityStatus.TEMPORARILY_RATE_LIMITED,
+        )
+        self.assertIsNone(result.capacity_observation.recovery)
         transport.assert_complete()
 
     def test_generic_http_429_without_machine_readable_code_is_unknown(self):
