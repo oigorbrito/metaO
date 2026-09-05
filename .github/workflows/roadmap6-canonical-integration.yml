@@ -101,34 +101,30 @@ jobs:
           assert evidence['provider_backed_execution'] == 'NOT_TESTED'
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
-      - name: Gemini live authentication diagnostic
+      - name: Gemini live authentication smoke
         run: python scripts/gemini_live_auth_smoke.py | tee "$RUNNER_TEMP/gemini-live-auth-smoke.json"
-      - name: Validate Gemini nested-details diagnostic boundary
+      - name: Validate Gemini live evidence boundary
         run: |
           python - <<'PY'
           import json, os
           from pathlib import Path
           path = Path(os.environ['RUNNER_TEMP']) / 'gemini-live-auth-smoke.json'
           lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
-          assert lines, 'Gemini diagnostic produced no evidence output'
+          assert lines, 'Gemini live auth smoke produced no evidence output'
           evidence = json.loads(lines[-1])
           assert evidence['base_url'] == 'https://generativelanguage.googleapis.com/v1beta'
           assert evidence['endpoint'] == '/interactions'
+          assert evidence['execution_status'] == 'FAILED'
           assert evidence['observed_http_status'] == 400
+          assert evidence['structured_provider_reason'] == 'API_KEY_INVALID'
+          assert evidence['structured_provider_domain'] == 'googleapis.com'
+          assert evidence['capacity_status'] == 'authentication_failure'
+          assert evidence['recovery'] is None
           assert evidence['credential_value_emitted'] is False
-          assert evidence['capacity_classification'] == 'NOT_YET_QUALIFIED'
           assert evidence['synthetic_invalid_credential'] is True
           assert evidence['paid_inference_authorized'] is False
           assert evidence['provider_backed_execution'] == 'NOT_TESTED'
-          assert evidence['body_kind'] == 'list'
-          assert evidence['body_list_length'] == 1
-          first = evidence['body_list_items'][0]
-          nested = first['nested_error']
-          assert nested['machine_fields']['code'] == 400
-          assert nested['machine_fields']['status'] == 'INVALID_ARGUMENT'
-          assert nested['details_kind'] == 'list'
-          assert isinstance(nested['details_length'], int)
-          assert isinstance(nested['details'], list)
+          assert evidence['antigravity_managed_agent_execution'] == 'NOT_TESTED'
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
       - name: Roadmap 2 WU05 deterministic feedback focused regression
