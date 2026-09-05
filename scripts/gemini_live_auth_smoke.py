@@ -18,6 +18,7 @@ from metao.adapters.gemini_interactions import (
 
 
 _INVALID_API_KEY = "metao-intentionally-invalid-live-auth-smoke"
+_MACHINE_FIELDS = ("code", "status", "reason", "domain", "@type", "errorCode", "type")
 
 
 def _safe_scalar(value: Any) -> str | int | float | bool | None:
@@ -26,7 +27,7 @@ def _safe_scalar(value: Any) -> str | int | float | bool | None:
     return None
 
 
-def _message_metadata(value: Any) -> dict[str, Any]:
+def _text_metadata(value: Any) -> dict[str, Any]:
     if not isinstance(value, str):
         return {"present": False, "length": None, "sha256": None}
     return {
@@ -36,9 +37,49 @@ def _message_metadata(value: Any) -> dict[str, Any]:
     }
 
 
+def _mapping_summary(value: Mapping[Any, Any]) -> dict[str, Any]:
+    summary: dict[str, Any] = {"keys": sorted(str(key) for key in value.keys())}
+    machine: dict[str, Any] = {}
+    for key in _MACHINE_FIELDS:
+        if key in value:
+            scalar = _safe_scalar(value.get(key))
+            if scalar is not None:
+                machine[key] = scalar
+    summary["machine_fields"] = machine
+    summary["message"] = _text_metadata(value.get("message"))
+
+    nested_error = value.get("error")
+    if isinstance(nested_error, Mapping):
+        nested: dict[str, Any] = {
+            "keys": sorted(str(key) for key in nested_error.keys()),
+            "machine_fields": {},
+            "message": _text_metadata(nested_error.get("message")),
+        }
+        for key in _MACHINE_FIELDS:
+            if key in nested_error:
+                scalar = _safe_scalar(nested_error.get(key))
+                if scalar is not None:
+                    nested["machine_fields"][key] = scalar
+        summary["nested_error"] = nested
+    return summary
+
+
+def _item_summary(value: Any) -> dict[str, Any]:
+    result: dict[str, Any] = {"kind": type(value).__name__}
+    if isinstance(value, Mapping):
+        result.update(_mapping_summary(value))
+    elif isinstance(value, str):
+        result["text"] = _text_metadata(value)
+    elif isinstance(value, (int, float, bool)) or value is None:
+        result["scalar"] = value
+    return result
+
+
 def _structured_error(body: Any) -> dict[str, Any]:
     evidence: dict[str, Any] = {
         "body_kind": type(body).__name__,
+        "body_list_length": None,
+        "body_list_items": [],
         "top_level_keys": [],
         "error_kind": None,
         "error_keys": [],
@@ -48,6 +89,12 @@ def _structured_error(body: Any) -> dict[str, Any]:
         "error_message": {"present": False, "length": None, "sha256": None},
         "provider_error_details": [],
     }
+
+    if isinstance(body, list):
+        evidence["body_list_length"] = len(body)
+        evidence["body_list_items"] = [_item_summary(item) for item in body[:3]]
+        return evidence
+
     if not isinstance(body, Mapping):
         if isinstance(body, str):
             evidence["body_text_length"] = len(body)
@@ -66,25 +113,11 @@ def _structured_error(body: Any) -> dict[str, Any]:
     evidence["error_code_value"] = _safe_scalar(code)
     status = error.get("status")
     evidence["error_status"] = status if isinstance(status, str) else None
-    evidence["error_message"] = _message_metadata(error.get("message"))
+    evidence["error_message"] = _text_metadata(error.get("message"))
 
     details = error.get("details")
     if isinstance(details, list):
-        sanitized: list[dict[str, Any]] = []
-        for item in details:
-            if not isinstance(item, Mapping):
-                continue
-            entry: dict[str, Any] = {"keys": sorted(str(key) for key in item.keys())}
-            for source_key, output_key in (
-                ("reason", "reason"),
-                ("domain", "domain"),
-                ("@type", "type"),
-            ):
-                value = item.get(source_key)
-                if isinstance(value, str) and value.strip():
-                    entry[output_key] = value
-            sanitized.append(entry)
-        evidence["provider_error_details"] = sanitized
+        evidence["provider_error_details"] = [_item_summary(item) for item in details[:3]]
     return evidence
 
 
