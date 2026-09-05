@@ -321,11 +321,29 @@ class CodexAppServerOrchestratorAdapter:
             raise CodexAppServerProtocolError("turn/completed notification missing turn")
         return turn
 
-    def _wait_for_turn(self, turn_id: str) -> Mapping[str, Any]:
+    def _wait_for_turn(
+        self,
+        turn_id: str,
+    ) -> tuple[Mapping[str, Any], tuple[Mapping[str, Any], ...], str | None]:
+        completed_items: list[Mapping[str, Any]] = []
+        latest_diff: str | None = None
+
         for _ in range(self._max_notifications):
             notification = self._read_notification_fn()
             if not isinstance(notification, Mapping):
                 raise CodexAppServerProtocolError("App Server emitted a non-object notification")
+
+            method = notification.get("method")
+            params = notification.get("params")
+            if method == "item/completed" and isinstance(params, Mapping):
+                if params.get("turnId") == turn_id and isinstance(params.get("item"), Mapping):
+                    completed_items.append(dict(params["item"]))
+                continue
+            if method == "turn/diff/updated" and isinstance(params, Mapping):
+                if params.get("turnId") == turn_id and isinstance(params.get("diff"), str):
+                    latest_diff = str(params["diff"])
+                continue
+
             turn = self._turn_from_notification(notification)
             if turn is None or turn.get("id") != turn_id:
                 continue
@@ -334,7 +352,8 @@ class CodexAppServerOrchestratorAdapter:
                 raise CodexAppServerProtocolError(
                     f"turn/completed emitted unsupported status: {status!r}"
                 )
-            return turn
+            return turn, tuple(completed_items), latest_diff
+
         raise CodexAppServerProtocolError(
             f"turn {turn_id} did not complete within notification bound"
         )
@@ -349,6 +368,8 @@ class CodexAppServerOrchestratorAdapter:
                 )
 
         thread_id = ""
+        completed_items: tuple[Mapping[str, Any], ...] = ()
+        latest_diff: str | None = None
         try:
             self._initialize()
             thread_result = self._request_fn("thread/start", self._thread_start_params())
@@ -382,7 +403,7 @@ class CodexAppServerOrchestratorAdapter:
             if turn.get("status") in {"completed", "interrupted", "failed"}:
                 final_turn = turn
             else:
-                final_turn = self._wait_for_turn(turn_id)
+                final_turn, completed_items, latest_diff = self._wait_for_turn(turn_id)
         except CodexAppServerRpcError as exc:
             return ExecutionResult(
                 request.execution_id,
@@ -403,11 +424,15 @@ class CodexAppServerOrchestratorAdapter:
                 self._active.pop(request.execution_id, None)
 
         status = str(final_turn.get("status"))
-        output = {
+        output: dict[str, Any] = {
             "result": _last_agent_message(final_turn),
             "thread_id": thread_id,
             "turn": dict(final_turn),
+            "completed_items": completed_items,
         }
+        if latest_diff is not None:
+            output["diff"] = latest_diff
+
         if status == "completed":
             return ExecutionResult(
                 request.execution_id,
