@@ -9,6 +9,7 @@ on:
       - 'scripts/deepseek_live_auth_smoke.py'
       - 'scripts/gemini_live_auth_smoke.py'
       - 'scripts/jules_live_auth_smoke.py'
+      - 'scripts/openai_agents_live_auth_smoke.py'
       - 'src/metao/**'
       - 'tests/unit/**'
       - 'tests/integration/**'
@@ -162,6 +163,36 @@ jobs:
           assert evidence['credential_value_emitted'] is False
           assert evidence['session_created'] is False
           assert evidence['repository_touched'] is False
+          assert evidence['paid_inference_authorized'] is False
+          assert evidence['provider_backed_execution'] == 'NOT_TESTED'
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
+      - name: OpenAI Agents live authentication smoke
+        run: |
+          python scripts/openai_agents_live_auth_smoke.py | tee "$RUNNER_TEMP/openai-agents-live-auth-smoke.json"
+      - name: Validate OpenAI Agents live evidence boundary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'openai-agents-live-auth-smoke.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'OpenAI Agents live auth smoke produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['adapter'] == 'openai-agents'
+          assert evidence['agents_sdk_version'] == '0.20.0'
+          assert evidence['api_surface'] == 'Responses API via OpenAI Agents SDK Runner.run_sync'
+          assert evidence['execution_status'] == 'FAILED'
+          assert evidence['observed_http_status'] == 401
+          assert evidence['capacity_status'] == 'authentication_failure'
+          assert evidence['recovery'] is None
+          assert evidence['synthetic_invalid_credential'] is True
+          assert evidence['credential_value_emitted'] is False
+          assert evidence['tracing_disabled'] is True
+          assert evidence['model_call_attempted'] is True
+          assert evidence['valid_credential_present'] is False
           assert evidence['paid_inference_authorized'] is False
           assert evidence['provider_backed_execution'] == 'NOT_TESTED'
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
