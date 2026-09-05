@@ -74,9 +74,11 @@ def _error_code(body: Any) -> str | None:
 def _retry_after_recovery(
     headers: Mapping[str, str],
     *,
-    created_at_epoch: float,
+    created_at_epoch: float | None,
     evidence_prefix: str,
 ) -> CapacityRecovery | None:
+    if created_at_epoch is None:
+        return None
     raw = None
     for key, value in headers.items():
         if key.lower() == "retry-after":
@@ -95,7 +97,11 @@ def _retry_after_recovery(
     )
 
 
-def _next_daily_quota_reset(created_at_epoch: float) -> CapacityRecovery:
+def _next_daily_quota_reset(
+    created_at_epoch: float | None,
+) -> CapacityRecovery | None:
+    if created_at_epoch is None:
+        return None
     observed = datetime.fromtimestamp(created_at_epoch, tz=_PACIFIC)
     next_day = observed.date() + timedelta(days=1)
     reset = datetime.combine(next_day, time.min, tzinfo=_PACIFIC)
@@ -109,7 +115,7 @@ def _next_daily_quota_reset(created_at_epoch: float) -> CapacityRecovery:
 def _capacity_observation_from_http_error(
     exc: GeminiHttpError,
     *,
-    created_at_epoch: float,
+    created_at_epoch: float | None,
 ) -> CapacityObservation | None:
     code = _error_code(exc.body)
 
@@ -425,7 +431,15 @@ class GeminiInteractionsOrchestratorAdapter:
                 error="Gemini interaction did not reach a terminal state within the polling bound",
             )
         except GeminiHttpError as exc:
-            created_at_epoch = float(request.context.get("created_at_epoch", 0.0))
+            created_at_raw = request.context.get("created_at_epoch")
+            try:
+                created_at_epoch = (
+                    float(created_at_raw) if created_at_raw is not None else None
+                )
+            except (TypeError, ValueError):
+                created_at_epoch = None
+            if created_at_epoch is not None and created_at_epoch < 0:
+                created_at_epoch = None
             return ExecutionResult(
                 request.execution_id,
                 self.descriptor.orchestrator_id,
@@ -445,11 +459,11 @@ class GeminiInteractionsOrchestratorAdapter:
             )
 
     def cancel(self, execution_id: str) -> None:
+        # Cancellation is recorded once at the metaO boundary. If a provider
+        # interaction already exists, the polling loop delegates the provider-side
+        # cancel exactly once using that interaction handle.
         with self._lock:
             self._cancelled.add(execution_id)
-            interaction_id = self._interactions.get(execution_id)
-        if interaction_id is not None:
-            self.cancel_interaction(interaction_id)
 
 
 __all__ = [
