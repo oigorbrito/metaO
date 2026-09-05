@@ -1,21 +1,56 @@
-"""Credential-free live Gemini authentication smoke for #359.
+"""Credential-free live Gemini authentication diagnostic for #359.
 
 This intentionally uses a synthetic invalid API key against the provider's real
-Interactions endpoint. The smoke proves live HTTP reachability and production
-adapter normalization of the documented 401 authentication failure. It does not
-claim provider-backed model execution or authorize paid inference.
+Interactions endpoint. The diagnostic captures only machine-readable error
+metadata needed to decide whether an observed HTTP 400 is specifically an API
+key authentication failure. It never prints the credential or authorizes paid
+inference.
 """
 
 from __future__ import annotations
 
 import json
+from typing import Any, Mapping
 
-from metao.adapters.gemini_interactions import GeminiInteractionsOrchestratorAdapter
-from metao.capacity import CapacityStatus
-from metao.core import ExecutionRequest, ExecutionStatus, Mission
+from metao.adapters.gemini_interactions import (
+    GeminiHttpError,
+    GeminiInteractionsOrchestratorAdapter,
+)
 
 
 _INVALID_API_KEY = "metao-intentionally-invalid-live-auth-smoke"
+
+
+def _structured_error(body: Any) -> tuple[str | None, tuple[dict[str, str], ...]]:
+    if not isinstance(body, Mapping):
+        return None, ()
+    error = body.get("error")
+    if not isinstance(error, Mapping):
+        return None, ()
+
+    status = error.get("status")
+    status_value = status if isinstance(status, str) and status.strip() else None
+    details = error.get("details")
+    if not isinstance(details, list):
+        return status_value, ()
+
+    sanitized: list[dict[str, str]] = []
+    for item in details:
+        if not isinstance(item, Mapping):
+            continue
+        reason = item.get("reason")
+        domain = item.get("domain")
+        entry: dict[str, str] = {}
+        if isinstance(reason, str) and reason.strip():
+            entry["reason"] = reason
+        if isinstance(domain, str) and domain.strip():
+            entry["domain"] = domain
+        type_name = item.get("@type")
+        if isinstance(type_name, str) and type_name.strip():
+            entry["type"] = type_name
+        if entry:
+            sanitized.append(entry)
+    return status_value, tuple(sanitized)
 
 
 def main() -> int:
@@ -27,45 +62,33 @@ def main() -> int:
         max_polls=1,
         poll_interval_s=0.0,
     )
-    request = ExecutionRequest(
-        "gemini-live-auth-smoke-exec",
-        Mission(
-            "gemini-live-auth-smoke-mission",
-            "credential validation only; no provider-backed execution is authorized",
-            frozenset({"agent"}),
-        ),
-        {
-            "created_at_epoch": 0.0,
-            "subject_id": "gemini-live-auth-smoke",
-            "subject_state_id": "invalid-credential",
-            "verification_context_id": "gemini-live-auth-smoke",
-            "policy_bundle_id": "no-paid-inference",
-        },
-    )
 
-    result = adapter.execute(request)
-    observation = result.capacity_observation
-
-    assert result.status is ExecutionStatus.FAILED, result
-    assert result.error is not None and result.error.startswith("Gemini HTTP 401"), result.error
-    assert observation is not None, result
-    assert observation.capacity_status is CapacityStatus.AUTHENTICATION_FAILURE, observation
-    assert observation.recovery is None, observation
-
-    evidence = {
-        "adapter": adapter.descriptor.orchestrator_id,
-        "base_url": "https://generativelanguage.googleapis.com/v1beta",
-        "endpoint": "/interactions",
-        "execution_status": result.status.value,
-        "observed_http_status": 401,
-        "capacity_status": observation.capacity_status.value,
-        "recovery": None,
-        "synthetic_invalid_credential": True,
-        "provider_backed_execution": "NOT_TESTED",
-        "paid_inference_authorized": False,
+    payload = {
+        "model": "gemini-3.8-flash",
+        "input": "credential validation only; no provider-backed execution is authorized",
     }
-    print(json.dumps(evidence, sort_keys=True, separators=(",", ":")))
-    return 0
+
+    try:
+        adapter._default_transport("POST", "/interactions", payload)
+    except GeminiHttpError as exc:
+        error_status, details = _structured_error(exc.body)
+        evidence = {
+            "adapter": adapter.descriptor.orchestrator_id,
+            "base_url": "https://generativelanguage.googleapis.com/v1beta",
+            "endpoint": "/interactions",
+            "observed_http_status": exc.status_code,
+            "provider_error_status": error_status,
+            "provider_error_details": list(details),
+            "synthetic_invalid_credential": True,
+            "credential_value_emitted": False,
+            "capacity_classification": "NOT_YET_QUALIFIED",
+            "provider_backed_execution": "NOT_TESTED",
+            "paid_inference_authorized": False,
+        }
+        print(json.dumps(evidence, sort_keys=True, separators=(",", ":")))
+        return 0
+
+    raise AssertionError("synthetic invalid Gemini API key unexpectedly succeeded")
 
 
 if __name__ == "__main__":
