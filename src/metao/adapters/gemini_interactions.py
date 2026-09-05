@@ -34,6 +34,8 @@ from metao.core import (
 
 
 _ACTIVE_STATUSES = frozenset({"queued", "in_progress"})
+_GOOGLE_ERROR_INFO_TYPE = "type.googleapis.com/google.rpc.ErrorInfo"
+_GOOGLE_API_DOMAIN = "googleapis.com"
 
 
 class GeminiHttpError(RuntimeError):
@@ -66,6 +68,46 @@ def _error_code(body: Any) -> str | None:
         return None
     code = error.get("code")
     return code if isinstance(code, str) and code.strip() else None
+
+
+def _is_google_api_key_invalid(body: Any) -> bool:
+    """Recognize only the structured invalid-key envelope observed from Google.
+
+    Google may reject an invalid API key at the API-key layer before the
+    Interactions API returns its documented authentication error. The observed
+    boundary is HTTP 400 with an INVALID_ARGUMENT error containing an exact
+    google.rpc.ErrorInfo reason. Free-form messages, generic 400 responses, and
+    similarly named reasons from other domains must not gain authentication
+    authority.
+    """
+
+    envelopes: tuple[Mapping[str, Any], ...]
+    if isinstance(body, Mapping):
+        envelopes = (body,)
+    elif isinstance(body, list):
+        envelopes = tuple(item for item in body if isinstance(item, Mapping))
+    else:
+        return False
+
+    for envelope in envelopes:
+        error = envelope.get("error")
+        if not isinstance(error, Mapping):
+            continue
+        if error.get("code") != 400 or error.get("status") != "INVALID_ARGUMENT":
+            continue
+        details = error.get("details")
+        if not isinstance(details, list):
+            continue
+        for detail in details:
+            if not isinstance(detail, Mapping):
+                continue
+            if (
+                detail.get("@type") == _GOOGLE_ERROR_INFO_TYPE
+                and detail.get("domain") == _GOOGLE_API_DOMAIN
+                and detail.get("reason") == "API_KEY_INVALID"
+            ):
+                return True
+    return False
 
 
 def _retry_after_recovery(
@@ -102,6 +144,8 @@ def _capacity_observation_from_http_error(
     code = _error_code(exc.body)
 
     if code == "authentication" or exc.status_code == 401:
+        return CapacityObservation(CapacityStatus.AUTHENTICATION_FAILURE)
+    if exc.status_code == 400 and _is_google_api_key_invalid(exc.body):
         return CapacityObservation(CapacityStatus.AUTHENTICATION_FAILURE)
     if code == "permission_denied" or exc.status_code == 403:
         return CapacityObservation(CapacityStatus.UNKNOWN)

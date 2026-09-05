@@ -7,6 +7,7 @@ on:
       - '.github/workflows/roadmap6-canonical-integration.yml'
       - 'scripts/codex_app_server_real_binary_smoke.py'
       - 'scripts/deepseek_live_auth_smoke.py'
+      - 'scripts/gemini_live_auth_smoke.py'
       - 'src/metao/**'
       - 'tests/unit/**'
       - 'tests/integration/**'
@@ -104,6 +105,35 @@ jobs:
           assert evidence['synthetic_invalid_credential'] is True
           assert evidence['paid_inference_authorized'] is False
           assert evidence['provider_backed_execution'] == 'NOT_TESTED'
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
+      - name: Gemini live authentication smoke
+        run: |
+          python scripts/gemini_live_auth_smoke.py | tee "$RUNNER_TEMP/gemini-live-auth-smoke.json"
+      - name: Validate Gemini live evidence boundary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'gemini-live-auth-smoke.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'Gemini live auth smoke produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['base_url'] == 'https://generativelanguage.googleapis.com/v1beta'
+          assert evidence['endpoint'] == '/interactions'
+          assert evidence['execution_status'] == 'FAILED'
+          assert evidence['observed_http_status'] == 400
+          assert evidence['structured_provider_reason'] == 'API_KEY_INVALID'
+          assert evidence['structured_provider_domain'] == 'googleapis.com'
+          assert evidence['capacity_status'] == 'authentication_failure'
+          assert evidence['recovery'] is None
+          assert evidence['credential_value_emitted'] is False
+          assert evidence['synthetic_invalid_credential'] is True
+          assert evidence['paid_inference_authorized'] is False
+          assert evidence['provider_backed_execution'] == 'NOT_TESTED'
+          assert evidence['antigravity_managed_agent_execution'] == 'NOT_TESTED'
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
       - name: Roadmap 2 WU05 deterministic feedback focused regression
