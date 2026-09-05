@@ -10,6 +10,7 @@ class CapacityStatus(str, Enum):
     TEMPORARILY_QUOTA_EXHAUSTED = "temporarily_quota_exhausted"
     PROVIDER_UNAVAILABLE = "provider_unavailable"
     AUTHENTICATION_FAILURE = "authentication_failure"
+    CREDIT_EXHAUSTED = "credit_exhausted"
     UNKNOWN = "unknown"
 
 
