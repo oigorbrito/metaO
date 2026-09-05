@@ -97,7 +97,7 @@ jobs:
           evidence = json.loads(lines[-1])
           assert evidence['base_url'] == 'https://api.deepseek.com'
           assert evidence['endpoint'] == '/chat/completions'
-          assert evidence['execution_status'] == 'failed'
+          assert evidence['execution_status'] == 'FAILED'
           assert evidence['observed_http_status'] == 401
           assert evidence['capacity_status'] == 'authentication_failure'
           assert evidence['recovery'] is None
