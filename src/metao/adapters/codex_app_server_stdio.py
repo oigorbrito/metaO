@@ -240,14 +240,22 @@ class CodexAppServerStdioTransport:
 
     def close(self) -> None:
         process = self._process
-        if process.poll() is not None:
-            return
-        process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
-            process.wait(timeout=5)
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=5)
+
+        # Process exit closes the child side of the pipes and lets both reader
+        # loops observe EOF. Join before closing the parent streams so normal
+        # shutdown does not manufacture reader errors.
+        self._reader.join(timeout=1)
+        self._stderr_reader.join(timeout=1)
+        for stream in (process.stdin, process.stdout, process.stderr):
+            if stream is not None and not stream.closed:
+                stream.close()
 
     def __enter__(self) -> "CodexAppServerStdioTransport":
         return self
