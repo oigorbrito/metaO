@@ -103,7 +103,7 @@ jobs:
           PY
       - name: Gemini live authentication diagnostic
         run: python scripts/gemini_live_auth_smoke.py | tee "$RUNNER_TEMP/gemini-live-auth-smoke.json"
-      - name: Validate Gemini list-envelope diagnostic boundary
+      - name: Validate Gemini nested-details diagnostic boundary
         run: |
           python - <<'PY'
           import json, os
@@ -121,10 +121,14 @@ jobs:
           assert evidence['paid_inference_authorized'] is False
           assert evidence['provider_backed_execution'] == 'NOT_TESTED'
           assert evidence['body_kind'] == 'list'
-          assert isinstance(evidence['body_list_length'], int)
-          assert evidence['body_list_length'] >= 1
-          assert isinstance(evidence['body_list_items'], list)
-          assert evidence['body_list_items'], evidence
+          assert evidence['body_list_length'] == 1
+          first = evidence['body_list_items'][0]
+          nested = first['nested_error']
+          assert nested['machine_fields']['code'] == 400
+          assert nested['machine_fields']['status'] == 'INVALID_ARGUMENT'
+          assert nested['details_kind'] == 'list'
+          assert isinstance(nested['details_length'], int)
+          assert isinstance(nested['details'], list)
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
       - name: Roadmap 2 WU05 deterministic feedback focused regression
