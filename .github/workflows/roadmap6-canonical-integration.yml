@@ -8,6 +8,7 @@ on:
       - 'scripts/codex_app_server_real_binary_smoke.py'
       - 'scripts/deepseek_live_auth_smoke.py'
       - 'scripts/gemini_live_auth_smoke.py'
+      - 'scripts/jules_live_auth_smoke.py'
       - 'src/metao/**'
       - 'tests/unit/**'
       - 'tests/integration/**'
@@ -134,6 +135,35 @@ jobs:
           assert evidence['paid_inference_authorized'] is False
           assert evidence['provider_backed_execution'] == 'NOT_TESTED'
           assert evidence['antigravity_managed_agent_execution'] == 'NOT_TESTED'
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
+      - name: Jules live authentication smoke
+        run: |
+          python scripts/jules_live_auth_smoke.py | tee "$RUNNER_TEMP/jules-live-auth-smoke.json"
+      - name: Validate Jules live evidence boundary
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'jules-live-auth-smoke.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'Jules live auth smoke produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['base_url'] == 'https://jules.googleapis.com/v1alpha'
+          assert evidence['endpoint'] == '/sessions'
+          assert evidence['http_method'] == 'GET'
+          assert evidence['page_size'] == 1
+          assert evidence['observed_http_status'] == 401
+          assert evidence['capacity_status'] == 'authentication_failure'
+          assert evidence['recovery'] is None
+          assert evidence['synthetic_invalid_credential'] is True
+          assert evidence['credential_value_emitted'] is False
+          assert evidence['session_created'] is False
+          assert evidence['repository_touched'] is False
+          assert evidence['paid_inference_authorized'] is False
+          assert evidence['provider_backed_execution'] == 'NOT_TESTED'
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
       - name: Roadmap 2 WU05 deterministic feedback focused regression
