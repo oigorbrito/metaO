@@ -5,7 +5,6 @@ on:
     paths:
       - '.github/workflows/codex-app-server-real-binary-smoke.yml'
       - 'scripts/codex_app_server_real_binary_smoke.py'
-      - 'tests/unit/test_codex_real_binary_smoke_gate.py'
       - 'src/metao/adapters/codex_app_server.py'
       - 'src/metao/adapters/codex_app_server_stdio.py'
   workflow_dispatch:
@@ -13,6 +12,7 @@ on:
 jobs:
   real-codex-binary-smoke:
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     env:
       OPENAI_API_KEY: ''
       CODEX_HOME: ${{ runner.temp }}/codex-home
