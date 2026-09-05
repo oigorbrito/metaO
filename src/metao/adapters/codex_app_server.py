@@ -35,7 +35,7 @@ class CodexAppServerProtocolError(RuntimeError):
 
 
 class CodexAppServerRpcError(RuntimeError):
-    """Structured JSON-RPC error surfaced by an injected transport."""
+    """Structured JSON-RPC error surfaced by a transport."""
 
     def __init__(self, code: int, message: str, data: Any = None) -> None:
         super().__init__(f"Codex App Server RPC {code}: {message}")
@@ -64,7 +64,7 @@ def _codex_error_kind(error: Any) -> str | None:
         kind = info.get("type") or info.get("kind")
         if isinstance(kind, str) and kind.strip():
             return kind
-        # Generated tagged-union encodings may use a single variant key.
+        # Serde's externally tagged representation for variants with fields.
         if len(info) == 1:
             key = next(iter(info))
             if isinstance(key, str):
@@ -74,33 +74,45 @@ def _codex_error_kind(error: Any) -> str | None:
 
 def _http_status_from_error(error: Any) -> int | None:
     info = _codex_error_info(error)
-    if isinstance(info, Mapping):
-        value = info.get("httpStatusCode")
-        if isinstance(value, int):
-            return value
-        if len(info) == 1:
-            payload = next(iter(info.values()))
-            if isinstance(payload, Mapping) and isinstance(payload.get("httpStatusCode"), int):
-                return int(payload["httpStatusCode"])
+    if not isinstance(info, Mapping):
+        return None
+    value = info.get("httpStatusCode")
+    if isinstance(value, int):
+        return value
+    if len(info) == 1:
+        payload = next(iter(info.values()))
+        if isinstance(payload, Mapping) and isinstance(payload.get("httpStatusCode"), int):
+            return int(payload["httpStatusCode"])
     return None
 
 
 def _capacity_observation_from_turn_error(error: Any) -> CapacityObservation | None:
+    """Normalize only structured App Server signals with defensible semantics."""
+
     kind = _codex_error_kind(error)
     status_code = _http_status_from_error(error)
 
     if kind == "unauthorized" or status_code == 401:
         return CapacityObservation(CapacityStatus.AUTHENTICATION_FAILURE)
-    if kind == "rateLimitExceeded":
+
+    if kind == "rateLimitExceeded" or status_code == 429:
+        # App Server exposes no recovery deadline in CodexErrorInfo. Do not
+        # fabricate one from message text.
         return CapacityObservation(CapacityStatus.TEMPORARILY_RATE_LIMITED)
+
     if kind == "usageLimitExceeded":
-        # The public App Server contract exposes a usage limit signal but does
-        # not establish that it is always a specific quota window with a known
-        # recovery boundary. Preserve the signal fail-closed without inventing
-        # recovery evidence.
-        return CapacityObservation(CapacityStatus.TEMPORARILY_QUOTA_EXHAUSTED)
+        # Codex collapses multiple upstream causes into this value, including
+        # quota exhaustion and usage-not-included/credit-like states. The public
+        # App Server signal alone cannot distinguish them.
+        return CapacityObservation(CapacityStatus.UNKNOWN)
+
+    if kind == "serverOverloaded":
+        # The upstream error is scoped to the selected model being at capacity;
+        # it does not prove provider-wide unavailability. Python does not yet
+        # expose a model/executor saturation capacity state, so fail closed.
+        return CapacityObservation(CapacityStatus.UNKNOWN)
+
     if kind in {
-        "serverOverloaded",
         "internalServerError",
         "httpConnectionFailed",
         "responseStreamConnectionFailed",
@@ -109,13 +121,8 @@ def _capacity_observation_from_turn_error(error: Any) -> CapacityObservation | N
     }:
         return CapacityObservation(CapacityStatus.PROVIDER_UNAVAILABLE)
 
-    # Structured 429 without a more specific kind proves transient pressure but
-    # not a reset time or quota class.
-    if status_code == 429:
-        return CapacityObservation(CapacityStatus.TEMPORARILY_RATE_LIMITED)
-
-    # Context-window, sandbox, cyber-policy, bad-request, misalignment and other
-    # task/policy failures are execution failures rather than global capacity.
+    # Context-window, metaO/provider budget, policy, sandbox and malformed-task
+    # failures are not provider capacity observations.
     if kind in {
         "contextWindowExceeded",
         "sessionBudgetExceeded",
@@ -133,14 +140,22 @@ def _capacity_observation_from_turn_error(error: Any) -> CapacityObservation | N
     return None
 
 
+def _capacity_observation_from_rpc_error(exc: CodexAppServerRpcError) -> CapacityObservation | None:
+    if exc.code == -32001:
+        # App Server documents this as bounded ingress saturation with retry.
+        # It is not a provider rate-limit signal, and Python has no executor-
+        # overload state yet. Preserve it as unknown capacity rather than
+        # misclassifying its scope.
+        return CapacityObservation(CapacityStatus.UNKNOWN)
+    return None
+
+
 def _last_agent_message(turn: Mapping[str, Any]) -> str:
     items = turn.get("items")
     if not isinstance(items, list):
         return ""
     for item in reversed(items):
-        if not isinstance(item, Mapping):
-            continue
-        if item.get("type") != "agentMessage":
+        if not isinstance(item, Mapping) or item.get("type") != "agentMessage":
             continue
         text = item.get("text")
         if isinstance(text, str):
@@ -306,15 +321,13 @@ class CodexAppServerOrchestratorAdapter:
             raise CodexAppServerProtocolError("turn/completed notification missing turn")
         return turn
 
-    def _wait_for_turn(self, thread_id: str, turn_id: str) -> Mapping[str, Any]:
+    def _wait_for_turn(self, turn_id: str) -> Mapping[str, Any]:
         for _ in range(self._max_notifications):
             notification = self._read_notification_fn()
             if not isinstance(notification, Mapping):
                 raise CodexAppServerProtocolError("App Server emitted a non-object notification")
             turn = self._turn_from_notification(notification)
-            if turn is None:
-                continue
-            if turn.get("id") != turn_id:
+            if turn is None or turn.get("id") != turn_id:
                 continue
             status = turn.get("status")
             if status not in {"completed", "interrupted", "failed"}:
@@ -335,6 +348,7 @@ class CodexAppServerOrchestratorAdapter:
                     ExecutionStatus.CANCELLED,
                 )
 
+        thread_id = ""
         try:
             self._initialize()
             thread_result = self._request_fn("thread/start", self._thread_start_params())
@@ -368,19 +382,14 @@ class CodexAppServerOrchestratorAdapter:
             if turn.get("status") in {"completed", "interrupted", "failed"}:
                 final_turn = turn
             else:
-                final_turn = self._wait_for_turn(thread_id, turn_id)
+                final_turn = self._wait_for_turn(turn_id)
         except CodexAppServerRpcError as exc:
-            observation = (
-                CapacityObservation(CapacityStatus.TEMPORARILY_RATE_LIMITED)
-                if exc.code == -32001
-                else None
-            )
             return ExecutionResult(
                 request.execution_id,
                 self.descriptor.orchestrator_id,
                 ExecutionStatus.FAILED,
                 error=str(exc),
-                capacity_observation=observation,
+                capacity_observation=_capacity_observation_from_rpc_error(exc),
             )
         except Exception as exc:
             return ExecutionResult(
@@ -415,7 +424,6 @@ class CodexAppServerOrchestratorAdapter:
             )
         if status == "failed":
             error = final_turn.get("error")
-            observation = _capacity_observation_from_turn_error(error)
             message = "Codex turn failed"
             if isinstance(error, Mapping) and isinstance(error.get("message"), str):
                 message = str(error["message"])
@@ -425,7 +433,7 @@ class CodexAppServerOrchestratorAdapter:
                 ExecutionStatus.FAILED,
                 output=output,
                 error=message,
-                capacity_observation=observation,
+                capacity_observation=_capacity_observation_from_turn_error(error),
             )
         return ExecutionResult(
             request.execution_id,
