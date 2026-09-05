@@ -9,6 +9,8 @@ class CapacityStatus(str, Enum):
     TEMPORARILY_RATE_LIMITED = "temporarily_rate_limited"
     TEMPORARILY_QUOTA_EXHAUSTED = "temporarily_quota_exhausted"
     PROVIDER_UNAVAILABLE = "provider_unavailable"
+    AUTHENTICATION_FAILURE = "authentication_failure"
+    UNKNOWN = "unknown"
 
 
 class RecoveryEvidenceBasis(str, Enum):
