@@ -1,10 +1,9 @@
-"""Temporary qualification gate for the first real Codex binary smoke.
+"""Temporary bootstrap gate for canonical Codex binary smoke ownership.
 
-The canonical CI already executes ``tests/unit`` from the pull-request merge
-ref. This test is intentionally active only on the dedicated qualification
-branch, allowing the new standalone workflow to be bootstrapped without
-claiming evidence from a workflow that is not yet present on the default branch.
-Once that workflow is merged, this temporary gate is removed in a cleanup wave.
+GitHub evaluates pull-request workflow definitions from the default branch, so
+this branch-scoped test qualifies the Roadmap 6 workflow change through the
+already-canonical CI merge-ref. After that workflow is in ``main``, this file is
+removed and the final cleanup is qualified by Roadmap 6 itself.
 """
 
 from __future__ import annotations
@@ -19,7 +18,7 @@ import tempfile
 import unittest
 
 
-_QUALIFICATION_BRANCH = "post-mvp/real-runtime-smoke-wave1-codex-binary-v1"
+_QUALIFICATION_BRANCH = "post-mvp/codex-smoke-canonicalization-bootstrap-v2"
 _CODEX_VERSION = "0.153.3"
 
 
