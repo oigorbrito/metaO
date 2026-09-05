@@ -8,7 +8,6 @@ keeping Google SDK types out of Core.
 
 from __future__ import annotations
 
-from datetime import datetime, time, timedelta
 from hashlib import sha256
 import json
 from threading import Lock
@@ -16,7 +15,6 @@ from time import sleep
 from typing import Any, Callable, Mapping
 import urllib.error
 import urllib.request
-from zoneinfo import ZoneInfo
 
 from metao.acceptance import EvidenceEnvelope
 from metao.capacity import (
@@ -35,7 +33,6 @@ from metao.core import (
 )
 
 
-_PACIFIC = ZoneInfo("America/Los_Angeles")
 _ACTIVE_STATUSES = frozenset({"queued", "in_progress"})
 
 
@@ -97,21 +94,6 @@ def _retry_after_recovery(
     )
 
 
-def _next_daily_quota_reset(
-    created_at_epoch: float | None,
-) -> CapacityRecovery | None:
-    if created_at_epoch is None:
-        return None
-    observed = datetime.fromtimestamp(created_at_epoch, tz=_PACIFIC)
-    next_day = observed.date() + timedelta(days=1)
-    reset = datetime.combine(next_day, time.min, tzinfo=_PACIFIC)
-    return CapacityRecovery(
-        recover_at_epoch=reset.timestamp(),
-        evidence_basis=RecoveryEvidenceBasis.PROVIDER_DOCUMENTATION,
-        evidence_ref="gemini:quota_exceeded:rpd-reset-midnight-pacific",
-    )
-
-
 def _capacity_observation_from_http_error(
     exc: GeminiHttpError,
     *,
@@ -123,15 +105,22 @@ def _capacity_observation_from_http_error(
         return CapacityObservation(CapacityStatus.AUTHENTICATION_FAILURE)
     if code == "permission_denied" or exc.status_code == 403:
         return CapacityObservation(CapacityStatus.UNKNOWN)
+    if code == "failed_precondition":
+        # The provider documents disabled billing as one possible cause, but the
+        # code is broader than account state. Preserve the signal without
+        # fabricating a more specific capacity classification.
+        return CapacityObservation(CapacityStatus.UNKNOWN)
     if code == "quota_exceeded":
-        recovery = _retry_after_recovery(
-            exc.headers,
-            created_at_epoch=created_at_epoch,
-            evidence_prefix="gemini:quota_exceeded",
-        ) or _next_daily_quota_reset(created_at_epoch)
+        # The provider documents this as daily quota exhaustion, but the error
+        # does not identify the quota dimension. Do not infer an exact reset
+        # boundary from RPD documentation alone.
         return CapacityObservation(
             CapacityStatus.TEMPORARILY_QUOTA_EXHAUSTED,
-            recovery,
+            _retry_after_recovery(
+                exc.headers,
+                created_at_epoch=created_at_epoch,
+                evidence_prefix="gemini:quota_exceeded",
+            ),
         )
     if code in {"rate_limit_exceeded", "too_many_requests"}:
         return CapacityObservation(
