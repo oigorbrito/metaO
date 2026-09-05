@@ -25,7 +25,6 @@ jobs:
     timeout-minutes: 20
     env:
       OPENAI_API_KEY: ''
-      CODEX_HOME: ${{ runner.temp }}/codex-home
       CREWAI_DISABLE_TELEMETRY: 'true'
       OTEL_SDK_DISABLED: 'true'
       CREWAI_TRACING_ENABLED: 'false'
@@ -42,7 +41,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install -e .
           python -m pip install 'openai-agents==0.20.0' 'langgraph==1.2.11' 'crewai==1.15.16'
-          mkdir -p "$CODEX_HOME"
+          echo "CODEX_HOME=$RUNNER_TEMP/codex-home" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/codex-home"
           npm install -g '@openai/codex@0.153.3'
       - name: Confirm pinned runtime versions
         run: |
