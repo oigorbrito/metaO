@@ -1,5 +1,6 @@
 name: Roadmap 6 Canonical Integration Candidate
 
+# Canonical owner of the credential-free real Codex App Server binary smoke.
 on:
   pull_request:
     paths:
