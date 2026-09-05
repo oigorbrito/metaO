@@ -53,24 +53,48 @@ def _capacity_observation_from_exception(
     *,
     created_at_epoch: float,
 ) -> CapacityObservation | None:
+    """Normalize only provider signals that carry explicit evidence.
+
+    Ordinary runtime/task exceptions without a provider status remain ordinary
+    execution failures and do not manufacture capacity state. Provider responses
+    with an HTTP status are normalized conservatively; unsupported provider states
+    become UNKNOWN so future dispatch fails closed until a refreshed observation.
+    """
+
     status_code = getattr(exc, "status_code", None)
+    if status_code is None:
+        return None
+    if status_code == 401:
+        return CapacityObservation(
+            capacity_status=CapacityStatus.AUTHENTICATION_FAILURE,
+            recovery=None,
+        )
     if status_code == 503:
         return CapacityObservation(
             capacity_status=CapacityStatus.PROVIDER_UNAVAILABLE,
             recovery=None,
         )
     if status_code != 429:
-        return None
+        return CapacityObservation(
+            capacity_status=CapacityStatus.UNKNOWN,
+            recovery=None,
+        )
+
     headers = getattr(exc, "headers", None)
-    if not isinstance(headers, dict):
-        return None
-    retry_after_raw = headers.get("retry-after") or headers.get("Retry-After")
+    retry_after_raw = None
+    if isinstance(headers, dict):
+        retry_after_raw = headers.get("retry-after") or headers.get("Retry-After")
     try:
         retry_after_s = float(retry_after_raw)
     except (TypeError, ValueError):
-        return None
-    if retry_after_s < 0:
-        return None
+        retry_after_s = None
+
+    if retry_after_s is None or retry_after_s < 0:
+        return CapacityObservation(
+            capacity_status=CapacityStatus.TEMPORARILY_RATE_LIMITED,
+            recovery=None,
+        )
+
     recovery = CapacityRecovery(
         recover_at_epoch=created_at_epoch + retry_after_s,
         evidence_basis=RecoveryEvidenceBasis.ADAPTER_VERIFIED,
