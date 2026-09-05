@@ -60,13 +60,11 @@ jobs:
           metao --help
           python -c "import metao; import metao.runtime_factory; import metao.runtime_certification; import metao.runtime_certification_revocation"
       - name: Real Codex App Server binary smoke
-        run: |
-          python scripts/codex_app_server_real_binary_smoke.py | tee "$RUNNER_TEMP/codex-app-server-smoke.json"
+        run: python scripts/codex_app_server_real_binary_smoke.py | tee "$RUNNER_TEMP/codex-app-server-smoke.json"
       - name: Validate Codex evidence boundary
         run: |
           python - <<'PY'
-          import json
-          import os
+          import json, os
           from pathlib import Path
           path = Path(os.environ['RUNNER_TEMP']) / 'codex-app-server-smoke.json'
           lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
@@ -86,8 +84,7 @@ jobs:
       - name: Validate DeepSeek live evidence boundary
         run: |
           python - <<'PY'
-          import json
-          import os
+          import json, os
           from pathlib import Path
           path = Path(os.environ['RUNNER_TEMP']) / 'deepseek-live-auth-smoke.json'
           lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
@@ -106,11 +103,10 @@ jobs:
           PY
       - name: Gemini live authentication diagnostic
         run: python scripts/gemini_live_auth_smoke.py | tee "$RUNNER_TEMP/gemini-live-auth-smoke.json"
-      - name: Validate Gemini diagnostic boundary
+      - name: Validate Gemini list-envelope diagnostic boundary
         run: |
           python - <<'PY'
-          import json
-          import os
+          import json, os
           from pathlib import Path
           path = Path(os.environ['RUNNER_TEMP']) / 'gemini-live-auth-smoke.json'
           lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
@@ -124,8 +120,11 @@ jobs:
           assert evidence['synthetic_invalid_credential'] is True
           assert evidence['paid_inference_authorized'] is False
           assert evidence['provider_backed_execution'] == 'NOT_TESTED'
-          assert isinstance(evidence['body_kind'], str)
-          assert isinstance(evidence['top_level_keys'], list)
+          assert evidence['body_kind'] == 'list'
+          assert isinstance(evidence['body_list_length'], int)
+          assert evidence['body_list_length'] >= 1
+          assert isinstance(evidence['body_list_items'], list)
+          assert evidence['body_list_items'], evidence
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
       - name: Roadmap 2 WU05 deterministic feedback focused regression
