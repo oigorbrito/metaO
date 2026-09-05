@@ -5,6 +5,7 @@ on:
     paths:
       - '.github/workflows/codex-app-server-real-binary-smoke.yml'
       - 'scripts/codex_app_server_real_binary_smoke.py'
+      - 'tests/unit/test_codex_real_binary_smoke_gate.py'
       - 'src/metao/adapters/codex_app_server.py'
       - 'src/metao/adapters/codex_app_server_stdio.py'
   workflow_dispatch:
