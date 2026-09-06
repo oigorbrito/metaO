@@ -19,6 +19,12 @@ pub enum ExecutionTerminationCause {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExecutionTerminationFact {
+    pub outcome: FactualExecutionOutcome,
+    pub cause: ExecutionTerminationCause,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FailureClass {
     None,
     Transient,
@@ -52,7 +58,6 @@ pub enum RetryEligibility {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FailureCausalityFacts {
     pub original_outcome: FactualExecutionOutcome,
-    pub termination_cause: ExecutionTerminationCause,
     pub failure_class: FailureClass,
     pub failure_class_basis: FailureClassificationBasis,
     pub failure_class_evidence_ref: Option<String>,
@@ -68,7 +73,6 @@ pub struct FailureCausalityFacts {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct RetryEligibilityProjection {
     pub original_outcome: FactualExecutionOutcome,
-    pub termination_cause: ExecutionTerminationCause,
     pub failure_class: FailureClass,
     pub failure_class_basis: FailureClassificationBasis,
     pub failure_class_evidence_ref: Option<String>,
@@ -104,7 +108,6 @@ fn recovery_allows_retry(facts: &FailureCausalityFacts) -> bool {
 pub fn evaluate_retry_eligibility(facts: &FailureCausalityFacts) -> RetryEligibilityProjection {
     let ineligible = |reason: &str| RetryEligibilityProjection {
         original_outcome: facts.original_outcome,
-        termination_cause: facts.termination_cause,
         failure_class: facts.failure_class,
         failure_class_basis: facts.failure_class_basis,
         failure_class_evidence_ref: facts.failure_class_evidence_ref.clone(),
@@ -148,7 +151,6 @@ pub fn evaluate_retry_eligibility(facts: &FailureCausalityFacts) -> RetryEligibi
 
     RetryEligibilityProjection {
         original_outcome: facts.original_outcome,
-        termination_cause: facts.termination_cause,
         failure_class: facts.failure_class,
         failure_class_basis: facts.failure_class_basis,
         failure_class_evidence_ref: facts.failure_class_evidence_ref.clone(),
