@@ -3,8 +3,9 @@ use metao_contracts::execution_stage_evidence::{
     ExecutionStageStatus,
 };
 use metao_contracts::failure_causality::{
-    evaluate_retry_eligibility, FailureCausalityFacts, FailureClass,
-    FailureClassificationBasis, FactualExecutionOutcome, RecoveryStatus, RetryEligibility,
+    evaluate_retry_eligibility, ExecutionTerminationCause, ExecutionTerminationFact,
+    FailureCausalityFacts, FailureClass, FailureClassificationBasis, FactualExecutionOutcome,
+    RecoveryStatus, RetryEligibility,
 };
 use metao_contracts::{
     EvidenceEnvelope, ExecutionId, MissionId, RuntimeId, VerificationAttemptId,
@@ -120,18 +121,40 @@ fn b6_attempt_budget_exhaustion_blocks_retry_without_rewriting_outcome() {
 }
 
 #[test]
-fn b7_baseline_collapses_criterion_satisfied_and_sampling_budget_exhausted_into_succeeded() {
-    // These two upstream terminal situations are intentionally modeled as distinct
-    // local scenarios, then projected onto the current canonical factual outcome.
-    // The equality below documents the representational collision without changing
-    // production contracts.
-    let criterion_satisfied = FactualExecutionOutcome::Succeeded;
-    let sampling_budget_exhausted_target_unsatisfied = FactualExecutionOutcome::Succeeded;
+fn b7_candidate_distinguishes_criterion_satisfied_from_sampling_budget_exhausted() {
+    let criterion_satisfied = ExecutionTerminationFact {
+        outcome: FactualExecutionOutcome::Succeeded,
+        cause: ExecutionTerminationCause::CriterionSatisfied,
+    };
+    let sampling_budget_exhausted_target_unsatisfied = ExecutionTerminationFact {
+        outcome: FactualExecutionOutcome::Succeeded,
+        cause: ExecutionTerminationCause::BudgetExhausted,
+    };
+
+    assert_eq!(criterion_satisfied.outcome, sampling_budget_exhausted_target_unsatisfied.outcome);
+    assert_ne!(criterion_satisfied.cause, sampling_budget_exhausted_target_unsatisfied.cause);
+}
+
+#[test]
+fn b8_termination_cause_remains_factual_and_does_not_mint_stage_pass() {
+    let termination = ExecutionTerminationFact {
+        outcome: FactualExecutionOutcome::Succeeded,
+        cause: ExecutionTerminationCause::CriterionSatisfied,
+    };
+    let invalid_stage = ExecutionStageEvidence {
+        stage_id: "qualification".to_string(),
+        sequence: 1,
+        requested: true,
+        executed: true,
+        status: ExecutionStageStatus::Pass,
+        reason: format!("runner terminated with {:?}", termination.cause),
+        evidence_basis: ExecutionStageEvidenceBasis::SelfReported,
+        evidence_ref: None,
+    };
 
     assert_eq!(
-        criterion_satisfied,
-        sampling_budget_exhausted_target_unsatisfied,
-        "baseline has no factual terminal-cause dimension that distinguishes these scenarios"
+        invalid_stage.validate(),
+        Err(ExecutionStageEvidenceError::InvalidEvidenceBasis)
     );
 }
 
