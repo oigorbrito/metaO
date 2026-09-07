@@ -163,20 +163,17 @@ pub fn derive_runtime_health(
                 | Some(RuntimeHealthState::Recovering)
         ) {
             if observation.failures == 0
-                && observation.fresh_successes_since_unhealthy
-                    >= policy.recovery_successes_required
+                && observation.fresh_successes_since_unhealthy >= policy.recovery_successes_required
             {
                 reasons.push(format!(
                     "fresh successes {} satisfied recovery threshold {}",
-                    observation.fresh_successes_since_unhealthy,
-                    policy.recovery_successes_required
+                    observation.fresh_successes_since_unhealthy, policy.recovery_successes_required
                 ));
                 RuntimeHealthState::Healthy
             } else {
                 reasons.push(format!(
                     "runtime is recovering; fresh successes {}/{}",
-                    observation.fresh_successes_since_unhealthy,
-                    policy.recovery_successes_required
+                    observation.fresh_successes_since_unhealthy, policy.recovery_successes_required
                 ));
                 RuntimeHealthState::Recovering
             }
