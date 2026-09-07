@@ -50,7 +50,9 @@ fn report(runtime_id: &str) -> RuntimeCertificationReport {
 #[test]
 fn all_required_categories_must_pass_for_certification() {
     let value = report("runtime-a");
-    let projection = value.project(&binding("runtime-a"), 150).expect("projection");
+    let projection = value
+        .project(&binding("runtime-a"), 150)
+        .expect("projection");
     assert_eq!(projection.decision, RuntimeCertificationDecision::Certified);
 }
 
@@ -58,7 +60,10 @@ fn all_required_categories_must_pass_for_certification() {
 fn runtime_cannot_certify_itself() {
     let mut value = report("runtime-a");
     value.evaluator_id = "runtime-a".to_string();
-    assert_eq!(value.validate(), Err(RuntimeCertificationError::SelfCertification));
+    assert_eq!(
+        value.validate(),
+        Err(RuntimeCertificationError::SelfCertification)
+    );
 }
 
 #[test]
@@ -82,7 +87,10 @@ fn trusted_harness_can_supply_certification_evidence() {
     let mut value = report("runtime-a");
     value.evaluator_evidence_basis = RuntimeCertificationEvidenceBasis::TrustedHarness;
     assert_eq!(
-        value.project(&binding("runtime-a"), 150).expect("projection").decision,
+        value
+            .project(&binding("runtime-a"), 150)
+            .expect("projection")
+            .decision,
         RuntimeCertificationDecision::Certified
     );
 }
@@ -101,13 +109,18 @@ fn evaluator_level_evidence_reference_is_required() {
 fn certification_requires_explicit_expiry() {
     let mut value = report("runtime-a");
     value.expires_at_epoch = None;
-    assert_eq!(value.validate(), Err(RuntimeCertificationError::MissingExpiry));
+    assert_eq!(
+        value.validate(),
+        Err(RuntimeCertificationError::MissingExpiry)
+    );
 }
 
 #[test]
 fn report_is_not_applicable_before_it_was_evaluated() {
     let value = report("runtime-a");
-    let projection = value.project(&binding("runtime-a"), 99).expect("projection");
+    let projection = value
+        .project(&binding("runtime-a"), 99)
+        .expect("projection");
     assert_eq!(projection.decision, RuntimeCertificationDecision::Stale);
 }
 
@@ -117,8 +130,13 @@ fn security_failure_is_not_rescued_by_benign_utility_success() {
     value.category_results[1].status = CertificationCategoryStatus::Fail;
     value.category_results[1].benign_utility_passed = Some(true);
     value.category_results[1].forbidden_action_observed = Some(true);
-    let projection = value.project(&binding("runtime-a"), 150).expect("projection");
-    assert_eq!(projection.decision, RuntimeCertificationDecision::NotCertified);
+    let projection = value
+        .project(&binding("runtime-a"), 150)
+        .expect("projection");
+    assert_eq!(
+        projection.decision,
+        RuntimeCertificationDecision::NotCertified
+    );
 }
 
 #[test]
@@ -143,8 +161,13 @@ fn skipped_not_requested_unknown_or_evaluator_error_is_incomplete() {
     ] {
         let mut value = report("runtime-a");
         value.category_results[0].status = status;
-        let projection = value.project(&binding("runtime-a"), 150).expect("projection");
-        assert_eq!(projection.decision, RuntimeCertificationDecision::Incomplete);
+        let projection = value
+            .project(&binding("runtime-a"), 150)
+            .expect("projection");
+        assert_eq!(
+            projection.decision,
+            RuntimeCertificationDecision::Incomplete
+        );
     }
 }
 
@@ -153,7 +176,10 @@ fn omitted_required_category_is_incomplete() {
     let mut value = report("runtime-a");
     value.category_results.remove(0);
     assert_eq!(
-        value.project(&binding("runtime-a"), 150).expect("projection").decision,
+        value
+            .project(&binding("runtime-a"), 150)
+            .expect("projection")
+            .decision,
         RuntimeCertificationDecision::Incomplete
     );
 }
@@ -163,7 +189,10 @@ fn empty_required_profile_cannot_mint_certification() {
     let mut value = report("runtime-a");
     value.required_categories.clear();
     assert_eq!(
-        value.project(&binding("runtime-a"), 150).expect("projection").decision,
+        value
+            .project(&binding("runtime-a"), 150)
+            .expect("projection")
+            .decision,
         RuntimeCertificationDecision::Incomplete
     );
 }
@@ -183,7 +212,10 @@ fn config_or_version_mutation_makes_prior_report_stale() {
 fn expired_report_is_stale() {
     let value = report("runtime-a");
     assert_eq!(
-        value.project(&binding("runtime-a"), 200).expect("projection").decision,
+        value
+            .project(&binding("runtime-a"), 200)
+            .expect("projection")
+            .decision,
         RuntimeCertificationDecision::Stale
     );
 }
