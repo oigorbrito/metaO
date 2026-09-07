@@ -19,6 +19,7 @@ from typing import Dict, Iterable, Mapping, Optional, Sequence, Tuple
 class OrchestratorStatus(str, Enum):
     HEALTHY = "healthy"
     DEGRADED = "degraded"
+    TEMPORARILY_QUOTA_EXHAUSTED = "temporarily_quota_exhausted"
     UNHEALTHY = "unhealthy"
     QUARANTINED = "quarantined"
 
@@ -181,7 +182,10 @@ class CostQualityRouter:
     def rank(self, pools: Iterable[OrchestratorPoolState]) -> Tuple[RoutingCandidate, ...]:
         candidates = []
         for pool in pools:
-            if pool.status not in {OrchestratorStatus.HEALTHY, OrchestratorStatus.DEGRADED}:
+            if pool.status not in {
+                OrchestratorStatus.HEALTHY,
+                OrchestratorStatus.DEGRADED,
+            }:
                 continue
             score = self.scorer.score(
                 outcome=pool.success_rate,
