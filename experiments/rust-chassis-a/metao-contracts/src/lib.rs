@@ -1,7 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+pub mod clarification_policy;
 pub mod project_contract;
 pub mod reference_intake;
+pub mod runtime_security;
 pub mod tech_stack_intake;
 
 pub const CONTRACT_VERSION: u32 = 1;
