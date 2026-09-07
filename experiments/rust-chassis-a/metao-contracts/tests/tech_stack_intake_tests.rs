@@ -51,7 +51,14 @@ fn profile(mode: TechStackDecisionMode) -> TechnicalPreferenceProfile {
 
 #[test]
 fn arbitrary_languages_and_technologies_are_data() {
-    for value in ["C#", "Python", "PHP", "Go", "TypeScript/Node", "Elixir/Phoenix"] {
+    for value in [
+        "C#",
+        "Python",
+        "PHP",
+        "Go",
+        "TypeScript/Node",
+        "Elixir/Phoenix",
+    ] {
         assert_eq!(tech(value).as_str(), value.trim().to_lowercase());
     }
 }
@@ -132,7 +139,10 @@ fn user_fixed_override_is_forbidden() {
 fn user_preferred_requires_material_rationale() {
     let mut value = profile(TechStackDecisionMode::UserPreferred);
     value.rationale = Some("   ".to_string());
-    assert_eq!(value.validate(), Err(TechStackIntakeError::MissingRationale));
+    assert_eq!(
+        value.validate(),
+        Err(TechStackIntakeError::MissingRationale)
+    );
 }
 
 #[test]
@@ -153,7 +163,10 @@ fn user_preferred_override_requires_rationale() {
 fn invalid_profile_provenance_fails_closed() {
     let mut value = profile(TechStackDecisionMode::UserPreferred);
     value.provenance = provenance(ProvenanceCategory::UserExplicit, "   ");
-    assert_eq!(value.validate(), Err(TechStackIntakeError::InvalidProvenance));
+    assert_eq!(
+        value.validate(),
+        Err(TechStackIntakeError::InvalidProvenance)
+    );
 }
 
 #[test]
@@ -179,7 +192,7 @@ fn user_preferred_explicit_override_passes_and_preserves_decision_evidence() {
         .explicit_override(
             replacement,
             "benchmark evidence",
-            provenance(ProvenanceCategory::UserConfirmed, "decision-42")
+            provenance(ProvenanceCategory::UserConfirmed, "decision-42"),
         )
         .expect("explicit override should pass");
     assert_eq!(result.mode, TechStackDecisionMode::MetaoRecommended);
@@ -195,7 +208,7 @@ fn metao_recommended_can_be_replaced_only_through_explicit_boundary() {
         .explicit_override(
             replacement,
             "user changed preference",
-            provenance(ProvenanceCategory::UserConfirmed, "human-decision")
+            provenance(ProvenanceCategory::UserConfirmed, "human-decision"),
         )
         .expect("explicit replacement should pass");
     assert_eq!(result.mode, TechStackDecisionMode::UserPreferred);
@@ -206,7 +219,10 @@ fn recommendation_provenance_is_preserved() {
     let mut value = profile(TechStackDecisionMode::MetaoRecommended);
     value.provenance = provenance(ProvenanceCategory::MetaoRecommendation, "benchmark-7");
     assert!(value.validate().is_ok());
-    assert_eq!(value.provenance.category, ProvenanceCategory::MetaoRecommendation);
+    assert_eq!(
+        value.provenance.category,
+        ProvenanceCategory::MetaoRecommendation
+    );
     assert_eq!(value.provenance.source_id, "benchmark-7");
 }
 

@@ -111,7 +111,10 @@ impl ExecutionLease {
             && self.fencing_token == presented_fence
     }
 
-    pub fn validate_successor(&self, successor: &ExecutionLease) -> Result<(), ExecutionLeaseError> {
+    pub fn validate_successor(
+        &self,
+        successor: &ExecutionLease,
+    ) -> Result<(), ExecutionLeaseError> {
         self.validate()?;
         successor.validate()?;
 
