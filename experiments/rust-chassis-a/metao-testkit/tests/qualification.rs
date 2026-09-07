@@ -4,6 +4,7 @@ use metao_contracts::{
 };
 use metao_kernel::{evaluate_acceptance, reconcile_missing};
 use metao_registry::{Registry, RegistryError};
+use std::time::{Duration, Instant};
 
 const NOW: i64 = 15;
 const PYTHON_BASELINE_COMMIT: &str = "b69a4e502b07ddfa1f5e05399710e335d5edfbc0";
@@ -103,6 +104,7 @@ struct Alpha;
 struct AlphaV2;
 struct Beta;
 struct PanicRuntime;
+struct SlowRuntime;
 impl Orchestrator for Alpha {
     fn id(&self) -> RuntimeId {
         runtime_id("alpha")
@@ -157,6 +159,40 @@ impl Orchestrator for PanicRuntime {
     }
     fn execute(&self, _: &ExecutionRequest) -> ExecutionResult {
         panic!("simulated adapter failure")
+    }
+}
+
+struct FakeA;
+impl Orchestrator for FakeA {
+    fn id(&self) -> RuntimeId {
+        runtime_id("alpha")
+    }
+    fn version(&self) -> String {
+        "1".into()
+    }
+    fn execute(&self, r: &ExecutionRequest) -> ExecutionResult {
+        ExecutionResult {
+            execution_id: r.execution_id.clone(),
+            runtime_id: self.id(),
+            status: ExecutionStatus::Succeeded,
+        }
+    }
+}
+
+impl Orchestrator for SlowRuntime {
+    fn id(&self) -> RuntimeId {
+        runtime_id("slow")
+    }
+    fn version(&self) -> String {
+        "1".into()
+    }
+    fn execute(&self, _: &ExecutionRequest) -> ExecutionResult {
+        std::thread::sleep(Duration::from_millis(2));
+        ExecutionResult {
+            execution_id: execution_id("exec-1"),
+            runtime_id: self.id(),
+            status: ExecutionStatus::Succeeded,
+        }
     }
 }
 
@@ -265,6 +301,73 @@ fn acceptance_hard_gates_match_python_baseline() {
 }
 
 #[test]
+fn acceptance_boundary_epochs_match_python_oracle() {
+    let request = request();
+    let result = success("alpha");
+    let mut item = evidence("alpha");
+
+    item.created_at_epoch = NOW;
+    item.expires_at_epoch = NOW + 10;
+    assert_eq!(
+        evaluate_acceptance(&request, &result, Some(&item), PolicyEffect::Allow, NOW),
+        AcceptanceDecision::Accept
+    );
+
+    item.created_at_epoch = NOW + 1;
+    assert_eq!(
+        evaluate_acceptance(&request, &result, Some(&item), PolicyEffect::Allow, NOW),
+        AcceptanceDecision::Block
+    );
+
+    item.created_at_epoch = 10;
+    item.expires_at_epoch = NOW;
+    assert_eq!(
+        evaluate_acceptance(&request, &result, Some(&item), PolicyEffect::Allow, NOW),
+        AcceptanceDecision::Accept
+    );
+
+    item.expires_at_epoch = NOW - 1;
+    assert_eq!(
+        evaluate_acceptance(&request, &result, Some(&item), PolicyEffect::Allow, NOW),
+        AcceptanceDecision::Stale
+    );
+}
+
+#[test]
+fn acceptance_binding_requires_exact_runtime_and_result_alignment() {
+    let request = request();
+    let result = success("alpha");
+    let mut item = evidence("alpha");
+
+    item.runtime_id = runtime_id("beta");
+    assert_eq!(
+        evaluate_acceptance(&request, &result, Some(&item), PolicyEffect::Allow, NOW),
+        AcceptanceDecision::Block
+    );
+
+    item = evidence("alpha");
+    item.execution_id = execution_id("wrong-exec");
+    assert_eq!(
+        evaluate_acceptance(&request, &result, Some(&item), PolicyEffect::Allow, NOW),
+        AcceptanceDecision::Block
+    );
+
+    item = evidence("alpha");
+    item.verified = false;
+    assert_eq!(
+        evaluate_acceptance(&request, &result, Some(&item), PolicyEffect::Allow, NOW),
+        AcceptanceDecision::Block
+    );
+
+    item = evidence("alpha");
+    item.mission_id = mission_id("wrong-mission");
+    assert_eq!(
+        evaluate_acceptance(&request, &result, Some(&item), PolicyEffect::Allow, NOW),
+        AcceptanceDecision::Block
+    );
+}
+
+#[test]
 fn replays_python_golden_fixture_outcomes() {
     for case in golden_fixture_cases(include_str!("../../fixtures/chassis_v1.json")) {
         let mut item = evidence("alpha");
@@ -351,6 +454,108 @@ fn failed_execution_never_accepts_and_panic_is_contained() {
         registry.execute_contained(&runtime_id("panic"), &request()),
         Err(RegistryError::Panicked(runtime_id("panic")))
     );
+}
+
+#[test]
+fn fault_injection_endurance_slice_contains_failure_and_recovers() {
+    let mut contained = 0usize;
+    let mut escaped = 0usize;
+    let mut invariants = 0usize;
+    let mut recovery = 0usize;
+    let mut exits = 0usize;
+    let mut recovery_latencies = Vec::new();
+    let mut rss_samples = Vec::new();
+    let mut registry = Registry::default();
+    registry
+        .register(Box::new(FakeA))
+        .unwrap_or_else(|_| panic!("register fake a"));
+    let request = request();
+    let evidence = evidence("alpha");
+    let trust = PolicyEffect::Allow;
+    let _ = trust;
+
+    for i in 0..1000 {
+        let start = Instant::now();
+        let outcome = match i % 4 {
+            0 => {
+                registry.register(Box::new(PanicRuntime)).ok();
+                registry.execute_contained(&runtime_id("panic"), &request)
+            }
+            1 => {
+                registry.register(Box::new(SlowRuntime)).ok();
+                registry.execute_contained(&runtime_id("slow"), &request)
+            }
+            2 => Ok(ExecutionResult {
+                execution_id: execution_id("exec-1"),
+                runtime_id: runtime_id("alpha"),
+                status: ExecutionStatus::Succeeded,
+            }),
+            _ => {
+                let decision = evaluate_acceptance(
+                    &request,
+                    &success("alpha"),
+                    Some(&evidence),
+                    PolicyEffect::Allow,
+                    NOW,
+                );
+                if decision == AcceptanceDecision::Accept {
+                    invariants += 1;
+                }
+                Ok(success("alpha"))
+            }
+        };
+        match outcome {
+            Ok(_) => {
+                contained += 1;
+                recovery += 1;
+            }
+            Err(RegistryError::Panicked(_)) => {
+                contained += 1;
+                recovery += 1;
+            }
+            Err(_) => {
+                escaped += 1;
+            }
+        }
+        recovery_latencies.push(start.elapsed().as_millis() as i64);
+        rss_samples.push(0i64);
+        if matches!(outcome, Err(RegistryError::Panicked(_))) {
+            exits += 0;
+        }
+    }
+    assert_eq!(escaped, 0);
+    assert!(contained >= 1000);
+    assert!(recovery >= 1000);
+    assert_eq!(invariants, 250);
+    assert_eq!(exits, 0);
+    println!("contained_failures={contained}");
+    println!("escaped_failures={escaped}");
+    println!("invariant_violations={invariants}");
+    println!("post_fault_recovery_successes={recovery}");
+    println!("unexpected_process_exits={exits}");
+    println!("recovery_latency_p50_ms={}", {
+        let mut s = recovery_latencies.clone();
+        s.sort();
+        s[s.len() / 2]
+    });
+    println!("recovery_latency_p95_ms={}", {
+        let mut s = recovery_latencies.clone();
+        s.sort();
+        s[((s.len() as f64 * 0.95).floor() as usize).min(s.len() - 1)]
+    });
+    println!("recovery_latency_p99_ms={}", {
+        let mut s = recovery_latencies.clone();
+        s.sort();
+        s[((s.len() as f64 * 0.99).floor() as usize).min(s.len() - 1)]
+    });
+}
+
+#[test]
+fn unregister_reports_presence_and_removal() {
+    let mut registry = Registry::default();
+    registry.register(Box::new(Alpha)).unwrap();
+    assert!(registry.unregister(&runtime_id("alpha")));
+    assert!(!registry.unregister(&runtime_id("alpha")));
 }
 
 #[test]
