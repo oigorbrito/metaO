@@ -343,12 +343,12 @@ def main(
             _write_json([_control_view(item) for item in controls.history(args.orchestrator_id)], out)
             return 0
         if args.command == "runtime-certificates":
-            certifications = SQLiteRuntimeCertificationStore(certification_db)
-            revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
             if (args.now_epoch is None) != (args.max_age_seconds is None):
                 raise CLIInputError(
                     "runtime-certificates freshness requires both --now-epoch and --max-age-seconds"
                 )
+            certifications = SQLiteRuntimeCertificationStore(certification_db)
+            revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
             items = certifications.history(args.orchestrator_id)
             _write_json(
                 [
