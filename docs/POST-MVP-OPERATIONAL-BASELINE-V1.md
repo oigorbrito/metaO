@@ -2,7 +2,7 @@
 
 Status: CANONICAL BASELINE DRAFT FOR POST-MVP OPERATIONALIZATION
 Baseline version: V1
-Applies to: repository `tihotm/metaO`
+Applies to: repository `oigorbrito/metaO`
 Last reconciled commit: `ffc1aae`
 Date: 2026-08-30
 
@@ -54,6 +54,7 @@ NORMATIVE_FOR_PROJECT:
 - `docs/CAPABILITY-MAP.md`
 - `docs/QUALITY-MODEL.md`
 - `docs/VERIFICATION-AND-VALIDATION.md`
+- `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`
 - `docs/OPERATIONS.md`
 - `docs/CLOSURE-PLAN.md`
 - `docs/TRACEABILITY.md`
@@ -159,6 +160,8 @@ Rules:
 - simulated evidence is not real runtime evidence;
 - unit tests are not integration evidence;
 - old SHA evidence is not current HEAD evidence.
+
+Empirical claims at evidence-bearing levels are additionally governed by `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`; that protocol constrains documentation of evidence but does not redefine L0-L7.
 
 ## 8. Current capability / evidence matrix
 
