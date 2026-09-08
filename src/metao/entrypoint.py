@@ -8,14 +8,19 @@ stable while operational control-plane surfaces evolve.
 from __future__ import annotations
 
 import argparse
-import importlib
 from inspect import Parameter, signature
 import json
 import os
 import sys
 from typing import Any, Sequence, TextIO
 
-from .cli import CLIInputError, DEFAULT_DB, main as mission_main, resolve_factory_spec
+from .cli import (
+    CLIInputError,
+    DEFAULT_DB,
+    load_factory_callable,
+    main as mission_main,
+    resolve_factory_spec,
+)
 from .operator import MissionOperator
 from .runtime_certification import RuntimeCertification, is_certificate_fresh
 from .runtime_certification_revocation import (
@@ -164,17 +169,7 @@ def _load_factory_operator(
     certification_db: str,
     certification_revocation_db: str,
 ) -> MissionOperator:
-    factory_spec = resolve_factory_spec(factory_spec)
-    if ":" not in factory_spec:
-        raise CLIInputError("factory must use module:function syntax")
-    module_name, attribute = factory_spec.split(":", 1)
-    if not module_name or not attribute:
-        raise CLIInputError("factory must use module:function syntax")
-    target: Any = importlib.import_module(module_name)
-    for part in attribute.split("."):
-        target = getattr(target, part)
-    if not callable(target):
-        raise CLIInputError("factory target is not callable")
+    target = load_factory_callable(resolve_factory_spec(factory_spec))
 
     kwargs: dict[str, Any] = {"store": SQLiteMissionStore(db)}
     optional = {
