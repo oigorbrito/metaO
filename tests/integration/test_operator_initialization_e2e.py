@@ -5,14 +5,19 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 import tempfile
 import unittest
 
 
 class OperatorInitializationE2ETests(unittest.TestCase):
     def run_metao(self, root: Path, env: dict[str, str], *args: str) -> object:
-        executable = shutil.which("metao")
-        self.assertIsNotNone(executable, "installed metao console script is required for this E2E")
+        scripts_dir = Path(sys.executable).parent
+        executable = shutil.which("metao", path=str(scripts_dir))
+        self.assertIsNotNone(
+            executable,
+            f"installed metao console script is required in current interpreter directory: {scripts_dir}",
+        )
         completed = subprocess.run(
             [executable, *args],
             cwd=root,
@@ -24,7 +29,7 @@ class OperatorInitializationE2ETests(unittest.TestCase):
         self.assertEqual(
             completed.returncode,
             0,
-            f"metao {' '.join(args)} failed\nstdout={completed.stdout}\nstderr={completed.stderr}",
+            f"metao {' '.join(args)} failed\nexecutable={executable}\nstdout={completed.stdout}\nstderr={completed.stderr}",
         )
         self.assertEqual(completed.stderr, "")
         return json.loads(completed.stdout)
