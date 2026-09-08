@@ -5,8 +5,21 @@ import os
 from io import StringIO
 import unittest
 
+from metao.catalog import OrchestratorCatalog
 from metao.cli import FACTORY_ENV_VAR
+from metao.core import OrchestratorRegistry
 from metao.entrypoint import main
+from metao.runtime_factory import RuntimeCatalogOperator
+
+
+def valid_operator_factory(*, store):
+    registry = OrchestratorRegistry()
+    catalog = OrchestratorCatalog(registry)
+    return RuntimeCatalogOperator(registry=registry, catalog=catalog, store=store)
+
+
+def failing_operator_factory(*, store):
+    raise RuntimeError("factory-bootstrap-sentinel")
 
 
 class OperatorUXDoctorTests(unittest.TestCase):
@@ -27,6 +40,10 @@ class OperatorUXDoctorTests(unittest.TestCase):
         code = main(args, stdout=stdout, stderr=stderr)
         return code, stdout.getvalue(), stderr.getvalue()
 
+    @staticmethod
+    def checks_by_name(data: dict) -> dict[str, dict]:
+        return {item["name"]: item for item in data["checks"]}
+
     def test_t01_help_includes_doctor(self) -> None:
         code, out, err = self.run_cli("--help")
         self.assertEqual(code, 0)
@@ -38,22 +55,49 @@ class OperatorUXDoctorTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         data = json.loads(out)
-        self.assertIn(data["overall_status"], ["NOT_CONFIGURED", "FAIL"])
+        self.assertEqual(data["overall_status"], "NOT_CONFIGURED")
 
     def test_t03_doctor_reports_not_configured(self) -> None:
         code, out, err = self.run_cli("doctor")
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         data = json.loads(out)
-        factory_check = next(c for c in data["checks"] if c["name"] == "FACTORY_CONFIG")
+        factory_check = self.checks_by_name(data)["FACTORY_CONFIG"]
         self.assertEqual(factory_check["status"], "NOT_CONFIGURED")
+
+    def test_t04_valid_factory_reaches_operator_and_catalog_readiness(self) -> None:
+        factory_spec = f"{__name__}:valid_operator_factory"
+        code, out, err = self.run_cli("doctor", "--factory", factory_spec)
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        data = json.loads(out)
+        checks = self.checks_by_name(data)
+        self.assertEqual(data["overall_status"], "PASS")
+        self.assertEqual(checks["FACTORY_CONFIG"]["status"], "PASS")
+        self.assertEqual(checks["FACTORY_IMPORT"]["status"], "PASS")
+        self.assertEqual(checks["OPERATOR_CONSTRUCTION"]["status"], "PASS")
+        self.assertEqual(checks["RUNTIME_CATALOG"]["status"], "PASS")
+        self.assertEqual(checks["RUNTIME_CATALOG"]["details"], "count=0")
+
+    def test_t05_factory_construction_failure_preserves_real_cause(self) -> None:
+        factory_spec = f"{__name__}:failing_operator_factory"
+        code, out, err = self.run_cli("doctor", "--factory", factory_spec)
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        data = json.loads(out)
+        checks = self.checks_by_name(data)
+        self.assertEqual(data["overall_status"], "FAIL")
+        self.assertEqual(checks["FACTORY_IMPORT"]["status"], "PASS")
+        self.assertEqual(checks["OPERATOR_CONSTRUCTION"]["status"], "FAIL")
+        self.assertEqual(checks["OPERATOR_CONSTRUCTION"]["message"], "factory-bootstrap-sentinel")
+        self.assertEqual(checks["RUNTIME_CATALOG"]["status"], "NOT_CHECKED")
 
     def test_t06_malformed_factory_syntax_fails_clearly(self) -> None:
         code, out, err = self.run_cli("doctor", "--factory", "bad_syntax")
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         data = json.loads(out)
-        import_check = next(c for c in data["checks"] if c["name"] == "FACTORY_IMPORT")
+        import_check = self.checks_by_name(data)["FACTORY_IMPORT"]
         self.assertEqual(import_check["status"], "FAIL")
         self.assertIn("Syntax must be module:function", import_check["message"])
 
@@ -62,30 +106,32 @@ class OperatorUXDoctorTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         data = json.loads(out)
-        import_check = next(c for c in data["checks"] if c["name"] == "FACTORY_IMPORT")
+        import_check = self.checks_by_name(data)["FACTORY_IMPORT"]
         self.assertEqual(import_check["status"], "FAIL")
+        self.assertIn("does_not_exist", import_check["message"])
 
     def test_t12_doctor_does_not_execute_mission(self) -> None:
-        code, out, err = self.run_cli("doctor")
+        factory_spec = f"{__name__}:valid_operator_factory"
+        code, out, err = self.run_cli("doctor", "--factory", factory_spec)
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         self.assertNotIn("mission_id", out)
 
-    def test_t14_run_explicit_factory_remains_backward_compatible(self) -> None:
-        try:
-            self.run_cli("run", "dummy.json", "--factory", "os:environ")
-        except SystemExit:
-            pass
-        except Exception:
-            pass
+    def test_t14_run_explicit_factory_reports_invalid_target(self) -> None:
+        code, out, err = self.run_cli("run", "dummy.json", "--factory", "os:environ")
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+        error = json.loads(err)
+        self.assertEqual(error["error"], "CLIInputError")
+        self.assertEqual(error["message"], "factory target is not callable")
 
-    def test_t16_runtimes_explicit_factory(self) -> None:
-        try:
-            self.run_cli("runtimes", "--factory", "does_not_exist:func")
-        except SystemExit:
-            pass
-        except Exception:
-            pass
+    def test_t16_runtimes_explicit_factory_reports_import_failure(self) -> None:
+        code, out, err = self.run_cli("runtimes", "--factory", "does_not_exist:func")
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+        error = json.loads(err)
+        self.assertIn(error["error"], {"ImportError", "ModuleNotFoundError"})
+        self.assertIn("does_not_exist", error["message"])
 
 
 if __name__ == "__main__":
