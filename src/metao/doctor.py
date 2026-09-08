@@ -18,17 +18,21 @@ def run_doctor(db_path: str, explicit_factory_spec: str | None = None) -> dict[s
     db_status = "FAIL"
     db_msg = ""
     try:
-        parent = os.path.dirname(os.path.abspath(db_path))
-        if not os.path.exists(parent):
-            try:
-                os.makedirs(parent, exist_ok=True)
-                db_status = "PASS"
-            except Exception as exc:
-                db_msg = f"Cannot create parent directory: {exc}"
-        elif os.access(parent, os.W_OK):
-            db_status = "PASS"
+        absolute_db_path = os.path.abspath(db_path)
+        if os.path.isdir(absolute_db_path):
+            db_msg = "Database path is a directory"
         else:
-            db_msg = "Parent directory not writable"
+            parent = os.path.dirname(absolute_db_path)
+            if not os.path.exists(parent):
+                try:
+                    os.makedirs(parent, exist_ok=True)
+                    db_status = "PASS"
+                except Exception as exc:
+                    db_msg = f"Cannot create parent directory: {exc}"
+            elif os.access(parent, os.W_OK):
+                db_status = "PASS"
+            else:
+                db_msg = "Parent directory not writable"
     except Exception as exc:
         db_msg = str(exc)
     check_db = {"name": "DATABASE_PATH", "status": db_status}
