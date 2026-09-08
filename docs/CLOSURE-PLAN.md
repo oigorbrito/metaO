@@ -2,22 +2,45 @@
 
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
-Applies to: repository `tihotm/metaO`
-Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
+Applies to: repository `oigorbrito/metaO`
+Last reconciled commit: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`
+Date reconciled: 2026-09-08
 
 This is the master closure plan for the post-MVP baseline. It replaces issue-by-issue ping-pong as the primary planning view.
+
+## Current closure fact: canonical operator initialization
+
+The canonical Python operator initialization requirement is resolved on the exact integrated reconciled source state.
+
+```text
+REPOSITORY = oigorbrito/metaO
+BRANCH = main
+HEAD = 9dbdf542eaad59e5cc80b8a1a845bf527a36893c
+PYTHON = 3.12.10
+CLEAN_CLONE = YES
+ISOLATED_VENV = YES
+INSTALLED_CLI = YES
+UNIT_REGRESSION = 487/487 PASS
+CANONICAL_INITIALIZATION_E2E = PASS
+FINAL_WORKTREE = CLEAN
+INITIALIZATION_RESOLVED = YES
+```
+
+The canonical E2E traversed installed CLI -> doctor -> canonical factory loading -> declarative runtime catalog -> real LangGraph runtime -> required certification -> admission -> mission execution -> `ACCEPTED` -> separate-process inspect with persisted execution/evidence/proof observable.
+
+This closes the initialization/bootstrap obligation only. It does not imply final project closure, hosted-CI PASS, or real external-provider success. Issue #71 remains the independent hosted-runner blocker.
 
 ## Block A - Documentation and requirements baseline
 
 - OBJECTIVE: establish canonical authority, baseline, and traceability documents.
-- ISSUES: #274, #245, #227, #70.
+- ISSUES: #274, #245, #227, #70, #434.
 - PRS: existing doc/reconciliation PRs only where still relevant.
 - DEPENDENCIES: current repo truth and issue reconciliation.
 - ENTRY_CRITERIA: baseline and authority docs created.
 - IMPLEMENTATION_WORK: create canonical docs, classify history, link baseline.
-- TESTS: link checks, markdown sanity.
+- TESTS: link checks, markdown sanity, factual reconciliation against exact source state.
 - EVIDENCE: updated docs and exact commit binding.
-- EXIT_CRITERIA: one authoritative baseline view exists.
+- EXIT_CRITERIA: one authoritative baseline view exists and current operational claims bind to executable evidence.
 - WHAT_CAN_RUN_IN_PARALLEL: history classification and traceability drafting.
 - WHAT_MUST_REMAIN_OPEN: external CI blocker.
 - EXTERNAL_BLOCKERS: hosted GitHub Actions, unavailable external evidence files.
@@ -160,7 +183,7 @@ This is the master closure plan for the post-MVP baseline. It replaces issue-by-
 ## Block K - Repository / GitHub convergence
 
 - OBJECTIVE: align issues, PRs, labels, and docs with current truth.
-- ISSUES: #70, #71, #73, #74, #274.
+- ISSUES: #70, #71, #73, #74, #274, #434.
 - PRS: current docs/convergence PRs.
 - DEPENDENCIES: baseline, authority map, and current issue state.
 - ENTRY_CRITERIA: canonical docs exist.
@@ -187,6 +210,8 @@ This is the master closure plan for the post-MVP baseline. It replaces issue-by-
 - WHAT_MUST_REMAIN_OPEN: external blockers.
 - EXTERNAL_BLOCKERS: hosted CI, unavailable evidence files.
 
+Initialization is no longer a Block L blocker for the reconciled Python operator path. Remaining Block L decisions must be based on the other readiness criteria and explicitly separated external blockers.
+
 ## Block M - Final closure audit
 
 - OBJECTIVE: determine what remains for project closure after operational readiness.
@@ -206,23 +231,31 @@ This is the master closure plan for the post-MVP baseline. It replaces issue-by-
 
 Status: LOCAL_IMPLEMENTATION_RECONCILIATION
 
-Current integrated `main`: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`.
+Historical integrated `main` recorded by this wave: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`.
 
-Current closure branch: `post-mvp/final-local-closure-v2`.
+Current reconciled `main` for this document: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`.
 
-New executable closure evidence:
+Historical closure branch: `post-mvp/final-local-closure-v2`.
 
-- `metao-testkit/tests/composed_system_closure_tests.rs` composes policy/risk/budget admission, runtime-health degradation, durable lost-ACK external effect recovery, multiprocess fencing, stale-owner rejection, execution-stage evidence, usage preservation, retry causality, machine-readable gate evidence, and independent acceptance for the current lineage.
+New executable closure evidence from that historical wave:
+
+- `metao-testkit/tests/composed_system_closure_tests.rs` composes policy/risk/budget admission, runtime-health degradation, durable lost-ACK external effect recovery, multiprocess fencing, stale-owner rejection, execution-stage evidence, usage preservation, retry causality, machine-readable gate evidence, and independent acceptance for the recorded lineage.
 - `metao-testkit/tests/scientific_fault_evidence_tests.rs` records an executable fault/evidence matrix for the currently covered closure gates and explicitly separates blocked external/toolchain cases.
-- `metao-contracts/tests/acceptance_budget_tests.rs` has been executed in release mode for the current boundary regressions.
+- `metao-contracts/tests/acceptance_budget_tests.rs` was executed in release mode for the recorded boundary regressions.
 - `metao-contracts/src/discovery_persistence.rs` provides the #176 product persistence boundary and filesystem implementation for durable Discovery save/reopen/resume.
 - `metao-contracts/tests/discovery_persistence_tests.rs` covers reopen, deterministic resume, explicit missing state, corrupt payload fail-closed, contract binding mismatch and unresolved-decision persistence.
 
-Remaining non-local closure items:
+Current additional executable evidence:
 
-- real external provider runtime execution is not proven by the Rust closure branch;
+- canonical Python operator initialization has executed and passed on integrated `main@9dbdf542eaad59e5cc80b8a1a845bf527a36893c` in a clean clone/isolated venv;
+- the same run executed all 487 unit tests successfully before the initialization E2E;
+- the E2E reached a certified/admitted real LangGraph runtime, mission `ACCEPTED`, and cross-process persisted inspection.
+
+Remaining non-local closure items include:
+
+- real external provider runtime execution is not proven by the initialization E2E;
 - real credential broker issue/renew/revoke lifecycle is not configured locally;
-- Python historical runtime tests requiring `agents` and `crewai` dependencies did not execute in this environment;
-- bounded formal model execution is blocked because TLC/java are unavailable;
+- bounded formal model execution remains separate from implementation proof;
 - hosted GitHub Actions remains governed by issue #71 until a hosted run reaches configured repository steps;
-- SWE-RPG executable publication/pinning remains external under issue #180.
+- SWE-RPG executable publication/pinning remains external under issue #180 where still applicable;
+- independent numeric hard-gate audit work remains separate and must be qualified on its own branches before integration.
