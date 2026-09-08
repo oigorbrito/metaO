@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import importlib
 import json
+import math
 import os
 from pathlib import Path
 import time
@@ -228,6 +229,8 @@ def _certificate_max_age_seconds(entry: Mapping[str, Any]) -> float | None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise RuntimeCatalogConfigError("certification.max_age_seconds must be numeric")
     result = float(value)
+    if not math.isfinite(result):
+        raise RuntimeCatalogConfigError("certification.max_age_seconds must be finite")
     if result <= 0:
         raise RuntimeCatalogConfigError("certification.max_age_seconds must be positive")
     return result
@@ -235,6 +238,8 @@ def _certificate_max_age_seconds(entry: Mapping[str, Any]) -> float | None:
 
 def _certification_now_epoch(value: float | None) -> float:
     result = time.time() if value is None else float(value)
+    if not math.isfinite(result):
+        raise RuntimeCatalogConfigError("certification current time must be finite")
     if result < 0:
         raise RuntimeCatalogConfigError("certification current time must be non-negative")
     return result

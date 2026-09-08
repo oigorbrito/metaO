@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from math import exp
+from math import exp, isfinite
 from time import time
 from typing import Dict, Iterable, Optional, Tuple
 
@@ -145,6 +145,8 @@ class DeterministicScorer:
         cost_scale: float = 1.0,
     ) -> None:
         weights = (outcome_weight, quality_weight, latency_weight, cost_weight)
+        if not all(isfinite(value) for value in (*weights, latency_scale_ms, cost_scale)):
+            raise ValueError("scorer weights and scales must be finite")
         if any(w < 0 for w in weights) or sum(weights) <= 0:
             raise ValueError("weights must be non-negative and not all zero")
         self.outcome_weight = outcome_weight
@@ -166,6 +168,8 @@ class DeterministicScorer:
         latency_ms: float,
         cost: float,
     ) -> ScoreBreakdown:
+        if not all(isfinite(value) for value in (outcome, quality, latency_ms, cost)):
+            raise ValueError("scorer inputs must be finite")
         outcome_component = self.outcome_weight * self._clamp01(outcome)
         quality_component = self.quality_weight * self._clamp01(quality)
         latency_utility = exp(-max(latency_ms, 0.0) / self.latency_scale_ms)
