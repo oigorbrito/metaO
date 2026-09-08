@@ -195,12 +195,14 @@ If direct comparison is impractical, document the reason rather than implying th
 
 ## 7. Reproduction and replication terminology
 
-For this repository:
+This repository adopts the ACM SIGSOFT Replication standard terminology for formal empirical claims:
 
-- **reproduction** means re-running the analysis or evaluation using the original study/evaluation data or artifacts, following the original procedure closely enough to test whether the reported result can be obtained again;
-- **replication** means repeating the empirical evaluation with newly collected observations, potentially in a new context, while retaining enough methodological correspondence to compare results meaningfully.
+- **reproduction** means repeating the original study's data analysis on the original study's data;
+- **replication** means repeating a study by collecting new data and repeating the original study's analysis on the new data.
 
-When a document uses either term as a formal evidence claim, it should state what was held constant and what changed.
+When a metaO engineering evaluation re-runs the same executable procedure on the same software/artifact state but does not satisfy the definition above, describe it more precisely as a **repeat execution**, **re-execution**, or **artifact re-run** rather than calling it a formal reproduction.
+
+When a document uses reproduction or replication as a formal evidence claim, it must identify the original study/evaluation and state what data, analysis, protocol, subjects, and context were held constant or changed.
 
 Do not use `reproducible`, `replicated`, or equivalent terms merely to mean that code compiled or tests once passed.
 
@@ -342,7 +344,8 @@ Primary methodological basis:
    https://www2.sigsoft.org/EmpiricalStandards/docs/standards
 3. ACM SIGSOFT Empirical Standards — Open Science supplement.
    https://www2.sigsoft.org/EmpiricalStandards/docs/supplements
-4. ACM Artifact Review and Badging guidance, as reflected in ACM artifact-evaluation practice for documented, consistent, complete, and exercisable artifacts.
+4. ACM Artifact Review and Badging policy.
+   https://www.acm.org/publications/policies/artifact-review-and-badging-current
 
 ## 15. Non-goals
 
