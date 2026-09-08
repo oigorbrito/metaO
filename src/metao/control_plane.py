@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from math import isfinite
 from time import time
 from typing import Callable, Mapping
 
@@ -70,6 +71,10 @@ class MissionAttempt:
             raise ValueError("mission attempt number must be positive")
         if not self.execution_id or not self.orchestrator_id:
             raise ValueError("mission attempt requires execution and orchestrator ids")
+        if self.started_at_epoch is not None and not isfinite(self.started_at_epoch):
+            raise ValueError("mission attempt start timestamp must be finite")
+        if self.ended_at_epoch is not None and not isfinite(self.ended_at_epoch):
+            raise ValueError("mission attempt end timestamp must be finite")
         if self.started_at_epoch is not None and self.started_at_epoch < 0:
             raise ValueError("mission attempt start timestamp must be non-negative")
         if self.ended_at_epoch is not None and self.ended_at_epoch < 0:
@@ -80,6 +85,8 @@ class MissionAttempt:
             and self.ended_at_epoch < self.started_at_epoch
         ):
             raise ValueError("mission attempt end timestamp cannot precede start")
+        if not isfinite(self.cost):
+            raise ValueError("mission attempt cost must be finite")
         if self.cost < 0:
             raise ValueError("mission attempt cost must be non-negative")
 
@@ -111,6 +118,14 @@ class MissionOutcome:
 
 def _blocked(reason: str) -> AcceptanceResult:
     return AcceptanceResult(AcceptanceDecision.BLOCK, (reason,))
+
+
+def _validated_epoch(value: float, name: str) -> float:
+    if not isfinite(value):
+        raise ValueError(f"{name} must be finite")
+    if value < 0:
+        raise ValueError(f"{name} must be non-negative")
+    return value
 
 
 def _eligible_pools(mission: Mission, pools: tuple[OrchestratorPoolState, ...]) -> tuple[OrchestratorPoolState, ...]:
@@ -203,6 +218,7 @@ def execute_mission_once(
 ) -> MissionOutcome:
     """Execute one independently accepted mission attempt."""
 
+    _validated_epoch(now_epoch, "mission current time")
     base_history = (MissionStatus.CREATED, MissionStatus.PLANNING)
     if policy.effect is PolicyEffect.REQUIRE_HUMAN:
         state = _state(
@@ -315,7 +331,7 @@ def execute_mission_once(
         },
     )
     clock = attempt_clock or time
-    started_at_epoch = clock()
+    started_at_epoch = _validated_epoch(clock(), "mission attempt start timestamp")
     attempt_context = AttemptExecutionContext(
         mission.mission_id,
         attempt_number,
@@ -338,7 +354,9 @@ def execute_mission_once(
             ExecutionStatus.FAILED,
             error=f"{type(exc).__name__}: {exc}",
         )
-    ended_at_epoch = clock()
+    ended_at_epoch = _validated_epoch(clock(), "mission attempt end timestamp")
+    if ended_at_epoch < started_at_epoch:
+        raise ValueError("mission attempt end timestamp cannot precede start")
     if on_attempt_finished is not None:
         on_attempt_finished(attempt_context, execution, ended_at_epoch)
 
