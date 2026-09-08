@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 
 from .control_plane import EvidenceNormalizer
 from .core import HealthStatus, OrchestratorRegistry
@@ -52,6 +53,8 @@ class OrchestratorCatalog:
 
     @staticmethod
     def _validate_unit_interval(name: str, value: float) -> None:
+        if not isfinite(value):
+            raise ValueError(f"{name} must be finite")
         if not 0.0 <= value <= 1.0:
             raise ValueError(f"{name} must be within [0, 1]")
 
@@ -69,6 +72,8 @@ class OrchestratorCatalog:
     ) -> None:
         if orchestrator_id in self._profiles:
             raise CatalogEntryAlreadyExists(orchestrator_id)
+        if not isfinite(cost) or not isfinite(latency_ms):
+            raise ValueError("catalog cost and latency must be finite")
         if cost < 0 or latency_ms < 0:
             raise ValueError("catalog cost and latency must be non-negative")
         if not trust_profile:
