@@ -374,13 +374,15 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
             _write_json(result, out)
             return 0
 
+        run_spec = _load_run_spec(args.mission_file) if args.command == "run" else None
+
         store = SQLiteMissionStore(args.db)
         ledger = SQLiteEventLedger(args.db)
         handles = SQLiteExecutionHandleStore(args.db)
         if args.command == "run":
+            assert run_spec is not None
             operator = _load_operator(args.factory, store, ledger, handles)
-            spec = _load_run_spec(args.mission_file)
-            outcome = operator.run(**spec)
+            outcome = operator.run(**run_spec)
             _write_json(_record_view(operator.inspect(outcome.mission_id), detailed=False), out)
             return 0
         if args.command == "status":
