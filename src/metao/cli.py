@@ -13,7 +13,7 @@ import importlib
 import json
 from pathlib import Path
 import sys
-from typing import Any, Mapping, Sequence, TextIO
+from typing import Any, Callable, Mapping, Sequence, TextIO
 
 from .acceptance import AcceptanceContext
 from .control_plane import MissionStatus
@@ -132,6 +132,7 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
 
 FACTORY_ENV_VAR = "METAO_OPERATOR_FACTORY"
 
+
 def resolve_factory_spec(explicit_spec: str | None) -> str:
     """Resolve canonical factory specification."""
     if explicit_spec:
@@ -141,24 +142,30 @@ def resolve_factory_spec(explicit_spec: str | None) -> str:
         return env_spec
     raise CLIInputError(f"Operator factory not configured. Provide --factory or set {FACTORY_ENV_VAR} environment variable.")
 
+
+def load_factory_callable(factory_spec: str) -> Callable[..., Any]:
+    """Load one canonical ``module:path.to.callable`` operator factory."""
+    if ":" not in factory_spec:
+        raise CLIInputError("factory must use module:function syntax")
+    module_name, attribute = factory_spec.split(":", 1)
+    parts = attribute.split(".")
+    if not module_name or not attribute or any(not part for part in parts):
+        raise CLIInputError("factory must use module:function syntax")
+    target: Any = importlib.import_module(module_name)
+    for part in parts:
+        target = getattr(target, part)
+    if not callable(target):
+        raise CLIInputError("factory target is not callable")
+    return target
+
+
 def _load_operator(
     factory_spec: str | None,
     store: SQLiteMissionStore,
     ledger: SQLiteEventLedger | None = None,
     execution_handles: SQLiteExecutionHandleStore | None = None,
 ) -> MissionOperator | ObservableMissionOperator:
-    factory_spec = resolve_factory_spec(factory_spec)
-    if ":" not in factory_spec:
-        raise CLIInputError("factory must use module:function syntax")
-    module_name, attribute = factory_spec.split(":", 1)
-    if not module_name or not attribute:
-        raise CLIInputError("factory must use module:function syntax")
-    module = importlib.import_module(module_name)
-    factory: Any = module
-    for part in attribute.split("."):
-        factory = getattr(factory, part)
-    if not callable(factory):
-        raise CLIInputError("factory target is not callable")
+    factory = load_factory_callable(resolve_factory_spec(factory_spec))
     operator = factory(store=store)
     if not isinstance(operator, MissionOperator):
         raise CLIInputError("factory must return MissionOperator")
@@ -361,14 +368,15 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
     args = _parser().parse_args(argv)
 
     try:
-        store = SQLiteMissionStore(args.db)
-        ledger = SQLiteEventLedger(args.db)
-        handles = SQLiteExecutionHandleStore(args.db)
         if args.command == "doctor":
             from .doctor import run_doctor
             result = run_doctor(args.db, args.factory)
             _write_json(result, out)
             return 0
+
+        store = SQLiteMissionStore(args.db)
+        ledger = SQLiteEventLedger(args.db)
+        handles = SQLiteExecutionHandleStore(args.db)
         if args.command == "run":
             operator = _load_operator(args.factory, store, ledger, handles)
             spec = _load_run_spec(args.mission_file)
