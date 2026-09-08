@@ -153,7 +153,11 @@ class OperatorInitializationE2ETests(unittest.TestCase):
                 "--factory",
                 "metao.runtime_factory:create_operator",
             )
-            self.assertEqual(doctor["overall_status"], "PASS")
+            self.assertEqual(
+                doctor["overall_status"],
+                "PASS",
+                f"doctor failed: {json.dumps(doctor, sort_keys=True)}",
+            )
             checks = {item["name"]: item for item in doctor["checks"]}
             self.assertEqual(checks["FACTORY_IMPORT"]["status"], "PASS")
             self.assertEqual(checks["OPERATOR_CONSTRUCTION"]["status"], "PASS")
