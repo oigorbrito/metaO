@@ -26,7 +26,7 @@
       "execution_result"
     ],
     "trusted_verifiers": [
-      "quickstart-observer"
+      "adapter-observer"
     ],
     "trusted_provenance_roots": [],
     "authorized_authorities": [
