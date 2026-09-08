@@ -3,8 +3,10 @@
 Status: CANONICAL BASELINE DRAFT FOR POST-MVP OPERATIONALIZATION
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`
+Qualified executable commit: `366a835923a814fcabe65bf7cc0763f56d456108`
 Date: 2026-09-08
+
+A later documentation-only merge may advance repository `HEAD` without invalidating the executable evidence bound to the qualified commit above. Any later change to product code, packaging, executable tests, or workflows must be requalified before inheriting these PASS claims.
 
 ## 1. Repository identity
 
@@ -18,18 +20,24 @@ Current actual phase:
 
 - post-MVP operational baseline reconstruction;
 - post-v0.1 operationalization;
-- the canonical Python operator initialization path is integrated and qualified locally on the exact reconciled `main` state;
-- the exact integrated clean-room qualification produced `487/487` unit PASS plus canonical initialization E2E PASS;
-- local executable evidence exists for major additional slices;
-- hosted CI remains externally blocked before configured steps on the historical release path under #71.
+- the canonical Python operator initialization path is integrated and qualified locally on the exact executable state above;
+- the clean-room qualification produced `487/487` unit PASS, README quickstart E2E PASS, installed-console negative-bootstrap E2E PASS, and canonical initialization E2E PASS;
+- the documented first-use path reaches mission `ACCEPTED` and separate-process inspection from a fresh clone with an isolated venv;
+- first-run failure paths fail early without partial mission persistence for the covered cases;
+- hosted CI remains externally blocked before configured steps under #71.
 
-This is not final closure.
+This is not final project closure.
 
-Initialization-specific state:
+Initialization/onboarding-specific state:
 
 ```text
 CANONICAL_ENTRYPOINT_IDENTIFIED = YES
 BOOTSTRAP_PATH_IMPLEMENTED = YES
+INSTALLED_CLI = YES
+README_QUICKSTART_E2E_EXECUTED = YES
+README_QUICKSTART_E2E_PASSES = YES
+NEGATIVE_BOOTSTRAP_E2E_EXECUTED = YES
+NEGATIVE_BOOTSTRAP_E2E_PASSES = YES
 E2E_INIT_TEST_EXISTS = YES
 E2E_INIT_TEST_EXECUTED = YES
 E2E_INIT_TEST_PASSES = YES
@@ -39,7 +47,7 @@ INITIALIZATION_RESOLVED = YES
 HOSTED_CI_PASS = NO / BLOCKED_EXTERNAL (#71)
 ```
 
-The initialization conclusion is bounded to the qualified local integrated path. It does not imply final project closure, hosted-CI PASS, or real external-provider success.
+The initialization/onboarding conclusion is bounded to the qualified integrated executable path. It does not imply final project closure, hosted-CI PASS, or real external-provider success.
 
 ## 3. Frozen architecture
 
@@ -62,6 +70,7 @@ Secondary invariant:
 - Python role: product implementation plus semantic oracle/reference for slices that are not yet fully proven in Rust parity.
 - Historical runtime evidence: OpenAI Agents, CrewAI, LangGraph, and local deterministic test seams.
 - Current canonical operator initialization evidence uses the installed Python `metao` CLI and a real LangGraph runtime through declarative catalog, certification, admission, mission execution, independent acceptance, persistence, and separate-process inspection.
+- Current README onboarding evidence additionally uses a committed deterministic local runtime/catalog example so a clean clone can reach `ACCEPTED` without hidden application modules, credentials, or external providers.
 
 ## 5. Authoritative documents
 
@@ -141,11 +150,13 @@ REFERENCE / HISTORICAL:
 
 Current capability truth is captured in `docs/CAPABILITY-MAP.md`. Short form:
 
-- the canonical operator initialization/bootstrap path has current integrated local L6-style integration evidence: installed CLI, doctor, factory/runtime composition, required certification/admission, mission `ACCEPTED`, and cross-process inspect all executed successfully on the reconciled `main` state;
+- the canonical operator initialization/bootstrap path has current integrated local L6-style integration evidence: installed CLI, doctor, factory/runtime composition, required certification/admission, mission `ACCEPTED`, and cross-process inspect all executed successfully on the qualified executable state;
+- the documented clean-room README quickstart is executable without hidden `my_app` modules or external credentials;
+- installed-console negative bootstrap paths are integration-tested to fail early for the covered configuration/input errors without partial mission persistence;
 - current executable evidence exists for the acceptance boundary, runtime invariants, governance budget/approval, replay/fencing, release validator, and several integration/runtime slices;
 - some slices are only specified or partially composed;
 - cross-orchestrator and hostile-boundary claims remain partitioned by evidence level and should not be collapsed into a single PASS bucket;
-- hosted GitHub Actions remains externally blocked on the historical release path and is not product proof.
+- hosted GitHub Actions remains externally blocked and is not product proof.
 
 ## 7. Evidence-level definitions
 
@@ -179,7 +190,8 @@ Rules:
 - do not infer a higher level from a lower level;
 - simulated evidence is not real runtime evidence;
 - unit tests are not integration evidence;
-- old SHA evidence is not current HEAD evidence.
+- evidence from an older executable surface is not automatically evidence for a later changed executable surface;
+- documentation-only commits may reference a prior exact qualified executable commit when the distinction is explicit.
 
 Empirical claims at evidence-bearing levels are additionally governed by `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`; that protocol constrains documentation of evidence but does not redefine L0-L7.
 
@@ -187,12 +199,30 @@ Empirical claims at evidence-bearing levels are additionally governed by `docs/E
 
 See `docs/CAPABILITY-MAP.md` for the consolidated matrix.
 
+Operational/onboarding closure slice at the qualified executable commit:
+
+```text
+CLEAN_CLONE_INSTALL = PASS
+CLI_HELP = PASS
+README_QUICKSTART = PASS
+DOCTOR = PASS
+RUNTIME_BOOTSTRAP = PASS
+CERTIFICATION = PASS
+FIRST_MISSION = ACCEPTED
+CROSS_PROCESS_INSPECT = PASS
+NEGATIVE_BOOTSTRAP_CASES = PASS
+UNIT_REGRESSION = 487/487 PASS
+WORKTREE_HYGIENE = PASS
+HOSTED_CI = BLOCKED_EXTERNAL (#71)
+```
+
 ## 9. Known blockers
 
-- hosted GitHub Actions pre-step blocker remains external under #71; this no longer blocks the factual local conclusion that canonical initialization is resolved on the exact reconciled integrated `main` state;
+- hosted GitHub Actions pre-step blocker remains external under #71; this no longer blocks the factual local conclusion that canonical initialization/onboarding is resolved on the qualified integrated executable state;
 - exact JSON re-validation of historical release evidence was separately blocked by file availability in prior reconciliation;
 - Rust canonical parity is still the product direction but not the only live implementation language in this checkout;
-- independent numeric hard-gate audit items remain separate work and must not be collapsed into initialization status.
+- independent numeric hard-gate audit items #420/#421 through #428/#429 remain separate work and must not be collapsed into initialization/onboarding status;
+- remote branch-reference cleanup is repository hygiene, not product correctness, and may require a Git client because the connected repository API does not expose branch deletion.
 
 ## 10. Operational readiness
 
@@ -206,7 +236,7 @@ See `docs/CAPABILITY-MAP.md` for the consolidated matrix.
 - real runtime and integration evidence for the required operational slice;
 - external blockers separated from product correctness.
 
-The canonical Python operator initialization requirement is satisfied for `main@9dbdf542eaad59e5cc80b8a1a845bf527a36893c`. That prerequisite must not be re-opened merely because hosted CI is blocked, but it also must not be used as a substitute for the remaining readiness requirements above.
+The canonical Python operator initialization/onboarding requirement is satisfied for executable `main@366a835923a814fcabe65bf7cc0763f56d456108`. That prerequisite must not be re-opened merely because hosted CI is blocked, but it also must not be used as a substitute for the remaining readiness requirements above.
 
 ## 11. Final closure
 
@@ -221,6 +251,16 @@ Final closure requires:
 - repository/GitHub convergence completed;
 - release/operations evidence captured for the exact authoritative state.
 
+Current conclusion:
+
+```text
+INITIALIZATION = RESOLVED
+README_ONBOARDING = QUALIFIED
+NEGATIVE_BOOTSTRAP = QUALIFIED
+POST_MVP_OPERATIONAL_READY = NOT_YET_CLAIMED
+FINAL_PROJECT_CLOSURE = NO
+```
+
 ## 12. Change control
 
 Rules:
@@ -230,4 +270,5 @@ Rules:
 - architecture changes require an ADR/decision record;
 - requirements changes require baseline revision;
 - evidence claims must bind exact commit/test identity;
+- documentation-only reconciliation must identify the executable commit it is describing instead of treating the documentation merge SHA as executed evidence;
 - this baseline supersedes prior mixed-purpose roadmap authority for current operational planning.
