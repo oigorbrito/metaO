@@ -300,9 +300,6 @@ def main(
     control_db = _control_db(args.db)
     certification_db = _certification_db(args.db)
     certification_revocation_db = _certification_revocation_db(args.db)
-    controls = SQLiteRuntimeControlStore(control_db)
-    certifications = SQLiteRuntimeCertificationStore(certification_db)
-    revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
 
     try:
         if args.command == "runtimes":
@@ -318,6 +315,11 @@ def main(
                 raise CLIInputError("factory operator does not expose runtime_entries()")
             _write_json([_runtime_entry_view(item) for item in runtime_entries()], out)
             return 0
+
+        controls = SQLiteRuntimeControlStore(control_db)
+        certifications = SQLiteRuntimeCertificationStore(certification_db)
+        revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
+
         if args.command == "runtime-quarantine":
             record = quarantine(
                 controls,
