@@ -88,13 +88,31 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
     )
 
     try:
+        money_limit = budget_data["money_limit"]
+        token_limit = budget_data["token_limit"]
+        wall_time_limit_s = budget_data["wall_time_limit_s"]
+        verifier_attempt_limit = budget_data["verifier_attempt_limit"]
+    except KeyError as exc:
+        raise CLIInputError("budget requires numeric money/token/wall-time/verifier limits") from exc
+    if (
+        isinstance(money_limit, bool)
+        or not isinstance(money_limit, (int, float))
+        or isinstance(token_limit, bool)
+        or not isinstance(token_limit, int)
+        or isinstance(wall_time_limit_s, bool)
+        or not isinstance(wall_time_limit_s, (int, float))
+        or isinstance(verifier_attempt_limit, bool)
+        or not isinstance(verifier_attempt_limit, int)
+    ):
+        raise CLIInputError("budget requires numeric money/token/wall-time/verifier limits")
+    try:
         budget = AcceptanceBudget(
-            money_limit=float(budget_data["money_limit"]),
-            token_limit=int(budget_data["token_limit"]),
-            wall_time_limit_s=float(budget_data["wall_time_limit_s"]),
-            verifier_attempt_limit=int(budget_data["verifier_attempt_limit"]),
+            money_limit=float(money_limit),
+            token_limit=token_limit,
+            wall_time_limit_s=float(wall_time_limit_s),
+            verifier_attempt_limit=verifier_attempt_limit,
         )
-    except (KeyError, TypeError, ValueError) as exc:
+    except (TypeError, ValueError) as exc:
         raise CLIInputError("budget requires numeric money/token/wall-time/verifier limits") from exc
 
     acceptance_context = AcceptanceContext(
@@ -111,11 +129,17 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
     prefix = root.get("execution_id_prefix")
     if prefix is not None and (not isinstance(prefix, str) or not prefix):
         raise CLIInputError("execution_id_prefix must be a non-empty string")
-    try:
-        now_epoch = float(root.get("now_epoch", 0.0))
-        max_attempts = int(root.get("max_attempts", 2))
-    except (TypeError, ValueError) as exc:
-        raise CLIInputError("now_epoch/max_attempts must be numeric") from exc
+    now_epoch_value = root.get("now_epoch", 0.0)
+    max_attempts_value = root.get("max_attempts", 2)
+    if (
+        isinstance(now_epoch_value, bool)
+        or not isinstance(now_epoch_value, (int, float))
+        or isinstance(max_attempts_value, bool)
+        or not isinstance(max_attempts_value, int)
+    ):
+        raise CLIInputError("now_epoch/max_attempts must be numeric")
+    now_epoch = float(now_epoch_value)
+    max_attempts = max_attempts_value
     if max_attempts < 1:
         raise CLIInputError("max_attempts must be at least 1")
 
