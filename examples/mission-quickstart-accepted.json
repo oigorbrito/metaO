@@ -1,0 +1,38 @@
+{
+  "mission": {
+    "mission_id": "quickstart-accepted",
+    "objective": "quickstart mission",
+    "required_capabilities": [
+      "workflow"
+    ]
+  },
+  "policy": {
+    "policy_bundle_id": "quickstart-policy",
+    "allowed": true,
+    "require_human": false
+  },
+  "budget": {
+    "money_limit": 1.0,
+    "token_limit": 1000,
+    "wall_time_limit_s": 60.0,
+    "verifier_attempt_limit": 3
+  },
+  "acceptance_context": {
+    "subject_id": "quickstart-subject",
+    "subject_state_id": "quickstart-state",
+    "verification_context_id": "quickstart-verification",
+    "policy_bundle_id": "quickstart-policy",
+    "required_obligations": [
+      "execution_result"
+    ],
+    "trusted_verifiers": [
+      "quickstart-observer"
+    ],
+    "trusted_provenance_roots": [],
+    "authorized_authorities": [
+      "metao-runtime"
+    ]
+  },
+  "now_epoch": 100.0,
+  "max_attempts": 2
+}
