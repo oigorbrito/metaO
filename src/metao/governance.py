@@ -47,8 +47,8 @@ class BudgetExhausted(RuntimeError):
 
 def _budget_values_are_finite(*values: float | int) -> bool:
     try:
-        return all(math.isfinite(value) for value in values)
-    except TypeError:
+        return all(isinstance(value, int) or math.isfinite(value) for value in values)
+    except (TypeError, OverflowError):
         return False
 
 
