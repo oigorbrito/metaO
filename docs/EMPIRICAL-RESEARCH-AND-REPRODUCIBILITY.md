@@ -1,36 +1,52 @@
 # Empirical Research and Reproducibility Contract
 
-Status: NORMATIVE_FOR_PROJECT
-Applies to: evidence-bearing research, comparison, benchmark, donor evaluation, chassis evaluation, conformance harnesses, and architecture claims in `tihotm/metaO`
+Status: SUPPLEMENTAL_METHOD_GUIDANCE — FORMAL REPRODUCTION/REPLICATION TERMINOLOGY SUPERSEDED
+Applies to: evidence-bearing research, comparison, benchmark, donor evaluation, chassis evaluation, conformance harnesses, and architecture claims in `oigorbrito/metaO`
+Issue: #433
+
+## Authority notice
+
+The current normative protocol for empirical evidence documentation and formal reproduction/replication terminology is:
+
+- `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`
+
+This document remains as supplemental methodological guidance for decision traceability, comparative measurement, anti-selective-reporting controls, and predeclaration/frozen-criterion discipline where those rules do not conflict with the normative protocol or a stricter domain-specific contract.
+
+The historical definitions of `reproduced` and `replicated` formerly contained here are superseded. Formal claims must use the ACM SIGSOFT Replication terminology adopted by `EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`:
+
+- **reproduction**: repeat the original study's data analysis on the original study's data;
+- **replication**: collect new data and repeat the original study's analysis on the new data.
+
+Engineering re-runs that do not meet those definitions should be described as repeat execution, re-execution, or artifact re-run.
+
+This reconciliation does not rewrite historical observations, dispositions, architecture decisions, score weights, hard gates, or acceptance authority.
 
 ## Purpose
 
-This document governs how metaO collects, records, compares, interprets, and promotes empirical evidence used in engineering decisions.
+This supplemental document governs how metaO records, compares, interprets, and promotes empirical evidence used in engineering decisions, subject to the normative protocol above.
 
 It does not define product architecture, architecture weights, language preference, donor preference, or acceptance authority. Those remain owned by their existing canonical contracts and ADRs.
-
-The governing principle is:
 
 ```text
 ENGINEERING_DECISION_REQUIRES_TRACEABLE_EVIDENCE
 METHODOLOGY_DOES_NOT_PREDETERMINE_ARCHITECTURE
 ```
 
-## Scope of methodological authority
+## Scope of supplemental methodological guidance
 
-Methodological rules may be introduced only when they improve one or more of:
+Rules here may be applied when they improve one or more of:
 
 - traceability from claim to observation;
-- reproducibility of an execution or measurement;
+- reproducibility or repeat-execution documentation;
 - comparability between candidates;
 - transparency of uncertainty, limitations, exclusions, and deviations;
 - resistance to selective reporting or post-hoc criterion changes.
 
 A methodological rule must not silently alter a frozen product criterion, hard gate, score weight, architecture invariant, or previously recorded result.
 
-## Evidence ladder
+## Historical evidence ladder
 
-Use the following evidence progression consistently:
+The following historical evidence progression remains a useful local research classification but is not a replacement for the canonical L0-L7 capability/evidence taxonomy:
 
 ```text
 DOCUMENTED
@@ -40,9 +56,7 @@ DOCUMENTED
 < MEASURED_IN_COMPARABLE_METAO_FIXTURE
 ```
 
-A higher evidence level increases confidence in a claim. It does not automatically improve the engineering score or disposition of a candidate.
-
-The following implications are invalid:
+The following implications remain invalid:
 
 ```text
 DOCUMENTED == EXECUTED
@@ -53,9 +67,9 @@ BENCHMARK_PASS == METAO_ACCEPTED
 ABSENCE_OF_EVIDENCE == EVIDENCE_OF_ABSENCE
 ```
 
-## Minimum claim-to-evidence contract
+## Supplemental claim-to-evidence fields
 
-Any material claim used to justify selection, rejection, adaptation, promotion, comparative superiority, or architecture change must preserve the applicable fields below:
+For material claims used to justify selection, rejection, adaptation, promotion, comparative superiority, or architecture change, preserve the applicable fields below in addition to the normative empirical record required by `EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`:
 
 ```text
 CLAIM_ID:
@@ -80,35 +94,7 @@ DECISION_OR_DISPOSITION_IMPACT:
 
 Fields that do not apply may be marked `N/A` with a reason. Missing metadata must not be invented.
 
-## Reproducibility vocabulary
-
-Use these terms narrowly:
-
-- **repeatable** — the same team can repeat the recorded procedure and obtain a materially equivalent result;
-- **reproduced** — an independent execution using the recorded artifacts/procedure obtains a materially equivalent result;
-- **replicated** — an independently constructed evaluation of the same claim reaches a materially consistent conclusion;
-- **not reproduced** — an attempted reproduction did not obtain a materially equivalent result and requires diagnosis;
-- **not reproducible from available artifacts** — the evidence package is insufficient to perform the attempt.
-
-These labels describe evidence status, not intrinsic product quality.
-
-## Reproducible execution requirements
-
-For executed evidence, record where applicable:
-
-1. immutable subject pin or exact artifact version;
-2. operating system and architecture;
-3. language/runtime/toolchain versions;
-4. dependency resolution state or lockfile identity;
-5. command lines and configuration;
-6. fixture/input identity;
-7. seed when stochastic behavior exists;
-8. timeout, retry, concurrency, and warm/cold-start policy when material;
-9. raw outputs or immutable artifact pointers;
-10. expected outcome and observed outcome;
-11. deviations from the predeclared procedure.
-
-A PASS without sufficient execution metadata may remain useful operationally, but it must not be promoted to a stronger reproducibility claim.
+`REPRODUCIBILITY_STATUS` must not use formal reproduction/replication labels contrary to the normative terminology. Prefer precise engineering statuses such as `REPEAT_EXECUTION_PASS`, `REPEAT_EXECUTION_FAIL`, `ARTIFACT_RERUN_BLOCKED`, or another explicitly defined non-scoring status when appropriate.
 
 ## Comparable measurement requirements
 
@@ -139,7 +125,9 @@ For phenomena with material variability:
 - report dispersion when decision-relevant;
 - do not rerun until a favorable result appears and report only that result.
 
-LLM token/cost measurements must additionally record model/provider/version where available, prompt/context boundary, tool-call boundary, cache assumptions, and whether deterministic GitHub/API work was performed inside or outside the model-mediated path.
+No universal repetition count is defined here. Repetition design must be justified by the phenomenon, variability, cost, and claim, consistent with the normative protocol.
+
+LLM token/cost measurements should additionally record model/provider/version where available, prompt/context boundary, tool-call boundary, cache assumptions, and whether deterministic GitHub/API work was performed inside or outside the model-mediated path.
 
 ## Negative and contradictory evidence
 
@@ -149,7 +137,7 @@ Negative, failed, blocked, and contradictory results are part of the evidence re
 BLOCKED != FAIL
 UNKNOWN != PASS
 NOT_PROVEN != PASS
-FAILED_REPRODUCTION != AUTOMATIC_DONOR_INVALIDATION
+FAILED_REPEAT_EXECUTION != AUTOMATIC_DONOR_INVALIDATION
 ```
 
 A blocked execution must name the blocker. A failure must preserve enough evidence for causal diagnosis. Contradictory results must not be discarded merely because they weaken the preferred interpretation.
@@ -175,18 +163,16 @@ If a criterion, fixture, instrumentation method, or interpretation changes after
 When a comparison can affect architecture selection or promotion:
 
 - define decision criteria before observing the deciding measurements whenever practical;
-- freeze hard gates and weights before candidate outcomes are interpreted;
+- freeze hard gates and weights before candidate outcomes are interpreted when the governing comparison contract uses such gates or weights;
 - record any post-observation change explicitly;
 - do not silently backfit a metric to favor a candidate;
 - use sensitivity analysis when the governing comparison contract requires it.
 
-Predeclaration reduces researcher degrees of freedom; it does not prevent justified protocol corrections. Corrections must preserve the original observation and record why the protocol changed.
+This document does not create or endorse any score, weight, or hard gate. It only requires that existing decision criteria not be silently changed after observing results.
 
-## Claim strength rule
+## Claim-strength rule
 
 The wording of a conclusion must not exceed the evidence.
-
-Examples:
 
 ```text
 ONE_FIXTURE_PASS -> "passed this fixture"
@@ -196,7 +182,7 @@ CODE_INSPECTION_ONLY -> "code-confirmed", not "proven in execution"
 TOOLCHAIN_BLOCKER -> "blocked", not "failed"
 ```
 
-Architecture decisions may combine multiple bounded observations, but the decision rationale must distinguish observed facts, measurements, inferences, and unresolved hypotheses.
+Architecture decisions may combine multiple bounded observations, but the rationale must distinguish observed facts, measurements, inferences, and unresolved hypotheses.
 
 ## Artifact retention
 
@@ -211,21 +197,20 @@ For decision-bearing experiments, retain where feasible:
 - issue/PR/run identifiers;
 - known instrumentation defects and their corrections.
 
-A summary table without recoverable underlying evidence is weaker than the same table with traceable raw artifacts.
+A summary without recoverable underlying evidence is weaker than the same summary with traceable raw artifacts.
 
-## Relationship to existing metaO documents
+## Relationship to current metaO documents
 
-This document owns empirical-method and reproducibility rules only.
+Authority is partitioned as follows:
 
-Existing documents retain their domains:
-
+- `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md` — normative empirical evidence documentation and formal reproduction/replication terminology;
 - `docs/ACCEPTANCE-CONTRACT.md` — acceptance authority and semantics;
 - `docs/CHASSIS-SCORECARD-SCHEMA-2026-08-26.md` — frozen chassis hard gates, weights, status vocabulary, and scoring contract;
 - `docs/CANONICAL-DONOR-EVALUATION-MATRIX.md` — donor research outcomes and dispositions;
 - `docs/ROADMAP-3-WU01-RUNTIME-CONFORMANCE-HARNESS.md` — runtime conformance harness scope and evidence requirements;
 - ADRs — recorded architecture decisions and their historical evidence state.
 
-If a local document contains a stricter domain-specific evidence requirement that does not conflict with this contract, the stricter requirement applies.
+If a domain-specific document contains a stricter evidence requirement that does not conflict with the normative empirical protocol, the stricter requirement applies.
 
 ## Final methodological invariants
 
@@ -236,6 +221,6 @@ RAW_ARTIFACT > SUMMARY_ONLY
 COMPARABLE_MEASUREMENT > CROSS_CONTEXT_NUMBER_COMPARISON
 NEGATIVE_RESULT = EVIDENCE
 BLOCKED != FAIL
-REPRODUCIBILITY_STATUS != PRODUCT_QUALITY
+FORMAL_REPRODUCTION_REPLICATION_TERMS = OWNED_BY_EMPIRICAL_EVIDENCE_PROTOCOL
 METHODOLOGY_DOES_NOT_MINT_ARCHITECTURE_AUTHORITY
 ```
