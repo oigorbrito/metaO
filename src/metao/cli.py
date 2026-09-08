@@ -13,7 +13,7 @@ import importlib
 import json
 from pathlib import Path
 import sys
-from typing import Any, Mapping, Sequence, TextIO
+from typing import Any, Callable, Mapping, Sequence, TextIO
 
 from .acceptance import AcceptanceContext
 from .control_plane import MissionStatus
@@ -88,13 +88,31 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
     )
 
     try:
+        money_limit = budget_data["money_limit"]
+        token_limit = budget_data["token_limit"]
+        wall_time_limit_s = budget_data["wall_time_limit_s"]
+        verifier_attempt_limit = budget_data["verifier_attempt_limit"]
+    except KeyError as exc:
+        raise CLIInputError("budget requires numeric money/token/wall-time/verifier limits") from exc
+    if (
+        isinstance(money_limit, bool)
+        or not isinstance(money_limit, (int, float))
+        or isinstance(token_limit, bool)
+        or not isinstance(token_limit, int)
+        or isinstance(wall_time_limit_s, bool)
+        or not isinstance(wall_time_limit_s, (int, float))
+        or isinstance(verifier_attempt_limit, bool)
+        or not isinstance(verifier_attempt_limit, int)
+    ):
+        raise CLIInputError("budget requires numeric money/token/wall-time/verifier limits")
+    try:
         budget = AcceptanceBudget(
-            money_limit=float(budget_data["money_limit"]),
-            token_limit=int(budget_data["token_limit"]),
-            wall_time_limit_s=float(budget_data["wall_time_limit_s"]),
-            verifier_attempt_limit=int(budget_data["verifier_attempt_limit"]),
+            money_limit=float(money_limit),
+            token_limit=token_limit,
+            wall_time_limit_s=float(wall_time_limit_s),
+            verifier_attempt_limit=verifier_attempt_limit,
         )
-    except (KeyError, TypeError, ValueError) as exc:
+    except (TypeError, ValueError) as exc:
         raise CLIInputError("budget requires numeric money/token/wall-time/verifier limits") from exc
 
     acceptance_context = AcceptanceContext(
@@ -111,11 +129,17 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
     prefix = root.get("execution_id_prefix")
     if prefix is not None and (not isinstance(prefix, str) or not prefix):
         raise CLIInputError("execution_id_prefix must be a non-empty string")
-    try:
-        now_epoch = float(root.get("now_epoch", 0.0))
-        max_attempts = int(root.get("max_attempts", 2))
-    except (TypeError, ValueError) as exc:
-        raise CLIInputError("now_epoch/max_attempts must be numeric") from exc
+    now_epoch_value = root.get("now_epoch", 0.0)
+    max_attempts_value = root.get("max_attempts", 2)
+    if (
+        isinstance(now_epoch_value, bool)
+        or not isinstance(now_epoch_value, (int, float))
+        or isinstance(max_attempts_value, bool)
+        or not isinstance(max_attempts_value, int)
+    ):
+        raise CLIInputError("now_epoch/max_attempts must be numeric")
+    now_epoch = float(now_epoch_value)
+    max_attempts = max_attempts_value
     if max_attempts < 1:
         raise CLIInputError("max_attempts must be at least 1")
 
@@ -132,6 +156,7 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
 
 FACTORY_ENV_VAR = "METAO_OPERATOR_FACTORY"
 
+
 def resolve_factory_spec(explicit_spec: str | None) -> str:
     """Resolve canonical factory specification."""
     if explicit_spec:
@@ -141,24 +166,30 @@ def resolve_factory_spec(explicit_spec: str | None) -> str:
         return env_spec
     raise CLIInputError(f"Operator factory not configured. Provide --factory or set {FACTORY_ENV_VAR} environment variable.")
 
+
+def load_factory_callable(factory_spec: str) -> Callable[..., Any]:
+    """Load one canonical ``module:path.to.callable`` operator factory."""
+    if ":" not in factory_spec:
+        raise CLIInputError("factory must use module:function syntax")
+    module_name, attribute = factory_spec.split(":", 1)
+    parts = attribute.split(".")
+    if not module_name or not attribute or any(not part for part in parts):
+        raise CLIInputError("factory must use module:function syntax")
+    target: Any = importlib.import_module(module_name)
+    for part in parts:
+        target = getattr(target, part)
+    if not callable(target):
+        raise CLIInputError("factory target is not callable")
+    return target
+
+
 def _load_operator(
     factory_spec: str | None,
     store: SQLiteMissionStore,
     ledger: SQLiteEventLedger | None = None,
     execution_handles: SQLiteExecutionHandleStore | None = None,
 ) -> MissionOperator | ObservableMissionOperator:
-    factory_spec = resolve_factory_spec(factory_spec)
-    if ":" not in factory_spec:
-        raise CLIInputError("factory must use module:function syntax")
-    module_name, attribute = factory_spec.split(":", 1)
-    if not module_name or not attribute:
-        raise CLIInputError("factory must use module:function syntax")
-    module = importlib.import_module(module_name)
-    factory: Any = module
-    for part in attribute.split("."):
-        factory = getattr(factory, part)
-    if not callable(factory):
-        raise CLIInputError("factory target is not callable")
+    factory = load_factory_callable(resolve_factory_spec(factory_spec))
     operator = factory(store=store)
     if not isinstance(operator, MissionOperator):
         raise CLIInputError("factory must return MissionOperator")
@@ -361,18 +392,21 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
     args = _parser().parse_args(argv)
 
     try:
-        store = SQLiteMissionStore(args.db)
-        ledger = SQLiteEventLedger(args.db)
-        handles = SQLiteExecutionHandleStore(args.db)
         if args.command == "doctor":
             from .doctor import run_doctor
             result = run_doctor(args.db, args.factory)
             _write_json(result, out)
             return 0
+
+        run_spec = _load_run_spec(args.mission_file) if args.command == "run" else None
+
+        store = SQLiteMissionStore(args.db)
+        ledger = SQLiteEventLedger(args.db)
+        handles = SQLiteExecutionHandleStore(args.db)
         if args.command == "run":
+            assert run_spec is not None
             operator = _load_operator(args.factory, store, ledger, handles)
-            spec = _load_run_spec(args.mission_file)
-            outcome = operator.run(**spec)
+            outcome = operator.run(**run_spec)
             _write_json(_record_view(operator.inspect(outcome.mission_id), detailed=False), out)
             return 0
         if args.command == "status":

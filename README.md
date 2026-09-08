@@ -46,42 +46,50 @@ ORCHESTRATOR_DONE != METAO_ACCEPTED
 metaO provides a CLI for managing missions and runtimes. On Windows (PowerShell) or Linux:
 
 1. **Install the package**:
-   ```powershell
+   ```console
    pip install -e .
    ```
 
 2. **Verify installation**:
-   ```powershell
+   ```console
    metao --help
    ```
 
 3. **Configure your runtime factory**:
    Specify a Python module and function that returns a `MissionOperator`.
+
+   PowerShell:
    ```powershell
    $env:METAO_OPERATOR_FACTORY="my_app.factory:create_operator"
-   # Or use --factory my_app.factory:create_operator on every command
    ```
 
+   Linux/POSIX shell:
+   ```sh
+   export METAO_OPERATOR_FACTORY="my_app.factory:create_operator"
+   ```
+
+   On either platform, you can instead pass `--factory my_app.factory:create_operator` on commands that load the operator.
+
 4. **Diagnose environment readiness**:
-   ```powershell
+   ```console
    metao doctor
    ```
 
 5. **List available runtimes**:
-   ```powershell
+   ```console
    metao runtimes
    ```
 
-6. **Run a mission**:
-   ```powershell
-   # Assumes tests/golden/chassis_v1.json exists or similar valid fixture
-   metao run tests/golden/chassis_v1.json
+6. **Run the canonical policy-gated example**:
+   ```console
+   metao run examples/mission-policy-deny.json
    ```
+   This example is intentionally denied by policy before runtime selection. A `BLOCKED` result proves the mission-file/CLI/governance path is working; it does **not** claim provider-backed execution or metaO acceptance.
 
 7. **Check mission status and inspect**:
-   ```powershell
-   metao status <mission_id>
-   metao inspect <mission_id>
+   ```console
+   metao status quickstart-policy-deny
+   metao inspect quickstart-policy-deny
    ```
 
 ## Python API Quickstart
