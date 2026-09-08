@@ -11,6 +11,7 @@ Conductor or any orchestrator SDK.
 
 from __future__ import annotations
 
+import math
 import threading
 from dataclasses import dataclass, replace
 from enum import Enum
@@ -44,6 +45,13 @@ class BudgetExhausted(RuntimeError):
     pass
 
 
+def _budget_values_are_finite(*values: float | int) -> bool:
+    try:
+        return all(math.isfinite(value) for value in values)
+    except TypeError:
+        return False
+
+
 @dataclass(frozen=True)
 class AcceptanceBudget:
     money_limit: float
@@ -56,6 +64,17 @@ class AcceptanceBudget:
     verifier_attempts_used: int = 0
 
     def __post_init__(self) -> None:
+        if not _budget_values_are_finite(
+            self.money_limit,
+            self.token_limit,
+            self.wall_time_limit_s,
+            self.verifier_attempt_limit,
+            self.money_used,
+            self.tokens_used,
+            self.wall_time_used_s,
+            self.verifier_attempts_used,
+        ):
+            raise ValueError("budget values must be finite")
         if (
             self.money_limit < 0
             or self.token_limit < 0
@@ -90,6 +109,8 @@ class AcceptanceBudget:
         wall_time_s: float = 0.0,
         verifier_attempts: int = 0,
     ) -> "AcceptanceBudget":
+        if not _budget_values_are_finite(money, tokens, wall_time_s, verifier_attempts):
+            raise ValueError("budget consumption must be finite")
         if min(money, tokens, wall_time_s, verifier_attempts) < 0:
             raise ValueError("budget consumption cannot be negative")
         money_used = self.money_used + money
@@ -170,6 +191,8 @@ class AcceptanceBudgetAuthority:
     ) -> BudgetReservation:
         if not reservation_id:
             raise ValueError("reservation_id cannot be empty")
+        if not _budget_values_are_finite(money, tokens, wall_time_s, verifier_attempts):
+            raise ValueError("budget reservation must be finite")
         if min(money, tokens, wall_time_s, verifier_attempts) < 0:
             raise ValueError("budget reservation cannot be negative")
 
