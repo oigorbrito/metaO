@@ -8,14 +8,19 @@ stable while operational control-plane surfaces evolve.
 from __future__ import annotations
 
 import argparse
-import importlib
 from inspect import Parameter, signature
 import json
 import os
 import sys
 from typing import Any, Sequence, TextIO
 
-from .cli import CLIInputError, DEFAULT_DB, main as mission_main, resolve_factory_spec
+from .cli import (
+    CLIInputError,
+    DEFAULT_DB,
+    load_factory_callable,
+    main as mission_main,
+    resolve_factory_spec,
+)
 from .operator import MissionOperator
 from .runtime_certification import RuntimeCertification, is_certificate_fresh
 from .runtime_certification_revocation import (
@@ -101,7 +106,7 @@ def _certification_revocation_db(db: str) -> str:
 def _combined_help(stream: TextIO) -> None:
     stream.write("usage: metao [--db DB] COMMAND ...\n\n")
     stream.write("metaO control-plane operator CLI\n\n")
-    stream.write("mission commands: run, status, inspect, list, events, approve, resume, cancel\n")
+    stream.write("mission commands: doctor, run, status, inspect, list, events, approve, resume, cancel\n")
     stream.write(
         "runtime commands: runtimes, runtime-quarantine, runtime-restore, runtime-history, "
         "runtime-certificates, runtime-certificate-revoke, runtime-certificate-revocations\n"
@@ -164,17 +169,7 @@ def _load_factory_operator(
     certification_db: str,
     certification_revocation_db: str,
 ) -> MissionOperator:
-    factory_spec = resolve_factory_spec(factory_spec)
-    if ":" not in factory_spec:
-        raise CLIInputError("factory must use module:function syntax")
-    module_name, attribute = factory_spec.split(":", 1)
-    if not module_name or not attribute:
-        raise CLIInputError("factory must use module:function syntax")
-    target: Any = importlib.import_module(module_name)
-    for part in attribute.split("."):
-        target = getattr(target, part)
-    if not callable(target):
-        raise CLIInputError("factory target is not callable")
+    target = load_factory_callable(resolve_factory_spec(factory_spec))
 
     kwargs: dict[str, Any] = {"store": SQLiteMissionStore(db)}
     optional = {
@@ -305,9 +300,6 @@ def main(
     control_db = _control_db(args.db)
     certification_db = _certification_db(args.db)
     certification_revocation_db = _certification_revocation_db(args.db)
-    controls = SQLiteRuntimeControlStore(control_db)
-    certifications = SQLiteRuntimeCertificationStore(certification_db)
-    revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
 
     try:
         if args.command == "runtimes":
@@ -323,7 +315,9 @@ def main(
                 raise CLIInputError("factory operator does not expose runtime_entries()")
             _write_json([_runtime_entry_view(item) for item in runtime_entries()], out)
             return 0
+
         if args.command == "runtime-quarantine":
+            controls = SQLiteRuntimeControlStore(control_db)
             record = quarantine(
                 controls,
                 args.orchestrator_id,
@@ -334,6 +328,7 @@ def main(
             _write_json(_control_view(record), out)
             return 0
         if args.command == "runtime-restore":
+            controls = SQLiteRuntimeControlStore(control_db)
             record = restore(
                 controls,
                 args.orchestrator_id,
@@ -344,6 +339,7 @@ def main(
             _write_json(_control_view(record), out)
             return 0
         if args.command == "runtime-history":
+            controls = SQLiteRuntimeControlStore(control_db)
             _write_json([_control_view(item) for item in controls.history(args.orchestrator_id)], out)
             return 0
         if args.command == "runtime-certificates":
@@ -351,6 +347,8 @@ def main(
                 raise CLIInputError(
                     "runtime-certificates freshness requires both --now-epoch and --max-age-seconds"
                 )
+            certifications = SQLiteRuntimeCertificationStore(certification_db)
+            revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
             items = certifications.history(args.orchestrator_id)
             _write_json(
                 [
@@ -366,6 +364,8 @@ def main(
             )
             return 0
         if args.command == "runtime-certificate-revoke":
+            certifications = SQLiteRuntimeCertificationStore(certification_db)
+            revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
             record = revoke_certificate(
                 certifications,
                 revocations,
@@ -377,6 +377,7 @@ def main(
             _write_json(_revocation_view(record), out)
             return 0
         if args.command == "runtime-certificate-revocations":
+            revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
             _write_json(
                 [_revocation_view(item) for item in revocations.history(args.orchestrator_id)],
                 out,
