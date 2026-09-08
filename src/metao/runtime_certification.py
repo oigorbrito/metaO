@@ -15,6 +15,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+import math
 from threading import RLock
 from typing import Protocol, runtime_checkable
 
@@ -50,6 +51,8 @@ class RuntimeCertification:
             raise ValueError("runtime certification requires stable identities and digest")
         if self.total_checks < 1:
             raise ValueError("runtime certification requires at least one check")
+        if not math.isfinite(self.certified_at_epoch):
+            raise ValueError("runtime certification time must be finite")
         if self.certified_at_epoch < 0:
             raise ValueError("runtime certification time must be non-negative")
         if self.passed and self.failed_checks:
@@ -109,6 +112,8 @@ def certificate_identity(
     *,
     certified_at_epoch: float = 0.0,
 ) -> str:
+    if not math.isfinite(certified_at_epoch):
+        raise ValueError("runtime certification time must be finite")
     if certified_at_epoch < 0:
         raise ValueError("runtime certification time must be non-negative")
     base = f"{orchestrator_id}:{runtime_version}:{probe_execution_id}"
@@ -129,6 +134,10 @@ def is_certificate_fresh(
     when a freshness policy is enabled. Clock reversal also fails closed.
     """
 
+    if not math.isfinite(now_epoch):
+        raise ValueError("current certification time must be finite")
+    if not math.isfinite(max_age_seconds):
+        raise ValueError("certificate max age must be finite")
     if now_epoch < 0:
         raise ValueError("current certification time must be non-negative")
     if max_age_seconds <= 0:
@@ -213,6 +222,8 @@ def certification_from_report(
 ) -> RuntimeCertification:
     if not runtime_version or not probe_execution_id:
         raise ValueError("runtime version and probe execution id are required")
+    if not math.isfinite(certified_at_epoch):
+        raise ValueError("runtime certification time must be finite")
     if certified_at_epoch < 0:
         raise ValueError("runtime certification time must be non-negative")
     checks_payload = [
