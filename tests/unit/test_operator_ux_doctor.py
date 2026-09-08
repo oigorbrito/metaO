@@ -50,6 +50,38 @@ class OperatorUXDoctorTests(unittest.TestCase):
     def checks_by_name(data: dict) -> dict[str, dict]:
         return {item["name"]: item for item in data["checks"]}
 
+    @staticmethod
+    def valid_denied_mission(*, mission_id: str = "factory-target-probe") -> dict:
+        return {
+            "mission": {
+                "mission_id": mission_id,
+                "objective": "exercise factory loading after mission preflight",
+                "required_capabilities": [],
+            },
+            "policy": {
+                "policy_bundle_id": "policy-factory-target-probe",
+                "allowed": False,
+                "require_human": False,
+                "reason": "loader-probe-policy-block",
+            },
+            "budget": {
+                "money_limit": 1,
+                "token_limit": 1,
+                "wall_time_limit_s": 1,
+                "verifier_attempt_limit": 1,
+            },
+            "acceptance_context": {
+                "subject_id": "subject",
+                "subject_state_id": "state",
+                "verification_context_id": "verification",
+                "policy_bundle_id": "policy-factory-target-probe",
+                "required_obligations": [],
+                "trusted_verifiers": [],
+                "trusted_provenance_roots": [],
+                "authorized_authorities": [],
+            },
+        }
+
     def test_t01_help_includes_doctor(self) -> None:
         code, out, err = self.run_cli("--help")
         self.assertEqual(code, 0)
@@ -136,7 +168,10 @@ class OperatorUXDoctorTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
             data = json.loads(out)
-            self.assertEqual(data["overall_status"], "NOT_CONFIGURED")
+            checks = self.checks_by_name(data)
+            self.assertEqual(data["overall_status"], "FAIL")
+            self.assertEqual(checks["DATABASE_PATH"]["status"], "FAIL")
+            self.assertEqual(checks["FACTORY_CONFIG"]["status"], "NOT_CONFIGURED")
             self.assertTrue(db_path.is_dir())
             self.assertEqual(list(db_path.iterdir()), [])
 
@@ -148,7 +183,10 @@ class OperatorUXDoctorTests(unittest.TestCase):
         self.assertNotIn("mission_id", out)
 
     def test_t14_run_explicit_factory_reports_invalid_target(self) -> None:
-        code, out, err = self.run_cli("run", "dummy.json", "--factory", "os:environ")
+        with tempfile.TemporaryDirectory() as tmp:
+            mission_file = Path(tmp) / "mission.json"
+            mission_file.write_text(json.dumps(self.valid_denied_mission()), encoding="utf-8")
+            code, out, err = self.run_cli("run", str(mission_file), "--factory", "os:environ")
         self.assertEqual(code, 2)
         self.assertEqual(out, "")
         error = json.loads(err)
