@@ -43,58 +43,120 @@ ORCHESTRATOR_DONE != METAO_ACCEPTED
 
 ## Quickstart (Operator CLI)
 
-metaO provides a CLI for managing missions and runtimes. On Windows (PowerShell) or Linux:
+The repository includes a deterministic local example runtime so a clean clone can exercise the real operator bootstrap path without external provider credentials or network calls. The example is for onboarding and operability verification only; it is **not** production-runtime or provider-backed evidence.
 
-1. **Install the package**:
+Python 3.12 or newer is required.
+
+1. **Install the package from the repository root**:
+
    ```console
-   pip install -e .
+   python -m pip install -e .
    ```
 
-2. **Verify installation**:
+   On Windows, if `python` does not select Python 3.12+, use the corresponding launcher explicitly, for example `py -3.12 -m pip install -e .`.
+
+2. **Verify the installed console script**:
+
    ```console
    metao --help
    ```
 
-3. **Configure your runtime factory**:
-   Specify a Python module and function that returns a `MissionOperator`.
+   The top-level help should include `doctor`, mission commands, and runtime commands.
+
+3. **Configure the repository-owned quickstart runtime**.
+
+   The quickstart uses the canonical declarative factory `metao.runtime_factory:create_operator`, the committed catalog `examples/runtime-catalog-quickstart.json`, and separate local SQLite state under `.metao/`.
 
    PowerShell:
+
    ```powershell
-   $env:METAO_OPERATOR_FACTORY="my_app.factory:create_operator"
+   $env:METAO_OPERATOR_FACTORY="metao.runtime_factory:create_operator"
+   $env:METAO_RUNTIME_CATALOG="examples/runtime-catalog-quickstart.json"
+   $env:METAO_RUNTIME_CONTROL_DB=".metao/runtime-control.db"
+   $env:METAO_RUNTIME_CERTIFICATION_DB=".metao/runtime-certification.db"
+   $env:METAO_RUNTIME_CERTIFICATION_REVOCATION_DB=".metao/runtime-certification-revocation.db"
    ```
 
    Linux/POSIX shell:
+
    ```sh
-   export METAO_OPERATOR_FACTORY="my_app.factory:create_operator"
+   export METAO_OPERATOR_FACTORY="metao.runtime_factory:create_operator"
+   export METAO_RUNTIME_CATALOG="examples/runtime-catalog-quickstart.json"
+   export METAO_RUNTIME_CONTROL_DB=".metao/runtime-control.db"
+   export METAO_RUNTIME_CERTIFICATION_DB=".metao/runtime-certification.db"
+   export METAO_RUNTIME_CERTIFICATION_REVOCATION_DB=".metao/runtime-certification-revocation.db"
    ```
 
-   On either platform, you can instead pass `--factory my_app.factory:create_operator` on commands that load the operator.
+4. **Diagnose bootstrap readiness**:
 
-4. **Diagnose environment readiness**:
    ```console
    metao doctor
    ```
 
-5. **List available runtimes**:
+   For this committed quickstart configuration, `overall_status` should be `PASS` and `RUNTIME_CATALOG` should report `count=1`.
+
+5. **List the admitted runtime**:
+
    ```console
    metao runtimes
    ```
 
-6. **Run the canonical policy-gated example**:
+   The result should contain the healthy local example runtime `quickstart-local`.
+
+6. **Inspect the persisted runtime certification**:
+
+   ```console
+   metao runtime-certificates quickstart-local
+   ```
+
+   At least one certificate should report `passed: true` with probe execution id `quickstart-certification`.
+
+7. **Run the committed accepted mission**:
+
+   ```console
+   metao run examples/mission-quickstart-accepted.json
+   ```
+
+   The expected mission state is `ACCEPTED`, with `acceptance_decision` equal to `ACCEPT` and `orchestrator_id` equal to `quickstart-local`.
+
+8. **Verify persistence from separate CLI invocations**:
+
+   ```console
+   metao status quickstart-accepted
+   metao inspect quickstart-accepted
+   ```
+
+   `status` should remain `ACCEPTED`. `inspect` should show execution status `SUCCEEDED`, output result `quickstart:quickstart mission`, and a non-null acceptance proof.
+
+9. **Optional governance-only negative path**:
+
    ```console
    metao run examples/mission-policy-deny.json
    ```
-   This example is intentionally denied by policy before runtime selection. A `BLOCKED` result proves the mission-file/CLI/governance path is working; it does **not** claim provider-backed execution or metaO acceptance.
 
-7. **Check mission status and inspect**:
-   ```console
-   metao status quickstart-policy-deny
-   metao inspect quickstart-policy-deny
-   ```
+   This second example is intentionally denied by policy before runtime selection. A `BLOCKED` result demonstrates that metaO governance remains authoritative before runtime execution.
+
+### Re-running the quickstart
+
+Mission and runtime state are durable under `.metao/`. Re-running a mission with the same mission id against the same database is intentionally rejected as a duplicate. To repeat the quickstart from a clean local state, remove `.metao/` first.
+
+PowerShell:
+
+```powershell
+Remove-Item -Recurse -Force .metao
+```
+
+Linux/POSIX shell:
+
+```sh
+rm -rf .metao
+```
+
+For a real application/runtime, replace the example catalog entry with your own `RuntimePlugin` factory and keep the same `metao.runtime_factory:create_operator` composition path. Do not treat the committed `quickstart-local` runtime as a production runtime.
 
 ## Python API Quickstart
 
-The public operator API takes an explicit durable-execution port. With a running Conductor instance:
+The public durable-execution API takes an explicit durable-execution port. With a running Conductor instance:
 
 ```python
 from metao import run, status
@@ -114,6 +176,8 @@ execution_id = run(
 )
 print(status(port, execution_id))
 ```
+
+This Python API example requires a separately running Conductor service; it is not part of the zero-network Operator CLI quickstart above.
 
 Framework adapters live outside Core. LangGraph-like runtimes are bridged through their `invoke` interface and CrewAI-like runtimes through `kickoff`; both normalize evidence at the metaO boundary.
 
