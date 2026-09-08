@@ -54,6 +54,31 @@ class BudgetNonFiniteFailClosedTests(unittest.TestCase):
                     authority.reserve(reservation_id, money=value)
                 self.assertIsNone(authority.reservation(reservation_id))
 
+    def test_large_integer_budget_values_remain_supported(self) -> None:
+        huge = 10**1000
+        budget = AcceptanceBudget(
+            money_limit=10.0,
+            token_limit=huge,
+            wall_time_limit_s=30.0,
+            verifier_attempt_limit=huge,
+        )
+        consumed = budget.consume(tokens=huge, verifier_attempts=huge)
+        self.assertEqual(consumed.tokens_used, huge)
+        self.assertEqual(consumed.verifier_attempts_used, huge)
+
+        authority = AcceptanceBudgetAuthority(
+            AcceptanceBudget(
+                money_limit=10.0,
+                token_limit=huge,
+                wall_time_limit_s=30.0,
+                verifier_attempt_limit=huge,
+            )
+        )
+        authority.reserve("large-int", tokens=huge, verifier_attempts=huge)
+        settled = authority.settle("large-int")
+        self.assertEqual(settled.tokens_used, huge)
+        self.assertEqual(settled.verifier_attempts_used, huge)
+
     def test_finite_budget_semantics_are_preserved(self) -> None:
         budget = self.valid_budget()
         updated = budget.consume(money=2.5, tokens=10, wall_time_s=4.0, verifier_attempts=1)
