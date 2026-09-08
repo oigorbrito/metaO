@@ -316,11 +316,8 @@ def main(
             _write_json([_runtime_entry_view(item) for item in runtime_entries()], out)
             return 0
 
-        controls = SQLiteRuntimeControlStore(control_db)
-        certifications = SQLiteRuntimeCertificationStore(certification_db)
-        revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
-
         if args.command == "runtime-quarantine":
+            controls = SQLiteRuntimeControlStore(control_db)
             record = quarantine(
                 controls,
                 args.orchestrator_id,
@@ -331,6 +328,7 @@ def main(
             _write_json(_control_view(record), out)
             return 0
         if args.command == "runtime-restore":
+            controls = SQLiteRuntimeControlStore(control_db)
             record = restore(
                 controls,
                 args.orchestrator_id,
@@ -341,9 +339,12 @@ def main(
             _write_json(_control_view(record), out)
             return 0
         if args.command == "runtime-history":
+            controls = SQLiteRuntimeControlStore(control_db)
             _write_json([_control_view(item) for item in controls.history(args.orchestrator_id)], out)
             return 0
         if args.command == "runtime-certificates":
+            certifications = SQLiteRuntimeCertificationStore(certification_db)
+            revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
             if (args.now_epoch is None) != (args.max_age_seconds is None):
                 raise CLIInputError(
                     "runtime-certificates freshness requires both --now-epoch and --max-age-seconds"
@@ -363,6 +364,8 @@ def main(
             )
             return 0
         if args.command == "runtime-certificate-revoke":
+            certifications = SQLiteRuntimeCertificationStore(certification_db)
+            revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
             record = revoke_certificate(
                 certifications,
                 revocations,
@@ -374,6 +377,7 @@ def main(
             _write_json(_revocation_view(record), out)
             return 0
         if args.command == "runtime-certificate-revocations":
+            revocations = SQLiteRuntimeCertificationRevocationStore(certification_revocation_db)
             _write_json(
                 [_revocation_view(item) for item in revocations.history(args.orchestrator_id)],
                 out,
