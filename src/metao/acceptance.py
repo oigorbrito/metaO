@@ -17,6 +17,7 @@ from dataclasses import dataclass, field, replace
 from enum import Enum
 from hashlib import sha256
 import json
+from math import isfinite
 from typing import Iterable, Optional, Sequence, Tuple
 
 
@@ -57,6 +58,19 @@ class EvidenceEnvelope:
     expires_at_epoch: Optional[float] = None
     approval_id: Optional[str] = None
     confidence: Optional[float] = None
+
+    def __post_init__(self) -> None:
+        if not isfinite(self.created_at_epoch):
+            raise ValueError("evidence creation time must be finite")
+        if self.created_at_epoch < 0:
+            raise ValueError("evidence creation time must be non-negative")
+        if self.expires_at_epoch is not None:
+            if not isfinite(self.expires_at_epoch):
+                raise ValueError("evidence expiry time must be finite")
+            if self.expires_at_epoch < 0:
+                raise ValueError("evidence expiry time must be non-negative")
+            if self.expires_at_epoch < self.created_at_epoch:
+                raise ValueError("evidence expiry time cannot precede creation")
 
 
 @dataclass(frozen=True)
@@ -110,7 +124,15 @@ def _digest_payload(payload: object) -> str:
     return sha256(encoded).hexdigest()
 
 
+def _validate_acceptance_now(now_epoch: float) -> None:
+    if not isfinite(now_epoch):
+        raise ValueError("acceptance current time must be finite")
+    if now_epoch < 0:
+        raise ValueError("acceptance current time must be non-negative")
+
+
 def check_freshness(evidence: EvidenceEnvelope, *, now_epoch: float) -> GateResult:
+    _validate_acceptance_now(now_epoch)
     if evidence.expires_at_epoch is not None and now_epoch > evidence.expires_at_epoch:
         return GateResult(False, AcceptanceDecision.STALE, "evidence_expired")
     if evidence.created_at_epoch and evidence.created_at_epoch > now_epoch:
@@ -244,6 +266,7 @@ def evaluate_acceptance(
 ) -> AcceptanceResult:
     """Return metaO's final decision; executor_done is intentionally non-authoritative."""
 
+    _validate_acceptance_now(now_epoch)
     items = tuple(evidence)
 
     ids = [item.evidence_id for item in items]
