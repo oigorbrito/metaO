@@ -59,7 +59,10 @@ def _string_set(data: Mapping[str, Any], key: str) -> frozenset[str]:
 def _json_number(value: Any) -> float:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise TypeError("expected JSON number")
-    return float(value)
+    result = float(value)
+    if result != result or result in (float("inf"), float("-inf")):
+        raise TypeError("expected finite JSON number")
+    return result
 
 
 def _json_integer(value: Any) -> int:
