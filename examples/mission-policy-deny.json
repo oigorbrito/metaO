@@ -1,0 +1,30 @@
+{
+  "mission": {
+    "mission_id": "quickstart-policy-deny",
+    "objective": "validate the metaO operator path without invoking an external runtime",
+    "required_capabilities": []
+  },
+  "policy": {
+    "policy_bundle_id": "quickstart-policy-v1",
+    "allowed": false,
+    "require_human": false,
+    "reason": "quickstart demonstrates fail-closed policy before runtime execution"
+  },
+  "budget": {
+    "money_limit": 1.0,
+    "token_limit": 1,
+    "wall_time_limit_s": 1.0,
+    "verifier_attempt_limit": 1
+  },
+  "acceptance_context": {
+    "subject_id": "quickstart-subject",
+    "subject_state_id": "quickstart-state-v1",
+    "verification_context_id": "quickstart-verification-v1",
+    "policy_bundle_id": "quickstart-policy-v1",
+    "required_obligations": [],
+    "trusted_verifiers": [],
+    "trusted_provenance_roots": [],
+    "authorized_authorities": []
+  },
+  "max_attempts": 1
+}
