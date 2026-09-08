@@ -106,7 +106,7 @@ def _certification_revocation_db(db: str) -> str:
 def _combined_help(stream: TextIO) -> None:
     stream.write("usage: metao [--db DB] COMMAND ...\n\n")
     stream.write("metaO control-plane operator CLI\n\n")
-    stream.write("mission commands: run, status, inspect, list, events, approve, resume, cancel\n")
+    stream.write("mission commands: doctor, run, status, inspect, list, events, approve, resume, cancel\n")
     stream.write(
         "runtime commands: runtimes, runtime-quarantine, runtime-restore, runtime-history, "
         "runtime-certificates, runtime-certificate-revoke, runtime-certificate-revocations\n"
