@@ -10,6 +10,7 @@ on:
       - 'src/metao/**'
       - 'tests/integration/test_operator_initialization_e2e.py'
       - 'tests/integration/test_readme_quickstart_e2e.py'
+      - 'tests/integration/test_operator_bootstrap_negative_e2e.py'
   workflow_dispatch:
 
 jobs:
@@ -33,6 +34,8 @@ jobs:
         run: |
           command -v metao
           metao --help
+      - name: Negative bootstrap E2E
+        run: python tests/integration/test_operator_bootstrap_negative_e2e.py
       - name: Bootstrap to accepted mission E2E
         run: python tests/integration/test_operator_initialization_e2e.py
       - name: README clean-room quickstart E2E
