@@ -1,10 +1,9 @@
 from __future__ import annotations
 
-import importlib
 import os
 from typing import Any
 
-from .cli import CLIInputError, resolve_factory_spec
+from .cli import CLIInputError, load_factory_callable, resolve_factory_spec
 from .mission_store import InMemoryMissionStore
 from .operator import MissionOperator
 
@@ -53,71 +52,53 @@ def run_doctor(db_path: str, explicit_factory_spec: str | None = None) -> dict[s
     check_catalog = {"name": "RUNTIME_CATALOG", "status": "NOT_CHECKED"}
 
     if factory_spec:
-        if ":" not in factory_spec:
-            check_import = {
-                "name": "FACTORY_IMPORT",
-                "status": "FAIL",
-                "message": "Syntax must be module:function",
-            }
-        else:
-            module_name, attr = factory_spec.split(":", 1)
+        try:
+            factory_func = load_factory_callable(factory_spec)
+            check_import = {"name": "FACTORY_IMPORT", "status": "PASS"}
+
             try:
-                module = importlib.import_module(module_name)
-                factory_func = getattr(module, attr)
-                if not callable(factory_func):
-                    check_import = {
-                        "name": "FACTORY_IMPORT",
+                probe_store = InMemoryMissionStore()
+                operator = factory_func(store=probe_store)
+                if not isinstance(operator, MissionOperator):
+                    check_construct = {
+                        "name": "OPERATOR_CONSTRUCTION",
                         "status": "FAIL",
-                        "message": "Target is not callable",
+                        "message": "Factory did not return a MissionOperator",
                     }
                 else:
-                    check_import = {"name": "FACTORY_IMPORT", "status": "PASS"}
+                    check_construct = {"name": "OPERATOR_CONSTRUCTION", "status": "PASS"}
 
-                    try:
-                        probe_store = InMemoryMissionStore()
-                        operator = factory_func(store=probe_store)
-                        if not isinstance(operator, MissionOperator):
-                            check_construct = {
-                                "name": "OPERATOR_CONSTRUCTION",
-                                "status": "FAIL",
-                                "message": "Factory did not return a MissionOperator",
+                    runtime_entries = getattr(operator, "runtime_entries", None)
+                    if callable(runtime_entries):
+                        try:
+                            entries = runtime_entries()
+                            check_catalog = {
+                                "name": "RUNTIME_CATALOG",
+                                "status": "PASS",
+                                "details": f"count={len(list(entries))}",
                             }
-                        else:
-                            check_construct = {"name": "OPERATOR_CONSTRUCTION", "status": "PASS"}
-
-                            runtime_entries = getattr(operator, "runtime_entries", None)
-                            if callable(runtime_entries):
-                                try:
-                                    entries = runtime_entries()
-                                    check_catalog = {
-                                        "name": "RUNTIME_CATALOG",
-                                        "status": "PASS",
-                                        "details": f"count={len(list(entries))}",
-                                    }
-                                except Exception as exc:
-                                    check_catalog = {
-                                        "name": "RUNTIME_CATALOG",
-                                        "status": "FAIL",
-                                        "message": f"runtime_entries() failed: {exc}",
-                                    }
-                            else:
-                                check_catalog = {
-                                    "name": "RUNTIME_CATALOG",
-                                    "status": "NOT_CONFIGURED",
-                                    "message": "Operator does not expose runtime_entries",
-                                }
-                    except Exception as exc:
-                        check_construct = {
-                            "name": "OPERATOR_CONSTRUCTION",
-                            "status": "FAIL",
-                            "message": str(exc),
+                        except Exception as exc:
+                            check_catalog = {
+                                "name": "RUNTIME_CATALOG",
+                                "status": "FAIL",
+                                "message": f"runtime_entries() failed: {exc}",
+                            }
+                    else:
+                        check_catalog = {
+                            "name": "RUNTIME_CATALOG",
+                            "status": "NOT_CONFIGURED",
+                            "message": "Operator does not expose runtime_entries",
                         }
-            except ImportError as exc:
-                check_import = {"name": "FACTORY_IMPORT", "status": "FAIL", "message": str(exc)}
-            except AttributeError as exc:
-                check_import = {"name": "FACTORY_IMPORT", "status": "FAIL", "message": str(exc)}
             except Exception as exc:
-                check_import = {"name": "FACTORY_IMPORT", "status": "FAIL", "message": str(exc)}
+                check_construct = {
+                    "name": "OPERATOR_CONSTRUCTION",
+                    "status": "FAIL",
+                    "message": str(exc),
+                }
+        except (CLIInputError, ImportError, AttributeError) as exc:
+            check_import = {"name": "FACTORY_IMPORT", "status": "FAIL", "message": str(exc)}
+        except Exception as exc:
+            check_import = {"name": "FACTORY_IMPORT", "status": "FAIL", "message": str(exc)}
 
     checks.extend([check_import, check_construct, check_catalog])
 
