@@ -3,43 +3,52 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`
+Qualified executable commit: `366a835923a814fcabe65bf7cc0763f56d456108`
 Date reconciled: 2026-09-08
+
+A later documentation-only merge may advance repository `HEAD` without changing the executable evidence binding above. Any later product-code, packaging, executable-test, or workflow change requires requalification before inheriting these PASS claims.
 
 This is the master closure plan for the post-MVP baseline. It replaces issue-by-issue ping-pong as the primary planning view.
 
-## Current closure fact: canonical operator initialization
+## Current closure fact: canonical operator initialization and onboarding
 
-The canonical Python operator initialization requirement is resolved on the exact integrated reconciled source state.
+The canonical Python operator initialization/onboarding requirement is resolved on the exact integrated executable state above.
 
 ```text
 REPOSITORY = oigorbrito/metaO
 BRANCH = main
-HEAD = 9dbdf542eaad59e5cc80b8a1a845bf527a36893c
+QUALIFIED_EXECUTABLE_COMMIT = 366a835923a814fcabe65bf7cc0763f56d456108
 PYTHON = 3.12.10
 CLEAN_CLONE = YES
 ISOLATED_VENV = YES
 INSTALLED_CLI = YES
 UNIT_REGRESSION = 487/487 PASS
+README_QUICKSTART_E2E = PASS
+NEGATIVE_BOOTSTRAP_E2E = PASS
 CANONICAL_INITIALIZATION_E2E = PASS
+FIRST_MISSION = ACCEPTED
+CROSS_PROCESS_INSPECT = PASS
 FINAL_WORKTREE = CLEAN
 INITIALIZATION_RESOLVED = YES
+HOSTED_CI = BLOCKED_EXTERNAL_PRE_STEP (#71)
 ```
 
-The canonical E2E traversed installed CLI -> doctor -> canonical factory loading -> declarative runtime catalog -> real LangGraph runtime -> required certification -> admission -> mission execution -> `ACCEPTED` -> separate-process inspect with persisted execution/evidence/proof observable.
+The canonical initialization E2E traversed installed CLI -> doctor -> canonical factory loading -> declarative runtime catalog -> real LangGraph runtime -> required certification -> admission -> mission execution -> `ACCEPTED` -> separate-process inspect with persisted execution/evidence/proof observable.
 
-This closes the initialization/bootstrap obligation only. It does not imply final project closure, hosted-CI PASS, or real external-provider success. Issue #71 remains the independent hosted-runner blocker.
+The README clean-room E2E proves the committed documented onboarding path without hidden `my_app` modules, external credentials, or an uncommitted runtime catalog. The installed-console negative-bootstrap E2E proves the covered first-run failures occur before partial mission persistence.
+
+This closes the initialization/onboarding obligation only. It does not imply final project closure, hosted-CI PASS, or real external-provider success. Issue #71 remains the independent hosted-runner blocker.
 
 ## Block A - Documentation and requirements baseline
 
 - OBJECTIVE: establish canonical authority, baseline, and traceability documents.
-- ISSUES: #274, #245, #227, #70, #434.
+- ISSUES: #274, #245, #227, #70, #434, #440.
 - PRS: existing doc/reconciliation PRs only where still relevant.
 - DEPENDENCIES: current repo truth and issue reconciliation.
 - ENTRY_CRITERIA: baseline and authority docs created.
 - IMPLEMENTATION_WORK: create canonical docs, classify history, link baseline.
 - TESTS: link checks, markdown sanity, factual reconciliation against exact source state.
-- EVIDENCE: updated docs and exact commit binding.
+- EVIDENCE: updated docs and exact executable-commit binding.
 - EXIT_CRITERIA: one authoritative baseline view exists and current operational claims bind to executable evidence.
 - WHAT_CAN_RUN_IN_PARALLEL: history classification and traceability drafting.
 - WHAT_MUST_REMAIN_OPEN: external CI blocker.
@@ -182,18 +191,18 @@ This closes the initialization/bootstrap obligation only. It does not imply fina
 
 ## Block K - Repository / GitHub convergence
 
-- OBJECTIVE: align issues, PRs, labels, and docs with current truth.
-- ISSUES: #70, #71, #73, #74, #274, #434.
+- OBJECTIVE: align issues, PRs, labels, branches, and docs with current truth.
+- ISSUES: #70, #71, #73, #74, #274, #434, #440.
 - PRS: current docs/convergence PRs.
 - DEPENDENCIES: baseline, authority map, and current issue state.
 - ENTRY_CRITERIA: canonical docs exist.
-- IMPLEMENTATION_WORK: reconcile tracker state and superseded docs.
+- IMPLEMENTATION_WORK: reconcile tracker state and superseded docs; remove absorbed/transient branch refs when branch-deletion authority is available.
 - TESTS: doc link validation and issue-state review.
 - EVIDENCE: documented reconciliation.
-- EXIT_CRITERIA: one current status view.
+- EXIT_CRITERIA: one current status view; stale branch refs are either removed or explicitly classified as hygiene-only residue.
 - WHAT_CAN_RUN_IN_PARALLEL: closure-plan drafting and capability mapping.
 - WHAT_MUST_REMAIN_OPEN: mass issue closure without evidence.
-- EXTERNAL_BLOCKERS: remote GitHub access when needed.
+- EXTERNAL_BLOCKERS: remote branch deletion requires a Git client because the connected repository API does not expose delete-ref.
 
 ## Block L - Operational release / readiness assessment
 
@@ -210,7 +219,7 @@ This closes the initialization/bootstrap obligation only. It does not imply fina
 - WHAT_MUST_REMAIN_OPEN: external blockers.
 - EXTERNAL_BLOCKERS: hosted CI, unavailable evidence files.
 
-Initialization is no longer a Block L blocker for the reconciled Python operator path. Remaining Block L decisions must be based on the other readiness criteria and explicitly separated external blockers.
+Initialization, README onboarding, and the covered negative-bootstrap paths are no longer Block L blockers for the qualified Python operator path. Remaining Block L decisions must be based on the other readiness criteria and explicitly separated external blockers.
 
 ## Block M - Final closure audit
 
@@ -227,13 +236,37 @@ Initialization is no longer a Block L blocker for the reconciled Python operator
 - WHAT_MUST_REMAIN_OPEN: anything still externally blocked or not executed.
 - EXTERNAL_BLOCKERS: external systems and pending evidence.
 
+## Operational/onboarding closure matrix
+
+Bound to `366a835923a814fcabe65bf7cc0763f56d456108`:
+
+```text
+CLEAN_CLONE_INSTALL = PASS
+CLI_HELP = PASS
+README_QUICKSTART = PASS
+DOCTOR = PASS
+RUNTIME_BOOTSTRAP = PASS
+CERTIFICATION = PASS
+FIRST_MISSION = ACCEPTED
+CROSS_PROCESS_INSPECT = PASS
+NEGATIVE_BOOTSTRAP_CASES = PASS
+PARTIAL_STATE_CREATED_ON_COVERED_FAILURES = NO
+UNIT_REGRESSION = 487/487 PASS
+WORKTREE_HYGIENE = PASS
+HOSTED_CI = BLOCKED_EXTERNAL (#71)
+```
+
+This matrix closes the first-use/operator-operability slice. It does not close the independent numeric audit, real external-provider qualification, credential-broker lifecycle, formal-model execution, or final project readiness.
+
 ## Final-Closure Wave Delta
 
 Status: LOCAL_IMPLEMENTATION_RECONCILIATION
 
-Historical integrated `main` recorded by this wave: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`.
+Historical integrated `main` recorded by the earlier wave: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`.
 
-Current reconciled `main` for this document: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`.
+Historical initialization-only reconciled `main`: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`.
+
+Current qualified executable `main` for the operational/onboarding slice: `366a835923a814fcabe65bf7cc0763f56d456108`.
 
 Historical closure branch: `post-mvp/final-local-closure-v2`.
 
@@ -247,15 +280,19 @@ New executable closure evidence from that historical wave:
 
 Current additional executable evidence:
 
-- canonical Python operator initialization has executed and passed on integrated `main@9dbdf542eaad59e5cc80b8a1a845bf527a36893c` in a clean clone/isolated venv;
-- the same run executed all 487 unit tests successfully before the initialization E2E;
-- the E2E reached a certified/admitted real LangGraph runtime, mission `ACCEPTED`, and cross-process persisted inspection.
+- canonical Python operator initialization executed and passed on integrated `main@366a835923a814fcabe65bf7cc0763f56d456108` in a clean clone/isolated venv;
+- the same guarded qualification sequence executed all 487 unit tests successfully;
+- README clean-room quickstart executed successfully from an installed CLI and committed examples, reaching mission `ACCEPTED` and cross-process inspection without hidden application modules or credentials;
+- installed-console negative bootstrap E2E executed successfully for not-configured, invalid DB path, missing mission, invalid JSON, and missing runtime catalog cases, preserving no partial mission DB for the covered failures;
+- the initialization E2E reached a certified/admitted real LangGraph runtime, mission `ACCEPTED`, and cross-process persisted inspection;
+- final clean-room worktree status was clean.
 
 Remaining non-local closure items include:
 
-- real external provider runtime execution is not proven by the initialization E2E;
+- real external provider runtime execution is not proven by the initialization/README E2Es;
 - real credential broker issue/renew/revoke lifecycle is not configured locally;
 - bounded formal model execution remains separate from implementation proof;
 - hosted GitHub Actions remains governed by issue #71 until a hosted run reaches configured repository steps;
 - SWE-RPG executable publication/pinning remains external under issue #180 where still applicable;
-- independent numeric hard-gate audit work remains separate and must be qualified on its own branches before integration.
+- independent numeric hard-gate audit work #420/#421 through #428/#429 remains separate and must be qualified on its own branches before integration;
+- stale remote branches are repository hygiene and should be deleted once branch-delete access is available.
