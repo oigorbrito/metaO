@@ -1,0 +1,35 @@
+{
+  "runtimes": [
+    {
+      "factory": "metao.quickstart_runtime:create_plugin",
+      "cost": 0.0,
+      "latency_ms": 1.0,
+      "success_rate": 1.0,
+      "quality": 1.0,
+      "reliability": 1.0,
+      "trust_profile": "quickstart-local",
+      "certification": {
+        "mode": "required",
+        "reuse_passed": true,
+        "probe": {
+          "execution_id": "quickstart-certification",
+          "mission_id": "quickstart-certification-mission",
+          "objective": "certify quickstart local runtime",
+          "required_capabilities": [
+            "workflow"
+          ],
+          "context": {
+            "obligation_id": "execution_result",
+            "subject_id": "quickstart-certification-subject",
+            "subject_state_id": "quickstart-certification-state",
+            "verification_context_id": "quickstart-certification-verification",
+            "policy_bundle_id": "quickstart-certification-policy",
+            "verifier_id": "adapter-observer",
+            "authority_id": "metao-runtime",
+            "created_at_epoch": 100.0
+          }
+        }
+      }
+    }
+  ]
+}

@@ -4,8 +4,12 @@ on:
   pull_request:
     paths:
       - '.github/workflows/operator-initialization-e2e-windows.yml'
+      - 'README.md'
+      - 'examples/runtime-catalog-quickstart.json'
+      - 'examples/mission-quickstart-accepted.json'
       - 'src/metao/**'
       - 'tests/integration/test_operator_initialization_e2e.py'
+      - 'tests/integration/test_readme_quickstart_e2e.py'
   workflow_dispatch:
 
 jobs:
@@ -32,3 +36,5 @@ jobs:
           metao --help
       - name: Bootstrap to accepted mission E2E
         run: python tests/integration/test_operator_initialization_e2e.py
+      - name: README clean-room quickstart E2E
+        run: python tests/integration/test_readme_quickstart_e2e.py
