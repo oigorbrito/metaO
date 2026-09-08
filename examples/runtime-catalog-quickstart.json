@@ -24,7 +24,7 @@
             "subject_state_id": "quickstart-certification-state",
             "verification_context_id": "quickstart-certification-verification",
             "policy_bundle_id": "quickstart-certification-policy",
-            "verifier_id": "quickstart-observer",
+            "verifier_id": "adapter-observer",
             "authority_id": "metao-runtime",
             "created_at_epoch": 100.0
           }
