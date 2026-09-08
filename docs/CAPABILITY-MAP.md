@@ -2,8 +2,9 @@
 
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
-Applies to: repository `tihotm/metaO`
-Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
+Applies to: repository `oigorbrito/metaO`
+Last reconciled commit: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`
+Date reconciled: 2026-09-08
 
 This matrix is the primary convergence view for current implementation truth.
 
@@ -38,6 +39,26 @@ Legend:
 | C20 | Rust composed closure system proof | #168 | implemented on final-closure branch | Rust | `metao-testkit/tests/composed_system_closure_tests.rs` | Y | Y | Y | Y | Y | N | Y | Y | L6 + MULTIPROCESS + REAL_EXTERNAL_SYSTEM + FAULT_INJECTION | real external orchestrator/provider not configured | final gates on exact branch SHA and remote landing | governance, lost ACK, health degradation, fencing, dedup, stage evidence and independent acceptance compose |
 | C21 | Formal model execution | #161 / #327 | specified | TLA+ | `experiments/rust-chassis-a/formal` | S | N | N | N | N | N | N | N | L1 | `tlc`/`java` not available locally | run bounded TLC/equivalent checker | model invariants checked without treating them as implementation proof |
 | C22 | Real credential broker lifecycle | #165 | specified/contracted | Rust/Python | credential lease contracts and historical docs | P | Y | Y | P | N | N | N | P | L4-L6 depending slice | no real broker configured locally | issue/renew/revoke lifecycle against safe broker | secret material absent from canonical evidence and lease binding enforced |
+| C23 | Canonical operator initialization / bootstrap | #398 / #400 / #402 / #404 / #406 / #408 / #410 / #412 / #414 / #416 / #418 / #430 | implemented and integrated | Python | installed `metao` CLI, `runtime_factory`, declarative catalog, certification/admission, SQLite mission state | Y | Y | Y | Y | N | Y (LangGraph) | N | N | L6 + REAL_RUNTIME | none for local initialization; hosted CI separately blocked by #71 | repeat exact clean-room E2E on future authoritative release candidate | clean environment reaches doctor PASS, certified/admitted runtime, mission ACCEPTED, and separate-process observable inspect |
+
+## Initialization evidence binding
+
+For C23, the exact reconciled execution context is:
+
+```text
+REPOSITORY = oigorbrito/metaO
+BRANCH = main
+HEAD = 9dbdf542eaad59e5cc80b8a1a845bf527a36893c
+OS = Windows PowerShell clean-room clone
+PYTHON = 3.12.10
+ISOLATED_VENV = YES
+INSTALLED_CLI = YES
+UNIT_REGRESSION = 487/487 PASS
+CANONICAL_INITIALIZATION_E2E = PASS
+FINAL_WORKTREE = CLEAN
+```
+
+The E2E uses a real LangGraph runtime locally but no external model/provider call. Therefore `REAL_RUNTIME = Y` for that runtime boundary while `REAL_EXTERNAL_SYSTEM = N` for this claim.
 
 ## Notes
 
@@ -45,3 +66,4 @@ Legend:
 - `REAL_RUNTIME` is reserved for real runtime evidence, not deterministic test doubles.
 - `REAL_EXTERNAL_SYSTEM` is only `P` where the repo explicitly documents provider/external-system reach.
 - `MULTIPROCESS_TEST` is only `Y` when more than one process boundary is evidenced, not when two objects exist.
+- C23 local initialization PASS and C14 hosted CI BLOCKED are intentionally independent claims: `LOCAL_INITIALIZATION_E2E_PASS != HOSTED_CI_PASS`.
