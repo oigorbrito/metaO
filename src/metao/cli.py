@@ -56,6 +56,18 @@ def _string_set(data: Mapping[str, Any], key: str) -> frozenset[str]:
     return frozenset(value)
 
 
+def _json_number(value: Any) -> float:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise TypeError("expected JSON number")
+    return float(value)
+
+
+def _json_integer(value: Any) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError("expected JSON integer")
+    return value
+
+
 def _load_run_spec(path: str | Path) -> dict[str, Any]:
     try:
         payload = json.loads(Path(path).read_text(encoding="utf-8"))
@@ -89,13 +101,15 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
 
     try:
         budget = AcceptanceBudget(
-            money_limit=float(budget_data["money_limit"]),
-            token_limit=int(budget_data["token_limit"]),
-            wall_time_limit_s=float(budget_data["wall_time_limit_s"]),
-            verifier_attempt_limit=int(budget_data["verifier_attempt_limit"]),
+            money_limit=_json_number(budget_data["money_limit"]),
+            token_limit=_json_integer(budget_data["token_limit"]),
+            wall_time_limit_s=_json_number(budget_data["wall_time_limit_s"]),
+            verifier_attempt_limit=_json_integer(budget_data["verifier_attempt_limit"]),
         )
     except (KeyError, TypeError, ValueError) as exc:
-        raise CLIInputError("budget requires numeric money/token/wall-time/verifier limits") from exc
+        raise CLIInputError(
+            "budget requires numeric money/wall-time limits and integer token/verifier limits"
+        ) from exc
 
     acceptance_context = AcceptanceContext(
         subject_id=_required_string(acceptance_data, "subject_id"),
@@ -112,10 +126,10 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
     if prefix is not None and (not isinstance(prefix, str) or not prefix):
         raise CLIInputError("execution_id_prefix must be a non-empty string")
     try:
-        now_epoch = float(root.get("now_epoch", 0.0))
-        max_attempts = int(root.get("max_attempts", 2))
-    except (TypeError, ValueError) as exc:
-        raise CLIInputError("now_epoch/max_attempts must be numeric") from exc
+        now_epoch = _json_number(root.get("now_epoch", 0.0))
+        max_attempts = _json_integer(root.get("max_attempts", 2))
+    except TypeError as exc:
+        raise CLIInputError("now_epoch must be numeric and max_attempts must be an integer") from exc
     if max_attempts < 1:
         raise CLIInputError("max_attempts must be at least 1")
 
