@@ -100,7 +100,7 @@ def normalize_evidence(
             context.get("verification_context_id", "quickstart-verification")
         ),
         policy_bundle_id=str(context.get("policy_bundle_id", "quickstart-policy")),
-        verifier_id=str(context.get("verifier_id", "quickstart-observer")),
+        verifier_id=str(context.get("verifier_id", "adapter-observer")),
         payload_digest=_digest(output),
         provenance_root=f"quickstart-local:{request.execution_id}",
         authority_id=str(context.get("authority_id", "metao-runtime")),
