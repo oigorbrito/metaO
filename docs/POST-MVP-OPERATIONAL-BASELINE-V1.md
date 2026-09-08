@@ -3,8 +3,8 @@
 Status: CANONICAL BASELINE DRAFT FOR POST-MVP OPERATIONALIZATION
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `ffc1aae`
-Date: 2026-08-30
+Last reconciled commit: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`
+Date: 2026-09-08
 
 ## 1. Repository identity
 
@@ -16,12 +16,30 @@ The current repository state is a Python package under `src/metao/` with Rust-na
 
 Current actual phase:
 
-- post-MVP operational baseline reconstruction
-- post-v0.1 operationalization
-- local executable evidence exists for major slices
-- hosted CI remains externally blocked before configured steps on the historical release path
+- post-MVP operational baseline reconstruction;
+- post-v0.1 operationalization;
+- the canonical Python operator initialization path is integrated and qualified locally on the exact reconciled `main` state;
+- the exact integrated clean-room qualification produced `487/487` unit PASS plus canonical initialization E2E PASS;
+- local executable evidence exists for major additional slices;
+- hosted CI remains externally blocked before configured steps on the historical release path under #71.
 
 This is not final closure.
+
+Initialization-specific state:
+
+```text
+CANONICAL_ENTRYPOINT_IDENTIFIED = YES
+BOOTSTRAP_PATH_IMPLEMENTED = YES
+E2E_INIT_TEST_EXISTS = YES
+E2E_INIT_TEST_EXECUTED = YES
+E2E_INIT_TEST_PASSES = YES
+INTEGRATED_INTO_MAIN = YES
+E2E_PASSES_ON_INTEGRATED_PATH = YES
+INITIALIZATION_RESOLVED = YES
+HOSTED_CI_PASS = NO / BLOCKED_EXTERNAL (#71)
+```
+
+The initialization conclusion is bounded to the qualified local integrated path. It does not imply final project closure, hosted-CI PASS, or real external-provider success.
 
 ## 3. Frozen architecture
 
@@ -43,6 +61,7 @@ Secondary invariant:
 - Canonical product direction: Rust-native Core and contracts.
 - Python role: product implementation plus semantic oracle/reference for slices that are not yet fully proven in Rust parity.
 - Historical runtime evidence: OpenAI Agents, CrewAI, LangGraph, and local deterministic test seams.
+- Current canonical operator initialization evidence uses the installed Python `metao` CLI and a real LangGraph runtime through declarative catalog, certification, admission, mission execution, independent acceptance, persistence, and separate-process inspection.
 
 ## 5. Authoritative documents
 
@@ -122,6 +141,7 @@ REFERENCE / HISTORICAL:
 
 Current capability truth is captured in `docs/CAPABILITY-MAP.md`. Short form:
 
+- the canonical operator initialization/bootstrap path has current integrated local L6-style integration evidence: installed CLI, doctor, factory/runtime composition, required certification/admission, mission `ACCEPTED`, and cross-process inspect all executed successfully on the reconciled `main` state;
 - current executable evidence exists for the acceptance boundary, runtime invariants, governance budget/approval, replay/fencing, release validator, and several integration/runtime slices;
 - some slices are only specified or partially composed;
 - cross-orchestrator and hostile-boundary claims remain partitioned by evidence level and should not be collapsed into a single PASS bucket;
@@ -169,9 +189,10 @@ See `docs/CAPABILITY-MAP.md` for the consolidated matrix.
 
 ## 9. Known blockers
 
-- hosted GitHub Actions pre-step blocker remains external;
+- hosted GitHub Actions pre-step blocker remains external under #71; this no longer blocks the factual local conclusion that canonical initialization is resolved on the exact reconciled integrated `main` state;
 - exact JSON re-validation of historical release evidence was separately blocked by file availability in prior reconciliation;
-- Rust canonical parity is still the product direction but not the only live implementation language in this checkout.
+- Rust canonical parity is still the product direction but not the only live implementation language in this checkout;
+- independent numeric hard-gate audit items remain separate work and must not be collapsed into initialization status.
 
 ## 10. Operational readiness
 
@@ -184,6 +205,8 @@ See `docs/CAPABILITY-MAP.md` for the consolidated matrix.
 - durable execution state and recovery behavior present;
 - real runtime and integration evidence for the required operational slice;
 - external blockers separated from product correctness.
+
+The canonical Python operator initialization requirement is satisfied for `main@9dbdf542eaad59e5cc80b8a1a845bf527a36893c`. That prerequisite must not be re-opened merely because hosted CI is blocked, but it also must not be used as a substitute for the remaining readiness requirements above.
 
 ## 11. Final closure
 
