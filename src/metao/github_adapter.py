@@ -152,6 +152,9 @@ class GitHubRepositoryAdapter:
     def _result(operation: str, repository: str, payload: Mapping[str, Any]) -> GitHubOperationResult:
         resource=str(payload.get("html_url") or payload.get("url") or payload.get("sha") or "")
         evidence={key: payload[key] for key in ("id","number","sha","ref","merged","message","html_url") if key in payload}
+        commit = payload.get("commit")
+        if "sha" not in evidence and isinstance(commit, Mapping) and commit.get("sha"):
+            evidence["sha"] = commit["sha"]
         return GitHubOperationResult(operation, repository, resource, evidence)
 
 
