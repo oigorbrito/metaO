@@ -389,18 +389,21 @@ fn runtime_binary() -> PathBuf {
     if let Ok(path) = std::env::var("CARGO_BIN_EXE_metao-wire-runtime") {
         return PathBuf::from(path);
     }
-    let fallback = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("target")
-        .join("debug")
-        .join(if cfg!(windows) {
-            "metao-wire-runtime.exe"
-        } else {
-            "metao-wire-runtime"
+    let target_root = std::env::var_os("CARGO_TARGET_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
+                .join("target")
         });
+    let fallback = target_root.join("debug").join(if cfg!(windows) {
+        "metao-wire-runtime.exe"
+    } else {
+        "metao-wire-runtime"
+    });
     assert!(
         fallback.exists(),
-        "missing runtime binary; run metao-wire runtime tests first or build the workspace: {}",
+        "missing runtime binary; build the workspace or set CARGO_TARGET_DIR consistently: {}",
         fallback.display()
     );
     fallback
@@ -723,9 +726,7 @@ fn run_case(case: &Case) -> Value {
                 vec!["root-1"],
                 vec!["authority-1"],
             ),
-            &[evidence(|item| {
-                item.subject_state_id = "other-state".into()
-            })],
+            &[evidence(|item| item.subject_state_id = "other-state".into())],
             15.0,
         )),
         ("acceptance", "verification_context_mismatch") => {
@@ -757,63 +758,54 @@ fn run_case(case: &Case) -> Value {
                 vec!["root-1"],
                 vec!["authority-1"],
             ),
+            &[evidence(|item| item.policy_bundle_id = "other-policy".into())],
+            15.0,
+        )),
+        ("authority_provenance", "missing_provenance") => acceptance_semantic(canonical_acceptance(
+            &context(
+                "subject-1",
+                "state-1",
+                "ctx-1",
+                "policy-1",
+                vec!["verify"],
+                vec!["verifier-1"],
+                vec!["root-1"],
+                vec!["authority-1"],
+            ),
             &[evidence(|item| {
-                item.policy_bundle_id = "other-policy".into()
+                item.payload_digest = "".into();
+                item.provenance_root = "".into();
             })],
             15.0,
         )),
-
-        ("authority_provenance", "missing_provenance") => {
-            acceptance_semantic(canonical_acceptance(
-                &context(
-                    "subject-1",
-                    "state-1",
-                    "ctx-1",
-                    "policy-1",
-                    vec!["verify"],
-                    vec!["verifier-1"],
-                    vec!["root-1"],
-                    vec!["authority-1"],
-                ),
-                &[evidence(|item| {
-                    item.payload_digest = "".into();
-                    item.provenance_root = "".into();
-                })],
-                15.0,
-            ))
-        }
-        ("authority_provenance", "untrusted_verifier") => {
-            acceptance_semantic(canonical_acceptance(
-                &context(
-                    "subject-1",
-                    "state-1",
-                    "ctx-1",
-                    "policy-1",
-                    vec!["verify"],
-                    vec!["verifier-1"],
-                    vec!["root-1"],
-                    vec!["authority-1"],
-                ),
-                &[evidence(|item| item.verifier_id = "evil-verifier".into())],
-                15.0,
-            ))
-        }
-        ("authority_provenance", "untrusted_provenance_root") => {
-            acceptance_semantic(canonical_acceptance(
-                &context(
-                    "subject-1",
-                    "state-1",
-                    "ctx-1",
-                    "policy-1",
-                    vec!["verify"],
-                    vec!["verifier-1"],
-                    vec!["root-1"],
-                    vec!["authority-1"],
-                ),
-                &[evidence(|item| item.provenance_root = "evil-root".into())],
-                15.0,
-            ))
-        }
+        ("authority_provenance", "untrusted_verifier") => acceptance_semantic(canonical_acceptance(
+            &context(
+                "subject-1",
+                "state-1",
+                "ctx-1",
+                "policy-1",
+                vec!["verify"],
+                vec!["verifier-1"],
+                vec!["root-1"],
+                vec!["authority-1"],
+            ),
+            &[evidence(|item| item.verifier_id = "evil-verifier".into())],
+            15.0,
+        )),
+        ("authority_provenance", "untrusted_provenance_root") => acceptance_semantic(canonical_acceptance(
+            &context(
+                "subject-1",
+                "state-1",
+                "ctx-1",
+                "policy-1",
+                vec!["verify"],
+                vec!["verifier-1"],
+                vec!["root-1"],
+                vec!["authority-1"],
+            ),
+            &[evidence(|item| item.provenance_root = "evil-root".into())],
+            15.0,
+        )),
         ("authority_provenance", "missing_authority") => acceptance_semantic(canonical_acceptance(
             &context(
                 "subject-1",
@@ -828,52 +820,38 @@ fn run_case(case: &Case) -> Value {
             &[evidence(|item| item.authority_id = "".into())],
             15.0,
         )),
-        ("authority_provenance", "unauthorized_authority") => {
-            acceptance_semantic(canonical_acceptance(
-                &context(
-                    "subject-1",
-                    "state-1",
-                    "ctx-1",
-                    "policy-1",
-                    vec!["verify"],
-                    vec!["verifier-1"],
-                    vec!["root-1"],
-                    vec!["authority-1"],
-                ),
-                &[evidence(|item| item.authority_id = "evil-authority".into())],
-                15.0,
-            ))
-        }
-        ("authority_provenance", "trusted_exact_evidence") => {
-            acceptance_semantic(canonical_acceptance(
-                &context(
-                    "subject-1",
-                    "state-1",
-                    "ctx-1",
-                    "policy-1",
-                    vec!["verify"],
-                    vec!["verifier-1"],
-                    vec!["root-1"],
-                    vec!["authority-1"],
-                ),
-                &[evidence(|_| {})],
-                15.0,
-            ))
-        }
-
-        ("policy", "allow_default") => {
-            policy_semantic(evaluate_policy("policy-1", true, false, ""))
-        }
-        ("policy", "deny_default") => {
-            policy_semantic(evaluate_policy("policy-1", false, false, ""))
-        }
-        ("policy", "require_human_default") => {
-            policy_semantic(evaluate_policy("policy-1", true, true, ""))
-        }
-        ("policy", "deny_overrides_require_human") => {
-            policy_semantic(evaluate_policy("policy-1", false, true, ""))
-        }
-
+        ("authority_provenance", "unauthorized_authority") => acceptance_semantic(canonical_acceptance(
+            &context(
+                "subject-1",
+                "state-1",
+                "ctx-1",
+                "policy-1",
+                vec!["verify"],
+                vec!["verifier-1"],
+                vec!["root-1"],
+                vec!["authority-1"],
+            ),
+            &[evidence(|item| item.authority_id = "evil-authority".into())],
+            15.0,
+        )),
+        ("authority_provenance", "trusted_exact_evidence") => acceptance_semantic(canonical_acceptance(
+            &context(
+                "subject-1",
+                "state-1",
+                "ctx-1",
+                "policy-1",
+                vec!["verify"],
+                vec!["verifier-1"],
+                vec!["root-1"],
+                vec!["authority-1"],
+            ),
+            &[evidence(|_| {})],
+            15.0,
+        )),
+        ("policy", "allow_default") => policy_semantic(evaluate_policy("policy-1", true, false, "")),
+        ("policy", "deny_default") => policy_semantic(evaluate_policy("policy-1", false, false, "")),
+        ("policy", "require_human_default") => policy_semantic(evaluate_policy("policy-1", true, true, "")),
+        ("policy", "deny_overrides_require_human") => policy_semantic(evaluate_policy("policy-1", false, true, "")),
         ("approval", "approved_exact_binding") => json!({
             "request": json!(approval_request()),
             "record": json!(approved_record()),
@@ -899,13 +877,9 @@ fn run_case(case: &Case) -> Value {
             "threshold": 0.8,
         }),
         ("approval", "invalid_confidence_fails_closed") => {
-            let err = apply_confidence_after_hard_gates(AcceptanceDecision::Accept, 1.1, 0.8)
-                .unwrap_err();
-            json!({
-                "error_category": normalized_error_category(&err),
-            })
+            let err = apply_confidence_after_hard_gates(AcceptanceDecision::Accept, 1.1, 0.8).unwrap_err();
+            json!({"error_category": normalized_error_category(&err)})
         }
-
         ("budget", "shared_budget_no_oversubscription") => {
             let authority = Arc::new(budget_authority());
             let barrier = Arc::new(Barrier::new(2));
@@ -953,14 +927,8 @@ fn run_case(case: &Case) -> Value {
             authority.reserve("r1", 5.0, 0, 0.0, 0).unwrap();
             authority.reserve("r2", 5.0, 0, 0.0, 0).unwrap();
             budget_semantic(BTreeMap::from([
-                (
-                    "reservation_r1",
-                    json!(authority.reservation("r1").unwrap()),
-                ),
-                (
-                    "reservation_r2",
-                    json!(authority.reservation("r2").unwrap()),
-                ),
+                ("reservation_r1", json!(authority.reservation("r1").unwrap())),
+                ("reservation_r2", json!(authority.reservation("r2").unwrap())),
                 ("money_used", json!(authority.snapshot().money_used)),
             ]))
         }
@@ -990,16 +958,11 @@ fn run_case(case: &Case) -> Value {
         ("budget", "conflicting_reservation_replay_fails_closed") => {
             let authority = budget_authority();
             authority.reserve("reservation-1", 4.0, 0, 0.0, 0).unwrap();
-            let conflict = authority
-                .reserve("reservation-1", 5.0, 0, 0.0, 0)
-                .unwrap_err();
+            let conflict = authority.reserve("reservation-1", 5.0, 0, 0.0, 0).unwrap_err();
             assert_eq!(normalized_error_category(conflict), "replay_conflict");
             budget_semantic(BTreeMap::from([
                 ("error_category", json!("replay_conflict")),
-                (
-                    "reservation",
-                    json!(authority.reservation("reservation-1").unwrap()),
-                ),
+                ("reservation", json!(authority.reservation("reservation-1").unwrap())),
             ]))
         }
         ("budget", "settlement_retry_idempotent") => {
@@ -1010,10 +973,7 @@ fn run_case(case: &Case) -> Value {
             budget_semantic(BTreeMap::from([
                 ("first", json!(first)),
                 ("retry", json!(retry)),
-                (
-                    "reservation",
-                    json!(authority.reservation("reservation-1").unwrap()),
-                ),
+                ("reservation", json!(authority.reservation("reservation-1").unwrap())),
             ]))
         }
         ("budget", "concurrent_same_settlement_single_effect") => {
@@ -1041,10 +1001,7 @@ fn run_case(case: &Case) -> Value {
             budget_semantic(BTreeMap::from([
                 ("results", json!(results)),
                 ("money_used", json!(authority.snapshot().money_used)),
-                (
-                    "reservation",
-                    json!(authority.reservation("reservation-1").unwrap()),
-                ),
+                ("reservation", json!(authority.reservation("reservation-1").unwrap())),
             ]))
         }
         ("budget", "unknown_settlement_id_fails_closed") => {
@@ -1056,14 +1013,10 @@ fn run_case(case: &Case) -> Value {
                 ("money_used", json!(authority.snapshot().money_used)),
             ]))
         }
-
         ("proof", "valid_replay") => {
             let result = canonical_acceptance(
                 &proof_context(),
-                &[
-                    proof_evidence("a", "e-a", 20.0),
-                    proof_evidence("b", "e-b", 10.0),
-                ],
+                &[proof_evidence("a", "e-a", 20.0), proof_evidence("b", "e-b", 10.0)],
                 30.0,
             );
             proof_semantic(result)
@@ -1071,10 +1024,7 @@ fn run_case(case: &Case) -> Value {
         ("proof", "tampered_evidence_ids") => {
             let result = canonical_acceptance(
                 &proof_context(),
-                &[
-                    proof_evidence("a", "e-a", 20.0),
-                    proof_evidence("b", "e-b", 10.0),
-                ],
+                &[proof_evidence("a", "e-a", 20.0), proof_evidence("b", "e-b", 10.0)],
                 30.0,
             );
             let mut proof = result.proof.unwrap();
@@ -1088,93 +1038,55 @@ fn run_case(case: &Case) -> Value {
         ("proof", "tampered_decision") => {
             let result = canonical_acceptance(
                 &proof_context(),
-                &[
-                    proof_evidence("a", "e-a", 20.0),
-                    proof_evidence("b", "e-b", 10.0),
-                ],
+                &[proof_evidence("a", "e-a", 20.0), proof_evidence("b", "e-b", 10.0)],
                 30.0,
             );
             let mut proof = result.proof.unwrap();
             proof.decision = AcceptanceDecision::Block;
             let err = replay_acceptance_decision(&proof).unwrap_err();
-            json!({
-                "error_category": normalized_error_category(&err),
-            })
+            json!({"error_category": normalized_error_category(&err)})
         }
         ("proof", "tampered_reasons") => {
             let result = canonical_acceptance(
                 &proof_context(),
-                &[
-                    proof_evidence("a", "e-a", 20.0),
-                    proof_evidence("b", "e-b", 10.0),
-                ],
+                &[proof_evidence("a", "e-a", 20.0), proof_evidence("b", "e-b", 10.0)],
                 30.0,
             );
             let mut proof = result.proof.unwrap();
             proof.reasons = vec!["forged".into()];
             let err = replay_acceptance_decision(&proof).unwrap_err();
-            json!({
-                "error_category": normalized_error_category(&err),
-            })
+            json!({"error_category": normalized_error_category(&err)})
         }
         ("proof", "tampered_digest") => {
             let result = canonical_acceptance(
                 &proof_context(),
-                &[
-                    proof_evidence("a", "e-a", 20.0),
-                    proof_evidence("b", "e-b", 10.0),
-                ],
+                &[proof_evidence("a", "e-a", 20.0), proof_evidence("b", "e-b", 10.0)],
                 30.0,
             );
             let mut proof = result.proof.unwrap();
             proof.digest = "deadbeef".repeat(8);
             let err = replay_acceptance_decision(&proof).unwrap_err();
-            json!({
-                "error_category": normalized_error_category(&err),
-            })
+            json!({"error_category": normalized_error_category(&err)})
         }
         ("proof", "order_independent") => {
             let chronological = canonical_acceptance(
                 &proof_context(),
-                &[
-                    proof_evidence("b", "e-b", 10.0),
-                    proof_evidence("a", "e-a", 20.0),
-                ],
+                &[proof_evidence("b", "e-b", 10.0), proof_evidence("a", "e-a", 20.0)],
                 30.0,
             );
             let out_of_order = canonical_acceptance(
                 &proof_context(),
-                &[
-                    proof_evidence("a", "e-a", 20.0),
-                    proof_evidence("b", "e-b", 10.0),
-                ],
+                &[proof_evidence("a", "e-a", 20.0), proof_evidence("b", "e-b", 10.0)],
                 30.0,
             );
             json!({
-                "base": proof_semantic(chronological.clone()),
-                "shuffled": proof_semantic(out_of_order.clone()),
-                "proof_equal": chronological.proof == out_of_order.proof,
+                "chronological": proof_semantic(chronological),
+                "out_of_order": proof_semantic(out_of_order),
             })
         }
-
-        ("runtime", "success_without_evidence") => {
-            runtime_result_summary("success_without_evidence")
-        }
-        ("runtime", "recovered_success_without_evidence") => {
-            runtime_result_summary("recovered_success_without_evidence")
-        }
-        ("runtime", "failover_success_without_evidence") => {
-            runtime_result_summary("failover_success_without_evidence")
-        }
-        ("runtime", "failover_success_with_valid_evidence") => {
-            runtime_result_summary("failover_success_with_valid_evidence")
-        }
-        ("runtime", "crash_recovery") => runtime_result_summary("crash_recovery"),
-        ("runtime", "timeout_recovery") => runtime_result_summary("timeout_recovery"),
-
-        other => panic!("unhandled shadow case: {other:?}"),
+        ("runtime", scenario) => runtime_result_summary(scenario),
+        _ => panic!("unknown phase6 shadow case: {} / {}", case.category, case.scenario),
     };
-
     json!({
         "case_id": case.case_id,
         "category": case.category,
