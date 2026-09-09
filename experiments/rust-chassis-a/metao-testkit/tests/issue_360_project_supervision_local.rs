@@ -288,10 +288,22 @@ fn one_objective_is_decomposed_supervised_failed_over_corrected_and_accepted() {
     assert!(result.plan.units.iter().any(|unit| unit.corrective));
     assert_eq!(result.executors_used.len(), 2);
     assert_eq!(result.providers_used.len(), 2);
-    assert!(result.trace.iter().any(|event| event.kind == TraceKind::FailedCapacity));
-    assert!(result.trace.iter().any(|event| event.kind == TraceKind::Checkpointed));
-    assert!(result.trace.iter().any(|event| event.kind == TraceKind::HandedOff));
-    assert!(result.trace.iter().any(|event| event.kind == TraceKind::VerificationFailed));
+    assert!(result
+        .trace
+        .iter()
+        .any(|event| event.kind == TraceKind::FailedCapacity));
+    assert!(result
+        .trace
+        .iter()
+        .any(|event| event.kind == TraceKind::Checkpointed));
+    assert!(result
+        .trace
+        .iter()
+        .any(|event| event.kind == TraceKind::HandedOff));
+    assert!(result
+        .trace
+        .iter()
+        .any(|event| event.kind == TraceKind::VerificationFailed));
     assert!(result
         .trace
         .iter()
