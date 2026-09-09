@@ -208,11 +208,10 @@ class RoutingCandidate:
 
 
 class CostQualityRouter:
-    _KNOWN_ROUTABLE = frozenset(
+    _NORMAL_ROUTABLE = frozenset(
         {
             OrchestratorStatus.HEALTHY,
             OrchestratorStatus.DEGRADED,
-            OrchestratorStatus.RECOVERING,
         }
     )
 
@@ -228,12 +227,16 @@ class CostQualityRouter:
         available = tuple(
             pool for pool in pools if pool.capacity_available(now_epoch=now_epoch)
         )
-        known = tuple(
-            pool for pool in available if pool.status in self._KNOWN_ROUTABLE
+        normal = tuple(
+            pool for pool in available if pool.status in self._NORMAL_ROUTABLE
         )
-        routable = known if known else tuple(
+        recovering = tuple(
+            pool for pool in available if pool.status is OrchestratorStatus.RECOVERING
+        )
+        unknown = tuple(
             pool for pool in available if pool.status is OrchestratorStatus.UNKNOWN
         )
+        routable = normal or recovering or unknown
 
         candidates = []
         for pool in routable:

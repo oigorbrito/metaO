@@ -106,14 +106,22 @@ class BlockHStrategyScoringAcceptance(unittest.TestCase):
         self.assertEqual(select_orchestrator((unknown, known)), "known")
         self.assertEqual(select_orchestrator((unknown,)), "unknown")
 
-    def test_recovering_runtime_is_known_tier_and_beats_unknown_bootstrap(self):
-        recovering = OrchestratorPoolState(
-            "recovering",
-            OrchestratorStatus.RECOVERING,
+    def test_recovering_runtime_is_controlled_fallback_between_normal_and_unknown(self):
+        healthy = OrchestratorPoolState(
+            "healthy",
+            OrchestratorStatus.HEALTHY,
             success_rate=0.1,
             quality=0.1,
             latency_ms=10_000,
             cost=10.0,
+        )
+        recovering = OrchestratorPoolState(
+            "recovering",
+            OrchestratorStatus.RECOVERING,
+            success_rate=1.0,
+            quality=1.0,
+            latency_ms=1,
+            cost=0.0,
         )
         unknown = OrchestratorPoolState(
             "unknown",
@@ -124,7 +132,12 @@ class BlockHStrategyScoringAcceptance(unittest.TestCase):
             cost=0.0,
         )
 
+        self.assertEqual(
+            select_orchestrator((unknown, recovering, healthy)),
+            "healthy",
+        )
         self.assertEqual(select_orchestrator((unknown, recovering)), "recovering")
+        self.assertEqual(select_orchestrator((unknown,)), "unknown")
 
 
 if __name__ == "__main__":
