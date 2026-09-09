@@ -115,6 +115,24 @@ class GitHubRepositoryAdapter:
         require_mutation(authorization, repository=repository, operation="file.create")
         payload={"message": message, "content": base64.b64encode(content.encode()).decode(), "branch": branch}
         return self._result("file.create", repository, self._transport.request("PUT", f"repos/{repository}/contents/{path}", payload))
+    def create_blob(self, repository: str, *, content: str, encoding: str = "utf-8", authorization: MutationAuthorization | None = None) -> GitHubOperationResult:
+        require_mutation(authorization, repository=repository, operation="git.blob.create")
+        if encoding not in {"utf-8", "base64"}: raise ValueError("unsupported blob encoding")
+        payload={"content": content, "encoding": encoding}
+        return self._result("git.blob.create", repository, self._transport.request("POST", f"repos/{repository}/git/blobs", payload))
+    def create_tree(self, repository: str, *, tree: list[Mapping[str, Any]], base_tree: str | None = None, authorization: MutationAuthorization | None = None) -> GitHubOperationResult:
+        require_mutation(authorization, repository=repository, operation="git.tree.create")
+        if not tree: raise ValueError("tree cannot be empty")
+        payload: dict[str, Any]={"tree": [dict(item) for item in tree]}
+        if base_tree: payload["base_tree"] = base_tree
+        return self._result("git.tree.create", repository, self._transport.request("POST", f"repos/{repository}/git/trees", payload))
+    def create_commit(self, repository: str, *, message: str, tree_sha: str, parents: list[str], authorization: MutationAuthorization | None = None) -> GitHubOperationResult:
+        require_mutation(authorization, repository=repository, operation="git.commit.create")
+        if not message: raise ValueError("commit message cannot be empty")
+        if not tree_sha: raise ValueError("tree_sha cannot be empty")
+        if not parents or any(not parent for parent in parents): raise ValueError("parents cannot be empty")
+        payload={"message": message, "tree": tree_sha, "parents": list(parents)}
+        return self._result("git.commit.create", repository, self._transport.request("POST", f"repos/{repository}/git/commits", payload))
     def create_pr(self, repository: str, *, head: str, base: str, title: str, body: str = "", authorization: MutationAuthorization | None = None) -> GitHubOperationResult:
         require_mutation(authorization, repository=repository, operation="pull_request.create")
         return self._result("pull_request.create", repository, self._transport.request("POST", f"repos/{repository}/pulls", {"head": head,"base": base,"title": title,"body": body}))
@@ -134,6 +152,9 @@ class GitHubRepositoryAdapter:
     def _result(operation: str, repository: str, payload: Mapping[str, Any]) -> GitHubOperationResult:
         resource=str(payload.get("html_url") or payload.get("url") or payload.get("sha") or "")
         evidence={key: payload[key] for key in ("id","number","sha","ref","merged","message","html_url") if key in payload}
+        commit = payload.get("commit")
+        if "sha" not in evidence and isinstance(commit, Mapping) and commit.get("sha"):
+            evidence["sha"] = commit["sha"]
         return GitHubOperationResult(operation, repository, resource, evidence)
 
 
