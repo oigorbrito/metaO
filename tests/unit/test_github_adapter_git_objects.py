@@ -140,7 +140,7 @@ class GitHubGitObjectOperationsTests(unittest.TestCase):
         self.transport.queue(
             {"number": 91, "html_url": "https://github.com/oigorbrito/metaO/issues/91"},
             {"ref": "refs/heads/feat/91", "url": "https://api.github.com/ref/91"},
-            {"sha": "commit-91", "html_url": "https://github.com/oigorbrito/metaO/commit/commit-91"},
+            {"content": {"sha": "blob-91"}, "commit": {"sha": "commit-91", "html_url": "https://github.com/oigorbrito/metaO/commit/commit-91"}},
             {"number": 92, "html_url": "https://github.com/oigorbrito/metaO/pull/92"},
             {"id": 93, "html_url": "https://github.com/oigorbrito/metaO/pull/92#issuecomment-93"},
             {"id": 94, "html_url": "https://github.com/oigorbrito/metaO/pull/92#pullrequestreview-94"},
