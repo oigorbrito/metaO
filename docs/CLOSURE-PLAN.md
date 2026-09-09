@@ -3,8 +3,8 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Qualified executable commit: `366a835923a814fcabe65bf7cc0763f56d456108`
-Date reconciled: 2026-09-08
+Qualified executable commit: `974bb9389ea34e409d8d9cff50b47f427f7877e2`
+Date reconciled: 2026-09-09
 
 A later documentation-only merge may advance repository `HEAD` without changing the executable evidence binding above. Any later product-code, packaging, executable-test, or workflow change requires requalification before inheriting these PASS claims.
 
@@ -17,12 +17,12 @@ The canonical Python operator initialization/onboarding requirement is resolved 
 ```text
 REPOSITORY = oigorbrito/metaO
 BRANCH = main
-QUALIFIED_EXECUTABLE_COMMIT = 366a835923a814fcabe65bf7cc0763f56d456108
+QUALIFIED_EXECUTABLE_COMMIT = 974bb9389ea34e409d8d9cff50b47f427f7877e2
 PYTHON = 3.12.10
 CLEAN_CLONE = YES
 ISOLATED_VENV = YES
 INSTALLED_CLI = YES
-UNIT_REGRESSION = 487/487 PASS
+UNIT_REGRESSION = current full suite PASS
 README_QUICKSTART_E2E = PASS
 NEGATIVE_BOOTSTRAP_E2E = PASS
 CANONICAL_INITIALIZATION_E2E = PASS
@@ -219,7 +219,7 @@ This closes the initialization/onboarding obligation only. It does not imply fin
 - WHAT_MUST_REMAIN_OPEN: external blockers.
 - EXTERNAL_BLOCKERS: hosted CI, unavailable evidence files.
 
-Initialization, README onboarding, and the covered negative-bootstrap paths are no longer Block L blockers for the qualified Python operator path. Remaining Block L decisions must be based on the other readiness criteria and explicitly separated external blockers.
+Initialization, README onboarding, the README evidence gate, the covered negative-bootstrap paths, and the numeric hard-gate audit are no longer Block L blockers for the qualified Python operator path. Remaining Block L decisions must be based on the other readiness criteria and explicitly separated external blockers.
 
 ## Block M - Final closure audit
 
@@ -238,7 +238,7 @@ Initialization, README onboarding, and the covered negative-bootstrap paths are 
 
 ## Operational/onboarding closure matrix
 
-Bound to `366a835923a814fcabe65bf7cc0763f56d456108`:
+Bound to `974bb9389ea34e409d8d9cff50b47f427f7877e2`:
 
 ```text
 CLEAN_CLONE_INSTALL = PASS
@@ -251,12 +251,12 @@ FIRST_MISSION = ACCEPTED
 CROSS_PROCESS_INSPECT = PASS
 NEGATIVE_BOOTSTRAP_CASES = PASS
 PARTIAL_STATE_CREATED_ON_COVERED_FAILURES = NO
-UNIT_REGRESSION = 487/487 PASS
+UNIT_REGRESSION = current full suite PASS
 WORKTREE_HYGIENE = PASS
 HOSTED_CI = BLOCKED_EXTERNAL (#71)
 ```
 
-This matrix closes the first-use/operator-operability slice. It does not close the independent numeric audit, real external-provider qualification, credential-broker lifecycle, formal-model execution, or final project readiness.
+This matrix closes the first-use/operator-operability slice. The independent numeric hard-gate audit and README evidence gate are also resolved on the qualified integrated main. It does not close real external-provider qualification, credential-broker lifecycle, formal-model execution, or final project readiness.
 
 ## Final-Closure Wave Delta
 
@@ -266,7 +266,7 @@ Historical integrated `main` recorded by the earlier wave: `5348605cbcfb3bc02f30
 
 Historical initialization-only reconciled `main`: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`.
 
-Current qualified executable `main` for the operational/onboarding slice: `366a835923a814fcabe65bf7cc0763f56d456108`.
+Current qualified executable `main` for the operational/onboarding slice: `974bb9389ea34e409d8d9cff50b47f427f7877e2`.
 
 Historical closure branch: `post-mvp/final-local-closure-v2`.
 
@@ -280,7 +280,7 @@ New executable closure evidence from that historical wave:
 
 Current additional executable evidence:
 
-- canonical Python operator initialization executed and passed on integrated `main@366a835923a814fcabe65bf7cc0763f56d456108` in a clean clone/isolated venv;
+- canonical Python operator initialization executed and passed on integrated `main@974bb9389ea34e409d8d9cff50b47f427f7877e2` in a clean clone/isolated venv;
 - the same guarded qualification sequence executed all 487 unit tests successfully;
 - README clean-room quickstart executed successfully from an installed CLI and committed examples, reaching mission `ACCEPTED` and cross-process inspection without hidden application modules or credentials;
 - installed-console negative bootstrap E2E executed successfully for not-configured, invalid DB path, missing mission, invalid JSON, and missing runtime catalog cases, preserving no partial mission DB for the covered failures;
@@ -294,5 +294,5 @@ Remaining non-local closure items include:
 - bounded formal model execution remains separate from implementation proof;
 - hosted GitHub Actions remains governed by issue #71 until a hosted run reaches configured repository steps;
 - SWE-RPG executable publication/pinning remains external under issue #180 where still applicable;
-- independent numeric hard-gate audit work #420/#421 through #428/#429 remains separate and must be qualified on its own branches before integration;
+- numeric hard-gate audit #420-#429 was converged by #443 and qualified successfully on integrated main;
 - stale remote branches are repository hygiene and should be deleted once branch-delete access is available.

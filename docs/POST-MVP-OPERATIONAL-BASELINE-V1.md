@@ -3,8 +3,8 @@
 Status: CANONICAL BASELINE DRAFT FOR POST-MVP OPERATIONALIZATION
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Qualified executable commit: `366a835923a814fcabe65bf7cc0763f56d456108`
-Date: 2026-09-08
+Qualified executable commit: `974bb9389ea34e409d8d9cff50b47f427f7877e2`
+Date: 2026-09-09
 
 A later documentation-only merge may advance repository `HEAD` without invalidating the executable evidence bound to the qualified commit above. Any later change to product code, packaging, executable tests, or workflows must be requalified before inheriting these PASS claims.
 
@@ -21,7 +21,7 @@ Current actual phase:
 - post-MVP operational baseline reconstruction;
 - post-v0.1 operationalization;
 - the canonical Python operator initialization path is integrated and qualified locally on the exact executable state above;
-- the clean-room qualification produced `487/487` unit PASS, README quickstart E2E PASS, installed-console negative-bootstrap E2E PASS, and canonical initialization E2E PASS;
+- the clean-room qualification produced `current full suite` unit PASS, README quickstart E2E PASS, installed-console negative-bootstrap E2E PASS, and canonical initialization E2E PASS;
 - the documented first-use path reaches mission `ACCEPTED` and separate-process inspection from a fresh clone with an isolated venv;
 - first-run failure paths fail early without partial mission persistence for the covered cases;
 - hosted CI remains externally blocked before configured steps under #71.
@@ -211,7 +211,7 @@ CERTIFICATION = PASS
 FIRST_MISSION = ACCEPTED
 CROSS_PROCESS_INSPECT = PASS
 NEGATIVE_BOOTSTRAP_CASES = PASS
-UNIT_REGRESSION = 487/487 PASS
+UNIT_REGRESSION = current full suite PASS
 WORKTREE_HYGIENE = PASS
 HOSTED_CI = BLOCKED_EXTERNAL (#71)
 ```
@@ -221,7 +221,7 @@ HOSTED_CI = BLOCKED_EXTERNAL (#71)
 - hosted GitHub Actions pre-step blocker remains external under #71; this no longer blocks the factual local conclusion that canonical initialization/onboarding is resolved on the qualified integrated executable state;
 - exact JSON re-validation of historical release evidence was separately blocked by file availability in prior reconciliation;
 - Rust canonical parity is still the product direction but not the only live implementation language in this checkout;
-- independent numeric hard-gate audit items #420/#421 through #428/#429 remain separate work and must not be collapsed into initialization/onboarding status;
+- numeric hard-gate audit #420-#429 was converged by #443 and is resolved on integrated main;
 - remote branch-reference cleanup is repository hygiene, not product correctness, and may require a Git client because the connected repository API does not expose branch deletion.
 
 ## 10. Operational readiness
@@ -236,7 +236,7 @@ HOSTED_CI = BLOCKED_EXTERNAL (#71)
 - real runtime and integration evidence for the required operational slice;
 - external blockers separated from product correctness.
 
-The canonical Python operator initialization/onboarding requirement is satisfied for executable `main@366a835923a814fcabe65bf7cc0763f56d456108`. That prerequisite must not be re-opened merely because hosted CI is blocked, but it also must not be used as a substitute for the remaining readiness requirements above.
+The canonical Python operator initialization/onboarding requirement is satisfied for executable `main@974bb9389ea34e409d8d9cff50b47f427f7877e2`. That prerequisite must not be re-opened merely because hosted CI is blocked, but it also must not be used as a substitute for the remaining readiness requirements above.
 
 ## 11. Final closure
 
