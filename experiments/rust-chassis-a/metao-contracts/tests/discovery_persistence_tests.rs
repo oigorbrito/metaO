@@ -15,7 +15,9 @@ use metao_contracts::project_contract::{
 use metao_contracts::tech_stack_intake::{TechStackDecisionMode, TechnicalPreferenceProfile};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::sync::atomic::{AtomicU64, Ordering};
+
+static NEXT_TEMP_STORE_ID: AtomicU64 = AtomicU64::new(0);
 
 fn provenance(category: ProvenanceCategory, source: &str) -> Provenance {
     Provenance {
@@ -153,13 +155,11 @@ fn unresolved_input() -> DiscoveryCoordinatorInput {
 }
 
 fn temp_store() -> FileDiscoveryStateStore {
-    let unique = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("clock")
-        .as_nanos();
-    FileDiscoveryStateStore::new(
-        std::env::temp_dir().join(format!("metao-discovery-store-{unique}")),
-    )
+    let unique = NEXT_TEMP_STORE_ID.fetch_add(1, Ordering::Relaxed);
+    FileDiscoveryStateStore::new(std::env::temp_dir().join(format!(
+        "metao-discovery-store-{}-{unique}",
+        std::process::id()
+    )))
 }
 
 #[test]
