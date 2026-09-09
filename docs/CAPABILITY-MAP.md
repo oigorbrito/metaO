@@ -3,8 +3,8 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Qualified executable commit: `366a835923a814fcabe65bf7cc0763f56d456108`
-Date reconciled: 2026-09-08
+Qualified executable commit: `974bb9389ea34e409d8d9cff50b47f427f7877e2`
+Date reconciled: 2026-09-09
 
 A later documentation-only merge may advance repository `HEAD` without changing the executable evidence binding above. Any later change to product code, packaging, executable tests, or workflows must be requalified before inheriting these PASS claims.
 
@@ -52,13 +52,16 @@ For C23-C25, the exact qualified executable context is:
 ```text
 REPOSITORY = oigorbrito/metaO
 BRANCH = main
-QUALIFIED_EXECUTABLE_COMMIT = 366a835923a814fcabe65bf7cc0763f56d456108
+QUALIFIED_EXECUTABLE_COMMIT = 974bb9389ea34e409d8d9cff50b47f427f7877e2
 OS = Windows PowerShell clean-room clone
 PYTHON = 3.12.10
 ISOLATED_VENV = YES
 INSTALLED_CLI = YES
-UNIT_REGRESSION = 487/487 PASS
+UNIT_REGRESSION = current full suite PASS
 README_QUICKSTART_E2E = PASS
+README_EVIDENCE_GATE = PASS
+NUMERIC_FOCUSED_REGRESSION = PASS
+NUMERIC_HARD_GATE_AUDIT = RESOLVED
 NEGATIVE_BOOTSTRAP_E2E = PASS
 CANONICAL_INITIALIZATION_E2E = PASS
 FIRST_MISSION = ACCEPTED
