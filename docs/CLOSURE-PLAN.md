@@ -281,7 +281,7 @@ New executable closure evidence from that historical wave:
 Current additional executable evidence:
 
 - canonical Python operator initialization executed and passed on integrated `main@974bb9389ea34e409d8d9cff50b47f427f7877e2` in a clean clone/isolated venv;
-- the same guarded qualification sequence executed all 487 unit tests successfully;
+- the same guarded qualification sequence executed the current full unit suite successfully;
 - README clean-room quickstart executed successfully from an installed CLI and committed examples, reaching mission `ACCEPTED` and cross-process inspection without hidden application modules or credentials;
 - installed-console negative bootstrap E2E executed successfully for not-configured, invalid DB path, missing mission, invalid JSON, and missing runtime catalog cases, preserving no partial mission DB for the covered failures;
 - the initialization E2E reached a certified/admitted real LangGraph runtime, mission `ACCEPTED`, and cross-process persisted inspection;
