@@ -74,7 +74,10 @@ fn authority() -> PlanningAuthority {
 fn node(id: &str, dependencies: &[&str]) -> WorkNode {
     WorkNode {
         id: id.to_string(),
-        dependencies: dependencies.iter().map(|value| (*value).to_string()).collect(),
+        dependencies: dependencies
+            .iter()
+            .map(|value| (*value).to_string())
+            .collect(),
     }
 }
 
@@ -192,14 +195,22 @@ fn spec_ready_binding_to_authoritative_validated_immutable_workgraph_allows_disp
         WorkGraphProposal {
             binding: binding(),
             proposer: auth.actor_id.clone(),
-            nodes: vec![node("discover", &[]), node("implement", &["discover"]), node("verify", &["implement"])],
+            nodes: vec![
+                node("discover", &[]),
+                node("implement", &["discover"]),
+                node("verify", &["implement"]),
+            ],
         },
         &auth,
     )
     .expect("authoritative graph should validate");
 
-    assert_eq!(graph.topological_order, vec!["discover", "implement", "verify"]);
-    let dispatch = authorize_dispatch(&graph, &auth).expect("validated sealed graph should authorize dispatch");
+    assert_eq!(
+        graph.topological_order,
+        vec!["discover", "implement", "verify"]
+    );
+    let dispatch = authorize_dispatch(&graph, &auth)
+        .expect("validated sealed graph should authorize dispatch");
     assert_eq!(dispatch.project_id, ProjectId("project-362".to_string()));
     assert_eq!(dispatch.contract_version, 7);
     assert_eq!(dispatch.contract_digest, "sha256:contract-362-v7");
@@ -295,7 +306,9 @@ fn sealed_graph_has_no_mutation_surface_and_dispatch_remains_bound_to_exact_snap
     };
     let graph = validate_and_seal(proposal.clone(), &auth).expect("seal graph");
 
-    proposal.nodes.push(node("late-executor-mutation", &["one"]));
+    proposal
+        .nodes
+        .push(node("late-executor-mutation", &["one"]));
 
     assert_eq!(graph.nodes.len(), 1);
     assert!(!graph.nodes.contains_key("late-executor-mutation"));
