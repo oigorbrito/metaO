@@ -389,23 +389,25 @@ fn runtime_binary() -> PathBuf {
     if let Ok(path) = std::env::var("CARGO_BIN_EXE_metao-wire-runtime") {
         return PathBuf::from(path);
     }
-    let fallback = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("..")
-        .join("target")
-        .join("debug")
-        .join(if cfg!(windows) {
-            "metao-wire-runtime.exe"
-        } else {
-            "metao-wire-runtime"
+    let target_root = std::env::var_os("CARGO_TARGET_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| {
+            Path::new(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
+                .join("target")
         });
+    let fallback = target_root.join("debug").join(if cfg!(windows) {
+        "metao-wire-runtime.exe"
+    } else {
+        "metao-wire-runtime"
+    });
     assert!(
         fallback.exists(),
-        "missing runtime binary; run metao-wire runtime tests first or build the workspace: {}",
+        "missing runtime binary; build the workspace or set CARGO_TARGET_DIR consistently: {}",
         fallback.display()
     );
     fallback
 }
-
 fn runtime_objective(scenario: &str) -> &'static str {
     match scenario {
         "success_without_evidence" => "normal",
