@@ -19,6 +19,7 @@ from metao.core import (
     HealthStatus,
     OrchestratorDescriptor,
 )
+from metao.runtime_health import RuntimeHealthFacts, RuntimeHealthPolicy, RuntimeHealthTracker
 
 
 def _digest(value: Any) -> str:
@@ -59,7 +60,15 @@ def normalize_evidence(
 class LangGraphOrchestratorAdapter:
     """Adapts a compiled LangGraph-like object exposing ``invoke``."""
 
-    def __init__(self, graph: Any, *, orchestrator_id: str = "langgraph", version: str = "1") -> None:
+    def __init__(
+        self,
+        graph: Any,
+        *,
+        orchestrator_id: str = "langgraph",
+        version: str = "1",
+        config_id: str = "default",
+        health_policy: RuntimeHealthPolicy | None = None,
+    ) -> None:
         self._graph = graph
         self._cancelled: set[str] = set()
         self._descriptor = OrchestratorDescriptor(
@@ -68,16 +77,24 @@ class LangGraphOrchestratorAdapter:
             capabilities=frozenset({"workflow", "agent"}),
             metadata={"adapter": "langgraph"},
         )
+        self._runtime_health = RuntimeHealthTracker(
+            runtime_id=orchestrator_id,
+            runtime_version=version,
+            config_id=config_id,
+            policy=health_policy,
+        )
 
     @property
     def descriptor(self) -> OrchestratorDescriptor:
         return self._descriptor
 
     def health(self) -> HealthReport:
-        return HealthReport(
-            HealthStatus.HEALTHY if callable(getattr(self._graph, "invoke", None)) else HealthStatus.UNHEALTHY,
-            "invoke available" if callable(getattr(self._graph, "invoke", None)) else "invoke unavailable",
-        )
+        if not callable(getattr(self._graph, "invoke", None)):
+            return HealthReport(HealthStatus.UNHEALTHY, "invoke unavailable")
+        return self._runtime_health.report()
+
+    def runtime_health_facts(self) -> RuntimeHealthFacts:
+        return self._runtime_health.facts()
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         if request.execution_id in self._cancelled:
@@ -85,19 +102,21 @@ class LangGraphOrchestratorAdapter:
         try:
             raw = self._graph.invoke({"objective": request.mission.objective, **dict(request.context)})
             output = raw if isinstance(raw, dict) else {"result": raw}
-            return ExecutionResult(
+            result = ExecutionResult(
                 request.execution_id,
                 self.descriptor.orchestrator_id,
                 ExecutionStatus.SUCCEEDED,
                 output=output,
             )
         except Exception as exc:
-            return ExecutionResult(
+            result = ExecutionResult(
                 request.execution_id,
                 self.descriptor.orchestrator_id,
                 ExecutionStatus.FAILED,
                 error=str(exc),
             )
+        self._runtime_health.record_execution(result.status, execution_id=request.execution_id)
+        return result
 
     def cancel(self, execution_id: str) -> None:
         self._cancelled.add(execution_id)
