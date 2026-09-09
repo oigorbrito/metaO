@@ -7,6 +7,7 @@ from math import isfinite
 
 from .control_plane import EvidenceNormalizer
 from .core import HealthStatus, OrchestratorRegistry
+from .runtime_health import RuntimeHealthState
 from .strategy import OrchestratorPoolState, OrchestratorStatus
 
 
@@ -106,6 +107,35 @@ class OrchestratorCatalog:
             return OrchestratorStatus.DEGRADED
         return OrchestratorStatus.UNHEALTHY
 
+    @staticmethod
+    def _map_factual_health(state: RuntimeHealthState) -> OrchestratorStatus:
+        return {
+            RuntimeHealthState.UNKNOWN: OrchestratorStatus.UNKNOWN,
+            RuntimeHealthState.HEALTHY: OrchestratorStatus.HEALTHY,
+            RuntimeHealthState.DEGRADED: OrchestratorStatus.DEGRADED,
+            RuntimeHealthState.UNHEALTHY: OrchestratorStatus.UNHEALTHY,
+            RuntimeHealthState.QUARANTINED: OrchestratorStatus.QUARANTINED,
+            RuntimeHealthState.RECOVERING: OrchestratorStatus.RECOVERING,
+        }[state]
+
+    def _runtime_status(self, orchestrator) -> OrchestratorStatus:
+        report = orchestrator.health()
+        facts_reader = getattr(orchestrator, "runtime_health_facts", None)
+        if not callable(facts_reader):
+            return self._map_health(report.status)
+
+        factual_status = self._map_factual_health(facts_reader().state)
+        if (
+            report.status is HealthStatus.UNHEALTHY
+            and factual_status
+            not in {OrchestratorStatus.UNHEALTHY, OrchestratorStatus.QUARANTINED}
+        ):
+            # Structural readiness is still a hard operational prerequisite.
+            # Historical facts cannot make a runtime routable when its callable
+            # runtime surface is currently unavailable.
+            return OrchestratorStatus.UNHEALTHY
+        return factual_status
+
     def entries(self) -> tuple[OrchestratorCatalogEntry, ...]:
         result: list[OrchestratorCatalogEntry] = []
         for orchestrator_id in sorted(self._profiles):
@@ -117,7 +147,7 @@ class OrchestratorCatalog:
                     orchestrator_id=orchestrator_id,
                     version=descriptor.version,
                     capabilities=descriptor.capabilities,
-                    health=self._map_health(orchestrator.health().status),
+                    health=self._runtime_status(orchestrator),
                     cost=profile.cost,
                     latency_ms=profile.latency_ms,
                     trust_profile=profile.trust_profile,

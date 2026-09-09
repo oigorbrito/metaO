@@ -187,6 +187,62 @@ class Issue461RealRuntimeHealthTests(unittest.TestCase):
         self.assertEqual(pools["crewai-real-health"].status, OrchestratorStatus.HEALTHY)
         self.assertEqual(select_orchestrator(tuple(pools.values())), "crewai-real-health")
 
+    def test_unknown_real_runtime_is_bootstrap_only_behind_factually_healthy_peer(self):
+        self.assertEqual(package_version("langgraph"), LANGGRAPH_VERSION)
+        self.assertEqual(package_version("crewai"), CREWAI_VERSION)
+
+        graph = LangGraphOrchestratorAdapter(
+            _build_graph(result="langgraph factual success"),
+            orchestrator_id="langgraph-known-health",
+            version=LANGGRAPH_VERSION,
+            config_id="issue-461",
+        )
+        crew = CrewAIOrchestratorAdapter(
+            _build_crew(response="crewai bootstrap candidate"),
+            orchestrator_id="crewai-unknown-health",
+            version=CREWAI_VERSION,
+            config_id="issue-461",
+        )
+
+        self.assertEqual(
+            graph.execute(_request("issue-461-lg-known")).status,
+            ExecutionStatus.SUCCEEDED,
+        )
+        self.assertEqual(graph.runtime_health_facts().state, RuntimeHealthState.HEALTHY)
+        self.assertEqual(crew.runtime_health_facts().state, RuntimeHealthState.UNKNOWN)
+
+        registry = OrchestratorRegistry()
+        registry.register(graph)
+        registry.register(crew)
+        catalog = OrchestratorCatalog(registry)
+        catalog.register(
+            "langgraph-known-health",
+            normalizer=normalize_langgraph,
+            cost=10.0,
+            latency_ms=10_000.0,
+            success_rate=0.1,
+            quality=0.1,
+            reliability=0.1,
+        )
+        catalog.register(
+            "crewai-unknown-health",
+            normalizer=normalize_crewai,
+            cost=0.0,
+            latency_ms=1.0,
+            success_rate=1.0,
+            quality=1.0,
+            reliability=1.0,
+        )
+
+        pools = {pool.orchestrator_id: pool for pool in catalog.pools()}
+        self.assertEqual(pools["langgraph-known-health"].status, OrchestratorStatus.HEALTHY)
+        self.assertEqual(pools["crewai-unknown-health"].status, OrchestratorStatus.UNKNOWN)
+        self.assertEqual(select_orchestrator(tuple(pools.values())), "langgraph-known-health")
+        self.assertEqual(
+            select_orchestrator((pools["crewai-unknown-health"],)),
+            "crewai-unknown-health",
+        )
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

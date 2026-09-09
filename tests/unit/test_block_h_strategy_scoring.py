@@ -30,6 +30,8 @@ class BlockHStrategyScoringAcceptance(unittest.TestCase):
         self.assertFalse(BudgetState(1.0, 10, 1.0).exhausted())
         self.assertTrue(BudgetState(0.0, 10, 1.0).exhausted())
         self.assertEqual(OrchestratorStatus.QUARANTINED.value, "quarantined")
+        self.assertEqual(OrchestratorStatus.UNKNOWN.value, "unknown")
+        self.assertEqual(OrchestratorStatus.RECOVERING.value, "recovering")
 
     def test_historical_score_uses_ema_deterministically(self):
         history = HistoricalScore().update(
@@ -82,6 +84,47 @@ class BlockHStrategyScoringAcceptance(unittest.TestCase):
         )
         self.assertEqual(select_orchestrator(pools), "balanced")
         self.assertEqual(CostQualityRouter().select(pools), "balanced")
+
+    def test_unknown_runtime_is_bootstrap_only_behind_factually_known_candidate(self):
+        known = OrchestratorPoolState(
+            "known",
+            OrchestratorStatus.HEALTHY,
+            success_rate=0.1,
+            quality=0.1,
+            latency_ms=10_000,
+            cost=10.0,
+        )
+        unknown = OrchestratorPoolState(
+            "unknown",
+            OrchestratorStatus.UNKNOWN,
+            success_rate=1.0,
+            quality=1.0,
+            latency_ms=1,
+            cost=0.0,
+        )
+
+        self.assertEqual(select_orchestrator((unknown, known)), "known")
+        self.assertEqual(select_orchestrator((unknown,)), "unknown")
+
+    def test_recovering_runtime_is_known_tier_and_beats_unknown_bootstrap(self):
+        recovering = OrchestratorPoolState(
+            "recovering",
+            OrchestratorStatus.RECOVERING,
+            success_rate=0.1,
+            quality=0.1,
+            latency_ms=10_000,
+            cost=10.0,
+        )
+        unknown = OrchestratorPoolState(
+            "unknown",
+            OrchestratorStatus.UNKNOWN,
+            success_rate=1.0,
+            quality=1.0,
+            latency_ms=1,
+            cost=0.0,
+        )
+
+        self.assertEqual(select_orchestrator((unknown, recovering)), "recovering")
 
 
 if __name__ == "__main__":

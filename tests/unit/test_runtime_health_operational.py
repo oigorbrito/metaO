@@ -4,6 +4,7 @@ import unittest
 
 from metao.adapters.crewai import CrewAIOrchestratorAdapter
 from metao.adapters.langgraph import LangGraphOrchestratorAdapter
+from metao.catalog import OrchestratorCatalog
 from metao.core import (
     ExecutionRequest,
     ExecutionStatus,
@@ -16,6 +17,7 @@ from metao.runtime_health import (
     RuntimeHealthState,
     RuntimeHealthTracker,
 )
+from metao.strategy import OrchestratorStatus, select_orchestrator
 
 
 class _CallableGraph:
@@ -162,6 +164,69 @@ class RuntimeHealthOperationalTests(unittest.TestCase):
         self.assertEqual(facts.runtime_version, "1.15.16")
         self.assertEqual(facts.config_id, "crew-config-v2")
         self.assertEqual(facts.evidence_basis, "ADAPTER_VERIFIED")
+
+    def test_catalog_preserves_unknown_and_strategy_prefers_factually_known_runtime(self):
+        known = LangGraphOrchestratorAdapter(
+            _CallableGraph(),
+            orchestrator_id="known-runtime",
+            version="1",
+        )
+        unknown = CrewAIOrchestratorAdapter(
+            _CallableCrew(),
+            orchestrator_id="unknown-runtime",
+            version="1",
+        )
+        mission = Mission("m-known-first", "route", frozenset({"workflow"}))
+        self.assertEqual(
+            known.execute(ExecutionRequest("e-known", mission)).status,
+            ExecutionStatus.SUCCEEDED,
+        )
+
+        registry = OrchestratorRegistry()
+        registry.register(known)
+        registry.register(unknown)
+        catalog = OrchestratorCatalog(registry)
+        catalog.register(
+            "known-runtime",
+            normalizer=lambda **_: None,
+            cost=10.0,
+            latency_ms=10_000.0,
+            success_rate=0.1,
+            quality=0.1,
+            reliability=0.1,
+        )
+        catalog.register(
+            "unknown-runtime",
+            normalizer=lambda **_: None,
+            cost=0.0,
+            latency_ms=1.0,
+            success_rate=1.0,
+            quality=1.0,
+            reliability=1.0,
+        )
+
+        pools = {pool.orchestrator_id: pool for pool in catalog.pools()}
+        self.assertEqual(pools["known-runtime"].status, OrchestratorStatus.HEALTHY)
+        self.assertEqual(pools["unknown-runtime"].status, OrchestratorStatus.UNKNOWN)
+        self.assertEqual(select_orchestrator(tuple(pools.values())), "known-runtime")
+        self.assertEqual(select_orchestrator((pools["unknown-runtime"],)), "unknown-runtime")
+
+    def test_catalog_does_not_turn_structurally_unready_runtime_into_unknown_bootstrap(self):
+        adapter = LangGraphOrchestratorAdapter(
+            object(),
+            orchestrator_id="not-ready",
+            version="1",
+        )
+        registry = OrchestratorRegistry()
+        registry.register(adapter)
+        catalog = OrchestratorCatalog(registry)
+        catalog.register("not-ready", normalizer=lambda **_: None)
+
+        pool = catalog.pools()[0]
+        self.assertEqual(adapter.runtime_health_facts().state, RuntimeHealthState.UNKNOWN)
+        self.assertEqual(adapter.health().status, HealthStatus.UNHEALTHY)
+        self.assertEqual(pool.status, OrchestratorStatus.UNHEALTHY)
+        self.assertIsNone(select_orchestrator((pool,)))
 
 
 if __name__ == "__main__":
