@@ -2,7 +2,7 @@
 
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
-Applies to: repository `tihotm/metaO`
+Applies to: repository `oigorbrito/metaO`
 Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
 
 ## Verification ladder
@@ -38,6 +38,12 @@ Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
 - `UNIT_PASS != SYSTEM_PASS`
 - `SIMULATED != REAL`
 - `DOCUMENTED != IMPLEMENTED`
+
+## Empirical evidence documentation authority
+
+Evidence-bearing claims produced under this verification ladder must be documented according to `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`.
+
+That protocol governs claim-to-observation traceability, execution context, formal reproduction/replication terminology, limitations, and evidence-status reporting. It does **not** redefine this verification ladder, architecture rules, score weights, acceptance authority, or previously recorded historical evidence.
 
 ## Current release-path interpretation
 
