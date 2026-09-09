@@ -1,7 +1,4 @@
-#[path = "../src/engineering_knowledge.rs"]
-mod engineering_knowledge;
-
-use engineering_knowledge::*;
+use metao_contracts::engineering_knowledge::*;
 
 fn source(
     id: &str,
