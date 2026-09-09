@@ -1,7 +1,13 @@
 # Empirical Research and Reproducibility Contract
 
-Status: NORMATIVE_FOR_PROJECT
-Applies to: evidence-bearing research, comparison, benchmark, donor evaluation, chassis evaluation, conformance harnesses, and architecture claims in `tihotm/metaO`
+Status: SUPERSEDED_FOR_FORMAL_REPRODUCTION_AND_REPLICATION_TERMINOLOGY
+Applies to: evidence-bearing research, comparison, benchmark, donor evaluation, chassis evaluation, conformance harnesses, and architecture claims in `oigorbrito/metaO`
+
+## Supersession notice
+
+Formal use of **reproduction**, **replication**, **reproduced**, **replicated**, and related terminology is governed exclusively by `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`, which adopts the ACM SIGSOFT Replication standard.
+
+This document remains a reference for non-conflicting historical and domain-specific empirical practices. Existing observations, results, experiment artifacts, decisions, and historical classifications are not rewritten by this supersession.
 
 ## Purpose
 
@@ -80,7 +86,9 @@ DECISION_OR_DISPOSITION_IMPACT:
 
 Fields that do not apply may be marked `N/A` with a reason. Missing metadata must not be invented.
 
-## Reproducibility vocabulary
+## Historical reproducibility vocabulary — superseded for formal claims
+
+The vocabulary below is retained only as historical context for existing records. It must not be used as current formal reproduction/replication terminology; current formal claims follow `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`.
 
 Use these terms narrowly:
 
@@ -215,7 +223,7 @@ A summary table without recoverable underlying evidence is weaker than the same 
 
 ## Relationship to existing metaO documents
 
-This document owns empirical-method and reproducibility rules only.
+This document owns empirical-method and reproducibility rules only, except that formal reproduction/replication terminology is superseded as stated above.
 
 Existing documents retain their domains:
 
