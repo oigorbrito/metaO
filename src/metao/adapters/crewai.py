@@ -6,8 +6,10 @@ typing, so CrewAI SDK types never enter metaO Core.
 
 from __future__ import annotations
 
+from collections import deque
 from hashlib import sha256
 import json
+from threading import RLock
 from typing import Any
 
 from metao.acceptance import EvidenceEnvelope
@@ -78,6 +80,8 @@ class CrewAIOrchestratorAdapter:
         self._crew = crew
         self._cancelled: set[str] = set()
         self._health_persistence_error: Exception | None = None
+        self._pending_health_facts: deque[tuple[ExecutionStatus, str]] = deque()
+        self._health_lock = RLock()
         self._descriptor = OrchestratorDescriptor(
             orchestrator_id=orchestrator_id,
             version=version,
@@ -99,29 +103,47 @@ class CrewAIOrchestratorAdapter:
     def health(self) -> HealthReport:
         if not callable(getattr(self._crew, "kickoff", None)):
             return HealthReport(HealthStatus.UNHEALTHY, "kickoff unavailable")
-        if self._health_persistence_error is not None:
-            return HealthReport(
-                HealthStatus.UNHEALTHY,
-                (
-                    "runtime health evidence unavailable: "
-                    f"{type(self._health_persistence_error).__name__}"
-                ),
-            )
-        try:
-            return self._runtime_health.report()
-        except Exception as exc:
-            self._health_persistence_error = exc
-            return HealthReport(
-                HealthStatus.UNHEALTHY,
-                f"runtime health evidence unavailable: {type(exc).__name__}",
-            )
+        with self._health_lock:
+            try:
+                self._flush_pending_health_facts()
+                return self._runtime_health.report()
+            except Exception as exc:
+                self._health_persistence_error = exc
+                return HealthReport(
+                    HealthStatus.UNHEALTHY,
+                    f"runtime health evidence unavailable: {type(exc).__name__}",
+                )
 
     def runtime_health_facts(self) -> RuntimeHealthFacts:
-        return self._runtime_health.facts()
+        with self._health_lock:
+            try:
+                self._flush_pending_health_facts()
+                return self._runtime_health.facts()
+            except Exception as exc:
+                self._health_persistence_error = exc
+                raise
 
     def configure_runtime_health_store(self, store: RuntimeHealthStorePort) -> None:
-        self._runtime_health.configure_store(store)
+        with self._health_lock:
+            self._runtime_health.configure_store(store)
+            self._health_persistence_error = None
+
+    def _flush_pending_health_facts(self) -> None:
+        while self._pending_health_facts:
+            status, execution_id = self._pending_health_facts[0]
+            self._runtime_health.record_execution(status, execution_id=execution_id)
+            self._pending_health_facts.popleft()
         self._health_persistence_error = None
+
+    def _record_runtime_health(self, status: ExecutionStatus, *, execution_id: str) -> None:
+        if status is ExecutionStatus.CANCELLED:
+            return
+        with self._health_lock:
+            self._pending_health_facts.append((status, execution_id))
+            try:
+                self._flush_pending_health_facts()
+            except Exception as exc:
+                self._health_persistence_error = exc
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         if request.execution_id in self._cancelled:
@@ -147,14 +169,7 @@ class CrewAIOrchestratorAdapter:
                 ExecutionStatus.FAILED,
                 error=str(exc),
             )
-        try:
-            self._runtime_health.record_execution(
-                result.status,
-                execution_id=request.execution_id,
-            )
-            self._health_persistence_error = None
-        except Exception as exc:
-            self._health_persistence_error = exc
+        self._record_runtime_health(result.status, execution_id=request.execution_id)
         return result
 
     def cancel(self, execution_id: str) -> None:
