@@ -35,15 +35,18 @@ from .runtime_certification_revocation import (
 )
 from .runtime_control import RuntimeControlStorePort
 from .runtime_feedback import RuntimeFeedbackStorePort, record_outcome
+from .runtime_health import RuntimeHealthStorePort
 from .sqlite_runtime_certification import SQLiteRuntimeCertificationStore
 from .sqlite_runtime_certification_revocation import SQLiteRuntimeCertificationRevocationStore
 from .sqlite_runtime_control import SQLiteRuntimeControlStore
 from .sqlite_runtime_feedback import SQLiteRuntimeFeedbackStore
+from .sqlite_runtime_health import SQLiteRuntimeHealthStore
 
 
 RUNTIME_CATALOG_ENV = "METAO_RUNTIME_CATALOG"
 RUNTIME_CONTROL_DB_ENV = "METAO_RUNTIME_CONTROL_DB"
 RUNTIME_FEEDBACK_DB_ENV = "METAO_RUNTIME_FEEDBACK_DB"
+RUNTIME_HEALTH_DB_ENV = "METAO_RUNTIME_HEALTH_DB"
 RUNTIME_CERTIFICATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_DB"
 RUNTIME_CERTIFICATION_REVOCATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_REVOCATION_DB"
 
@@ -151,6 +154,24 @@ def _load_callable(spec: str) -> Callable[..., Any]:
     if not callable(target):
         raise RuntimeCatalogConfigError(f"runtime factory is not callable: {spec}")
     return target
+
+
+def _configure_runtime_health(
+    plugin: RuntimePlugin,
+    health: RuntimeHealthStorePort | None,
+) -> None:
+    if health is None:
+        return
+    configure = getattr(plugin.orchestrator, "configure_runtime_health_store", None)
+    if not callable(configure):
+        return
+    try:
+        configure(health)
+    except Exception as exc:
+        orchestrator_id = plugin.orchestrator.descriptor.orchestrator_id
+        raise RuntimeCatalogConfigError(
+            f"runtime health store configuration failed: {orchestrator_id}"
+        ) from exc
 
 
 def _read_manifest(path: str | Path) -> tuple[Mapping[str, Any], ...]:
@@ -284,6 +305,7 @@ def create_operator_from_catalog(
     store: MissionStorePort,
     controls: RuntimeControlStorePort | None = None,
     feedback: RuntimeFeedbackStorePort | None = None,
+    health: RuntimeHealthStorePort | None = None,
     certifications: RuntimeCertificationStorePort | None = None,
     certification_revocations: RuntimeCertificationRevocationStorePort | None = None,
     certification_now_epoch: float | None = None,
@@ -311,6 +333,7 @@ def create_operator_from_catalog(
             raise RuntimeCatalogConfigError(
                 f"runtime factory must return RuntimePlugin: {factory_spec}"
             )
+        _configure_runtime_health(plugin, health)
 
         metrics = dict(
             cost=_number(entry, "cost", 0.0),
@@ -423,6 +446,7 @@ def create_operator(
     store: MissionStorePort,
     runtime_control_db: str | Path | None = None,
     runtime_feedback_db: str | Path | None = None,
+    runtime_health_db: str | Path | None = None,
     runtime_certification_db: str | Path | None = None,
     runtime_certification_revocation_db: str | Path | None = None,
     certification_now_epoch: float | None = None,
@@ -436,6 +460,7 @@ def create_operator(
         )
     control_path = runtime_control_db or os.environ.get(RUNTIME_CONTROL_DB_ENV)
     feedback_path = runtime_feedback_db or os.environ.get(RUNTIME_FEEDBACK_DB_ENV) or control_path
+    health_path = runtime_health_db or os.environ.get(RUNTIME_HEALTH_DB_ENV) or control_path
     certification_path = (
         runtime_certification_db
         or os.environ.get(RUNTIME_CERTIFICATION_DB_ENV)
@@ -448,6 +473,7 @@ def create_operator(
     )
     controls = SQLiteRuntimeControlStore(control_path) if control_path else None
     feedback = SQLiteRuntimeFeedbackStore(feedback_path) if feedback_path else None
+    health = SQLiteRuntimeHealthStore(health_path) if health_path else None
     certifications = (
         SQLiteRuntimeCertificationStore(certification_path) if certification_path else None
     )
@@ -461,6 +487,7 @@ def create_operator(
         store=store,
         controls=controls,
         feedback=feedback,
+        health=health,
         certifications=certifications,
         certification_revocations=certification_revocations,
         certification_now_epoch=certification_now_epoch,
@@ -471,6 +498,7 @@ __all__ = [
     "RUNTIME_CATALOG_ENV",
     "RUNTIME_CONTROL_DB_ENV",
     "RUNTIME_FEEDBACK_DB_ENV",
+    "RUNTIME_HEALTH_DB_ENV",
     "RUNTIME_CERTIFICATION_DB_ENV",
     "RUNTIME_CERTIFICATION_REVOCATION_DB_ENV",
     "RuntimeCatalogConfigError",
