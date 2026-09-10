@@ -1,12 +1,25 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
+import sys
 import tempfile
+from types import ModuleType
 import unittest
 
 from metao.adapters.crewai import CrewAIOrchestratorAdapter
-from metao.adapters.langgraph import LangGraphOrchestratorAdapter
-from metao.core import ExecutionRequest, ExecutionStatus, HealthStatus, Mission
+from metao.adapters.langgraph import LangGraphOrchestratorAdapter, normalize_evidence
+from metao.catalog import OrchestratorCatalog
+from metao.core import (
+    ExecutionRequest,
+    ExecutionStatus,
+    HealthReport,
+    HealthStatus,
+    Mission,
+    OrchestratorRegistry,
+)
+from metao.mission_store import InMemoryMissionStore
+from metao.runtime_factory import RuntimePlugin, create_operator_from_catalog
 from metao.runtime_health import (
     RuntimeHealthConflict,
     RuntimeHealthPolicy,
@@ -14,6 +27,7 @@ from metao.runtime_health import (
     RuntimeHealthTracker,
 )
 from metao.sqlite_runtime_health import SQLiteRuntimeHealthStore
+from metao.strategy import OrchestratorStatus
 
 
 class _FailingGraph:
@@ -37,6 +51,22 @@ class _BrokenHealthStore:
 
     def history(self, **kwargs):
         return ()
+
+
+class _UnreadableHealthStore:
+    def record(self, **kwargs):
+        raise AssertionError("record is not expected")
+
+    def history(self, **kwargs):
+        raise OSError("health history unavailable")
+
+
+class _UnreadableFactsAdapter(LangGraphOrchestratorAdapter):
+    def health(self):
+        return HealthReport(HealthStatus.DEGRADED, "structurally ready")
+
+    def runtime_health_facts(self):
+        raise OSError("factual authority unavailable")
 
 
 def _request(execution_id: str) -> ExecutionRequest:
@@ -215,6 +245,87 @@ class DurableRuntimeHealthTests(unittest.TestCase):
             adapter.runtime_health_facts().state,
             RuntimeHealthState.UNKNOWN,
         )
+
+    def test_unreadable_health_authority_fails_adapter_and_catalog_closed(self):
+        adapter = LangGraphOrchestratorAdapter(
+            _HealthyGraph(),
+            orchestrator_id="unreadable",
+            health_store=_UnreadableHealthStore(),
+        )
+        self.assertEqual(adapter.health().status, HealthStatus.UNHEALTHY)
+
+        factual_reader_failure = _UnreadableFactsAdapter(
+            _HealthyGraph(),
+            orchestrator_id="unreadable-facts",
+        )
+        registry = OrchestratorRegistry()
+        registry.register(factual_reader_failure)
+        catalog = OrchestratorCatalog(registry)
+        catalog.register(
+            "unreadable-facts",
+            normalizer=normalize_evidence,
+        )
+        self.assertEqual(
+            catalog.entries()[0].health,
+            OrchestratorStatus.UNHEALTHY,
+        )
+
+    def test_runtime_factory_injects_durable_health_before_admission(self):
+        module_name = "metao_runtime_health_durable_plugin"
+        module = ModuleType(module_name)
+        adapter = LangGraphOrchestratorAdapter(
+            _HealthyGraph(),
+            orchestrator_id="factory-health",
+            version="1.2.11",
+            config_id="cfg",
+            health_policy=self.policy(),
+        )
+        setattr(module, "build", lambda: RuntimePlugin(adapter, normalize_evidence))
+        sys.modules[module_name] = module
+        try:
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                manifest_path = root / "runtimes.json"
+                manifest_path.write_text(
+                    json.dumps(
+                        {
+                            "runtimes": [
+                                {
+                                    "factory": f"{module_name}:build",
+                                    "cost": 0.01,
+                                    "latency_ms": 10.0,
+                                    "success_rate": 0.9,
+                                    "quality": 0.9,
+                                    "reliability": 0.9,
+                                    "trust_profile": "local-test",
+                                }
+                            ]
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                database = root / "runtime-health.db"
+                create_operator_from_catalog(
+                    manifest_path,
+                    store=InMemoryMissionStore(),
+                    health=SQLiteRuntimeHealthStore(database),
+                )
+                result = adapter.execute(_request("factory-wired-execution"))
+                self.assertEqual(result.status, ExecutionStatus.SUCCEEDED)
+
+                restarted = RuntimeHealthTracker(
+                    runtime_id="factory-health",
+                    runtime_version="1.2.11",
+                    config_id="cfg",
+                    policy=self.policy(),
+                    store=SQLiteRuntimeHealthStore(database),
+                )
+                self.assertEqual(
+                    restarted.facts().state,
+                    RuntimeHealthState.HEALTHY,
+                )
+        finally:
+            sys.modules.pop(module_name, None)
 
     def test_store_cannot_be_replaced_after_local_factual_history_exists(self):
         tracker = RuntimeHealthTracker(
