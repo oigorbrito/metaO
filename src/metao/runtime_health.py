@@ -73,7 +73,10 @@ class RuntimeHealthExecutionFact:
         ):
             if not value or not value.strip():
                 raise ValueError(f"{name} must be non-empty")
-        if self.status not in {ExecutionStatus.SUCCEEDED, ExecutionStatus.FAILED}:
+        if (
+            not isinstance(self.status, ExecutionStatus)
+            or self.status not in {ExecutionStatus.SUCCEEDED, ExecutionStatus.FAILED}
+        ):
             raise ValueError("runtime health facts only persist SUCCEEDED or FAILED")
         if self.sequence < 1:
             raise ValueError("runtime health fact sequence must be positive")
@@ -264,6 +267,8 @@ class RuntimeHealthTracker:
     ) -> RuntimeHealthFacts:
         if not execution_id:
             raise ValueError("execution_id must be non-empty")
+        if not isinstance(status, ExecutionStatus):
+            raise ValueError(f"unsupported execution status for runtime health: {status}")
         if status is ExecutionStatus.CANCELLED:
             return self.facts()
         if status not in {ExecutionStatus.SUCCEEDED, ExecutionStatus.FAILED}:
@@ -329,9 +334,9 @@ class RuntimeHealthTracker:
                 fact.config_id,
             ) != (self._runtime_id, self._runtime_version, self._config_id):
                 raise RuntimeHealthHistoryCorrupt("runtime health fact binding mismatch")
-            if fact.sequence <= prior_sequence:
+            if fact.sequence != prior_sequence + 1:
                 raise RuntimeHealthHistoryCorrupt(
-                    "runtime health fact sequence is not strictly increasing"
+                    "runtime health fact sequence is not contiguous"
                 )
             prior_sequence = fact.sequence
             previous_state = state
