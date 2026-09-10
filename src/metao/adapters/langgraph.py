@@ -107,7 +107,14 @@ class LangGraphOrchestratorAdapter:
                     f"{type(self._health_persistence_error).__name__}"
                 ),
             )
-        return self._runtime_health.report()
+        try:
+            return self._runtime_health.report()
+        except Exception as exc:
+            self._health_persistence_error = exc
+            return HealthReport(
+                HealthStatus.UNHEALTHY,
+                f"runtime health evidence unavailable: {type(exc).__name__}",
+            )
 
     def runtime_health_facts(self) -> RuntimeHealthFacts:
         return self._runtime_health.facts()
