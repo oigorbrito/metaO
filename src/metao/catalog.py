@@ -119,12 +119,25 @@ class OrchestratorCatalog:
         }[state]
 
     def _runtime_status(self, orchestrator) -> OrchestratorStatus:
-        report = orchestrator.health()
+        try:
+            report = orchestrator.health()
+        except Exception:
+            # Health observation failure is not evidence of runtime health. It is
+            # nevertheless an operational inability to establish routability, so
+            # the catalog fails closed rather than treating the runtime UNKNOWN.
+            return OrchestratorStatus.UNHEALTHY
+
         facts_reader = getattr(orchestrator, "runtime_health_facts", None)
         if not callable(facts_reader):
             return self._map_health(report.status)
 
-        factual_status = self._map_factual_health(facts_reader().state)
+        try:
+            factual_status = self._map_factual_health(facts_reader().state)
+        except Exception:
+            # A factual authority that cannot be read must not silently degrade to
+            # coarse readiness or bootstrap UNKNOWN.
+            return OrchestratorStatus.UNHEALTHY
+
         if (
             report.status is HealthStatus.UNHEALTHY
             and factual_status

@@ -19,7 +19,12 @@ from metao.core import (
     HealthStatus,
     OrchestratorDescriptor,
 )
-from metao.runtime_health import RuntimeHealthFacts, RuntimeHealthPolicy, RuntimeHealthTracker
+from metao.runtime_health import (
+    RuntimeHealthFacts,
+    RuntimeHealthPolicy,
+    RuntimeHealthStorePort,
+    RuntimeHealthTracker,
+)
 
 
 def _digest(value: Any) -> str:
@@ -68,9 +73,11 @@ class CrewAIOrchestratorAdapter:
         version: str = "1",
         config_id: str = "default",
         health_policy: RuntimeHealthPolicy | None = None,
+        health_store: RuntimeHealthStorePort | None = None,
     ) -> None:
         self._crew = crew
         self._cancelled: set[str] = set()
+        self._health_persistence_error: Exception | None = None
         self._descriptor = OrchestratorDescriptor(
             orchestrator_id=orchestrator_id,
             version=version,
@@ -82,6 +89,7 @@ class CrewAIOrchestratorAdapter:
             runtime_version=version,
             config_id=config_id,
             policy=health_policy,
+            store=health_store,
         )
 
     @property
@@ -91,10 +99,22 @@ class CrewAIOrchestratorAdapter:
     def health(self) -> HealthReport:
         if not callable(getattr(self._crew, "kickoff", None)):
             return HealthReport(HealthStatus.UNHEALTHY, "kickoff unavailable")
+        if self._health_persistence_error is not None:
+            return HealthReport(
+                HealthStatus.UNHEALTHY,
+                (
+                    "runtime health evidence unavailable: "
+                    f"{type(self._health_persistence_error).__name__}"
+                ),
+            )
         return self._runtime_health.report()
 
     def runtime_health_facts(self) -> RuntimeHealthFacts:
         return self._runtime_health.facts()
+
+    def configure_runtime_health_store(self, store: RuntimeHealthStorePort) -> None:
+        self._runtime_health.configure_store(store)
+        self._health_persistence_error = None
 
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         if request.execution_id in self._cancelled:
@@ -120,7 +140,14 @@ class CrewAIOrchestratorAdapter:
                 ExecutionStatus.FAILED,
                 error=str(exc),
             )
-        self._runtime_health.record_execution(result.status, execution_id=request.execution_id)
+        try:
+            self._runtime_health.record_execution(
+                result.status,
+                execution_id=request.execution_id,
+            )
+            self._health_persistence_error = None
+        except Exception as exc:
+            self._health_persistence_error = exc
         return result
 
     def cancel(self, execution_id: str) -> None:
