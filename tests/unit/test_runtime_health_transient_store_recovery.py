@@ -51,29 +51,15 @@ class _FailNReadsStore:
 def _request(execution_id: str) -> ExecutionRequest:
     return ExecutionRequest(
         execution_id,
-        Mission("health-transient", "exercise transient health store", frozenset({"workflow"})),
+        Mission(
+            "health-transient",
+            "exercise transient health store",
+            frozenset({"workflow"}),
+        ),
     )
 
 
 class RuntimeHealthTransientStoreRecoveryTests(unittest.TestCase):
-    def adapters(self, store):
-        return (
-            LangGraphOrchestratorAdapter(
-                _HealthyGraph(),
-                orchestrator_id="langgraph-transient",
-                version="1.2.11",
-                config_id="cfg",
-                health_store=store,
-            ),
-            CrewAIOrchestratorAdapter(
-                _HealthyCrew(),
-                orchestrator_id="crewai-transient",
-                version="1.15.16",
-                config_id="cfg",
-                health_store=store,
-            ),
-        )
-
     def test_transient_write_failure_replays_original_fact_before_runtime_is_routable(self):
         cases = (
             (
