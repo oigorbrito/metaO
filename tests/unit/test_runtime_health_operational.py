@@ -38,7 +38,9 @@ class RuntimeHealthOperationalTests(unittest.TestCase):
             version="1",
             config_id="cfg-a",
         )
-        self.assertEqual(adapter.runtime_health_facts().state, RuntimeHealthState.UNKNOWN)
+        facts = adapter.runtime_health_facts()
+        self.assertEqual(facts.state, RuntimeHealthState.UNKNOWN)
+        self.assertEqual(facts.evidence_basis, "UNKNOWN")
         self.assertEqual(adapter.health().status, HealthStatus.DEGRADED)
 
         registry = OrchestratorRegistry()
@@ -74,6 +76,8 @@ class RuntimeHealthOperationalTests(unittest.TestCase):
 
         graph_facts = graph.runtime_health_facts()
         crew_facts = crew.runtime_health_facts()
+        self.assertEqual(graph_facts.evidence_basis, "ADAPTER_VERIFIED")
+        self.assertEqual(crew_facts.evidence_basis, "ADAPTER_VERIFIED")
         comparable_graph = (
             graph_facts.state,
             graph_facts.evidence_basis,
@@ -149,6 +153,7 @@ class RuntimeHealthOperationalTests(unittest.TestCase):
         self.assertEqual(result.status, ExecutionStatus.CANCELLED)
         facts = adapter.runtime_health_facts()
         self.assertEqual(facts.state, RuntimeHealthState.UNKNOWN)
+        self.assertEqual(facts.evidence_basis, "UNKNOWN")
         self.assertEqual(facts.attempts, 0)
         self.assertEqual(facts.failures, 0)
 
@@ -163,7 +168,7 @@ class RuntimeHealthOperationalTests(unittest.TestCase):
         self.assertEqual(facts.runtime_id, "crewai-bound")
         self.assertEqual(facts.runtime_version, "1.15.16")
         self.assertEqual(facts.config_id, "crew-config-v2")
-        self.assertEqual(facts.evidence_basis, "ADAPTER_VERIFIED")
+        self.assertEqual(facts.evidence_basis, "UNKNOWN")
 
     def test_catalog_preserves_unknown_and_strategy_prefers_factually_known_runtime(self):
         known = LangGraphOrchestratorAdapter(
@@ -224,6 +229,7 @@ class RuntimeHealthOperationalTests(unittest.TestCase):
 
         pool = catalog.pools()[0]
         self.assertEqual(adapter.runtime_health_facts().state, RuntimeHealthState.UNKNOWN)
+        self.assertEqual(adapter.runtime_health_facts().evidence_basis, "UNKNOWN")
         self.assertEqual(adapter.health().status, HealthStatus.UNHEALTHY)
         self.assertEqual(pool.status, OrchestratorStatus.UNHEALTHY)
         self.assertIsNone(select_orchestrator((pool,)))

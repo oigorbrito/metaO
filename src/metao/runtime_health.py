@@ -368,7 +368,7 @@ class RuntimeHealthTracker:
             runtime_version=self._runtime_version,
             config_id=self._config_id,
             state=state,
-            evidence_basis="ADAPTER_VERIFIED",
+            evidence_basis=("UNKNOWN" if attempts == 0 else "ADAPTER_VERIFIED"),
             evidence_ref=evidence_ref,
             window_start_sequence=start_sequence,
             window_end_sequence=end_sequence,
