@@ -87,13 +87,6 @@ impl RuntimeHealthObservation {
         if self.config_id.trim().is_empty() {
             return Err(RuntimeHealthError::BlankConfigIdentity);
         }
-        if !matches!(
-            self.evidence_basis,
-            RuntimeHealthEvidenceBasis::IndependentObservation
-                | RuntimeHealthEvidenceBasis::AdapterVerified
-        ) {
-            return Err(RuntimeHealthError::InvalidEvidenceBasis);
-        }
         if self.evidence_ref.trim().is_empty() {
             return Err(RuntimeHealthError::BlankEvidenceRef);
         }
@@ -108,6 +101,19 @@ impl RuntimeHealthObservation {
         {
             return Err(RuntimeHealthError::InvalidCounters);
         }
+
+        if self.attempts == 0 {
+            if self.evidence_basis != RuntimeHealthEvidenceBasis::Unknown {
+                return Err(RuntimeHealthError::InvalidEvidenceBasis);
+            }
+        } else if !matches!(
+            self.evidence_basis,
+            RuntimeHealthEvidenceBasis::IndependentObservation
+                | RuntimeHealthEvidenceBasis::AdapterVerified
+        ) {
+            return Err(RuntimeHealthError::InvalidEvidenceBasis);
+        }
+
         Ok(())
     }
 }
