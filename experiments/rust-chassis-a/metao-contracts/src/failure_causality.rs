@@ -9,6 +9,22 @@ pub enum FactualExecutionOutcome {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExecutionTerminationCause {
+    CriterionSatisfied,
+    BudgetExhausted,
+    TimeLimitReached,
+    Cancelled,
+    ExecutionFailure,
+    Unknown,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExecutionTerminationFact {
+    pub outcome: FactualExecutionOutcome,
+    pub cause: ExecutionTerminationCause,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum FailureClass {
     None,
     Transient,
