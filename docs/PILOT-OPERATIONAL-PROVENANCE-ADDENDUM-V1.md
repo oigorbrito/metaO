@@ -15,11 +15,15 @@ ENUM_BASIS_VALUE != CRYPTOGRAPHIC_OR_CALLER_IDENTITY_PROOF
 CALLER_DECLARATION != FACTUAL_AUTHORITY
 COMPOSED_GATE_PASS_REQUIRES_CANONICAL_PRODUCER_PATH
 ZERO_EXECUTION_FACTS -> UNKNOWN_BASIS_ONLY
+ZERO_ATTEMPT_EXECUTION_BOUND_ADMISSION -> REJECT
 ```
 
 The pure contracts in #472/#474 validate allowed evidence classifications and fail closed on missing/blank references. The composed integration must additionally prove that those classifications are emitted by the canonical execution/admission/adapter-normalization path rather than accepted from arbitrary application input.
 
-Runtime-health provenance has one additional invariant inherited from #462/#465 composition: zero execution observations cannot carry `AdapterVerified` or `IndependentObservation` factual execution provenance. Empty history is `UNKNOWN` with `Unknown` basis only.
+Runtime-health provenance has two related but distinct invariants inherited from #462/#465/#474 composition:
+
+- zero execution observations cannot carry `AdapterVerified` or `IndependentObservation` factual execution provenance; empty history is `UNKNOWN` with `Unknown` basis only;
+- an empty/zero-attempt `UNKNOWN` projection is bootstrap state only and must not be admitted as an execution-bound factual health observation for an `execution_id`, even when lease and runtime-binding identifiers otherwise match.
 
 ## Required machine-readable provenance
 
@@ -41,6 +45,7 @@ runtime_health_observation_runtime_id
 runtime_health_observation_runtime_version
 runtime_health_observation_config_id
 runtime_health_observation_attempts
+runtime_health_observation_execution_bound_admitted
 
 failure_origin_evidence_basis
 failure_origin_evidence_ref
@@ -71,12 +76,12 @@ Required cumulative shape:
 #469 merge
  -> updated #472: all prior regressions + failure-origin
 #472 merge
- -> updated #474: all prior regressions + fencing/execution-lease
+ -> updated #474: all prior regressions + fencing/execution-lease + explicit zero-attempt execution-bound admission rejection
 final main
  -> all cumulative regressions + #462 Python qualification subset + composed producer-wiring T6/T7 scenario
 ```
 
-The #465 zero-observation provenance rule is part of the cumulative authority surface and must be preserved by #469/#474 rebases.
+The #465 zero-observation provenance rule is part of the cumulative authority surface and must be preserved by #469/#474 rebases. The #474 admission-specific rule is stronger: a valid bootstrap `UNKNOWN` projection with zero attempts remains representable, but it is never admissible as an execution-bound factual observation.
 
 ## Composed T6/T7 gate
 
@@ -87,17 +92,18 @@ Before the real pilot, the exact resulting `main` must demonstrate all of the fo
 3. the binding carries an allowed factual evidence basis and nonblank evidence ref;
 4. the runtime-health observation is produced by the canonical adapter/observation path with an allowed factual basis and nonblank evidence ref;
 5. zero execution observations carry `Unknown` basis and cannot claim adapter/independent factual execution provenance;
-6. lease `execution_id`, binding `execution_id`, and the observed runtime/version/config agree;
-7. stale holder/generation/fence is rejected;
-8. a caller-constructed binding with copied identifiers but caller/self-reported provenance is rejected or cannot enter the canonical admission path;
-9. a caller-constructed health observation with copied identifiers but invalid provenance is rejected or cannot enter the canonical admission path;
-10. provider/network failure-origin evidence is not rewritten as runtime-local health evidence;
-11. capacity/policy pre-execution conditions do not mint execution failure outcomes;
-12. rejection never mutates runtime health, execution outcome, retry dispatch, or Acceptance authority.
+6. zero-attempt `UNKNOWN` bootstrap health is rejected by execution-bound health-observation admission even when lease/binding identifiers otherwise match;
+7. lease `execution_id`, binding `execution_id`, and the observed runtime/version/config agree;
+8. stale holder/generation/fence is rejected;
+9. a caller-constructed binding with copied identifiers but caller/self-reported provenance is rejected or cannot enter the canonical admission path;
+10. a caller-constructed health observation with copied identifiers but invalid provenance is rejected or cannot enter the canonical admission path;
+11. provider/network failure-origin evidence is not rewritten as runtime-local health evidence;
+12. capacity/policy pre-execution conditions do not mint execution failure outcomes;
+13. rejection never mutates runtime health, execution outcome, retry dispatch, or Acceptance authority.
 
 ## Pilot P6 extension
 
-Scenario P6 from the parent packet is PASS only if stale-owner rejection and producer provenance are both demonstrated.
+Scenario P6 from the parent packet is PASS only if stale-owner rejection, producer provenance, and zero-attempt execution-bound admission rejection are demonstrated.
 
 Required P6 evidence:
 
@@ -107,12 +113,13 @@ P6_EXECUTION_RUNTIME_BINDING_MATCH = YES
 P6_BINDING_PRODUCER_CANONICAL = YES
 P6_HEALTH_OBSERVATION_PRODUCER_CANONICAL = YES
 P6_ZERO_ATTEMPT_FACTUAL_PROVENANCE_ACCEPTED = NO
+P6_ZERO_ATTEMPT_EXECUTION_BOUND_ADMISSION_ACCEPTED = NO
 P6_CALLER_FORGED_BINDING_ACCEPTED = NO
 P6_CALLER_FORGED_HEALTH_OBSERVATION_ACCEPTED = NO
 P6_STALE_OWNER_HEALTH_CONTAMINATION = NO
 ```
 
-A test that only constructs `RuntimeExecutionHealthBinding { evidence_basis: AdapterVerified, ... }` directly and receives authorization is contract-unit evidence, not composed producer-provenance evidence.
+A test that only constructs `RuntimeExecutionHealthBinding { evidence_basis: AdapterVerified, ... }` directly and receives authorization is contract-unit evidence, not composed producer-provenance evidence. Likewise, proving only that zero attempts use `Unknown` basis is insufficient: the composed gate must also prove that this bootstrap projection cannot be admitted as factual execution-bound health evidence.
 
 ## Abort criteria extension
 
@@ -121,6 +128,7 @@ Abort and preserve evidence if any of these occur:
 - execution-runtime binding provenance cannot be traced to the canonical producer;
 - runtime-health observation provenance cannot be traced to the canonical producer;
 - zero-attempt runtime health carries adapter/independent factual execution provenance;
+- zero-attempt bootstrap `UNKNOWN` is admitted as execution-bound factual health evidence;
 - caller-controlled input can mint an allowed factual evidence basis without crossing canonical authority;
 - evidence basis/ref values disagree with the recorded producer path;
 - copied identifiers are sufficient to bypass producer provenance;
@@ -144,6 +152,7 @@ This addendum is documentation/design evidence only.
 ```text
 ADDENDUM = PREPARED
 CUMULATIVE_SERIAL_REGRESSION_MATRIX = PREPARED
+ZERO_ATTEMPT_EXECUTION_BOUND_ADMISSION_RULE = PREPARED
 COMPOSED_PRODUCER_WIRING_GATE = NOT_RUN
 PILOT = NOT_EXECUTED
 FUNCTIONAL_PASS = NO
