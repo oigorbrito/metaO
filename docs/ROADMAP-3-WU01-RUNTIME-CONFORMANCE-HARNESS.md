@@ -12,15 +12,15 @@ The harness certifies boundary correctness, not business quality and not current
 
 A runtime may be temporarily `UNHEALTHY` and still conform to the metaO contract. Conversely, a runtime that returns successful-looking output with broken mission/execution/orchestrator evidence binding is non-conformant.
 
-The harness is an empirical instrument. A claim produced from it is decision-grade only when another engineer can identify the exact subject, protocol, material environment, observations, analysis rule, and limitations relevant to that claim.
+The harness is an empirical instrument. A claim produced from it is decision-grade only when another engineer can identify the exact subject, procedure, material environment, observations, analysis rule, and limitations relevant to that claim.
 
 The canonical documentation authority for empirical claims is `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`.
 
 ## Empirical-method constraint
 
-Claim-bearing harness executions MUST use an explicit, versioned protocol before their observations are interpreted as evidence. The amount of study-design metadata required depends on the kind of empirical claim being made.
+Claim-bearing harness executions MUST use an explicit, identifiable procedure before their observations are interpreted as evidence. Formal protocol versioning is required when changes to the procedure could affect comparability, interpretation, or evidence reuse; it is not universal inventory for every deterministic check.
 
-A deterministic conformance check is not automatically an experiment, benchmark, or comparative study. Baselines, independent variables, controlled variables, repetitions, and statistical analysis are required only when the selected empirical design makes them material to the claim.
+The amount of study-design metadata required depends on the kind of empirical claim being made. A deterministic conformance check is not automatically an experiment, benchmark, or comparative study. Baselines, independent variables, controlled variables, repetitions, and statistical analysis are required only when the selected empirical design makes them material to the claim.
 
 ### Universal claim record
 
@@ -30,7 +30,7 @@ For every decision-bearing harness claim, record when applicable:
 |---|---|
 | Claim / research question | Specific observable property or proposition being evaluated. |
 | Subject | Runtime/candidate name and immutable commit, tag, digest, version, or equivalent identity. |
-| Protocol | Versioned procedure, command, script, or test selector used to produce the observation. |
+| Procedure | Identifiable command, script, test selector, workflow, or other executable procedure; record a version/digest when procedure changes could affect the claim. |
 | Fixture/input | Fixture identity, digest, workload, mission, or other material input. |
 | Environment | Material OS, architecture, runtime/compiler, dependency, hardware, provider, or infrastructure context. |
 | Raw evidence | Machine-readable output/log/artifact location where practical; omission must be explained when material. |
@@ -53,6 +53,7 @@ Add these only when the claim/design makes them applicable:
 | Repetition count | Stochastic/nondeterministic systems or when run-to-run variability is material. |
 | Seed/randomness controls | Randomized procedure or subject. |
 | Statistical/aggregation method | The conclusion depends on aggregation, uncertainty, significance, effect size, or other quantitative analysis. |
+| Procedure/protocol version | Procedure evolution could affect comparability, interpretation, or later evidence reuse. |
 
 A missing applicable field does not imply failure of the candidate. It limits the strength of the supported claim and MUST be represented conservatively.
 
@@ -85,6 +86,7 @@ The harness MUST NOT present the following as empirical-method requirements unle
 - preferred implementation patterns;
 - arbitrary numeric thresholds, scores, or weights;
 - mandatory baselines for non-comparative deterministic checks;
+- mandatory protocol-version labels when procedure evolution is immaterial to the claim;
 - mandatory repetition counts independent of observed/plausible variability;
 - mandatory statistical tests for deterministic properties;
 - project-specific authority or security invariants masquerading as research-community standards;
@@ -116,7 +118,8 @@ V1 validates:
 For every decision-bearing harness execution, preserve enough information to independently inspect or repeat the executable procedure without reconstructing hidden material context:
 
 ```text
-PROTOCOL_VERSION = REQUIRED
+PROCEDURE_IDENTITY = REQUIRED
+PROTOCOL_VERSION = REQUIRED_WHEN_PROCEDURE_EVOLUTION_IS_MATERIAL
 SUBJECT_PIN = REQUIRED_WHEN_PINNABLE
 FIXTURE_ID_OR_DIGEST = REQUIRED_WHEN_MATERIAL
 COMMAND_OR_PROCEDURE = REQUIRED
@@ -127,7 +130,7 @@ ANALYSIS_RULE = REQUIRED
 LIMITATIONS = REQUIRED_WHEN_MATERIAL
 ```
 
-`BASELINE_PIN` is required for comparative claims, not for every conformance execution. Start/end timestamps, resource measurements, repetition counts, seeds, and per-run observations are required when they are material to interpreting or repeating the claim rather than as unconditional inventory.
+`BASELINE_PIN` is required for comparative claims, not for every conformance execution. Start/end timestamps, resource measurements, repetition counts, seeds, per-run observations, and protocol-version identifiers are required when they are material to interpreting, comparing, or repeating the claim rather than as unconditional inventory.
 
 Randomized or nondeterministic components MUST disclose material randomness controls and use repetitions when needed to characterize stability. Network-backed or mutable external dependencies must be pinned, snapshotted, identified, or explicitly classified as a reproducibility limitation when their mutability can affect the result.
 
@@ -184,7 +187,7 @@ Admission gating belongs to a later WU after the WU05 integration line is settle
 - harness remains SDK-neutral;
 - full historical regression remains green when executable CI is available;
 - decision-bearing claims include the applicable reproducibility record;
-- comparative conclusions identify evidence for every candidate under a materially comparable protocol;
+- comparative conclusions identify evidence for every candidate under a materially comparable procedure;
 - material deviations are exposed instead of silently overwriting earlier observations;
 - documentary suggestions include an applicable methodological criterion and do not create unsupported product/architecture requirements.
 
@@ -199,7 +202,7 @@ SDK_NEUTRAL = YES
 RUNTIME_FACTORY_CHANGED = NO
 THIRD_FRAMEWORK_REQUIRED = NO
 CI_EXECUTED = PENDING_HOSTED_RUNNER_AVAILABILITY
-EMPIRICAL_PROTOCOL_REQUIRED = YES
+IDENTIFIABLE_EMPIRICAL_PROCEDURE_REQUIRED = YES
 APPLICABILITY_AWARE_STUDY_RECORD = YES
 REPRODUCIBILITY_RECORD_REQUIRED = YES
 DOCUMENTARY_SUGGESTION_METHOD_BASIS_REQUIRED = YES
