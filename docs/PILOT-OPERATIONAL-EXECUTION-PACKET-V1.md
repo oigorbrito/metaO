@@ -3,7 +3,7 @@
 Status: PREPARED_NOT_EXECUTED
 Owner: #360
 Related maturity owner: #357
-Related runtime-health work: #160, #168/T6, #461/#462, #464/#465, #468/#469
+Related runtime-health work: #160, #168/T6-T7, #461/#462, #464/#465, #468/#469, #471/#472, #473/#474
 
 This packet prepares a bounded real-provider pilot. It does not claim that the pilot has executed or passed.
 
@@ -57,7 +57,8 @@ The pilot may start only when all applicable conditions are satisfied:
 - credentials are available through an explicitly authorized non-persistent mechanism;
 - policy, risk and budget bounds are explicit;
 - external side effects are disabled, sandboxed, reversible, or protected by existing idempotency authority;
-- #462/#465/#469 evidence is not silently transferred from other SHAs;
+- #462/#465/#469/#472/#474 evidence is not silently transferred from other SHAs;
+- a composed T6/T7 gate has passed on the exact resulting `main` after the required slices were promoted serially;
 - hosted Actions blocker #71 is recorded separately if still present.
 
 ## Pilot workload
@@ -75,10 +76,11 @@ one bounded project objective
 -> primary real runtime/provider executes permitted work
 -> factual execution/evidence recorded
 -> inject or observe one controlled runtime/provider failure where safe
--> failure causality remains factual
+-> failure origin remains causally distinct from runtime health
 -> bounded retry/reselection rules apply
 -> alternate eligible runtime/provider may execute new controlled attempt
 -> repository/work state handoff is preserved
+-> stale owner cannot rewrite authoritative runtime-health evidence
 -> verification runs independently
 -> if verification fails, MetaO creates corrective work
 -> corrective execution runs under the same constraints
@@ -97,6 +99,10 @@ If the candidate includes the relevant qualified runtime-health slices, the pilo
 - `UNKNOWN`, `UNHEALTHY`, `QUARANTINED`, and `RECOVERING` are not treated as ordinary healthy retry targets according to the qualified contracts;
 - failover does not erase authoritative retry/history evidence;
 - recovery probe authorization, when present, is explicit and does not itself dispatch work or mint `HEALTHY`;
+- provider/service, network/transport, runtime-local, capacity and policy causes remain separately attributable where factual evidence supports them;
+- provider/network/capacity/policy failures must not be silently rewritten as local-runtime failure;
+- only the current authoritative execution owner with matching factual execution-to-runtime binding may authorize runtime-health observation admission;
+- stale holder/generation/fence or cross-runtime/version/config observations fail closed;
 - return to normal health requires canonical fresh factual evidence.
 
 If a required slice is still unmerged/unqualified, mark the corresponding invariant `NOT_IN_CANDIDATE` rather than simulating a PASS.
@@ -109,7 +115,7 @@ A real provider/runtime completes a bounded work unit, evidence is generated, ve
 
 ### P1 — controlled provider/runtime failure and alternate execution
 
-A controlled factual failure occurs on the primary path. The failure classification is preserved and a new authorized attempt may select the alternate eligible runtime/provider. The original execution is never relabeled as success.
+A controlled factual failure occurs on the primary path. Failure class and failure origin are preserved separately. Provider/network/capacity/policy causes must not contaminate local runtime health. A new authorized attempt may select the alternate eligible runtime/provider. The original execution is never relabeled as success.
 
 ### P2 — retry pressure bound
 
@@ -127,6 +133,10 @@ Verification deliberately detects a bounded defect. MetaO creates corrective wor
 
 At a safe checkpoint, stop and resume the execution environment. Authoritative lineage/evidence required by the candidate must survive or replay according to the existing qualified durability mechanism.
 
+### P6 — stale-owner health fencing
+
+Where #474 semantics are present and qualified, transfer or renew execution authority and then present a stale holder/generation/fence observation plus a cross-runtime binding attempt. Neither may contaminate runtime health; the current authoritative lease and factual execution-to-runtime binding must remain required.
+
 ## Success criteria
 
 The pilot is PASS only if every required scenario for the candidate completes and all of the following are true:
@@ -138,7 +148,9 @@ WORKTREE_CLEAN_AFTER = YES
 REAL_PROVIDER_EXECUTION = YES
 POLICY_RISK_BUDGET_ENFORCED = YES
 FAILURE_CAUSALITY_PRESERVED = YES
+FAILURE_ORIGIN_PRESERVED = YES
 ATTEMPT_LINEAGE_PRESERVED = YES
+STALE_OWNER_HEALTH_CONTAMINATION = NO
 INDEPENDENT_VERIFICATION = YES
 INDEPENDENT_ACCEPTANCE = YES
 NO_UNAUTHORIZED_EXTERNAL_EFFECT = YES
@@ -154,10 +166,12 @@ Abort the pilot and preserve evidence if any of these occur:
 - unexpected repository SHA or dirty worktree;
 - credential leakage to files/logs/output;
 - policy/risk/budget denial;
-- ambiguous causal classification;
+- ambiguous causal or failure-origin classification;
+- provider/network/capacity/policy evidence is rewritten as local runtime failure without factual support;
 - uncontrolled or irreversible external side effect;
 - retry/reselection exceeds configured bound;
 - stale/forged/truncated authoritative history is accepted;
+- stale execution owner or mismatched runtime binding can alter runtime-health evidence;
 - runtime-health state is manually rewritten to force eligibility;
 - Acceptance is bypassed or execution self-accepts;
 - dependency/runtime version mismatch invalidates the candidate assumptions.
@@ -202,8 +216,14 @@ risk_result
 budget_result
 strategy_selection
 failure_classification
+failure_origin
+failure_attribution_target
 health_before
 health_after
+execution_lease_holder_non_secret
+execution_lease_generation
+execution_fencing_token_non_secret
+execution_runtime_binding_evidence_ref
 verification_result
 acceptance_result
 evidence_ids
@@ -212,7 +232,7 @@ result
 blocker_or_failure_classification
 ```
 
-## Current blockers as of packet preparation
+## Current blockers as of packet reconciliation
 
 ```text
 GITHUB_HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP (#71)
@@ -221,24 +241,42 @@ HOSTED_CI_REQUIRED_FOR_FULL_#360_CLOSURE = YES
 
 REAL_PROVIDER_CREDENTIAL = EXTERNAL_AUTHORIZATION_OR_MANUAL_LOGIN_REQUIRED
 #462 = FROZEN / NOT YET EXACT-HEAD REAL-RUNTIME QUALIFIED
-#465 = DRAFT / NOT YET EXACT-HEAD LOCALLY QUALIFIED
-#469 = DRAFT / NOT YET EXACT-HEAD LOCALLY QUALIFIED
+#465 = DRAFT / CORRECTED HEAD / NOT YET EXACT-HEAD LOCALLY QUALIFIED
+#469 = DRAFT / CORRECTED HEAD / NOT YET EXACT-HEAD LOCALLY QUALIFIED
+#472 = DRAFT / CORRECTED HEAD / NOT YET EXACT-HEAD LOCALLY QUALIFIED
+#474 = DRAFT / CORRECTED HEAD / NOT YET EXACT-HEAD LOCALLY QUALIFIED
+```
+
+Current prepared heads are informational only and are not transferable evidence:
+
+```text
+#462 = f6d9fe8d8035479d91a994745afe5b802936d338
+#465 = b8e09e585dbfddfbc1251ea4b47a50ced97fb72c
+#469 = 13fe27932db8c98459ad56569334cc55626c6b3d
+#472 = 32ecb78b7de7677c09c69a933ebf41bd6e92d7a9
+#474 = a98d49195e4823bd2e360951a6e61c92122942d4
 ```
 
 These blockers do not authorize weakening the pilot. They determine which evidence level can currently be reached.
 
-## Promotion sequence
+## Serial promotion sequence
+
+Do not qualify all prepared heads and then merge them. Each merge changes `main` and may require a new branch head/requalification for later slices.
 
 1. qualify #462 exact frozen head independently;
-2. qualify #465 exact head and merge only if its gate passes;
-3. qualify #469 exact head and merge only if its gate passes;
-4. construct pilot candidate from an exact `main` that contains only qualified slices;
-5. authorize real-provider credential use through an approved non-persistent path;
-6. execute P0 first;
-7. execute P1/P4;
-8. execute P2/P3 only if the corresponding slices are actually present and qualified;
-9. execute P5 where durability semantics are in the candidate;
-10. record exact evidence and reconcile #360/#357/#160/#168 without automatic parent closure.
+2. if PASS, merge #462 and record the resulting `main` SHA;
+3. update/rebase #465 onto resulting `main`, obtain a new exact head, qualify that head, and merge only if PASS;
+4. update/rebase #469 onto resulting `main`, obtain a new exact head, qualify that head, and merge only if PASS;
+5. update/rebase #472 onto resulting `main`, obtain a new exact head, qualify that head, and merge only if PASS;
+6. update/rebase #474 onto resulting `main`, obtain a new exact head, qualify that head, and merge only if PASS;
+7. run one composed deterministic T6/T7 gate on the resulting exact `main` covering factual health, bounded retry, controlled recovery, failure-origin separation and stale-owner fencing;
+8. construct the pilot candidate only from that qualified exact `main`;
+9. authorize real-provider credential use through an approved non-persistent path;
+10. execute P0 first;
+11. execute P1/P4;
+12. execute P2/P3/P6 only when the corresponding qualified slices are in the candidate;
+13. execute P5 where durability semantics are in the candidate;
+14. record exact evidence and reconcile #360/#357/#160/#168 without automatic parent closure.
 
 ## Non-goals
 
@@ -246,5 +284,5 @@ These blockers do not authorize weakening the pilot. They determine which eviden
 - no production-readiness claim from one pilot;
 - no automatic closure of #160, #168, #357 or #360;
 - no credential persistence;
-- no workaround that bypasses Policy, Budget, runtime health, verification, or Acceptance;
+- no workaround that bypasses Policy, Budget, runtime health, fencing, verification, or Acceptance;
 - no treating GitHub hosted pre-step failures as MetaO functional failures.
