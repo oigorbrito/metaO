@@ -94,6 +94,7 @@ one bounded project objective
 If the candidate includes the relevant qualified runtime-health slices, the pilot must verify these invariants without bypassing their authority boundaries:
 
 - runtime self-report does not override factual outcomes;
+- empty runtime-health history is `UNKNOWN` and must not claim adapter-verified factual execution evidence;
 - one isolated failure does not permanently quarantine a runtime;
 - repeated factual failures cross configured thresholds deterministically;
 - ordinary retry/reselection is bounded;
@@ -244,21 +245,23 @@ HOSTED_CI_REQUIRED_FOR_FULL_360_CLOSURE = YES
 
 REAL_PROVIDER_CREDENTIAL = EXTERNAL_AUTHORIZATION_OR_MANUAL_LOGIN_REQUIRED
 #462 = FROZEN / NOT YET EXACT-HEAD REAL-RUNTIME QUALIFIED
-#465 = DRAFT / CORRECTED HEAD / NOT YET EXACT-HEAD LOCALLY QUALIFIED
-#469 = DRAFT / CORRECTED HEAD / NOT YET EXACT-HEAD LOCALLY QUALIFIED
+#465 = DRAFT / ZERO-OBSERVATION PROVENANCE CORRECTED / NOT YET EXACT-HEAD LOCALLY QUALIFIED
+#469 = DRAFT / MUST INHERIT #465 ZERO-OBSERVATION PROVENANCE ON SERIAL REBASE / NOT QUALIFIED
 #472 = DRAFT / CORRECTED HEAD / NOT YET EXACT-HEAD LOCALLY QUALIFIED
-#474 = DRAFT / CORRECTED HEAD / NOT YET EXACT-HEAD LOCALLY QUALIFIED
+#474 = DRAFT / MUST INHERIT #465 ZERO-OBSERVATION PROVENANCE ON SERIAL REBASE / NOT QUALIFIED
 ```
 
 Current prepared heads are informational only and are not transferable evidence:
 
 ```text
 #462 = f6d9fe8d8035479d91a994745afe5b802936d338
-#465 = b8e09e585dbfddfbc1251ea4b47a50ced97fb72c
+#465 = 270439e28eca5b1f054a0f7fe0e1a4494e631666
 #469 = a2d85c69e7adb7ab89eb4cacbe4d04dccd2f9894
 #472 = 32ecb78b7de7677c09c69a933ebf41bd6e92d7a9
 #474 = a98d49195e4823bd2e360951a6e61c92122942d4
 ```
+
+The #469/#474 heads above are prepared development snapshots only; their runtime-health validation predates the #465 zero-observation provenance correction and therefore cannot be treated as qualification candidates before the mandated serial rebase.
 
 These blockers do not authorize weakening the pilot. They determine which evidence level can currently be reached.
 
@@ -269,9 +272,9 @@ Do not qualify all prepared heads and then merge them. Each merge changes `main`
 1. qualify #462 exact frozen head independently;
 2. if PASS, merge #462 and record the resulting `main` SHA;
 3. update/rebase #465 onto resulting `main`, obtain a new exact head, qualify that head, and merge only if PASS;
-4. update/rebase #469 onto resulting `main`, obtain a new exact head, qualify that head, and merge only if PASS;
-5. update/rebase #472 onto resulting `main`, obtain a new exact head, qualify that head, and merge only if PASS;
-6. update/rebase #474 onto resulting `main`, obtain a new exact head, qualify that head, and merge only if PASS;
+4. update/rebase #469 onto resulting `main`, inherit the qualified #465 zero-observation provenance rule, obtain a new exact head, qualify that head cumulatively, and merge only if PASS;
+5. update/rebase #472 onto resulting `main`, obtain a new exact head, qualify that head cumulatively, and merge only if PASS;
+6. update/rebase #474 onto resulting `main`, inherit the qualified zero-observation provenance rule, obtain a new exact head, qualify that head cumulatively, and merge only if PASS;
 7. run one composed deterministic T6/T7 gate on the resulting exact `main` covering factual health, bounded retry, controlled recovery, failure-origin separation and stale-owner fencing;
 8. construct the pilot candidate only from that qualified exact `main`;
 9. authorize real-provider credential use through an approved non-persistent path;
