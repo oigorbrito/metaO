@@ -75,8 +75,9 @@ one bounded project objective
 -> Policy/Risk/Budget authorize execution
 -> primary real runtime/provider executes permitted work
 -> factual execution/evidence recorded
--> inject or observe one controlled runtime/provider failure where safe
+-> inject or observe one controlled runtime/provider execution failure where safe
 -> failure origin remains causally distinct from runtime health
+-> capacity/policy denials remain pre-execution conditions, not fabricated execution failures
 -> bounded retry/reselection rules apply
 -> alternate eligible runtime/provider may execute new controlled attempt
 -> repository/work state handoff is preserved
@@ -100,7 +101,8 @@ If the candidate includes the relevant qualified runtime-health slices, the pilo
 - failover does not erase authoritative retry/history evidence;
 - recovery probe authorization, when present, is explicit and does not itself dispatch work or mint `HEALTHY`;
 - provider/service, network/transport, runtime-local, capacity and policy causes remain separately attributable where factual evidence supports them;
-- provider/network/capacity/policy failures must not be silently rewritten as local-runtime failure;
+- provider/network execution failures must not be silently rewritten as local-runtime failure;
+- capacity/policy denials remain pre-execution conditions and must not mint execution failure outcomes;
 - only the current authoritative execution owner with matching factual execution-to-runtime binding may authorize runtime-health observation admission;
 - stale holder/generation/fence or cross-runtime/version/config observations fail closed;
 - return to normal health requires canonical fresh factual evidence.
@@ -115,7 +117,7 @@ A real provider/runtime completes a bounded work unit, evidence is generated, ve
 
 ### P1 — controlled provider/runtime failure and alternate execution
 
-A controlled factual failure occurs on the primary path. Failure class and failure origin are preserved separately. Provider/network/capacity/policy causes must not contaminate local runtime health. A new authorized attempt may select the alternate eligible runtime/provider. The original execution is never relabeled as success.
+A controlled factual execution failure occurs on the primary path. Failure class and failure origin are preserved separately. Provider/network failures must not contaminate local runtime health. Capacity/policy denial, when exercised, must remain a pre-execution condition with no fabricated execution-failure outcome. A new authorized attempt may select the alternate eligible runtime/provider. The original execution is never relabeled as success.
 
 ### P2 — retry pressure bound
 
@@ -167,7 +169,8 @@ Abort the pilot and preserve evidence if any of these occur:
 - credential leakage to files/logs/output;
 - policy/risk/budget denial;
 - ambiguous causal or failure-origin classification;
-- provider/network/capacity/policy evidence is rewritten as local runtime failure without factual support;
+- provider/network failure evidence is rewritten as local runtime failure without factual support;
+- capacity/policy denial fabricates an execution failure outcome;
 - uncontrolled or irreversible external side effect;
 - retry/reselection exceeds configured bound;
 - stale/forged/truncated authoritative history is accepted;
@@ -237,7 +240,7 @@ blocker_or_failure_classification
 ```text
 GITHUB_HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP (#71)
 HOSTED_CI_REQUIRED_FOR_LOCAL_FUNCTIONAL_VALIDITY = NO
-HOSTED_CI_REQUIRED_FOR_FULL_#360_CLOSURE = YES
+HOSTED_CI_REQUIRED_FOR_FULL_360_CLOSURE = YES
 
 REAL_PROVIDER_CREDENTIAL = EXTERNAL_AUTHORIZATION_OR_MANUAL_LOGIN_REQUIRED
 #462 = FROZEN / NOT YET EXACT-HEAD REAL-RUNTIME QUALIFIED
