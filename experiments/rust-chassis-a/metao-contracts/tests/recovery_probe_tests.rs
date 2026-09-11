@@ -1,5 +1,5 @@
 use metao_contracts::runtime_health::{
-    evaluate_recovery_probe_authorization, RecoveryProbeAuthorizationFacts,
+    derive_runtime_health, evaluate_recovery_probe_authorization, RecoveryProbeAuthorizationFacts,
     RecoveryProbeEligibility, RuntimeHealthEvidenceBasis, RuntimeHealthObservation,
     RuntimeHealthPolicy, RuntimeHealthState,
 };
@@ -168,6 +168,92 @@ fn self_reported_unknown_or_blank_health_evidence_fails_closed() {
     let mut blank = observation(RuntimeHealthState::Quarantined);
     blank.evidence_ref = "   ".to_string();
     assert!(evaluate_recovery_probe_authorization(&blank, &policy(), &authorized()).is_err());
+}
+
+#[test]
+fn one_successful_probe_keeps_runtime_recovering_until_threshold() {
+    let recovery = RuntimeHealthObservation {
+        runtime_id: "runtime-a".to_string(),
+        runtime_version: "1.0.0".to_string(),
+        config_id: "config-a".to_string(),
+        evidence_basis: RuntimeHealthEvidenceBasis::AdapterVerified,
+        evidence_ref: "health:runtime-a:probe-success-1".to_string(),
+        window_start_sequence: 5,
+        window_end_sequence: 5,
+        attempts: 1,
+        successes: 1,
+        failures: 0,
+        consecutive_failures: 0,
+        timeouts: 0,
+        transport_failures: 0,
+        active_retries: 0,
+        fresh_successes_since_unhealthy: 1,
+        prior_state: Some(RuntimeHealthState::Quarantined),
+        self_reported_healthy: None,
+    };
+
+    let projected = derive_runtime_health(&recovery, &policy())
+        .expect("first factual recovery success must validate");
+    assert_eq!(projected.state, RuntimeHealthState::Recovering);
+}
+
+#[test]
+fn recovery_threshold_is_reached_only_through_canonical_health_projection() {
+    let recovered = RuntimeHealthObservation {
+        runtime_id: "runtime-a".to_string(),
+        runtime_version: "1.0.0".to_string(),
+        config_id: "config-a".to_string(),
+        evidence_basis: RuntimeHealthEvidenceBasis::AdapterVerified,
+        evidence_ref: "health:runtime-a:probe-success-2".to_string(),
+        window_start_sequence: 5,
+        window_end_sequence: 6,
+        attempts: 2,
+        successes: 2,
+        failures: 0,
+        consecutive_failures: 0,
+        timeouts: 0,
+        transport_failures: 0,
+        active_retries: 0,
+        fresh_successes_since_unhealthy: 2,
+        prior_state: Some(RuntimeHealthState::Recovering),
+        self_reported_healthy: None,
+    };
+
+    let projected = derive_runtime_health(&recovered, &policy())
+        .expect("recovery threshold observation must validate");
+    assert_eq!(projected.state, RuntimeHealthState::Healthy);
+}
+
+#[test]
+fn failed_recovery_probe_returns_to_unhealthy_without_ordinary_eligibility() {
+    let failed_probe = RuntimeHealthObservation {
+        runtime_id: "runtime-a".to_string(),
+        runtime_version: "1.0.0".to_string(),
+        config_id: "config-a".to_string(),
+        evidence_basis: RuntimeHealthEvidenceBasis::AdapterVerified,
+        evidence_ref: "health:runtime-a:probe-failed".to_string(),
+        window_start_sequence: 7,
+        window_end_sequence: 7,
+        attempts: 1,
+        successes: 0,
+        failures: 1,
+        consecutive_failures: 1,
+        timeouts: 0,
+        transport_failures: 0,
+        active_retries: 0,
+        fresh_successes_since_unhealthy: 0,
+        prior_state: Some(RuntimeHealthState::Recovering),
+        self_reported_healthy: None,
+    };
+
+    let projected = derive_runtime_health(&failed_probe, &policy())
+        .expect("failed recovery observation must validate");
+    assert_eq!(projected.state, RuntimeHealthState::Unhealthy);
+
+    let authorization = evaluate_recovery_probe_authorization(&failed_probe, &policy(), &authorized())
+        .expect("failed recovery observation remains factual");
+    assert_eq!(authorization.eligibility, RecoveryProbeEligibility::Eligible);
+    assert_eq!(authorization.health_state, RuntimeHealthState::Unhealthy);
 }
 
 #[test]
