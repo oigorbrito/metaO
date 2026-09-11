@@ -2,7 +2,7 @@
 
 Status: AUDIT_RECORD
 Scope: current evidence-bearing architecture and donor documentation
-Governing method: `docs/EMPIRICAL-RESEARCH-AND-REPRODUCIBILITY.md`
+Governing method: `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`
 Product code change: NO
 Architecture decision change: NO
 
@@ -186,16 +186,46 @@ CONFORMANCE_PASS != GENERAL_PRODUCT_QUALITY
 
 This boundary must be retained in future benchmark or runtime claims.
 
+## Finding A9 — harness documentary suggestions are now applicability-bound
+
+Observed before correction:
+
+- the harness documentation treated several controlled-experiment fields (`baseline`, independent variable, controlled variables) as universally required;
+- it described some changed-subject/material-context reruns as “replication/robustness observations”, broader than the formal reproduction/replication terminology adopted by the canonical protocol;
+- the method-basis section did not require every documentary suggestion to name an applicable empirical/reproducibility criterion.
+
+Methodological correction:
+
+- universal claim records now contain only generally applicable traceability/reproducibility information;
+- experiment/benchmark/comparative fields are conditional on the claim and study design;
+- repetition, seeds, statistical analysis, resource measurement, and timestamps are required when material rather than as arbitrary universal inventory;
+- formal reproduction/replication terminology is delegated to the canonical protocol;
+- harness-generated documentary suggestions now require a named applicable criterion, methodological basis, applicability rationale, bounded documentary change, and explicit claim effect;
+- engineering preferences, architecture choices, product requirements, arbitrary thresholds, and generic “best practices” are excluded from the empirical-documentation suggestion channel unless an applicable methodological source actually supports them.
+
+Classification:
+
+```text
+EMPIRICAL_SUGGESTION_SCOPE = METHODOLOGY_ONLY
+CRITERION_APPLICABILITY_REQUIRED = YES
+UNSUPPORTED_BEST_PRACTICE_SUGGESTION = FORBIDDEN
+EXPERIMENT_FIELDS_UNIVERSAL = NO
+FORMAL_REPRODUCTION_TERMINOLOGY = CANONICAL_PROTOCOL_OWNED
+PRODUCT_OR_ARCHITECTURE_REQUIREMENT_CREATED = NO
+```
+
+This is a documentary-method correction only. It does not weaken existing metaO architecture/security/authority requirements; it prevents those project-specific requirements from being misrepresented as empirical-research standards.
+
 ## Required evidence-reuse procedure
 
 When an existing historical result is reused in a new architecture, donor, cost, token, or performance decision:
 
 1. identify the exact claim being reused;
-2. resolve the immutable subject pin/version;
+2. resolve the immutable subject pin/version when applicable;
 3. resolve the original issue/PR/run/raw artifact when available;
-4. record command, environment, fixture, and measurement boundary;
+4. record command/procedure, material environment, fixture, and measurement boundary;
 5. preserve known confounders and instrumentation corrections;
-6. classify the reproducibility status;
+6. classify the reproducibility status using the canonical terminology;
 7. rerun under a comparable fixture when the new decision requires a stronger evidence grade;
 8. do not generalize beyond the tested scope.
 
@@ -208,6 +238,7 @@ NEW_PRODUCT_REQUIREMENT = NO
 CANONICAL_EMPIRICAL_METHOD = ESTABLISHED
 CLAIM_TRACEABILITY_GAPS = PRESENT_BUT_MANAGEABLE
 RAW_EVIDENCE_RECONSTRUCTION_REQUIRED_ON_REUSE = YES
+HARNESS_DOCUMENTARY_SUGGESTIONS = APPLICABILITY_BOUND
 ```
 
-The next empirical action is not to create additional criteria. It is to reconstruct claim-to-evidence records only for claims that materially enter the next active engineering decision.
+The next empirical action is not to create additional criteria. It is to reconstruct claim-to-evidence records only for claims that materially enter the next active engineering decision, and to propose documentary improvements only when an applicable empirical/reproducibility criterion supports them.
