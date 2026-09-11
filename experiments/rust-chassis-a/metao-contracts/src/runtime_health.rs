@@ -1,7 +1,9 @@
+use crate::execution_lease::ExecutionLease;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RuntimeHealthError {
+    BlankExecutionIdentity,
     BlankRuntimeIdentity,
     BlankRuntimeVersion,
     BlankConfigIdentity,
@@ -28,6 +30,23 @@ pub enum RuntimeHealthEvidenceBasis {
     AdapterVerified,
     SelfReported,
     Unknown,
+}
+
+fn validate_factual_evidence(
+    basis: RuntimeHealthEvidenceBasis,
+    evidence_ref: &str,
+) -> Result<(), RuntimeHealthError> {
+    if !matches!(
+        basis,
+        RuntimeHealthEvidenceBasis::IndependentObservation
+            | RuntimeHealthEvidenceBasis::AdapterVerified
+    ) {
+        return Err(RuntimeHealthError::InvalidEvidenceBasis);
+    }
+    if evidence_ref.trim().is_empty() {
+        return Err(RuntimeHealthError::BlankEvidenceRef);
+    }
+    Ok(())
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,16 +102,7 @@ impl RuntimeHealthObservation {
         if self.config_id.trim().is_empty() {
             return Err(RuntimeHealthError::BlankConfigIdentity);
         }
-        if !matches!(
-            self.evidence_basis,
-            RuntimeHealthEvidenceBasis::IndependentObservation
-                | RuntimeHealthEvidenceBasis::AdapterVerified
-        ) {
-            return Err(RuntimeHealthError::InvalidEvidenceBasis);
-        }
-        if self.evidence_ref.trim().is_empty() {
-            return Err(RuntimeHealthError::BlankEvidenceRef);
-        }
+        validate_factual_evidence(self.evidence_basis, &self.evidence_ref)?;
         if self.window_end_sequence < self.window_start_sequence {
             return Err(RuntimeHealthError::InvalidObservationWindow);
         }
@@ -124,6 +134,107 @@ pub struct RuntimeHealthProjection {
     pub retry_pressure_exceeded: bool,
     pub self_reported_healthy: Option<bool>,
     pub reasons: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeExecutionHealthBinding {
+    pub execution_id: String,
+    pub runtime_id: String,
+    pub runtime_version: String,
+    pub config_id: String,
+    pub evidence_basis: RuntimeHealthEvidenceBasis,
+    pub evidence_ref: String,
+}
+
+impl RuntimeExecutionHealthBinding {
+    pub fn validate(&self) -> Result<(), RuntimeHealthError> {
+        if self.execution_id.trim().is_empty() {
+            return Err(RuntimeHealthError::BlankExecutionIdentity);
+        }
+        if self.runtime_id.trim().is_empty() {
+            return Err(RuntimeHealthError::BlankRuntimeIdentity);
+        }
+        if self.runtime_version.trim().is_empty() {
+            return Err(RuntimeHealthError::BlankRuntimeVersion);
+        }
+        if self.config_id.trim().is_empty() {
+            return Err(RuntimeHealthError::BlankConfigIdentity);
+        }
+        validate_factual_evidence(self.evidence_basis, &self.evidence_ref)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeHealthObservationAuthority {
+    pub execution_id: String,
+    pub holder_identity: String,
+    pub lease_generation: u64,
+    pub fencing_token: u64,
+    pub observed_at_epoch: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeHealthObservationAuthorization {
+    pub execution_id: String,
+    pub runtime_id: String,
+    pub runtime_version: String,
+    pub config_id: String,
+    pub authorized: bool,
+    pub reason: String,
+}
+
+pub fn authorize_runtime_health_observation(
+    lease: &ExecutionLease,
+    authority: &RuntimeHealthObservationAuthority,
+    binding: &RuntimeExecutionHealthBinding,
+    observation: &RuntimeHealthObservation,
+) -> RuntimeHealthObservationAuthorization {
+    let reject = |reason: &str| RuntimeHealthObservationAuthorization {
+        execution_id: authority.execution_id.clone(),
+        runtime_id: observation.runtime_id.clone(),
+        runtime_version: observation.runtime_version.clone(),
+        config_id: observation.config_id.clone(),
+        authorized: false,
+        reason: reason.to_string(),
+    };
+
+    if binding.validate().is_err() {
+        return reject("execution-to-runtime binding lacks factual provenance or valid identity");
+    }
+    if observation.validate().is_err() {
+        return reject("runtime health observation is not factually valid");
+    }
+    if authority.execution_id != lease.execution_id || binding.execution_id != lease.execution_id {
+        return reject("health observation execution binding does not match authoritative lease");
+    }
+    if (
+        binding.runtime_id.as_str(),
+        binding.runtime_version.as_str(),
+        binding.config_id.as_str(),
+    ) != (
+        observation.runtime_id.as_str(),
+        observation.runtime_version.as_str(),
+        observation.config_id.as_str(),
+    ) {
+        return reject("health observation runtime binding does not match factual execution binding");
+    }
+    if !lease.authorizes(
+        &authority.holder_identity,
+        authority.lease_generation,
+        authority.fencing_token,
+        authority.observed_at_epoch,
+    ) {
+        return reject("health observation is rejected by the current execution lease or fencing token");
+    }
+
+    RuntimeHealthObservationAuthorization {
+        execution_id: authority.execution_id.clone(),
+        runtime_id: observation.runtime_id.clone(),
+        runtime_version: observation.runtime_version.clone(),
+        config_id: observation.config_id.clone(),
+        authorized: true,
+        reason: "health observation is authorized by current execution lease/fence and factual execution-to-runtime binding".to_string(),
+    }
 }
 
 pub fn derive_runtime_health(
