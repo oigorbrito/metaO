@@ -25,6 +25,46 @@ pub enum FailureClassificationBasis {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FailureOrigin {
+    None,
+    RuntimeLocal,
+    ProviderService,
+    NetworkTransport,
+    Capacity,
+    Policy,
+    Unknown,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FailureAttributionTarget {
+    None,
+    Runtime,
+    Provider,
+    Network,
+    Capacity,
+    Policy,
+    Unknown,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FailureOriginFacts {
+    pub original_outcome: Option<FactualExecutionOutcome>,
+    pub origin: FailureOrigin,
+    pub basis: FailureClassificationBasis,
+    pub evidence_ref: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FailureOriginProjection {
+    pub original_outcome: Option<FactualExecutionOutcome>,
+    pub reported_origin: FailureOrigin,
+    pub attribution: FailureAttributionTarget,
+    pub factual: bool,
+    pub evidence_ref: Option<String>,
+    pub reason: String,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecoveryStatus {
     NotRequired,
     NotAttempted,
@@ -67,15 +107,121 @@ pub struct RetryEligibilityProjection {
     pub reason: String,
 }
 
-fn has_factual_transient_evidence(facts: &FailureCausalityFacts) -> bool {
+fn has_factual_evidence(
+    basis: FailureClassificationBasis,
+    evidence_ref: Option<&str>,
+) -> bool {
     matches!(
-        facts.failure_class_basis,
+        basis,
         FailureClassificationBasis::AuthoritativeObservation
             | FailureClassificationBasis::AdapterNormalization
-    ) && facts
-        .failure_class_evidence_ref
-        .as_deref()
-        .is_some_and(|value| !value.trim().is_empty())
+    ) && evidence_ref.is_some_and(|value| !value.trim().is_empty())
+}
+
+fn has_factual_transient_evidence(facts: &FailureCausalityFacts) -> bool {
+    has_factual_evidence(
+        facts.failure_class_basis,
+        facts.failure_class_evidence_ref.as_deref(),
+    )
+}
+
+fn unknown_failure_origin(
+    facts: &FailureOriginFacts,
+    reason: &str,
+) -> FailureOriginProjection {
+    FailureOriginProjection {
+        original_outcome: facts.original_outcome,
+        reported_origin: facts.origin,
+        attribution: FailureAttributionTarget::Unknown,
+        factual: false,
+        evidence_ref: facts.evidence_ref.clone(),
+        reason: reason.to_string(),
+    }
+}
+
+pub fn attribute_failure_origin(facts: &FailureOriginFacts) -> FailureOriginProjection {
+    if !has_factual_evidence(facts.basis, facts.evidence_ref.as_deref()) {
+        return unknown_failure_origin(facts, "failure origin lacks authoritative factual evidence");
+    }
+
+    if matches!(
+        facts.original_outcome,
+        Some(FactualExecutionOutcome::Succeeded | FactualExecutionOutcome::Cancelled)
+    ) {
+        return FailureOriginProjection {
+            original_outcome: facts.original_outcome,
+            reported_origin: facts.origin,
+            attribution: FailureAttributionTarget::None,
+            factual: false,
+            evidence_ref: facts.evidence_ref.clone(),
+            reason: "execution outcome does not carry a failure attribution".to_string(),
+        };
+    }
+
+    match facts.origin {
+        FailureOrigin::Capacity | FailureOrigin::Policy => {
+            if facts.original_outcome.is_some() {
+                return unknown_failure_origin(
+                    facts,
+                    "pre-execution capacity/policy condition cannot carry an execution outcome",
+                );
+            }
+        }
+        FailureOrigin::RuntimeLocal
+        | FailureOrigin::ProviderService
+        | FailureOrigin::NetworkTransport => {
+            if !matches!(
+                facts.original_outcome,
+                Some(FactualExecutionOutcome::Failed | FactualExecutionOutcome::Timeout)
+            ) {
+                return unknown_failure_origin(
+                    facts,
+                    "execution failure origin requires a factual failed/timeout execution outcome",
+                );
+            }
+        }
+        FailureOrigin::None | FailureOrigin::Unknown => {}
+    }
+
+    let attribution = match facts.origin {
+        FailureOrigin::None | FailureOrigin::Unknown => FailureAttributionTarget::Unknown,
+        FailureOrigin::RuntimeLocal => FailureAttributionTarget::Runtime,
+        FailureOrigin::ProviderService => FailureAttributionTarget::Provider,
+        FailureOrigin::NetworkTransport => FailureAttributionTarget::Network,
+        FailureOrigin::Capacity => FailureAttributionTarget::Capacity,
+        FailureOrigin::Policy => FailureAttributionTarget::Policy,
+    };
+
+    FailureOriginProjection {
+        original_outcome: facts.original_outcome,
+        reported_origin: facts.origin,
+        attribution,
+        factual: attribution != FailureAttributionTarget::Unknown,
+        evidence_ref: facts.evidence_ref.clone(),
+        reason: match attribution {
+            FailureAttributionTarget::Runtime => {
+                "factual failure is attributable to the local runtime boundary".to_string()
+            }
+            FailureAttributionTarget::Provider => {
+                "factual failure is attributable to the external provider service".to_string()
+            }
+            FailureAttributionTarget::Network => {
+                "factual failure is attributable to network/transport".to_string()
+            }
+            FailureAttributionTarget::Capacity => {
+                "factual pre-execution condition is attributable to capacity/admission, not runtime health"
+                    .to_string()
+            }
+            FailureAttributionTarget::Policy => {
+                "factual pre-execution condition is attributable to policy, not runtime health"
+                    .to_string()
+            }
+            FailureAttributionTarget::Unknown => {
+                "failure origin is factual but not attributable to a trusted domain".to_string()
+            }
+            FailureAttributionTarget::None => unreachable!("non-failure outcomes returned earlier"),
+        },
+    }
 }
 
 fn recovery_allows_retry(facts: &FailureCausalityFacts) -> bool {
