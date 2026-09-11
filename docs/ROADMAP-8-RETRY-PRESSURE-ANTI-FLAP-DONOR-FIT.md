@@ -66,6 +66,14 @@ NEW_DURABLE_TIMER_AUTHORITY = NO
 RETRY_BACKOFF_EXECUTION_AUTHORITY = NO
 ```
 
+## Source pins
+
+- Envoy latest outlier-detection API: `config.cluster.v3.OutlierDetection` (reviewed 2026-09-11), including `consecutive_5xx`, `base_ejection_time`, `max_ejection_percent`, `max_ejection_time`, and `successful_active_health_check_uneject_host`.
+- Envoy latest outlier-detection architecture overview (reviewed 2026-09-11), including repeated-ejection duration behavior and return-to-service semantics.
+- Envoy latest route retry policy API (reviewed 2026-09-11), including retry backoff `base_interval` / `max_interval`.
+
+These are reference pins, not runtime dependencies.
+
 ## Qualification boundary
 
 This donor classification is design evidence only. It is not executable qualification. PR #465 remains non-merge-ready until its exact head passes the documented local Rust gate with a clean worktree.
