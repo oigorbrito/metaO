@@ -222,3 +222,71 @@ pub fn derive_runtime_health(
         reasons,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecoveryProbeAuthorizationFacts {
+    pub explicit_probe_intent: bool,
+    pub policy_blocked: bool,
+    pub risk_blocked: bool,
+    pub budget_blocked: bool,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RecoveryProbeEligibility {
+    Eligible,
+    Ineligible,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecoveryProbeAuthorizationProjection {
+    pub runtime_id: String,
+    pub runtime_version: String,
+    pub config_id: String,
+    pub health_state: RuntimeHealthState,
+    pub eligibility: RecoveryProbeEligibility,
+    pub reason: String,
+}
+
+pub fn evaluate_recovery_probe_authorization(
+    health: &RuntimeHealthProjection,
+    facts: &RecoveryProbeAuthorizationFacts,
+) -> RecoveryProbeAuthorizationProjection {
+    let ineligible = |reason: &str| RecoveryProbeAuthorizationProjection {
+        runtime_id: health.runtime_id.clone(),
+        runtime_version: health.runtime_version.clone(),
+        config_id: health.config_id.clone(),
+        health_state: health.state,
+        eligibility: RecoveryProbeEligibility::Ineligible,
+        reason: reason.to_string(),
+    };
+
+    if !facts.explicit_probe_intent {
+        return ineligible("recovery probe requires explicit authorization intent");
+    }
+    if facts.policy_blocked {
+        return ineligible("policy blocks recovery probe");
+    }
+    if facts.risk_blocked {
+        return ineligible("risk authority blocks recovery probe");
+    }
+    if facts.budget_blocked {
+        return ineligible("budget authority blocks recovery probe");
+    }
+    if !matches!(
+        health.state,
+        RuntimeHealthState::Unhealthy
+            | RuntimeHealthState::Quarantined
+            | RuntimeHealthState::Recovering
+    ) {
+        return ineligible("runtime state does not require controlled recovery probing");
+    }
+
+    RecoveryProbeAuthorizationProjection {
+        runtime_id: health.runtime_id.clone(),
+        runtime_version: health.runtime_version.clone(),
+        config_id: health.config_id.clone(),
+        health_state: health.state,
+        eligibility: RecoveryProbeEligibility::Eligible,
+        reason: "explicit controlled recovery probe is authorized; execution and post-probe health remain separate authorities".to_string(),
+    }
+}
