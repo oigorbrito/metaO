@@ -133,8 +133,8 @@ fn observation(state: RuntimeHealthState) -> RuntimeHealthObservation {
             runtime_id: "runtime-a".to_string(),
             runtime_version: "1.0.0".to_string(),
             config_id: "config-a".to_string(),
-            evidence_basis: RuntimeHealthEvidenceBasis::AdapterVerified,
-            evidence_ref: "health:runtime-a:unknown".to_string(),
+            evidence_basis: RuntimeHealthEvidenceBasis::Unknown,
+            evidence_ref: "no-execution-observation".to_string(),
             window_start_sequence: 0,
             window_end_sequence: 0,
             attempts: 0,
@@ -153,7 +153,7 @@ fn observation(state: RuntimeHealthState) -> RuntimeHealthObservation {
 
 fn evaluate(state: RuntimeHealthState) -> metao_contracts::runtime_health::BoundedRetryProjection {
     evaluate_bounded_retry(&transient_failure(), &observation(state), &policy())
-        .expect("valid factual health observation")
+        .expect("valid health observation")
 }
 
 #[test]
@@ -224,9 +224,20 @@ fn recovering_runtime_requires_separate_controlled_recovery_authority() {
 
 #[test]
 fn unknown_health_cannot_be_used_as_fresh_retry_escape_hatch() {
-    let result = evaluate(RuntimeHealthState::Unknown);
+    let unknown = observation(RuntimeHealthState::Unknown);
+    assert_eq!(unknown.evidence_basis, RuntimeHealthEvidenceBasis::Unknown);
+    let result = evaluate_bounded_retry(&transient_failure(), &unknown, &policy())
+        .expect("empty health history is a valid UNKNOWN observation");
     assert_eq!(result.eligibility, BoundedRetryEligibility::Ineligible);
     assert!(result.reason.contains("fresh healthy retry target"));
+}
+
+#[test]
+fn zero_attempts_cannot_claim_factual_adapter_verified_provenance() {
+    let mut forged = observation(RuntimeHealthState::Unknown);
+    forged.evidence_basis = RuntimeHealthEvidenceBasis::AdapterVerified;
+    forged.evidence_ref = "forged:factual-without-execution".to_string();
+    assert!(evaluate_bounded_retry(&transient_failure(), &forged, &policy()).is_err());
 }
 
 #[test]
