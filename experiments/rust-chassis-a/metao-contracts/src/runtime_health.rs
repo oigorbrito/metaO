@@ -1,3 +1,4 @@
+use crate::execution_lease::ExecutionLease;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -124,6 +125,54 @@ pub struct RuntimeHealthProjection {
     pub retry_pressure_exceeded: bool,
     pub self_reported_healthy: Option<bool>,
     pub reasons: Vec<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeHealthObservationAuthority {
+    pub execution_id: String,
+    pub holder_identity: String,
+    pub lease_generation: u64,
+    pub fencing_token: u64,
+    pub observed_at_epoch: i64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeHealthObservationAuthorization {
+    pub execution_id: String,
+    pub authorized: bool,
+    pub reason: String,
+}
+
+pub fn authorize_runtime_health_observation(
+    lease: &ExecutionLease,
+    authority: &RuntimeHealthObservationAuthority,
+) -> RuntimeHealthObservationAuthorization {
+    if authority.execution_id != lease.execution_id {
+        return RuntimeHealthObservationAuthorization {
+            execution_id: authority.execution_id.clone(),
+            authorized: false,
+            reason: "health observation execution binding does not match authoritative lease"
+                .to_string(),
+        };
+    }
+
+    let authorized = lease.authorizes(
+        &authority.holder_identity,
+        authority.lease_generation,
+        authority.fencing_token,
+        authority.observed_at_epoch,
+    );
+
+    RuntimeHealthObservationAuthorization {
+        execution_id: authority.execution_id.clone(),
+        authorized,
+        reason: if authorized {
+            "health observation is authorized by the current execution lease and fence".to_string()
+        } else {
+            "health observation is rejected by the current execution lease or fencing token"
+                .to_string()
+        },
+    }
 }
 
 pub fn derive_runtime_health(
