@@ -48,7 +48,7 @@ pub enum FailureAttributionTarget {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FailureOriginFacts {
-    pub original_outcome: FactualExecutionOutcome,
+    pub original_outcome: Option<FactualExecutionOutcome>,
     pub origin: FailureOrigin,
     pub basis: FailureClassificationBasis,
     pub evidence_ref: Option<String>,
@@ -56,7 +56,7 @@ pub struct FailureOriginFacts {
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct FailureOriginProjection {
-    pub original_outcome: FactualExecutionOutcome,
+    pub original_outcome: Option<FactualExecutionOutcome>,
     pub reported_origin: FailureOrigin,
     pub attribution: FailureAttributionTarget,
     pub factual: bool,
@@ -125,13 +125,29 @@ fn has_factual_transient_evidence(facts: &FailureCausalityFacts) -> bool {
     )
 }
 
-pub fn attribute_failure_origin(facts: &FailureOriginFacts) -> FailureOriginProjection {
-    let no_failure = matches!(
-        facts.original_outcome,
-        FactualExecutionOutcome::Succeeded | FactualExecutionOutcome::Cancelled
-    );
+fn unknown_failure_origin(
+    facts: &FailureOriginFacts,
+    reason: &str,
+) -> FailureOriginProjection {
+    FailureOriginProjection {
+        original_outcome: facts.original_outcome,
+        reported_origin: facts.origin,
+        attribution: FailureAttributionTarget::Unknown,
+        factual: false,
+        evidence_ref: facts.evidence_ref.clone(),
+        reason: reason.to_string(),
+    }
+}
 
-    if no_failure {
+pub fn attribute_failure_origin(facts: &FailureOriginFacts) -> FailureOriginProjection {
+    if !has_factual_evidence(facts.basis, facts.evidence_ref.as_deref()) {
+        return unknown_failure_origin(facts, "failure origin lacks authoritative factual evidence");
+    }
+
+    if matches!(
+        facts.original_outcome,
+        Some(FactualExecutionOutcome::Succeeded | FactualExecutionOutcome::Cancelled)
+    ) {
         return FailureOriginProjection {
             original_outcome: facts.original_outcome,
             reported_origin: facts.origin,
@@ -142,15 +158,29 @@ pub fn attribute_failure_origin(facts: &FailureOriginFacts) -> FailureOriginProj
         };
     }
 
-    if !has_factual_evidence(facts.basis, facts.evidence_ref.as_deref()) {
-        return FailureOriginProjection {
-            original_outcome: facts.original_outcome,
-            reported_origin: facts.origin,
-            attribution: FailureAttributionTarget::Unknown,
-            factual: false,
-            evidence_ref: facts.evidence_ref.clone(),
-            reason: "failure origin lacks authoritative factual evidence".to_string(),
-        };
+    match facts.origin {
+        FailureOrigin::Capacity | FailureOrigin::Policy => {
+            if facts.original_outcome.is_some() {
+                return unknown_failure_origin(
+                    facts,
+                    "pre-execution capacity/policy condition cannot carry an execution outcome",
+                );
+            }
+        }
+        FailureOrigin::RuntimeLocal
+        | FailureOrigin::ProviderService
+        | FailureOrigin::NetworkTransport => {
+            if !matches!(
+                facts.original_outcome,
+                Some(FactualExecutionOutcome::Failed | FactualExecutionOutcome::Timeout)
+            ) {
+                return unknown_failure_origin(
+                    facts,
+                    "execution failure origin requires a factual failed/timeout execution outcome",
+                );
+            }
+        }
+        FailureOrigin::None | FailureOrigin::Unknown => {}
     }
 
     let attribution = match facts.origin {
@@ -179,11 +209,12 @@ pub fn attribute_failure_origin(facts: &FailureOriginFacts) -> FailureOriginProj
                 "factual failure is attributable to network/transport".to_string()
             }
             FailureAttributionTarget::Capacity => {
-                "factual condition is attributable to capacity/admission, not runtime health"
+                "factual pre-execution condition is attributable to capacity/admission, not runtime health"
                     .to_string()
             }
             FailureAttributionTarget::Policy => {
-                "factual condition is attributable to policy, not runtime health".to_string()
+                "factual pre-execution condition is attributable to policy, not runtime health"
+                    .to_string()
             }
             FailureAttributionTarget::Unknown => {
                 "failure origin is factual but not attributable to a trusted domain".to_string()
