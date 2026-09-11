@@ -244,8 +244,10 @@ pub struct BoundedRetryProjection {
 
 pub fn evaluate_bounded_retry(
     facts: &FailureCausalityFacts,
-    health: &RuntimeHealthProjection,
-) -> BoundedRetryProjection {
+    observation: &RuntimeHealthObservation,
+    policy: &RuntimeHealthPolicy,
+) -> Result<BoundedRetryProjection, RuntimeHealthError> {
+    let health = derive_runtime_health(observation, policy)?;
     let causal = evaluate_retry_eligibility(facts);
 
     let blocked = |reason: String| BoundedRetryProjection {
@@ -257,20 +259,20 @@ pub fn evaluate_bounded_retry(
     };
 
     if causal.eligibility == RetryEligibility::Ineligible {
-        return blocked(format!("retry causality gate blocked: {}", causal.reason));
+        return Ok(blocked(format!("retry causality gate blocked: {}", causal.reason)));
     }
 
     if health.retry_pressure_exceeded {
-        return blocked("runtime retry pressure limit is exceeded".to_string());
+        return Ok(blocked("runtime retry pressure limit is exceeded".to_string()));
     }
 
-    match health.state {
+    Ok(match health.state {
         RuntimeHealthState::Healthy | RuntimeHealthState::Degraded => BoundedRetryProjection {
             eligibility: BoundedRetryEligibility::Eligible,
             next_attempt: causal.next_attempt,
             health_state: health.state,
             retry_pressure_exceeded: false,
-            reason: "causal retry is eligible and runtime retry pressure is bounded".to_string(),
+            reason: "causal retry is eligible and factual runtime retry pressure is bounded".to_string(),
         },
         RuntimeHealthState::Recovering => blocked(
             "recovering runtime is not eligible for ordinary retry; controlled recovery authority is required"
@@ -282,5 +284,5 @@ pub fn evaluate_bounded_retry(
         RuntimeHealthState::Unhealthy | RuntimeHealthState::Quarantined => blocked(
             "unhealthy or quarantined runtime is not eligible for ordinary retry".to_string(),
         ),
-    }
+    })
 }
