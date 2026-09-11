@@ -42,6 +42,23 @@ Relevant donor concepts:
 | Active-health-check unejection | REJECTED_AS_AUTHORITY | A successful probe must not erase factual runtime history or directly mint ordinary HEALTHY eligibility. Controlled recovery remains explicit. |
 | Exponential retry backoff | REFERENCE_ONLY | Timing/backoff policy belongs with canonical retry execution authority, not runtime-health projection. |
 
+## Existing authoritative retry-history reuse
+
+MetaO already has the A11 authoritative retry-history ledger. It is append-only and scoped to `(mission_id, execution_id)`, rejects duplicate records, sequence gaps, binding mismatches, omitted/truncated caller history, and supports deterministic replay into a fresh authority instance.
+
+That existing ledger is the correct durability source for retry-attempt history across process restart and for preserving logical-execution attempt history while routing/failover decisions change runtime candidates. #464 must reuse it rather than introduce a second retry counter or durable retry ledger inside runtime health.
+
+For this slice:
+
+```text
+RETRY_HISTORY_AUTHORITY = EXISTING_A11_LEDGER
+NEW_RETRY_LEDGER = NO
+RESTART_ATTEMPT_RESET = FORBIDDEN
+FAILOVER_ATTEMPT_RESET = FORBIDDEN
+```
+
+The exact-head qualification gate for PR #465 therefore includes the existing `metao-kernel --test retry_history` regression in addition to the new health-pressure tests.
+
 ## Resulting invariants for the current slice
 
 1. ordinary retry is bounded first by canonical causal/attempt/policy/risk/budget authority;
@@ -50,13 +67,14 @@ Relevant donor concepts:
 4. `RECOVERING` remains outside ordinary retry and requires separate controlled-recovery authority;
 5. `UNKNOWN` cannot be used as a fresh healthy retry target;
 6. health eligibility does not dispatch retry or failover;
-7. a single probe/success cannot clear authoritative failure history by donor imitation.
+7. a single probe/success cannot clear authoritative failure history by donor imitation;
+8. restart/failover must not reset logical-execution retry history because A11 remains authoritative.
 
 ## Cooldown/restart decision
 
 No new wall-clock cooldown state is added in PR #465.
 
-Reason: the current branch can enforce bounded retry pressure and anti-flap eligibility using already-owned factual state and canonical attempt limits. A durable cooldown clock would add new authoritative state, persistence, restart, and time-source semantics. That should be implemented only if exact-head executable qualification or a deterministic failing sequence shows that existing `QUARANTINED` / `RECOVERING` hysteresis is insufficient.
+Reason: the current branch can enforce bounded retry pressure and anti-flap eligibility using already-owned factual state and canonical attempt limits. A durable cooldown clock would add new authoritative state, persistence, restart, and time-source semantics. The required retry-history durability already exists in A11 and is replayable; it should be reused, not duplicated. A new cooldown timer should be implemented only if exact-head executable qualification or a deterministic failing sequence shows that existing `QUARANTINED` / `RECOVERING` hysteresis plus canonical attempt history is insufficient.
 
 Therefore for this slice:
 
@@ -76,4 +94,4 @@ These are reference pins, not runtime dependencies.
 
 ## Qualification boundary
 
-This donor classification is design evidence only. It is not executable qualification. PR #465 remains non-merge-ready until its exact head passes the documented local Rust gate with a clean worktree.
+This donor classification and authority-reuse note are design evidence only. They are not executable qualification. PR #465 remains non-merge-ready until its exact head passes the documented local Rust gate with a clean worktree.
