@@ -118,10 +118,9 @@ class CrewAIOrchestratorAdapter:
         with self._health_lock:
             try:
                 self._flush_pending_health_facts()
-                return self._runtime_health.facts()
             except Exception as exc:
                 self._health_persistence_error = exc
-                raise
+            return self._runtime_health.facts()
 
     def configure_runtime_health_store(self, store: RuntimeHealthStorePort) -> None:
         with self._health_lock:

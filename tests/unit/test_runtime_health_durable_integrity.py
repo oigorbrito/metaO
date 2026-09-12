@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -35,7 +36,7 @@ class DurableRuntimeHealthIntegrityTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "runtime.db"
             SQLiteRuntimeHealthStore(path)
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection, connection:
                 connection.execute(
                     """
                     INSERT INTO runtime_health_execution_facts(
