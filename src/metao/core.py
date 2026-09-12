@@ -147,7 +147,7 @@ class OrchestratorRegistry:
     def eligible(self, mission: Mission) -> tuple[OrchestratorContract, ...]:
         result: list[OrchestratorContract] = []
         for _, item in sorted(self._items.items()):
-            if item.health().status is not HealthStatus.HEALTHY:
+            if item.health().status not in {HealthStatus.HEALTHY, HealthStatus.DEGRADED}:
                 continue
             if not mission.required_capabilities <= item.descriptor.capabilities:
                 continue

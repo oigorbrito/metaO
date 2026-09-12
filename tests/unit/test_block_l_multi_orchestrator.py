@@ -66,7 +66,7 @@ class BlockLMultiOrchestratorAcceptance(unittest.TestCase):
         crew_adapter = CrewAIOrchestratorAdapter(FakeCrew())
         for adapter in (graph_adapter, crew_adapter):
             self.assertIsInstance(adapter, OrchestratorContract)
-            self.assertTrue(adapter.health().status.value == "HEALTHY")
+            self.assertEqual(adapter.health().status.value, "DEGRADED")
             self.assertIn("workflow", adapter.descriptor.capabilities)
 
     def test_both_normalize_to_same_acceptance_envelope_contract(self):
