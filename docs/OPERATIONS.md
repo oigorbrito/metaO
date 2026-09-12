@@ -32,3 +32,42 @@ This document defines the operational rules for the post-MVP baseline.
 ## Operational readiness
 
 Operational readiness means the current baseline can be repeated locally and reasoned about from durable evidence, with external infrastructure blockers explicitly separated.
+
+## Canonical operator quickstart
+
+The canonical executable operator surface is the Python package declared in `pyproject.toml`:
+
+```text
+package = metao-control-plane
+console = metao
+entrypoint = metao.entrypoint:main
+python = >=3.12
+default_db = .metao/metao.db
+factory = METAO_OPERATOR_FACTORY or --factory module:function
+quickstart_factory = metao.examples.readme_factory:create_operator
+quickstart_mission = examples/readme_mission.json
+```
+
+The operator quickstart in `README.md` is executable evidence, not editorial guidance. Its local verification harness is:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-readme-quickstart-gate.ps1
+```
+
+The harness installs the package in an isolated Python 3.12 virtual environment, invokes the installed `metao` command, runs `doctor`, lists runtimes, executes a first mission to `ACCEPTED`, and verifies `status` plus `inspect` against the persisted SQLite record from a new process.
+
+Evidence is written outside the repository under:
+
+```text
+%LOCALAPPDATA%\metaO\readme-quickstart-evidence\
+```
+
+Release-quality quickstart evidence requires:
+
+```text
+clean_worktree = true
+failure_count = 0
+overall = PASS
+```
+
+A dirty-worktree run with `-AllowDirty` is diagnostic only.

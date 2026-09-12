@@ -66,7 +66,7 @@ def run_doctor(db_path: str, explicit_factory_spec: str | None = None) -> dict[s
                     # Try construct
                     try:
                         from .sqlite_store import SQLiteMissionStore
-                        probe_store = SQLiteMissionStore(":memory:")
+                        probe_store = SQLiteMissionStore(db_path)
                         operator = factory_func(store=probe_store)
                         if not isinstance(operator, MissionOperator):
                             check_construct = {"name": "OPERATOR_CONSTRUCTION", "status": "FAIL", "message": "Factory did not return a MissionOperator"}

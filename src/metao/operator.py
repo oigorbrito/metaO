@@ -620,6 +620,11 @@ class MissionOperator:
     def list(self) -> tuple[MissionRecord, ...]:
         return self._store.list()
 
+    def runtime_entries(self):
+        if self._catalog is None:
+            raise AttributeError("runtime_entries requires a catalog-backed MissionOperator")
+        return self._catalog.entries()
+
 
 __all__ = [
     "run",

@@ -41,48 +41,102 @@ EXECUTED != ACCEPTED
 ORCHESTRATOR_DONE != METAO_ACCEPTED
 ```
 
+## Canonical executable
+
+The executable metaO surface today is the Python control-plane package defined in `pyproject.toml`:
+
+- package name: `metao-control-plane`
+- console command: `metao`, provided by `metao.entrypoint:main`
+- supported Python version: `>=3.12`
+- default durable state: SQLite at `.metao/metao.db`, override with `--db <path>`
+- operator factory configuration: `METAO_OPERATOR_FACTORY` or `--factory module:function`
+
+The Rust code under `experiments/rust-chassis-a/` is an experiment/chassis track, not the canonical operator quickstart.
+
 ## Quickstart (Operator CLI)
 
-metaO provides a CLI for managing missions and runtimes. On Windows (PowerShell) or Linux:
+This quickstart is the canonical documented path for operating metaO from a checkout. Run the commands in order on Windows PowerShell:
 
-1. **Install the package**:
+1. **Install the Python package for local operation**:
    ```powershell
-   pip install -e .
+   python -m pip install -e .
    ```
 
-2. **Verify installation**:
+2. **Verify that the installed console command is available**:
    ```powershell
    metao --help
    ```
 
-3. **Configure your runtime factory**:
-   Specify a Python module and function that returns a `MissionOperator`.
-   ```powershell
-   $env:METAO_OPERATOR_FACTORY="my_app.factory:create_operator"
-   # Or use --factory my_app.factory:create_operator on every command
+   Expected command groups:
+   ```text
+   mission commands: run, status, inspect, list, events, approve, resume, cancel
+   runtime commands: runtimes, runtime-quarantine, runtime-restore, runtime-history, runtime-certificates, runtime-certificate-revoke, runtime-certificate-revocations
    ```
 
-4. **Diagnose environment readiness**:
+3. **Configure the operator factory**:
+   ```powershell
+   $env:METAO_OPERATOR_FACTORY="metao.examples.readme_factory:create_operator"
+   ```
+
+   The factory spec must use `module:function` syntax. The callable must return a `metao.operator.MissionOperator`. You may also pass the same factory explicitly on commands that accept it:
+   ```powershell
+   metao doctor --factory metao.examples.readme_factory:create_operator
+   metao run examples/readme_mission.json --factory metao.examples.readme_factory:create_operator
+   ```
+
+4. **Diagnose installation, database, factory, and runtime-catalog readiness**:
    ```powershell
    metao doctor
    ```
 
-5. **List available runtimes**:
+   `doctor` emits JSON. `overall_status` is `PASS` only when the package, database path, factory import, operator construction, and runtime catalog checks pass. Without a configured factory, `doctor` reports `NOT_CONFIGURED`; that is a configuration result, not a successful mission run.
+
+5. **List configured runtimes**:
    ```powershell
    metao runtimes
    ```
 
-6. **Run a mission**:
+   This command uses the configured factory and prints the runtime catalog with live/control health fields. It requires a factory-backed operator that exposes `runtime_entries()`.
+
+6. **Run the first Mission**:
    ```powershell
-   # Assumes tests/golden/chassis_v1.json exists or similar valid fixture
-   metao run tests/golden/chassis_v1.json
+   metao run examples/readme_mission.json
    ```
 
-7. **Check mission status and inspect**:
+   `examples/readme_mission.json` is the packaged quickstart fixture. A mission file must be a JSON object with `mission`, `policy`, `budget`, and `acceptance_context` objects. The mission object must include `mission_id`, `objective`, and `required_capabilities`; use that `mission_id` in the status and inspect commands below.
+
+7. **Observe status and inspect the audit record**:
    ```powershell
    metao status <mission_id>
    metao inspect <mission_id>
    ```
+
+   `status` returns the current mission state and revision. `inspect` returns the auditable mission record, including attempted runtimes, execution status, acceptance decision, reasons, budget usage, and proof fields when present.
+
+8. **Interpret runtime and metaO outcomes separately**:
+   ```text
+   runtime execution status SUCCEEDED != metaO mission status ACCEPTED
+   ```
+
+   `SUCCEEDED` is an execution status reported for a runtime attempt. `ACCEPTED` is a metaO mission status produced only after metaO evaluates policy, budget, required obligations, provenance/trust inputs, retry history, and the acceptance decision. A runtime can finish with `SUCCEEDED` while the mission remains `NOT_DONE`, `BLOCKED`, `WAITING_APPROVAL`, `FAILED`, or another non-accepted state.
+
+## README quickstart gate
+
+The README quickstart has an executable local gate:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\run-readme-quickstart-gate.ps1
+```
+
+The gate creates an isolated Python 3.12 virtual environment outside the repository, installs the package through `pyproject.toml`, invokes the installed `metao` console command, configures a temporary factory, runs `doctor`, lists runtimes, executes a first mission, and verifies `status` plus cross-process `inspect`.
+
+Evidence is written outside the repository:
+
+```text
+%LOCALAPPDATA%\metaO\readme-quickstart-evidence\readme-quickstart-<timestamp>.json
+```
+
+A release-quality README quickstart claim requires `clean_worktree = true`, every recorded command at `exit_code = 0`, `failure_count = 0`, and `overall = PASS`. A diagnostic run with `-AllowDirty` may expose defects, but it is not clean release evidence.
 
 ## Python API Quickstart
 

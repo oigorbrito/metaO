@@ -11,10 +11,10 @@ This must not be classified as a metaO functional test failure because checkout/
 ## Repository
 
 ```text
-repository = tihotm/metaO
+repository = oigorbrito/metaO
 visibility = private
 default branch = main
-owner/admin = tihotm
+owner/admin = oigorbrito
 ```
 
 ## Reproduction matrix
@@ -159,7 +159,7 @@ Record the observed values in Issue #71. Do not infer them from the failed runs.
 
 ### Repository Actions settings
 
-Inspect repository `tihotm/metaO` -> Settings -> Actions -> General for:
+Inspect repository `oigorbrito/metaO` -> Settings -> Actions -> General for:
 
 ```text
 Actions enabled
@@ -192,7 +192,7 @@ Functional PASS remains a separate question from runner recovery.
 ```text
 Subject: Private repository GitHub-hosted Actions jobs fail before Set up job with steps=null across Ubuntu/Windows/macOS
 
-Repository: tihotm/metaO (private)
+Repository: oigorbrito/metaO (private)
 
 We have a reproducible hosted-runner failure before repository execution. Jobs are created and end in failure, but the jobs API reports steps=null; checkout never starts. In some runs job log retrieval returns BlobNotFound/unavailable logs.
 
