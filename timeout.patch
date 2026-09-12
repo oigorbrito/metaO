@@ -1,0 +1,37 @@
+diff --git a/src/metao/adapters/codex_app_server_stdio.py b/src/metao/adapters/codex_app_server_stdio.py
+--- a/src/metao/adapters/codex_app_server_stdio.py
++++ b/src/metao/adapters/codex_app_server_stdio.py
+@@
+ from queue import Queue
++from queue import Empty
+@@
+ from threading import Condition, Lock, Thread
++from time import monotonic
+@@
+ class _ReaderClosed:
+@@
+         self.error = error
++
++
++class CodexAppServerTransportTimeout(TimeoutError):
++    """A bounded wait expired while awaiting an App Server response/event."""
+@@
+-    def request(self, method: str, params: Mapping[str, Any] | None = None) -> Mapping[str, Any]:
++    def request(self, method: str, params: Mapping[str, Any] | None = None, *, timeout: float | None = None) -> Mapping[str, Any]:
+@@
+-            while request_id not in self._responses and self._reader_error is None:
+-                self._condition.wait()
++            deadline = None if timeout is None else monotonic() + timeout
++            while request_id not in self._responses and self._reader_error is None:
++                remaining = None if deadline is None else deadline - monotonic()
++                if remaining is not None and remaining <= 0:
++                    raise CodexAppServerTransportTimeout(f"timed out waiting for RPC {method}")
++                self._condition.wait(timeout=remaining)
+@@
+-    def read_notification(self) -> Mapping[str, Any]:
+-        item = self._notifications.get()
++    def read_notification(self, *, timeout: float | None = None) -> Mapping[str, Any]:
++        try:
++            item = self._notifications.get(timeout=timeout)
++        except Empty as exc:
++            raise CodexAppServerTransportTimeout("timed out waiting for App Server notification") from exc
