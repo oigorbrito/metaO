@@ -1,0 +1,31 @@
+{
+  "mission": {
+    "mission_id": "readme-first-mission",
+    "objective": "complete the README quickstart fixture",
+    "required_capabilities": ["workflow"]
+  },
+  "policy": {
+    "policy_bundle_id": "readme-policy",
+    "allowed": true,
+    "require_human": false
+  },
+  "budget": {
+    "money_limit": 1,
+    "token_limit": 1,
+    "wall_time_limit_s": 60,
+    "verifier_attempt_limit": 1
+  },
+  "acceptance_context": {
+    "subject_id": "readme-subject",
+    "subject_state_id": "readme-subject-state",
+    "verification_context_id": "readme-verification",
+    "policy_bundle_id": "readme-policy",
+    "required_obligations": ["readme-obligation"],
+    "trusted_verifiers": ["adapter-observer"],
+    "trusted_provenance_roots": ["readme-provenance"],
+    "authorized_authorities": ["metao-runtime"]
+  },
+  "execution_id_prefix": "readme-first-mission-exec",
+  "now_epoch": 1,
+  "max_attempts": 1
+}
