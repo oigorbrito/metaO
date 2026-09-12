@@ -20,10 +20,12 @@ from .capacity import CapacityRecovery, CapacityStatus, RecoveryEvidenceBasis
 
 
 class OrchestratorStatus(str, Enum):
+    UNKNOWN = "unknown"
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
     QUARANTINED = "quarantined"
+    RECOVERING = "recovering"
 
 
 @dataclass(frozen=True)
@@ -206,6 +208,13 @@ class RoutingCandidate:
 
 
 class CostQualityRouter:
+    _NORMAL_ROUTABLE = frozenset(
+        {
+            OrchestratorStatus.HEALTHY,
+            OrchestratorStatus.DEGRADED,
+        }
+    )
+
     def __init__(self, scorer: Optional[DeterministicScorer] = None) -> None:
         self.scorer = scorer or DeterministicScorer()
 
@@ -215,12 +224,22 @@ class CostQualityRouter:
         *,
         now_epoch: float | None = None,
     ) -> Tuple[RoutingCandidate, ...]:
+        available = tuple(
+            pool for pool in pools if pool.capacity_available(now_epoch=now_epoch)
+        )
+        normal = tuple(
+            pool for pool in available if pool.status in self._NORMAL_ROUTABLE
+        )
+        recovering = tuple(
+            pool for pool in available if pool.status is OrchestratorStatus.RECOVERING
+        )
+        unknown = tuple(
+            pool for pool in available if pool.status is OrchestratorStatus.UNKNOWN
+        )
+        routable = normal or recovering or unknown
+
         candidates = []
-        for pool in pools:
-            if pool.status not in {OrchestratorStatus.HEALTHY, OrchestratorStatus.DEGRADED}:
-                continue
-            if not pool.capacity_available(now_epoch=now_epoch):
-                continue
+        for pool in routable:
             score = self.scorer.score(
                 outcome=pool.success_rate,
                 quality=pool.quality,
