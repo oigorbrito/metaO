@@ -337,12 +337,17 @@ def supervise_project(
                 frozenset(providers_used),
             )
 
+        def dependency_satisfied(unit: WorkUnit, dependency: str) -> bool:
+            if unit.corrective and unit.corrects_work_unit_id == dependency:
+                return dependency in executed
+            return dependency in accepted
+
         ready = [
             unit
             for unit in unresolved
             if unit.work_unit_id not in awaiting_correction
             and all(
-                dependency in executed or dependency in accepted
+                dependency_satisfied(unit, dependency)
                 for dependency in unit.dependencies
             )
         ]
