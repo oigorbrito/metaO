@@ -101,7 +101,6 @@ impl RuntimeHealthObservation {
         {
             return Err(RuntimeHealthError::InvalidCounters);
         }
-
         if self.attempts == 0 {
             if self.evidence_basis != RuntimeHealthEvidenceBasis::Unknown {
                 return Err(RuntimeHealthError::InvalidEvidenceBasis);
@@ -113,7 +112,6 @@ impl RuntimeHealthObservation {
         ) {
             return Err(RuntimeHealthError::InvalidEvidenceBasis);
         }
-
         Ok(())
     }
 }
@@ -142,153 +140,142 @@ pub fn derive_runtime_health(
 ) -> Result<RuntimeHealthProjection, RuntimeHealthError> {
     observation.validate()?;
     policy.validate()?;
-
     let retry_pressure_exceeded = observation.active_retries > policy.retry_pressure_limit;
     let mut reasons = Vec::new();
-
     let state = if observation.attempts == 0 {
         reasons.push("no factual execution observations in window".to_string());
         RuntimeHealthState::Unknown
     } else if observation.consecutive_failures >= policy.quarantine_consecutive_failures {
-        reasons.push(format!(
-            "consecutive failures {} reached quarantine threshold {}",
-            observation.consecutive_failures, policy.quarantine_consecutive_failures
-        ));
+        reasons.push(format!("consecutive failures {} reached quarantine threshold {}", observation.consecutive_failures, policy.quarantine_consecutive_failures));
         RuntimeHealthState::Quarantined
     } else {
         let failure_scaled = u64::from(observation.failures) * 100;
-        let unhealthy_scaled =
-            u64::from(observation.attempts) * u64::from(policy.unhealthy_failure_percent);
-
+        let unhealthy_scaled = u64::from(observation.attempts) * u64::from(policy.unhealthy_failure_percent);
         if failure_scaled >= unhealthy_scaled {
-            reasons.push(format!(
-                "failure ratio {}/{} reached unhealthy threshold {}%",
-                observation.failures, observation.attempts, policy.unhealthy_failure_percent
-            ));
+            reasons.push(format!("failure ratio {}/{} reached unhealthy threshold {}%", observation.failures, observation.attempts, policy.unhealthy_failure_percent));
             RuntimeHealthState::Unhealthy
-        } else if matches!(
-            observation.prior_state,
-            Some(RuntimeHealthState::Quarantined)
-                | Some(RuntimeHealthState::Unhealthy)
-                | Some(RuntimeHealthState::Recovering)
-        ) {
-            if observation.failures == 0
-                && observation.fresh_successes_since_unhealthy >= policy.recovery_successes_required
-            {
-                reasons.push(format!(
-                    "fresh successes {} satisfied recovery threshold {}",
-                    observation.fresh_successes_since_unhealthy, policy.recovery_successes_required
-                ));
+        } else if matches!(observation.prior_state, Some(RuntimeHealthState::Quarantined) | Some(RuntimeHealthState::Unhealthy) | Some(RuntimeHealthState::Recovering)) {
+            if observation.failures == 0 && observation.fresh_successes_since_unhealthy >= policy.recovery_successes_required {
+                reasons.push(format!("fresh successes {} satisfied recovery threshold {}", observation.fresh_successes_since_unhealthy, policy.recovery_successes_required));
                 RuntimeHealthState::Healthy
             } else {
-                reasons.push(format!(
-                    "runtime is recovering; fresh successes {}/{}",
-                    observation.fresh_successes_since_unhealthy, policy.recovery_successes_required
-                ));
+                reasons.push(format!("runtime is recovering; fresh successes {}/{}", observation.fresh_successes_since_unhealthy, policy.recovery_successes_required));
                 RuntimeHealthState::Recovering
             }
-        } else if observation.failures > 0
-            || observation.timeouts > 0
-            || observation.transport_failures > 0
-            || retry_pressure_exceeded
-        {
-            if observation.failures > 0 {
-                reasons.push(format!(
-                    "{} factual failure(s) observed below unhealthy/quarantine thresholds",
-                    observation.failures
-                ));
-            }
-            if retry_pressure_exceeded {
-                reasons.push(format!(
-                    "active retries {} exceed configured pressure limit {}",
-                    observation.active_retries, policy.retry_pressure_limit
-                ));
-            }
+        } else if observation.failures > 0 || observation.timeouts > 0 || observation.transport_failures > 0 || retry_pressure_exceeded {
+            if observation.failures > 0 { reasons.push(format!("{} factual failure(s) observed below unhealthy/quarantine thresholds", observation.failures)); }
+            if retry_pressure_exceeded { reasons.push(format!("active retries {} exceed configured pressure limit {}", observation.active_retries, policy.retry_pressure_limit)); }
             RuntimeHealthState::Degraded
         } else {
             reasons.push("factual observations are currently healthy".to_string());
             RuntimeHealthState::Healthy
         }
     };
-
     if observation.self_reported_healthy == Some(true) && state != RuntimeHealthState::Healthy {
         reasons.push("runtime self-report healthy=true did not override factual state".to_string());
     }
-
     Ok(RuntimeHealthProjection {
-        runtime_id: observation.runtime_id.clone(),
-        runtime_version: observation.runtime_version.clone(),
-        config_id: observation.config_id.clone(),
-        state,
-        attempts: observation.attempts,
-        successes: observation.successes,
-        failures: observation.failures,
-        consecutive_failures: observation.consecutive_failures,
-        timeouts: observation.timeouts,
-        transport_failures: observation.transport_failures,
-        active_retries: observation.active_retries,
-        retry_pressure_exceeded,
-        self_reported_healthy: observation.self_reported_healthy,
-        reasons,
+        runtime_id: observation.runtime_id.clone(), runtime_version: observation.runtime_version.clone(), config_id: observation.config_id.clone(), state,
+        attempts: observation.attempts, successes: observation.successes, failures: observation.failures, consecutive_failures: observation.consecutive_failures,
+        timeouts: observation.timeouts, transport_failures: observation.transport_failures, active_retries: observation.active_retries,
+        retry_pressure_exceeded, self_reported_healthy: observation.self_reported_healthy, reasons,
     })
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum BoundedRetryEligibility {
-    Eligible,
-    Ineligible,
+pub enum BoundedRetryEligibility { Eligible, Ineligible }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BoundedRetryProjection { pub eligibility: BoundedRetryEligibility, pub next_attempt: Option<u64>, pub health_state: RuntimeHealthState, pub retry_pressure_exceeded: bool, pub reason: String }
+pub fn evaluate_bounded_retry(facts:&FailureCausalityFacts, observation:&RuntimeHealthObservation, policy:&RuntimeHealthPolicy)->Result<BoundedRetryProjection,RuntimeHealthError>{
+    let health=derive_runtime_health(observation,policy)?; let causal=evaluate_retry_eligibility(facts);
+    let blocked=|reason:String|BoundedRetryProjection{eligibility:BoundedRetryEligibility::Ineligible,next_attempt:None,health_state:health.state,retry_pressure_exceeded:health.retry_pressure_exceeded,reason};
+    if causal.eligibility==RetryEligibility::Ineligible{return Ok(blocked(format!("retry causality gate blocked: {}",causal.reason)))}
+    if health.retry_pressure_exceeded{return Ok(blocked("runtime retry pressure limit is exceeded".to_string()))}
+    Ok(match health.state{
+        RuntimeHealthState::Healthy|RuntimeHealthState::Degraded=>BoundedRetryProjection{eligibility:BoundedRetryEligibility::Eligible,next_attempt:causal.next_attempt,health_state:health.state,retry_pressure_exceeded:false,reason:"causal retry is eligible and factual runtime retry pressure is bounded".into()},
+        RuntimeHealthState::Recovering=>blocked("recovering runtime is not eligible for ordinary retry; controlled recovery authority is required".into()),
+        RuntimeHealthState::Unknown=>blocked("unknown runtime health cannot be treated as a fresh healthy retry target".into()),
+        RuntimeHealthState::Unhealthy|RuntimeHealthState::Quarantined=>blocked("unhealthy or quarantined runtime is not eligible for ordinary retry".into()),
+    })
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct BoundedRetryProjection {
-    pub eligibility: BoundedRetryEligibility,
-    pub next_attempt: Option<u64>,
-    pub health_state: RuntimeHealthState,
-    pub retry_pressure_exceeded: bool,
-    pub reason: String,
+pub struct RecoveryProbeIntentAuthority {
+    pub intent_id: String,
+    pub mission_id: crate::MissionId,
+    pub execution_id: crate::ExecutionId,
+    pub runtime_id: String,
+    pub runtime_version: String,
+    pub config_id: String,
+    pub authority_generation: u64,
+    pub fencing_token: u64,
+    pub evidence_ref: String,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RecoveryProbeIntentClaim {
+    pub intent_id: String,
+    pub mission_id: crate::MissionId,
+    pub execution_id: crate::ExecutionId,
+    pub runtime_id: String,
+    pub runtime_version: String,
+    pub config_id: String,
+    pub authority_generation: u64,
+    pub fencing_token: u64,
+}
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RecoveryProbeIntentError { InvalidAuthority, BindingMismatch, StaleAuthority }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BoundRecoveryProbeIntent {
+    pub intent_id: String,
+    pub execution_id: crate::ExecutionId,
+    pub runtime_id: String,
+    pub runtime_version: String,
+    pub config_id: String,
+    pub authority_generation: u64,
+    pub fencing_token: u64,
+    pub evidence_ref: String,
 }
 
-pub fn evaluate_bounded_retry(
-    facts: &FailureCausalityFacts,
-    observation: &RuntimeHealthObservation,
-    policy: &RuntimeHealthPolicy,
-) -> Result<BoundedRetryProjection, RuntimeHealthError> {
-    let health = derive_runtime_health(observation, policy)?;
-    let causal = evaluate_retry_eligibility(facts);
-
-    let blocked = |reason: String| BoundedRetryProjection {
-        eligibility: BoundedRetryEligibility::Ineligible,
-        next_attempt: None,
-        health_state: health.state,
-        retry_pressure_exceeded: health.retry_pressure_exceeded,
-        reason,
-    };
-
-    if causal.eligibility == RetryEligibility::Ineligible {
-        return Ok(blocked(format!("retry causality gate blocked: {}", causal.reason)));
+pub fn bind_recovery_probe_intent(
+    claim: &RecoveryProbeIntentClaim,
+    authority: &RecoveryProbeIntentAuthority,
+    current_generation: u64,
+    current_fencing_token: u64,
+) -> Result<BoundRecoveryProbeIntent, RecoveryProbeIntentError> {
+    if authority.intent_id.trim().is_empty()
+        || authority.runtime_id.trim().is_empty()
+        || authority.runtime_version.trim().is_empty()
+        || authority.config_id.trim().is_empty()
+        || authority.evidence_ref.trim().is_empty()
+        || authority.authority_generation == 0
+        || authority.fencing_token == 0
+    {
+        return Err(RecoveryProbeIntentError::InvalidAuthority);
     }
-
-    if health.retry_pressure_exceeded {
-        return Ok(blocked("runtime retry pressure limit is exceeded".to_string()));
+    if authority.authority_generation != current_generation
+        || authority.fencing_token != current_fencing_token
+    {
+        return Err(RecoveryProbeIntentError::StaleAuthority);
     }
-
-    Ok(match health.state {
-        RuntimeHealthState::Healthy | RuntimeHealthState::Degraded => BoundedRetryProjection {
-            eligibility: BoundedRetryEligibility::Eligible,
-            next_attempt: causal.next_attempt,
-            health_state: health.state,
-            retry_pressure_exceeded: false,
-            reason: "causal retry is eligible and factual runtime retry pressure is bounded".to_string(),
-        },
-        RuntimeHealthState::Recovering => blocked(
-            "recovering runtime is not eligible for ordinary retry; controlled recovery authority is required"
-                .to_string(),
-        ),
-        RuntimeHealthState::Unknown => blocked(
-            "unknown runtime health cannot be treated as a fresh healthy retry target".to_string(),
-        ),
-        RuntimeHealthState::Unhealthy | RuntimeHealthState::Quarantined => blocked(
-            "unhealthy or quarantined runtime is not eligible for ordinary retry".to_string(),
-        ),
+    if claim.intent_id != authority.intent_id
+        || claim.mission_id != authority.mission_id
+        || claim.execution_id != authority.execution_id
+        || claim.runtime_id != authority.runtime_id
+        || claim.runtime_version != authority.runtime_version
+        || claim.config_id != authority.config_id
+        || claim.authority_generation != authority.authority_generation
+        || claim.fencing_token != authority.fencing_token
+    {
+        return Err(RecoveryProbeIntentError::BindingMismatch);
+    }
+    Ok(BoundRecoveryProbeIntent {
+        intent_id: authority.intent_id.clone(),
+        execution_id: authority.execution_id.clone(),
+        runtime_id: authority.runtime_id.clone(),
+        runtime_version: authority.runtime_version.clone(),
+        config_id: authority.config_id.clone(),
+        authority_generation: authority.authority_generation,
+        fencing_token: authority.fencing_token,
+        evidence_ref: authority.evidence_ref.clone(),
     })
 }
