@@ -54,7 +54,7 @@ jobs:
           "METAO_AUDITED_PILOT_HEAD=$audited" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Checkout audited pilot head without persisting credentials
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ccb0c93d761ad0598ea1d9dcc76476cb0a73a861
           persist-credentials: false
