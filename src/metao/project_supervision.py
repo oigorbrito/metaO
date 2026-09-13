@@ -575,6 +575,15 @@ def supervise_project(
                 verification.evidence_ref,
             )
         )
+        traceability.append(
+            ProjectTraceabilityRecord(
+                objective.requirement_id,
+                unit.work_unit_id,
+                checkpoint.artifact_ref,
+                verification.test_ref,
+                "FAIL",
+            )
+        )
         if unit.corrective:
             return blocked(f"corrective work failed verification: {unit.work_unit_id}")
         if corrective_count >= max_corrective_units:
