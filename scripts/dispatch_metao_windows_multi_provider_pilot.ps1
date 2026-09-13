@@ -3,7 +3,7 @@ Set-StrictMode -Version Latest
 
 $Repo = 'oigorbrito/metaO'
 $Workflow = 'project-multi-provider-pilot-windows-fenced.yml'
-$AuditedHead = 'ccb0c93d761ad0598ea1d9dcc76476cb0a73a861'
+$AuditedHead = '6121a52a6bd76fbc6d0e74928b9b96f9242ec066'
 $Authorization = if ($args.Count -gt 0) { $args[0] } else { '' }
 $OpenAIModel = if ($args.Count -gt 1) { $args[1] } else { 'gpt-5.6-luna' }
 $GeminiTarget = if ($args.Count -gt 2) { $args[2] } else { 'gemma-4-26b-a4b-it' }
@@ -32,6 +32,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Windows credential-backed pilot dispatch faile
     workflow=$Workflow
     workflow_ref='main'
     audited_head=$AuditedHead
+    dependency_runtime='HERMETIC_PREPARED'
     runner_os='Windows'
     operational_pilot='NOT_RUN'
     project_operational_pass=$false
