@@ -47,6 +47,35 @@ pub fn bind_active_retry_pressure(producer:&ActiveRetrySetProducer,runtime_id:&s
     Ok(BoundActiveRetryPressure{runtime_id:runtime_id.into(),runtime_version:runtime_version.into(),config_id:config_id.into(),active_retries,state_version:producer.state_version,producer_id:producer.producer_id.clone(),evidence_ref:producer.evidence_ref.clone()})
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ActiveRetrySetPersistedState { pub producer:ActiveRetrySetProducer }
+
+pub struct ActiveRetrySetState { producer:ActiveRetrySetProducer }
+
+impl ActiveRetrySetState {
+    pub fn from_producer(producer:ActiveRetrySetProducer)->Result<Self,RuntimeHealthError>{
+        use std::collections::BTreeMap;
+        if producer.producer_id.trim().is_empty()||producer.evidence_ref.trim().is_empty()||producer.state_version==0||producer.basis!=ActiveRetryAuthorityBasis::CanonicalExecutionRegistry{return Err(RuntimeHealthError::InvalidRetryPressureAuthority)}
+        let mut unique:BTreeMap<String,ActiveRetryExecutionRecord>=BTreeMap::new();
+        for record in producer.records {
+            if record.retry_execution_id.trim().is_empty()||record.retry_lineage_id.trim().is_empty()||record.runtime_id.trim().is_empty()||record.runtime_version.trim().is_empty()||record.config_id.trim().is_empty()||record.evidence_ref.trim().is_empty()||record.authority_generation==0||record.fencing_token==0||record.current_authority_generation==0||record.current_fencing_token==0{return Err(RuntimeHealthError::InvalidRetryPressureAuthority)}
+            if record.state==ActiveRetryExecutionState::Active&&(record.authority_generation!=record.current_authority_generation||record.fencing_token!=record.current_fencing_token){return Err(RuntimeHealthError::RetryPressureStaleExecution)}
+            if let Some(existing)=unique.get(&record.retry_execution_id){if existing!=&record{return Err(RuntimeHealthError::RetryPressureDuplicateConflict)}continue;}
+            unique.insert(record.retry_execution_id.clone(),record);
+        }
+        Ok(Self{producer:ActiveRetrySetProducer{producer_id:producer.producer_id,state_version:producer.state_version,basis:producer.basis,evidence_ref:producer.evidence_ref,records:unique.into_values().collect()}})
+    }
+    pub fn reopen(persisted:ActiveRetrySetPersistedState)->Result<Self,RuntimeHealthError>{
+        let expected_len=persisted.producer.records.len();
+        let state=Self::from_producer(persisted.producer)?;
+        if state.producer.records.len()!=expected_len{return Err(RuntimeHealthError::RetryPressureDuplicateConflict)}
+        Ok(state)
+    }
+    pub fn export_state(&self)->ActiveRetrySetPersistedState{ActiveRetrySetPersistedState{producer:self.producer.clone()}}
+    pub fn producer(&self)->&ActiveRetrySetProducer{&self.producer}
+    pub fn bind_pressure(&self,runtime_id:&str,runtime_version:&str,config_id:&str)->Result<BoundActiveRetryPressure,RuntimeHealthError>{bind_active_retry_pressure(&self.producer,runtime_id,runtime_version,config_id)}
+}
+
 fn bind_pressure_to_observation(observation:&RuntimeHealthObservation,pressure:&BoundActiveRetryPressure)->Result<RuntimeHealthObservation,RuntimeHealthError>{
     if observation.runtime_id!=pressure.runtime_id||observation.runtime_version!=pressure.runtime_version||observation.config_id!=pressure.config_id{return Err(RuntimeHealthError::RetryPressureBindingMismatch)}
     let mut authoritative=observation.clone();
