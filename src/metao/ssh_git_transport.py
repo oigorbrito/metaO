@@ -9,6 +9,7 @@ enter execution context or trace evidence.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from ipaddress import IPv4Address, IPv6Address, ip_address
 from pathlib import Path, PurePosixPath
 import re
 import shlex
@@ -20,9 +21,25 @@ from .git_checkpoint_transport import GitRepositoryEndpoint
 
 
 _SHA_RE = re.compile(r"^[0-9a-fA-F]{40,64}$")
-_HOST_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
+_HOSTNAME_RE = re.compile(r"^[A-Za-z0-9](?:[A-Za-z0-9.-]{0,251}[A-Za-z0-9])?$")
 _USER_RE = re.compile(r"^[A-Za-z0-9._-]+$")
 _REMOTE_TMP_RE = re.compile(r"^/tmp/metao-checkpoint\.[A-Za-z0-9]+\.bundle$")
+
+
+def _canonical_host(value: str) -> str:
+    if not value or value != value.strip() or any(character in value for character in ("\r", "\n", "\x00")):
+        raise ValueError("SSH Git endpoint requires a canonical host name or address")
+    if value.startswith("[") or value.endswith("]"):
+        raise ValueError("SSH Git endpoint host must not include IPv6 brackets")
+    try:
+        address = ip_address(value)
+    except ValueError:
+        if not _HOSTNAME_RE.fullmatch(value):
+            raise ValueError("SSH Git endpoint requires a canonical host name or address") from None
+        return value
+    if not isinstance(address, (IPv4Address, IPv6Address)):
+        raise ValueError("SSH Git endpoint requires an IPv4 or IPv6 address")
+    return str(address)
 
 
 @dataclass(frozen=True, slots=True)
@@ -35,8 +52,7 @@ class SshGitRepositoryEndpoint(GitRepositoryEndpoint):
 
     def __post_init__(self) -> None:
         GitRepositoryEndpoint.__post_init__(self)
-        if not _HOST_RE.fullmatch(self.host):
-            raise ValueError("SSH Git endpoint requires a canonical host name or address")
+        object.__setattr__(self, "host", _canonical_host(self.host))
         if not _USER_RE.fullmatch(self.username):
             raise ValueError("SSH Git endpoint requires a canonical username")
         if not 1 <= self.port <= 65535:
@@ -48,6 +64,13 @@ class SshGitRepositoryEndpoint(GitRepositoryEndpoint):
             raise ValueError("SSH Git endpoint requires known_hosts_file")
         if self.identity_file is not None and not self.identity_file.strip():
             raise ValueError("SSH identity_file must be non-empty when configured")
+
+    @property
+    def is_ipv6_literal(self) -> bool:
+        try:
+            return isinstance(ip_address(self.host), IPv6Address)
+        except ValueError:
+            return False
 
 
 @runtime_checkable
@@ -103,8 +126,13 @@ class OpenSshCommandExecutor:
         return options
 
     @staticmethod
-    def _destination(endpoint: SshGitRepositoryEndpoint) -> str:
+    def _ssh_destination(endpoint: SshGitRepositoryEndpoint) -> str:
         return f"{endpoint.username}@{endpoint.host}"
+
+    @staticmethod
+    def _scp_destination(endpoint: SshGitRepositoryEndpoint, remote_path: str) -> str:
+        host = f"[{endpoint.host}]" if endpoint.is_ipv6_literal else endpoint.host
+        return f"{endpoint.username}@{host}:{remote_path}"
 
     def run(
         self,
@@ -117,7 +145,7 @@ class OpenSshCommandExecutor:
         command = [
             "ssh",
             *self._ssh_options(endpoint, scp=False),
-            self._destination(endpoint),
+            self._ssh_destination(endpoint),
             remote_command,
         ]
         try:
@@ -146,7 +174,7 @@ class OpenSshCommandExecutor:
             "scp",
             *self._ssh_options(endpoint, scp=True),
             str(local),
-            f"{self._destination(endpoint)}:{remote_path}",
+            self._scp_destination(endpoint, remote_path),
         ]
         try:
             subprocess.run(
