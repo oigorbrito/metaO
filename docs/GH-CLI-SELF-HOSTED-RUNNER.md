@@ -43,6 +43,8 @@ Do not export a GitHub token into project execution context or logs.
 
 ## Install/register
 
+The default pinned GitHub Actions runner release is `v2.337.0`. The installer fetches that exact release through the GitHub API, selects its linux-x64 archive and verifies the release asset's published SHA-256 digest before extraction. A different exact release tag can be selected explicitly with `METAO_ACTIONS_RUNNER_VERSION=vMAJOR.MINOR.PATCH`; there is no implicit `latest` path.
+
 From a checkout containing this script:
 
 ```bash
@@ -50,24 +52,23 @@ METAO_RUNNER_NAME=metao-project-pilot-01 \
   bash scripts/install_metao_self_hosted_runner.sh
 ```
 
-Optional installation location:
+Optional installation location and exact runner version:
 
 ```bash
 METAO_RUNNER_INSTALL_DIR=/opt/metao/actions-runner \
 METAO_RUNNER_NAME=metao-project-pilot-01 \
+METAO_ACTIONS_RUNNER_VERSION=v2.337.0 \
   bash scripts/install_metao_self_hosted_runner.sh
 ```
 
 The directory must be absolute, writable by the invoking user, and empty on the first installation. Service installation uses `sudo` through the official `svc.sh` helper.
 
-The installer obtains the latest official `actions/runner` linux-x64 release through the GitHub API and verifies the release asset's published SHA-256 digest before extraction.
-
-On a repeated invocation, an existing local configuration is accepted only when GitHub's runner registry contains the same runner name with all required labels. A local/remote mismatch fails closed rather than silently replacing another runner.
+On a repeated invocation, an existing local configuration is accepted only when `svc.sh` is present and GitHub's runner registry contains the same runner name with all required labels. A local/remote mismatch fails closed rather than silently replacing another runner.
 
 Expected bounded output resembles:
 
 ```json
-{"installer":"PASS","repository":"oigorbrito/metaO","runner_name":"metao-project-pilot-01","runner_label":"metao-project-pilot","already_configured":false,"registration_token_emitted":false,"credentials_emitted":false,"pilot_operational_pass":false}
+{"installer":"PASS","repository":"oigorbrito/metaO","runner_name":"metao-project-pilot-01","runner_label":"metao-project-pilot","runner_version":"v2.337.0","runner_asset_sha256":"<published sha256>","already_configured":false,"registration_token_emitted":false,"credentials_emitted":false,"pilot_operational_pass":false}
 ```
 
 `installer=PASS` is not `RUNNER_READINESS=PASS` and is not `#360_OPERATIONAL_PASS`.
