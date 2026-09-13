@@ -180,14 +180,21 @@ class SshGitRepositoryTransport:
             ("git", "-C", endpoint.repository_locator, *args),
         )
 
-    def observe_clean_head(self, endpoint: GitRepositoryEndpoint) -> str:
-        remote = self._endpoint(endpoint)
+    def _observe_clean_head_without_commit_probe(
+        self,
+        remote: SshGitRepositoryEndpoint,
+    ) -> str:
         if self._git(remote, "rev-parse", "--is-inside-work-tree").decode().strip() != "true":
             raise ValueError("SSH Git endpoint must be a worktree")
         if self._git(remote, "status", "--porcelain", "--untracked-files=normal").decode().strip():
             raise ValueError("SSH Git endpoint worktree must be clean")
         head = self._git(remote, "rev-parse", "HEAD").decode().strip()
         self._assert_commit_id(head)
+        return head
+
+    def observe_clean_head(self, endpoint: GitRepositoryEndpoint) -> str:
+        remote = self._endpoint(endpoint)
+        head = self._observe_clean_head_without_commit_probe(remote)
         self.require_commit(remote, head)
         return head
 
@@ -203,6 +210,23 @@ class SshGitRepositoryTransport:
         except ValueError as exc:
             raise ValueError(f"SSH Git endpoint missing checkpoint commit: {remote.endpoint_id}") from exc
 
+    def _rollback_destination_if_safe(
+        self,
+        destination: SshGitRepositoryEndpoint,
+        *,
+        applied_commit: str,
+        previous_head: str,
+    ) -> None:
+        current_head = self._observe_clean_head_without_commit_probe(destination)
+        if current_head != applied_commit:
+            raise ValueError(
+                "destination changed after checkpoint mutation; refusing unsafe rollback"
+            )
+        self.require_commit(destination, previous_head)
+        self._git(destination, "reset", "--hard", previous_head)
+        if self.observe_clean_head(destination) != previous_head:
+            raise ValueError("destination rollback did not restore previous checkpoint")
+
     def transfer_exact(
         self,
         source: GitRepositoryEndpoint,
@@ -214,10 +238,10 @@ class SshGitRepositoryTransport:
         self._assert_commit_id(commit_id)
         if self.observe_clean_head(source_remote) != commit_id:
             raise ValueError("source SSH Git endpoint HEAD does not match checkpoint")
-        self.observe_clean_head(destination_remote)
+        previous_destination_head = self.observe_clean_head(destination_remote)
 
         if source_remote.endpoint_id == destination_remote.endpoint_id:
-            if self.observe_clean_head(destination_remote) != commit_id:
+            if previous_destination_head != commit_id:
                 raise ValueError("destination SSH Git endpoint HEAD does not match checkpoint")
             return
 
@@ -226,6 +250,9 @@ class SshGitRepositoryTransport:
             raise ValueError("source SSH Git endpoint produced an empty checkpoint bundle")
 
         remote_temp: str | None = None
+        reset_applied = False
+        operation_error: Exception | None = None
+        cleanup_error: Exception | None = None
         try:
             remote_temp = self.executor.run(
                 destination_remote,
@@ -244,11 +271,41 @@ class SshGitRepositoryTransport:
             if fetched != commit_id:
                 raise ValueError("transported SSH Git checkpoint does not match authoritative state")
             self._git(destination_remote, "reset", "--hard", commit_id)
+            reset_applied = True
             if self.observe_clean_head(destination_remote) != commit_id:
                 raise ValueError("destination SSH Git endpoint did not reach checkpoint")
+        except Exception as exc:
+            operation_error = exc
         finally:
             if remote_temp is not None and _REMOTE_TMP_RE.fullmatch(remote_temp):
-                self.executor.run(destination_remote, ("rm", "-f", "--", remote_temp))
+                try:
+                    self.executor.run(destination_remote, ("rm", "-f", "--", remote_temp))
+                except Exception as exc:
+                    cleanup_error = exc
+
+        if operation_error is None and cleanup_error is None:
+            return
+
+        if reset_applied:
+            try:
+                self._rollback_destination_if_safe(
+                    destination_remote,
+                    applied_commit=commit_id,
+                    previous_head=previous_destination_head,
+                )
+            except Exception as rollback_error:
+                raise ValueError(
+                    "SSH Git checkpoint transfer failed and destination rollback failed"
+                ) from rollback_error
+
+        if operation_error is not None and cleanup_error is not None:
+            raise ValueError(
+                "SSH Git checkpoint transfer failed and remote temp cleanup also failed"
+            ) from cleanup_error
+        if cleanup_error is not None:
+            raise ValueError("SSH Git checkpoint remote temp cleanup failed") from cleanup_error
+        assert operation_error is not None
+        raise operation_error
 
 
 __all__ = [
