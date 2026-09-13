@@ -8,7 +8,8 @@ fn record(id:&str,state:ActiveRetryExecutionState)->ActiveRetryExecutionRecord{
     ActiveRetryExecutionRecord{
         retry_execution_id:id.into(),mission_id:MissionId::new("mission-504").unwrap(),
         runtime_id:"runtime-a".into(),runtime_version:"1".into(),config_id:"cfg-a".into(),
-        retry_lineage_id:"lineage-a".into(),authority_generation:7,fencing_token:11,state,
+        retry_lineage_id:"lineage-a".into(),authority_generation:7,fencing_token:11,
+        current_authority_generation:7,current_fencing_token:11,state,
         evidence_ref:format!("retry-registry://{id}"),
     }
 }
@@ -69,11 +70,26 @@ fn blank_or_unversioned_registry_snapshot_fails_closed(){
 }
 
 #[test]
-fn invalid_active_record_generation_or_fence_fails_closed(){
+fn zero_generation_or_fence_is_invalid(){
     let mut stale=record("stale",ActiveRetryExecutionState::Active);stale.authority_generation=0;
     assert_eq!(bind_active_retry_pressure(&producer(vec![stale]),"runtime-a","1","cfg-a"),Err(RuntimeHealthError::InvalidRetryPressureAuthority));
     let mut unfenced=record("unfenced",ActiveRetryExecutionState::Active);unfenced.fencing_token=0;
     assert_eq!(bind_active_retry_pressure(&producer(vec![unfenced]),"runtime-a","1","cfg-a"),Err(RuntimeHealthError::InvalidRetryPressureAuthority));
+}
+
+#[test]
+fn rotated_generation_or_fence_rejects_record_still_claimed_active(){
+    let mut generation=record("generation",ActiveRetryExecutionState::Active);generation.current_authority_generation=8;
+    assert_eq!(bind_active_retry_pressure(&producer(vec![generation]),"runtime-a","1","cfg-a"),Err(RuntimeHealthError::RetryPressureStaleExecution));
+    let mut fence=record("fence",ActiveRetryExecutionState::Active);fence.current_fencing_token=12;
+    assert_eq!(bind_active_retry_pressure(&producer(vec![fence]),"runtime-a","1","cfg-a"),Err(RuntimeHealthError::RetryPressureStaleExecution));
+}
+
+#[test]
+fn terminal_record_does_not_become_active_after_rotation(){
+    let mut settled=record("settled",ActiveRetryExecutionState::Settled);settled.current_authority_generation=8;settled.current_fencing_token=12;
+    let bound=bind_active_retry_pressure(&producer(vec![settled]),"runtime-a","1","cfg-a").unwrap();
+    assert_eq!(bound.active_retries(),0);
 }
 
 #[test]
