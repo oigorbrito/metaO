@@ -8,7 +8,7 @@ behind ports; a production runner may delegate each work unit to
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from enum import StrEnum
 from typing import Protocol, runtime_checkable
 
@@ -45,7 +45,11 @@ class ProjectObjective:
     objective: str
 
     def __post_init__(self) -> None:
-        for name, value in (("project_id", self.project_id), ("requirement_id", self.requirement_id), ("objective", self.objective)):
+        for name, value in (
+            ("project_id", self.project_id),
+            ("requirement_id", self.requirement_id),
+            ("objective", self.objective),
+        ):
             if not value or not value.strip():
                 raise ValueError(f"{name} must be non-empty")
 
@@ -98,7 +102,12 @@ class RepositoryCheckpoint:
     artifact_ref: str
 
     def __post_init__(self) -> None:
-        for name, value in (("checkpoint_id", self.checkpoint_id), ("repository_id", self.repository_id), ("state_id", self.state_id), ("artifact_ref", self.artifact_ref)):
+        for name, value in (
+            ("checkpoint_id", self.checkpoint_id),
+            ("repository_id", self.repository_id),
+            ("state_id", self.state_id),
+            ("artifact_ref", self.artifact_ref),
+        ):
             if not value or not value.strip():
                 raise ValueError(f"{name} must be non-empty")
 
@@ -123,7 +132,11 @@ class WorkVerificationResult:
     reason: str = ""
 
     def __post_init__(self) -> None:
-        for name, value in (("verifier_id", self.verifier_id), ("evidence_ref", self.evidence_ref), ("test_ref", self.test_ref)):
+        for name, value in (
+            ("verifier_id", self.verifier_id),
+            ("evidence_ref", self.evidence_ref),
+            ("test_ref", self.test_ref),
+        ):
             if not value or not value.strip():
                 raise ValueError(f"{name} must be non-empty")
 
@@ -175,26 +188,54 @@ class ProjectPlannerPort(Protocol):
 
 @runtime_checkable
 class ExecutorSchedulerPort(Protocol):
-    def select(self, unit: WorkUnit, *, excluded_executor_ids: frozenset[str]) -> ExecutorTarget | None: ...
+    def select(
+        self,
+        unit: WorkUnit,
+        *,
+        excluded_executor_ids: frozenset[str],
+    ) -> ExecutorTarget | None: ...
 
 
 @runtime_checkable
 class WorkUnitRunnerPort(Protocol):
-    def run(self, objective: ProjectObjective, unit: WorkUnit, target: ExecutorTarget, checkpoint: RepositoryCheckpoint) -> WorkExecutionResult: ...
+    def run(
+        self,
+        objective: ProjectObjective,
+        unit: WorkUnit,
+        target: ExecutorTarget,
+        checkpoint: RepositoryCheckpoint,
+    ) -> WorkExecutionResult: ...
 
 
 @runtime_checkable
 class RepositoryCheckpointPort(Protocol):
     def initial(self, objective: ProjectObjective) -> RepositoryCheckpoint: ...
 
-    def capture(self, objective: ProjectObjective, unit: WorkUnit, execution: WorkExecutionResult) -> RepositoryCheckpoint: ...
+    def capture(
+        self,
+        objective: ProjectObjective,
+        unit: WorkUnit,
+        execution: WorkExecutionResult,
+    ) -> RepositoryCheckpoint: ...
 
-    def handoff(self, checkpoint: RepositoryCheckpoint, *, from_executor_id: str, to_executor_id: str) -> RepositoryCheckpoint: ...
+    def handoff(
+        self,
+        checkpoint: RepositoryCheckpoint,
+        *,
+        from_executor_id: str,
+        to_executor_id: str,
+    ) -> RepositoryCheckpoint: ...
 
 
 @runtime_checkable
 class WorkUnitVerifierPort(Protocol):
-    def verify(self, objective: ProjectObjective, unit: WorkUnit, execution: WorkExecutionResult, checkpoint: RepositoryCheckpoint) -> WorkVerificationResult: ...
+    def verify(
+        self,
+        objective: ProjectObjective,
+        unit: WorkUnit,
+        execution: WorkExecutionResult,
+        checkpoint: RepositoryCheckpoint,
+    ) -> WorkVerificationResult: ...
 
 
 def _validate_graph(units: tuple[WorkUnit, ...]) -> None:
@@ -207,7 +248,9 @@ def _validate_graph(units: tuple[WorkUnit, ...]) -> None:
             raise ValueError("work unit cannot depend on itself")
         unknown = set(unit.dependencies) - known
         if unknown:
-            raise ValueError(f"work graph contains unknown dependency: {sorted(unknown)[0]}")
+            raise ValueError(
+                f"work graph contains unknown dependency: {sorted(unknown)[0]}"
+            )
     visiting: set[str] = set()
     visited: set[str] = set()
     deps = {unit.work_unit_id: unit.dependencies for unit in units}
@@ -227,10 +270,6 @@ def _validate_graph(units: tuple[WorkUnit, ...]) -> None:
         visit(node)
 
 
-def _same_checkpoint(left: RepositoryCheckpoint, right: RepositoryCheckpoint) -> bool:
-    return left == right
-
-
 def supervise_project(
     *,
     objective: ProjectObjective,
@@ -248,11 +287,10 @@ def supervise_project(
     if graph.authority_id != "metao":
         raise ValueError("project decomposition authority must be metao")
     _validate_graph(graph.units)
-    required_ids = {unit.work_unit_id for unit in graph.units}
     units = list(graph.units)
     executed: set[str] = set()
     accepted: set[str] = set()
-    corrected: set[str] = set()
+    awaiting_correction: dict[str, str] = {}
     trace: list[ProjectTraceEvent] = [ProjectTraceEvent(ProjectTraceKind.PLANNED)]
     traceability: list[ProjectTraceabilityRecord] = []
     executors_used: set[str] = set()
@@ -261,100 +299,269 @@ def supervise_project(
     corrective_count = 0
 
     def blocked(reason: str) -> ProjectSupervisionResult:
-        trace.append(ProjectTraceEvent(ProjectTraceKind.PROJECT_BLOCKED, checkpoint_id=checkpoint.checkpoint_id, repository_state_id=checkpoint.state_id))
-        return ProjectSupervisionResult(objective.project_id, ProjectVerdict.PROJECT_BLOCKED, WorkGraph(graph.authority_id, tuple(units)), tuple(trace), tuple(traceability), frozenset(executors_used), frozenset(providers_used), reason)
+        trace.append(
+            ProjectTraceEvent(
+                ProjectTraceKind.PROJECT_BLOCKED,
+                checkpoint_id=checkpoint.checkpoint_id,
+                repository_state_id=checkpoint.state_id,
+            )
+        )
+        return ProjectSupervisionResult(
+            objective.project_id,
+            ProjectVerdict.PROJECT_BLOCKED,
+            WorkGraph(graph.authority_id, tuple(units)),
+            tuple(trace),
+            tuple(traceability),
+            frozenset(executors_used),
+            frozenset(providers_used),
+            reason,
+        )
 
     while True:
         unresolved = [unit for unit in units if unit.work_unit_id not in accepted]
         if not unresolved:
-            trace.append(ProjectTraceEvent(ProjectTraceKind.PROJECT_ACCEPTED, checkpoint_id=checkpoint.checkpoint_id, repository_state_id=checkpoint.state_id))
-            return ProjectSupervisionResult(objective.project_id, ProjectVerdict.PROJECT_ACCEPTED, WorkGraph(graph.authority_id, tuple(units)), tuple(trace), tuple(traceability), frozenset(executors_used), frozenset(providers_used))
+            trace.append(
+                ProjectTraceEvent(
+                    ProjectTraceKind.PROJECT_ACCEPTED,
+                    checkpoint_id=checkpoint.checkpoint_id,
+                    repository_state_id=checkpoint.state_id,
+                )
+            )
+            return ProjectSupervisionResult(
+                objective.project_id,
+                ProjectVerdict.PROJECT_ACCEPTED,
+                WorkGraph(graph.authority_id, tuple(units)),
+                tuple(trace),
+                tuple(traceability),
+                frozenset(executors_used),
+                frozenset(providers_used),
+            )
 
-        ready = [unit for unit in unresolved if all(dependency in executed or dependency in accepted for dependency in unit.dependencies)]
+        ready = [
+            unit
+            for unit in unresolved
+            if unit.work_unit_id not in awaiting_correction
+            and all(
+                dependency in executed or dependency in accepted
+                for dependency in unit.dependencies
+            )
+        ]
         if not ready:
             return blocked("no dependency-ready work unit")
         unit = ready[0]
         excluded: set[str] = set()
         execution: WorkExecutionResult | None = None
         selected_target: ExecutorTarget | None = None
+        pinned_target: ExecutorTarget | None = None
 
         for _ in range(max_executor_attempts_per_unit):
-            target = scheduler.select(unit, excluded_executor_ids=frozenset(excluded))
+            target = pinned_target or scheduler.select(
+                unit,
+                excluded_executor_ids=frozenset(excluded),
+            )
+            pinned_target = None
             if target is None:
                 return blocked(f"no executor available for {unit.work_unit_id}")
             selected_target = target
             executors_used.add(target.executor_id)
             providers_used.add(target.provider_id)
-            trace.append(ProjectTraceEvent(ProjectTraceKind.DISPATCHED, unit.work_unit_id, target.executor_id, checkpoint.checkpoint_id, checkpoint.state_id))
+            trace.append(
+                ProjectTraceEvent(
+                    ProjectTraceKind.DISPATCHED,
+                    unit.work_unit_id,
+                    target.executor_id,
+                    checkpoint.checkpoint_id,
+                    checkpoint.state_id,
+                )
+            )
             execution = runner.run(objective, unit, target, checkpoint)
-            if execution.work_unit_id != unit.work_unit_id or execution.executor_id != target.executor_id or execution.provider_id != target.provider_id:
+            if (
+                execution.work_unit_id != unit.work_unit_id
+                or execution.executor_id != target.executor_id
+                or execution.provider_id != target.provider_id
+            ):
                 return blocked("runner result binding mismatch")
             if execution.status is WorkExecutionStatus.CAPACITY_FAILED:
-                trace.append(ProjectTraceEvent(ProjectTraceKind.FAILED_CAPACITY, unit.work_unit_id, target.executor_id, checkpoint.checkpoint_id, checkpoint.state_id, evidence_ref=execution.evidence_ref))
+                trace.append(
+                    ProjectTraceEvent(
+                        ProjectTraceKind.FAILED_CAPACITY,
+                        unit.work_unit_id,
+                        target.executor_id,
+                        checkpoint.checkpoint_id,
+                        checkpoint.state_id,
+                        evidence_ref=execution.evidence_ref,
+                    )
+                )
                 excluded.add(target.executor_id)
-                next_target = scheduler.select(unit, excluded_executor_ids=frozenset(excluded))
+                next_target = scheduler.select(
+                    unit,
+                    excluded_executor_ids=frozenset(excluded),
+                )
                 if next_target is None:
                     return blocked(f"capacity exhausted for {unit.work_unit_id}")
-                handed = repository.handoff(checkpoint, from_executor_id=target.executor_id, to_executor_id=next_target.executor_id)
-                if not _same_checkpoint(checkpoint, handed):
+                handed = repository.handoff(
+                    checkpoint,
+                    from_executor_id=target.executor_id,
+                    to_executor_id=next_target.executor_id,
+                )
+                if handed != checkpoint:
                     return blocked("repository checkpoint changed during handoff")
-                trace.append(ProjectTraceEvent(ProjectTraceKind.HANDED_OFF, unit.work_unit_id, next_target.executor_id, checkpoint.checkpoint_id, checkpoint.state_id, checkpoint.artifact_ref))
+                trace.append(
+                    ProjectTraceEvent(
+                        ProjectTraceKind.HANDED_OFF,
+                        unit.work_unit_id,
+                        next_target.executor_id,
+                        checkpoint.checkpoint_id,
+                        checkpoint.state_id,
+                        checkpoint.artifact_ref,
+                    )
+                )
+                pinned_target = next_target
                 continue
             if execution.status is WorkExecutionStatus.FAILED:
                 return blocked(f"work unit execution failed: {unit.work_unit_id}")
             break
 
-        if execution is None or selected_target is None or execution.status is not WorkExecutionStatus.SUCCEEDED:
+        if (
+            execution is None
+            or selected_target is None
+            or execution.status is not WorkExecutionStatus.SUCCEEDED
+        ):
             return blocked(f"work unit did not complete: {unit.work_unit_id}")
         executed.add(unit.work_unit_id)
         checkpoint = repository.capture(objective, unit, execution)
-        if checkpoint.state_id != execution.repository_state_id or checkpoint.artifact_ref != execution.artifact_ref:
-            return blocked("captured checkpoint does not match execution repository state")
-        trace.append(ProjectTraceEvent(ProjectTraceKind.CHECKPOINTED, unit.work_unit_id, execution.executor_id, checkpoint.checkpoint_id, checkpoint.state_id, checkpoint.artifact_ref))
-        trace.append(ProjectTraceEvent(ProjectTraceKind.ARTIFACT_PRODUCED, unit.work_unit_id, execution.executor_id, checkpoint.checkpoint_id, checkpoint.state_id, checkpoint.artifact_ref))
+        if (
+            checkpoint.state_id != execution.repository_state_id
+            or checkpoint.artifact_ref != execution.artifact_ref
+        ):
+            return blocked(
+                "captured checkpoint does not match execution repository state"
+            )
+        trace.append(
+            ProjectTraceEvent(
+                ProjectTraceKind.CHECKPOINTED,
+                unit.work_unit_id,
+                execution.executor_id,
+                checkpoint.checkpoint_id,
+                checkpoint.state_id,
+                checkpoint.artifact_ref,
+            )
+        )
+        trace.append(
+            ProjectTraceEvent(
+                ProjectTraceKind.ARTIFACT_PRODUCED,
+                unit.work_unit_id,
+                execution.executor_id,
+                checkpoint.checkpoint_id,
+                checkpoint.state_id,
+                checkpoint.artifact_ref,
+            )
+        )
 
         verification = verifier.verify(objective, unit, execution, checkpoint)
         if verification.verifier_id == execution.executor_id:
             return blocked("work unit verifier is not independent from executor")
         if verification.accepted:
             accepted.add(unit.work_unit_id)
+            trace.append(
+                ProjectTraceEvent(
+                    ProjectTraceKind.VERIFICATION_PASSED,
+                    unit.work_unit_id,
+                    execution.executor_id,
+                    checkpoint.checkpoint_id,
+                    checkpoint.state_id,
+                    checkpoint.artifact_ref,
+                    verification.evidence_ref,
+                )
+            )
+            traceability.append(
+                ProjectTraceabilityRecord(
+                    objective.requirement_id,
+                    unit.work_unit_id,
+                    checkpoint.artifact_ref,
+                    verification.test_ref,
+                    "PASS",
+                )
+            )
             if unit.corrective and unit.corrects_work_unit_id is not None:
-                corrected.add(unit.corrects_work_unit_id)
-                accepted.add(unit.corrects_work_unit_id)
-            trace.append(ProjectTraceEvent(ProjectTraceKind.VERIFICATION_PASSED, unit.work_unit_id, execution.executor_id, checkpoint.checkpoint_id, checkpoint.state_id, checkpoint.artifact_ref, verification.evidence_ref))
-            traceability.append(ProjectTraceabilityRecord(objective.requirement_id, unit.work_unit_id, checkpoint.artifact_ref, verification.test_ref, "PASS"))
+                corrected_id = unit.corrects_work_unit_id
+                accepted.add(corrected_id)
+                awaiting_correction.pop(corrected_id, None)
+                traceability.append(
+                    ProjectTraceabilityRecord(
+                        objective.requirement_id,
+                        corrected_id,
+                        checkpoint.artifact_ref,
+                        verification.test_ref,
+                        "CORRECTED_PASS",
+                    )
+                )
             continue
 
-        trace.append(ProjectTraceEvent(ProjectTraceKind.VERIFICATION_FAILED, unit.work_unit_id, execution.executor_id, checkpoint.checkpoint_id, checkpoint.state_id, checkpoint.artifact_ref, verification.evidence_ref))
+        trace.append(
+            ProjectTraceEvent(
+                ProjectTraceKind.VERIFICATION_FAILED,
+                unit.work_unit_id,
+                execution.executor_id,
+                checkpoint.checkpoint_id,
+                checkpoint.state_id,
+                checkpoint.artifact_ref,
+                verification.evidence_ref,
+            )
+        )
         if unit.corrective:
             return blocked(f"corrective work failed verification: {unit.work_unit_id}")
         if corrective_count >= max_corrective_units:
             return blocked("corrective work limit reached")
-        corrective = planner.corrective_work(objective, unit, verification, WorkGraph(graph.authority_id, tuple(units)))
+        corrective = planner.corrective_work(
+            objective,
+            unit,
+            verification,
+            WorkGraph(graph.authority_id, tuple(units)),
+        )
         if corrective is None:
-            return blocked(f"verification failed without corrective work: {unit.work_unit_id}")
-        if not corrective.corrective or corrective.corrects_work_unit_id != unit.work_unit_id:
+            return blocked(
+                f"verification failed without corrective work: {unit.work_unit_id}"
+            )
+        if (
+            not corrective.corrective
+            or corrective.corrects_work_unit_id != unit.work_unit_id
+        ):
             return blocked("planner returned invalid corrective work")
         if corrective.work_unit_id in {item.work_unit_id for item in units}:
             return blocked("planner returned duplicate corrective work id")
         units.append(corrective)
         _validate_graph(tuple(units))
         corrective_count += 1
-        trace.append(ProjectTraceEvent(ProjectTraceKind.CORRECTIVE_WORK_CREATED, corrective.work_unit_id, repository_state_id=checkpoint.state_id, artifact_ref=verification.evidence_ref))
-
-        # The failed unit has factual output and can be a dependency of its correction,
-        # but it is not accepted until the corrective unit passes independent verification.
-        if unit.work_unit_id in accepted:
-            accepted.remove(unit.work_unit_id)
-
-        # Required units stay required. Corrective units are additionally required once created.
-        required_ids.add(corrective.work_unit_id)
+        awaiting_correction[unit.work_unit_id] = corrective.work_unit_id
+        trace.append(
+            ProjectTraceEvent(
+                ProjectTraceKind.CORRECTIVE_WORK_CREATED,
+                corrective.work_unit_id,
+                repository_state_id=checkpoint.state_id,
+                artifact_ref=verification.evidence_ref,
+            )
+        )
 
 
 __all__ = [
-    "ProjectVerdict", "WorkExecutionStatus", "ProjectTraceKind", "ProjectObjective", "WorkUnit",
-    "WorkGraph", "ExecutorTarget", "RepositoryCheckpoint", "WorkExecutionResult",
-    "WorkVerificationResult", "ProjectTraceEvent", "ProjectTraceabilityRecord",
-    "ProjectSupervisionResult", "ProjectPlannerPort", "ExecutorSchedulerPort", "WorkUnitRunnerPort",
-    "RepositoryCheckpointPort", "WorkUnitVerifierPort", "supervise_project",
+    "ProjectVerdict",
+    "WorkExecutionStatus",
+    "ProjectTraceKind",
+    "ProjectObjective",
+    "WorkUnit",
+    "WorkGraph",
+    "ExecutorTarget",
+    "RepositoryCheckpoint",
+    "WorkExecutionResult",
+    "WorkVerificationResult",
+    "ProjectTraceEvent",
+    "ProjectTraceabilityRecord",
+    "ProjectSupervisionResult",
+    "ProjectPlannerPort",
+    "ExecutorSchedulerPort",
+    "WorkUnitRunnerPort",
+    "RepositoryCheckpointPort",
+    "WorkUnitVerifierPort",
+    "supervise_project",
 ]
