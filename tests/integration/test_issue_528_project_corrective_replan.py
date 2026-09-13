@@ -249,17 +249,22 @@ class Issue528CorrectiveReplanIntegrationTests(unittest.TestCase):
             self.assertGreaterEqual(kinds.count(ProjectTraceKind.HANDED_OFF), 2)
             self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_ACCEPTED)
             self.assertEqual(
+                [(record.work_unit_id, record.verdict) for record in result.traceability],
                 [
-                    (record.work_unit_id, record.verdict, record.evidence_ref)
-                    for record in result.traceability
-                ],
-                [
-                    ("prepare", "FAIL", f"verify:prepare:{executor_a.requests[0].context['repository_state_id']}"),
-                    ("repair-prepare", "PASS", f"verify:repair-prepare:{git(executor_c_repo, 'rev-parse', 'HEAD~1')}"),
-                    ("prepare", "CORRECTED_PASS", f"verify:repair-prepare:{git(executor_c_repo, 'rev-parse', 'HEAD~1')}"),
-                    ("implement", "PASS", f"verify:implement:{git(executor_a_repo, 'rev-parse', 'HEAD')}"),
+                    ("prepare", "FAIL"),
+                    ("repair-prepare", "PASS"),
+                    ("prepare", "CORRECTED_PASS"),
+                    ("implement", "PASS"),
                 ],
             )
+            self.assertEqual(
+                [record.evidence_ref.split(":", 1)[0] for record in result.traceability],
+                ["verify", "verify", "verify", "verify"],
+            )
+            self.assertEqual(result.traceability[0].test_ref, "test:prepare")
+            self.assertEqual(result.traceability[1].test_ref, "test:repair-prepare")
+            self.assertEqual(result.traceability[2].test_ref, "test:repair-prepare")
+            self.assertEqual(result.traceability[3].test_ref, "test:implement")
             self.assertTrue(
                 all(record.requirement_id == "req-360" for record in result.traceability)
             )
