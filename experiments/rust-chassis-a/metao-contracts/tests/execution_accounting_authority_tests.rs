@@ -61,4 +61,8 @@ fn corrupted_persisted_state_fails_closed(){
     let operation=state.settlements.remove("acct-reopen").unwrap();
     state.settlements.insert("wrong-key".into(),operation);
     assert!(matches!(ExecutionAccountingAuthority::reopen(state),Err(ExecutionAccountingError::InvalidPersistedState)));
+
+    let mut state=a.export_state();
+    state.settlement_order.push("acct-reopen".into());
+    assert!(matches!(ExecutionAccountingAuthority::reopen(state),Err(ExecutionAccountingError::InvalidPersistedState)));
 }
