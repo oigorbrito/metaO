@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import shutil
 import subprocess
 import tempfile
 from pathlib import Path
@@ -97,8 +98,7 @@ def main() -> int:
     destination_port = _port("METAO_SSH_SMOKE_DESTINATION_PORT")
 
     for executable in ("git", "python3", "ssh", "scp"):
-        path = subprocess.run(["sh", "-c", f"command -v {executable}"], text=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True).stdout.strip()
-        if not path:
+        if shutil.which(executable) is None:
             raise RuntimeError(f"runner executable missing: {executable}")
 
     with tempfile.TemporaryDirectory(prefix="metao-project-pilot-preflight-") as root:
