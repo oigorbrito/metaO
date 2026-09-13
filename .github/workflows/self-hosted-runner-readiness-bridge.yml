@@ -1,0 +1,118 @@
+name: Self-Hosted Runner Readiness Bridge
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_head:
+        description: 'Exact 40-character Git commit SHA to qualify'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-runner-readiness-bridge
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    runs-on: [self-hosted, linux, x64, metao-project-pilot]
+    timeout-minutes: 5
+    steps:
+      - name: Validate target SHA before checkout
+        shell: bash
+        env:
+          METAO_TARGET_HEAD: ${{ inputs.target_head }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          target = os.environ['METAO_TARGET_HEAD'].strip().lower()
+          if not re.fullmatch(r'[0-9a-f]{40}', target):
+              raise SystemExit('target_head must be an exact 40-character Git SHA')
+          print(f'target SHA accepted: {target}')
+          PY
+
+      - name: Checkout exact target head without persisting credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_head }}
+          persist-credentials: false
+
+      - name: Revalidate exact target head
+        shell: bash
+        env:
+          METAO_TARGET_HEAD: ${{ inputs.target_head }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$METAO_TARGET_HEAD"
+
+      - name: Evaluate fixed runner readiness boundary
+        shell: bash
+        env:
+          METAO_TARGET_HEAD: ${{ inputs.target_head }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          import platform
+          import shutil
+          import subprocess
+          import sys
+          import tempfile
+          from pathlib import Path
+
+          target = os.environ['METAO_TARGET_HEAD']
+          actual = subprocess.run(
+              ['git', 'rev-parse', 'HEAD'],
+              check=True,
+              text=True,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE,
+          ).stdout.strip()
+          if actual != target:
+              raise SystemExit('checked-out HEAD differs from target_head')
+
+          machine = platform.machine().lower()
+          if platform.system() != 'Linux':
+              raise SystemExit('runner must be Linux')
+          if machine not in {'x86_64', 'amd64'}:
+              raise SystemExit('runner must be x64')
+          if sys.version_info < (3, 12):
+              raise SystemExit('runner requires Python 3.12+')
+
+          executables = {
+              name: shutil.which(name) is not None
+              for name in ('git', 'ssh', 'scp', 'curl', 'tar')
+          }
+          missing = [name for name, present in executables.items() if not present]
+          if missing:
+              raise SystemExit('runner missing required executables: ' + ','.join(sorted(missing)))
+
+          with tempfile.TemporaryDirectory(prefix='metao-runner-readiness-') as root:
+              probe = Path(root) / 'probe'
+              probe.write_text('ok\n', encoding='utf-8')
+              if probe.read_text(encoding='utf-8') != 'ok\n':
+                  raise SystemExit('runner temporary storage is not writable')
+
+          evidence = {
+              'bootstrap_readiness': 'PASS',
+              'target_head': target,
+              'checked_out_head_matches': True,
+              'linux': True,
+              'x64': True,
+              'python_3_12_plus': True,
+              'required_executables': executables,
+              'required_labels': ['self-hosted', 'linux', 'x64', 'metao-project-pilot'],
+              'repository_secrets_checked': False,
+              'provider_calls_made': False,
+              'credentials_emitted': False,
+              'host_values_emitted': False,
+              'target_code_executed': False,
+              'pilot_operational_pass': False,
+          }
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
