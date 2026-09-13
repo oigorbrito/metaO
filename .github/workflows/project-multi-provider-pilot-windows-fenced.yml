@@ -190,3 +190,19 @@ jobs:
           if (-not $e.cross_host -or $e.credentials_emitted -or $e.remote_paths_emitted) { throw 'trust/evidence boundary violated' }
           if (@($e.checkpoint_sha_lineage).Count -lt 3) { throw 'checkpoint lineage is incomplete' }
           $e | ConvertTo-Json -Compress
+
+      - name: Cleanup SSH verification files
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = [System.IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+          foreach ($name in @('metao-pilot-known-hosts', 'metao-pilot-identity')) {
+            $path = [System.IO.Path]::GetFullPath((Join-Path $root $name))
+            $parent = [System.IO.Path]::GetDirectoryName($path).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+            if ($parent -ne $root) { throw 'refusing cleanup outside RUNNER_TEMP' }
+            if (Test-Path -LiteralPath $path) {
+              Remove-Item -LiteralPath $path -Force -ErrorAction Stop
+            }
+          }
+          Write-Output 'ssh secret-file cleanup PASS'
