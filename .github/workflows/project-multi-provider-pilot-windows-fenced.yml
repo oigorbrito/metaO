@@ -121,8 +121,8 @@ jobs:
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
-          METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+          METAO_OPENAI_CREDENTIAL_PRESENT: ${{ secrets.METAO_OPENAI_API_KEY != '' }}
+          METAO_GEMINI_CREDENTIAL_PRESENT: ${{ secrets.METAO_GEMINI_API_KEY != '' }}
           METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
           METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
           METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
@@ -140,7 +140,7 @@ jobs:
           if ($e.preflight -ne 'PASS' -or -not $e.source_reachable -or -not $e.destination_reachable -or -not $e.distinct_hosts) {
             throw 'preflight readiness evidence is incomplete'
           }
-          if (-not $e.provider_credentials_present -or $e.credentials_emitted -or $e.hosts_emitted -or $e.provider_calls_made) {
+          if (-not $e.provider_credentials_present -or $e.provider_credential_inputs -ne 'presence-only' -or $e.credentials_emitted -or $e.hosts_emitted -or $e.provider_calls_made) {
             throw 'preflight evidence boundary violated'
           }
           $e | ConvertTo-Json -Compress
