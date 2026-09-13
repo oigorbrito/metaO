@@ -263,3 +263,121 @@ pub fn aggregate_runtime_health_constituents(
         self_reported_healthy,
     })
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeHealthConstituentPersistedState {
+    pub constituents: Vec<AdmittedRuntimeHealthConstituent>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeHealthConstituentRecordDecision { Recorded, Idempotent }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeHealthConstituentStateError {
+    InvalidConstituent,
+    RuntimeTupleMismatch,
+    DuplicateResultConflict,
+    SequenceConflict,
+    InvalidPersistedState,
+    Aggregation(RuntimeHealthConstituentError),
+}
+
+pub struct RuntimeHealthConstituentState {
+    by_result: std::collections::BTreeMap<String, AdmittedRuntimeHealthConstituent>,
+    by_sequence: std::collections::BTreeMap<u64, String>,
+    runtime_tuple: Option<(String, String, String)>,
+}
+
+impl RuntimeHealthConstituentState {
+    pub fn new() -> Self {
+        Self { by_result: std::collections::BTreeMap::new(), by_sequence: std::collections::BTreeMap::new(), runtime_tuple: None }
+    }
+
+    pub fn reopen(persisted: RuntimeHealthConstituentPersistedState) -> Result<Self, RuntimeHealthConstituentStateError> {
+        let expected_len = persisted.constituents.len();
+        let mut state = Self::new();
+        for constituent in persisted.constituents {
+            if state.record(constituent)? != RuntimeHealthConstituentRecordDecision::Recorded {
+                return Err(RuntimeHealthConstituentStateError::InvalidPersistedState);
+            }
+        }
+        if state.by_result.len() != expected_len || state.by_sequence.len() != expected_len {
+            return Err(RuntimeHealthConstituentStateError::InvalidPersistedState);
+        }
+        Ok(state)
+    }
+
+    pub fn record(&mut self, constituent: AdmittedRuntimeHealthConstituent) -> Result<RuntimeHealthConstituentRecordDecision, RuntimeHealthConstituentStateError> {
+        validate_admitted_runtime_health_constituent(&constituent)?;
+        let tuple = (
+            constituent.fact.runtime_id.clone(),
+            constituent.fact.runtime_version.clone(),
+            constituent.fact.config_id.clone(),
+        );
+        if self.runtime_tuple.as_ref().is_some_and(|current| current != &tuple) {
+            return Err(RuntimeHealthConstituentStateError::RuntimeTupleMismatch);
+        }
+        if let Some(existing) = self.by_result.get(&constituent.fact.result_id) {
+            return if existing == &constituent {
+                Ok(RuntimeHealthConstituentRecordDecision::Idempotent)
+            } else {
+                Err(RuntimeHealthConstituentStateError::DuplicateResultConflict)
+            };
+        }
+        if let Some(existing_result) = self.by_sequence.get(&constituent.sequence) {
+            if existing_result != &constituent.fact.result_id {
+                return Err(RuntimeHealthConstituentStateError::SequenceConflict);
+            }
+        }
+        self.runtime_tuple.get_or_insert(tuple);
+        self.by_sequence.insert(constituent.sequence, constituent.fact.result_id.clone());
+        self.by_result.insert(constituent.fact.result_id.clone(), constituent);
+        Ok(RuntimeHealthConstituentRecordDecision::Recorded)
+    }
+
+    pub fn export_state(&self) -> RuntimeHealthConstituentPersistedState {
+        RuntimeHealthConstituentPersistedState { constituents: self.constituents() }
+    }
+
+    pub fn constituents(&self) -> Vec<AdmittedRuntimeHealthConstituent> {
+        self.by_sequence.values().filter_map(|result_id| self.by_result.get(result_id)).cloned().collect()
+    }
+
+    pub fn aggregate(
+        &self,
+        active_retries: u32,
+        prior_state: Option<crate::runtime_health::RuntimeHealthState>,
+        self_reported_healthy: Option<bool>,
+    ) -> Result<crate::runtime_health::RuntimeHealthObservation, RuntimeHealthConstituentStateError> {
+        aggregate_runtime_health_constituents(&self.constituents(), active_retries, prior_state, self_reported_healthy)
+            .map_err(RuntimeHealthConstituentStateError::Aggregation)
+    }
+}
+
+impl Default for RuntimeHealthConstituentState {
+    fn default() -> Self { Self::new() }
+}
+
+fn validate_admitted_runtime_health_constituent(constituent: &AdmittedRuntimeHealthConstituent) -> Result<(), RuntimeHealthConstituentStateError> {
+    let fact = &constituent.fact;
+    if [
+        fact.result_id.as_str(), fact.execution_id.as_str(), fact.runtime_id.as_str(),
+        fact.runtime_version.as_str(), fact.config_id.as_str(), fact.admission_authority_ref.as_str(),
+        fact.observation_evidence_ref.as_str(), fact.result_evidence_ref.as_str(),
+    ].iter().any(|value| value.trim().is_empty()) || fact.lease_generation == 0 || fact.fencing_token == 0 {
+        return Err(RuntimeHealthConstituentStateError::InvalidConstituent);
+    }
+    match constituent.outcome {
+        RuntimeHealthConstituentOutcome::Succeeded => {
+            if fact.failure_origin_producer_id.is_some() {
+                return Err(RuntimeHealthConstituentStateError::InvalidConstituent);
+            }
+        }
+        RuntimeHealthConstituentOutcome::RuntimeLocalFailed | RuntimeHealthConstituentOutcome::RuntimeLocalTimeout => {
+            if fact.failure_origin_producer_id.as_deref().is_none_or(|value| value.trim().is_empty()) {
+                return Err(RuntimeHealthConstituentStateError::InvalidConstituent);
+            }
+        }
+    }
+    Ok(())
+}
