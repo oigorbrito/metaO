@@ -249,12 +249,19 @@ class Issue528CorrectiveReplanIntegrationTests(unittest.TestCase):
             self.assertGreaterEqual(kinds.count(ProjectTraceKind.HANDED_OFF), 2)
             self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_ACCEPTED)
             self.assertEqual(
-                [(record.work_unit_id, record.verdict) for record in result.traceability],
                 [
-                    ("repair-prepare", "PASS"),
-                    ("prepare", "CORRECTED_PASS"),
-                    ("implement", "PASS"),
+                    (record.work_unit_id, record.verdict, record.evidence_ref)
+                    for record in result.traceability
                 ],
+                [
+                    ("prepare", "FAIL", f"verify:prepare:{executor_a.requests[0].context['repository_state_id']}"),
+                    ("repair-prepare", "PASS", f"verify:repair-prepare:{git(executor_c_repo, 'rev-parse', 'HEAD~1')}"),
+                    ("prepare", "CORRECTED_PASS", f"verify:repair-prepare:{git(executor_c_repo, 'rev-parse', 'HEAD~1')}"),
+                    ("implement", "PASS", f"verify:implement:{git(executor_a_repo, 'rev-parse', 'HEAD')}"),
+                ],
+            )
+            self.assertTrue(
+                all(record.requirement_id == "req-360" for record in result.traceability)
             )
             self.assertEqual(len(executor_a.requests), 2)
             self.assertEqual(len(executor_c.requests), 1)
