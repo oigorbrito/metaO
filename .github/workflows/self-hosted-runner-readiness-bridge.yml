@@ -35,7 +35,7 @@ jobs:
           print(f'target SHA accepted: {target}')
           PY
 
-      - name: Checkout exact target head
+      - name: Checkout exact target head without persisting credentials
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.target_head }}
@@ -49,15 +49,7 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$METAO_TARGET_HEAD"
 
-      - name: Run target-head runner readiness helper
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f scripts/self_hosted_runner_readiness.py
-          python3 scripts/self_hosted_runner_readiness.py > "$RUNNER_TEMP/metao-runner-readiness.json"
-          cat "$RUNNER_TEMP/metao-runner-readiness.json"
-
-      - name: Validate bounded readiness evidence
+      - name: Evaluate fixed runner readiness boundary
         shell: bash
         env:
           METAO_TARGET_HEAD: ${{ inputs.target_head }}
@@ -66,25 +58,14 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import platform
+          import shutil
           import subprocess
+          import sys
+          import tempfile
           from pathlib import Path
 
-          path = Path(os.environ['RUNNER_TEMP']) / 'metao-runner-readiness.json'
-          evidence = json.loads(path.read_text(encoding='utf-8'))
-          assert evidence['runner_readiness'] == 'PASS'
-          assert evidence['linux'] is True
-          assert evidence['x64'] is True
-          assert evidence['python_3_12_plus'] is True
-          assert all(evidence['required_executables'].values())
-          assert evidence['required_labels'] == [
-              'self-hosted', 'linux', 'x64', 'metao-project-pilot'
-          ]
-          assert evidence['registration_token_present'] is False
-          assert evidence['repository_secrets_checked'] is False
-          assert evidence['provider_calls_made'] is False
-          assert evidence['credentials_emitted'] is False
-          assert evidence['host_values_emitted'] is False
-          assert evidence['pilot_operational_pass'] is False
+          target = os.environ['METAO_TARGET_HEAD']
           actual = subprocess.run(
               ['git', 'rev-parse', 'HEAD'],
               check=True,
@@ -92,13 +73,46 @@ jobs:
               stdout=subprocess.PIPE,
               stderr=subprocess.PIPE,
           ).stdout.strip()
-          assert os.environ['METAO_TARGET_HEAD'] == actual
-          print(json.dumps({
+          if actual != target:
+              raise SystemExit('checked-out HEAD differs from target_head')
+
+          machine = platform.machine().lower()
+          if platform.system() != 'Linux':
+              raise SystemExit('runner must be Linux')
+          if machine not in {'x86_64', 'amd64'}:
+              raise SystemExit('runner must be x64')
+          if sys.version_info < (3, 12):
+              raise SystemExit('runner requires Python 3.12+')
+
+          executables = {
+              name: shutil.which(name) is not None
+              for name in ('git', 'ssh', 'scp', 'curl', 'tar')
+          }
+          missing = [name for name, present in executables.items() if not present]
+          if missing:
+              raise SystemExit('runner missing required executables: ' + ','.join(sorted(missing)))
+
+          with tempfile.TemporaryDirectory(prefix='metao-runner-readiness-') as root:
+              probe = Path(root) / 'probe'
+              probe.write_text('ok\n', encoding='utf-8')
+              if probe.read_text(encoding='utf-8') != 'ok\n':
+                  raise SystemExit('runner temporary storage is not writable')
+
+          evidence = {
               'bootstrap_readiness': 'PASS',
-              'target_head': os.environ['METAO_TARGET_HEAD'],
-              'runner_readiness': evidence['runner_readiness'],
-              'provider_calls_made': False,
+              'target_head': target,
+              'checked_out_head_matches': True,
+              'linux': True,
+              'x64': True,
+              'python_3_12_plus': True,
+              'required_executables': executables,
+              'required_labels': ['self-hosted', 'linux', 'x64', 'metao-project-pilot'],
               'repository_secrets_checked': False,
+              'provider_calls_made': False,
+              'credentials_emitted': False,
+              'host_values_emitted': False,
+              'target_code_executed': False,
               'pilot_operational_pass': False,
-          }, sort_keys=True, separators=(',', ':')))
+          }
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
