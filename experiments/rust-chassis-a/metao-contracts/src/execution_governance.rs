@@ -223,3 +223,129 @@ pub fn evaluate_pre_runtime_gate(
         reason: "policy, risk and execution budget permit execution".to_string(),
     }
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RetryApprovalContext {
+    pub mission_id: crate::MissionId,
+    pub execution_id: crate::ExecutionId,
+    pub subject_state_id: String,
+    pub policy_bundle_id: String,
+    pub action: String,
+    pub target: String,
+    pub scope: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RetryGovernanceProjection {
+    pub policy_denied: bool,
+    pub risk_stopped: bool,
+    pub budget_blocked: bool,
+    pub human_approval_required: bool,
+    pub human_approval_satisfied: bool,
+    pub decision: ExecutionGateDecision,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RetryGovernanceBridgeError {
+    HumanApprovalRequired,
+}
+
+fn approval_ticket_matches(
+    candidate: &crate::ApprovalAuthorityTicket,
+    current: &crate::ApprovalAuthorityTicket,
+    context: &RetryApprovalContext,
+    now_epoch: f64,
+) -> bool {
+    !candidate.revoked
+        && !current.revoked
+        && candidate.approval_id == current.approval_id
+        && candidate.mission_id == current.mission_id
+        && candidate.execution_id == current.execution_id
+        && candidate.subject_state_id == current.subject_state_id
+        && candidate.policy_bundle_id == current.policy_bundle_id
+        && candidate.approver_id == current.approver_id
+        && candidate.capability_id == current.capability_id
+        && candidate.action == current.action
+        && candidate.target == current.target
+        && candidate.scope == current.scope
+        && candidate.authority_epoch == current.authority_epoch
+        && candidate.mission_id == context.mission_id
+        && candidate.execution_id == context.execution_id
+        && candidate.subject_state_id == context.subject_state_id
+        && candidate.policy_bundle_id == context.policy_bundle_id
+        && candidate.action == context.action
+        && candidate.target == context.target
+        && candidate.scope == context.scope
+        && candidate
+            .not_before_epoch
+            .is_none_or(|not_before| now_epoch >= not_before)
+        && current
+            .not_before_epoch
+            .is_none_or(|not_before| now_epoch >= not_before)
+        && candidate
+            .expires_at_epoch
+            .is_none_or(|expires| now_epoch <= expires)
+        && current
+            .expires_at_epoch
+            .is_none_or(|expires| now_epoch <= expires)
+}
+
+pub fn project_retry_governance(
+    policy: ExecutionPolicyEffect,
+    risk: ExecutionRiskDecision,
+    budget: &ExecutionBudget,
+    requested_usage: &ExecutionUsage,
+    candidate_approval: Option<&crate::ApprovalAuthorityTicket>,
+    approval_port: &dyn crate::ApprovalAuthorityPort,
+    approval_context: &RetryApprovalContext,
+    now_epoch: f64,
+) -> RetryGovernanceProjection {
+    let policy_denied = policy == ExecutionPolicyEffect::Deny;
+    let risk_stopped = risk == ExecutionRiskDecision::Stop;
+    let budget_blocked = !budget.has_pre_runtime_capacity(requested_usage);
+    let human_approval_required = risk == ExecutionRiskDecision::RequireHuman;
+    let human_approval_satisfied = if human_approval_required {
+        candidate_approval.is_some_and(|candidate| {
+            approval_port
+                .current(&candidate.approval_id)
+                .as_ref()
+                .is_some_and(|current| {
+                    approval_ticket_matches(candidate, current, approval_context, now_epoch)
+                })
+        })
+    } else {
+        false
+    };
+
+    let decision = if policy_denied || risk_stopped || budget_blocked {
+        ExecutionGateDecision::Block
+    } else if human_approval_required && !human_approval_satisfied {
+        ExecutionGateDecision::RequireHuman
+    } else {
+        ExecutionGateDecision::Proceed
+    };
+
+    RetryGovernanceProjection {
+        policy_denied,
+        risk_stopped,
+        budget_blocked,
+        human_approval_required,
+        human_approval_satisfied,
+        decision,
+    }
+}
+
+pub fn bind_retry_governance(
+    facts: &crate::failure_causality::FailureCausalityFacts,
+    governance: &RetryGovernanceProjection,
+) -> Result<crate::failure_causality::FailureCausalityFacts, RetryGovernanceBridgeError> {
+    if governance.decision == ExecutionGateDecision::RequireHuman {
+        return Err(RetryGovernanceBridgeError::HumanApprovalRequired);
+    }
+
+    let mut bound = facts.clone();
+    bound.policy_blocked = bound.policy_blocked || governance.policy_denied;
+    bound.risk_blocked = bound.risk_blocked || governance.risk_stopped;
+    bound.budget_blocked = bound.budget_blocked || governance.budget_blocked;
+    Ok(bound)
+}
