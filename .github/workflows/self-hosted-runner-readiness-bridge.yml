@@ -66,6 +66,7 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import subprocess
           from pathlib import Path
 
           path = Path(os.environ['RUNNER_TEMP']) / 'metao-runner-readiness.json'
@@ -84,7 +85,14 @@ jobs:
           assert evidence['credentials_emitted'] is False
           assert evidence['host_values_emitted'] is False
           assert evidence['pilot_operational_pass'] is False
-          assert os.environ['METAO_TARGET_HEAD'] == os.popen('git rev-parse HEAD').read().strip()
+          actual = subprocess.run(
+              ['git', 'rev-parse', 'HEAD'],
+              check=True,
+              text=True,
+              stdout=subprocess.PIPE,
+              stderr=subprocess.PIPE,
+          ).stdout.strip()
+          assert os.environ['METAO_TARGET_HEAD'] == actual
           print(json.dumps({
               'bootstrap_readiness': 'PASS',
               'target_head': os.environ['METAO_TARGET_HEAD'],
