@@ -34,14 +34,16 @@ jobs:
     runs-on: [self-hosted, Windows, X64, metao-project-pilot]
     timeout-minutes: 35
     steps:
-      - name: Validate authorization and audited target before secrets
+      - name: Validate authorization audited target and provider targets before secrets
         shell: pwsh
         env:
           METAO_AUTHORIZATION_INPUT: ${{ inputs.authorization }}
           METAO_EXPECTED_HEAD_INPUT: ${{ inputs.expected_head }}
+          METAO_OPENAI_MODEL_INPUT: ${{ inputs.openai_model }}
+          METAO_GEMINI_TARGET_INPUT: ${{ inputs.gemini_target }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $audited = 'e1bef06c058497fb3ac8b81621ad621dea6f1406'
+          $audited = 'fe2519044f89cdf0111b5e5118a056fce7524e8d'
           if ($env:METAO_AUTHORIZATION_INPUT -ne 'I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT') {
             throw 'explicit multi-provider pilot authorization is required'
           }
@@ -51,12 +53,18 @@ jobs:
           if ($env:METAO_EXPECTED_HEAD_INPUT.ToLowerInvariant() -ne $audited) {
             throw 'expected_head is not the audited Windows pilot SHA'
           }
+          if ($env:METAO_OPENAI_MODEL_INPUT -ne 'gpt-5.6-luna') {
+            throw 'OpenAI model is not approved for operational pilot evidence'
+          }
+          if ($env:METAO_GEMINI_TARGET_INPUT -ne 'gemma-4-26b-a4b-it') {
+            throw 'Gemini target is not approved for operational pilot evidence'
+          }
           "METAO_AUDITED_PILOT_HEAD=$audited" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Checkout audited pilot head without persisting credentials
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: e1bef06c058497fb3ac8b81621ad621dea6f1406
+          ref: fe2519044f89cdf0111b5e5118a056fce7524e8d
           persist-credentials: false
 
       - name: Revalidate audited checkout and Windows runner contract
@@ -156,7 +164,7 @@ jobs:
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_PILOT_TARGET_HEAD: e1bef06c058497fb3ac8b81621ad621dea6f1406
+          METAO_PILOT_TARGET_HEAD: fe2519044f89cdf0111b5e5118a056fce7524e8d
           METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
           METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
           METAO_OPENAI_MODEL: ${{ inputs.openai_model }}
@@ -198,6 +206,9 @@ jobs:
           }
           if ([string]$e.runtime_authority_source_commit -notmatch '^[0-9a-f]{40}$') { throw 'invalid runtime authority source commit' }
           if ([string]$e.runtime_authority_uv_lock_blob_sha1 -notmatch '^[0-9a-f]{40}$') { throw 'invalid runtime authority uv.lock blob SHA-1' }
+          if (-not $e.provider_targets_approved -or $e.operational_target_policy -ne 'ALLOWLISTED') { throw 'provider target policy evidence missing' }
+          if ([string]$e.openai_model -ne 'gpt-5.6-luna') { throw 'unexpected OpenAI model evidence' }
+          if ([string]$e.gemini_target -ne 'gemma-4-26b-a4b-it') { throw 'unexpected Gemini target evidence' }
           $e | ConvertTo-Json -Compress
 
       - name: Cleanup SSH verification files
