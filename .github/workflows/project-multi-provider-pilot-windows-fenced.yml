@@ -41,7 +41,7 @@ jobs:
           METAO_EXPECTED_HEAD_INPUT: ${{ inputs.expected_head }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $audited = 'ccb0c93d761ad0598ea1d9dcc76476cb0a73a861'
+          $audited = '6121a52a6bd76fbc6d0e74928b9b96f9242ec066'
           if ($env:METAO_AUTHORIZATION_INPUT -ne 'I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT') {
             throw 'explicit multi-provider pilot authorization is required'
           }
@@ -54,9 +54,9 @@ jobs:
           "METAO_AUDITED_PILOT_HEAD=$audited" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Checkout audited pilot head without persisting credentials
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ccb0c93d761ad0598ea1d9dcc76476cb0a73a861
+          ref: 6121a52a6bd76fbc6d0e74928b9b96f9242ec066
           persist-credentials: false
 
       - name: Revalidate audited checkout and Windows runner contract
@@ -137,24 +137,26 @@ jobs:
           }
           $e | ConvertTo-Json -Compress
 
-      - name: Install audited metaO and pinned OpenAI Agents runtime
+      - name: Install hermetic metaO provider runtime
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          python -m pip install --upgrade pip
-          if ($LASTEXITCODE -ne 0) { throw 'pip upgrade failed' }
-          python -m pip install -e .
-          if ($LASTEXITCODE -ne 0) { throw 'metaO install failed' }
-          python -m pip install 'openai-agents==0.20.0'
-          if ($LASTEXITCODE -ne 0) { throw 'openai-agents install failed' }
-          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'"
-          if ($LASTEXITCODE -ne 0) { throw 'openai-agents version verification failed' }
+          $evidencePath = Join-Path $env:RUNNER_TEMP 'project-pilot-dependency-install-windows.json'
+          python scripts/install_hermetic_pilot_runtime.py | Out-File -LiteralPath $evidencePath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'hermetic provider runtime install failed' }
+          $lines = @(Get-Content -LiteralPath $evidencePath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+          if ($lines.Count -eq 0) { throw 'dependency installer produced no evidence' }
+          $e = $lines[-1] | ConvertFrom-Json
+          if ($e.hermetic_runtime -ne 'PREPARED' -or $e.credentials_emitted) {
+            throw 'dependency installer evidence boundary violated'
+          }
+          $e | ConvertTo-Json -Compress
 
-      - name: Run credential-backed Windows multi-provider project pilot
+      - name: Run credential-backed Windows hermetic multi-provider project pilot
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_PILOT_TARGET_HEAD: ccb0c93d761ad0598ea1d9dcc76476cb0a73a861
+          METAO_PILOT_TARGET_HEAD: 6121a52a6bd76fbc6d0e74928b9b96f9242ec066
           METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
           METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
           METAO_OPENAI_MODEL: ${{ inputs.openai_model }}
@@ -169,8 +171,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $evidencePath = Join-Path $env:RUNNER_TEMP 'project-multi-provider-pilot-windows.json'
-          python scripts/project_multi_provider_pilot.py | Out-File -LiteralPath $evidencePath -Encoding utf8
-          if ($LASTEXITCODE -ne 0) { throw 'credential-backed project pilot failed' }
+          python scripts/run_project_multi_provider_pilot_hermetic.py | Out-File -LiteralPath $evidencePath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'credential-backed hermetic project pilot failed' }
 
       - name: Validate bounded Windows pilot evidence
         shell: pwsh
@@ -189,4 +191,11 @@ jobs:
           if ($e.independent_verifier_id -ne 'project-verifier') { throw 'independent verifier evidence mismatch' }
           if (-not $e.cross_host -or $e.credentials_emitted -or $e.remote_paths_emitted) { throw 'trust/evidence boundary violated' }
           if (@($e.checkpoint_sha_lineage).Count -lt 3) { throw 'checkpoint lineage is incomplete' }
+          if ($e.dependency_identity -ne 'VERIFIED') { throw 'dependency identity evidence missing' }
+          foreach ($name in @('bootstrap_lock_sha256','runtime_requirements_sha256','runtime_authority_openai_agents_wheel_sha256')) {
+            $value = [string]$e.$name
+            if ($value -notmatch '^[0-9a-f]{64}$') { throw "invalid dependency SHA-256 evidence: $name" }
+          }
+          if ([string]$e.runtime_authority_source_commit -notmatch '^[0-9a-f]{40}$') { throw 'invalid runtime authority source commit' }
+          if ([string]$e.runtime_authority_uv_lock_blob_sha1 -notmatch '^[0-9a-f]{40}$') { throw 'invalid runtime authority uv.lock blob SHA-1' }
           $e | ConvertTo-Json -Compress
