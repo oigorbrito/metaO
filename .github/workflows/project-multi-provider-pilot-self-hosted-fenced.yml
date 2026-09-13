@@ -58,8 +58,8 @@ jobs:
     timeout-minutes: 10
     env:
       METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-      METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
-      METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+      METAO_OPENAI_CREDENTIAL_PRESENT: ${{ secrets.METAO_OPENAI_API_KEY != '' }}
+      METAO_GEMINI_CREDENTIAL_PRESENT: ${{ secrets.METAO_GEMINI_API_KEY != '' }}
       METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
       METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
       METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
@@ -103,6 +103,7 @@ jobs:
           assert evidence['destination_reachable'] is True
           assert evidence['distinct_hosts'] is True
           assert evidence['provider_credentials_present'] is True
+          assert evidence['provider_credential_inputs'] == 'presence-only'
           assert evidence['credentials_emitted'] is False
           assert evidence['hosts_emitted'] is False
           assert evidence['provider_calls_made'] is False
