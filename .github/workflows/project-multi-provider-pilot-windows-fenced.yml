@@ -41,7 +41,7 @@ jobs:
           METAO_EXPECTED_HEAD_INPUT: ${{ inputs.expected_head }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $audited = '6121a52a6bd76fbc6d0e74928b9b96f9242ec066'
+          $audited = 'e1bef06c058497fb3ac8b81621ad621dea6f1406'
           if ($env:METAO_AUTHORIZATION_INPUT -ne 'I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT') {
             throw 'explicit multi-provider pilot authorization is required'
           }
@@ -56,7 +56,7 @@ jobs:
       - name: Checkout audited pilot head without persisting credentials
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 6121a52a6bd76fbc6d0e74928b9b96f9242ec066
+          ref: e1bef06c058497fb3ac8b81621ad621dea6f1406
           persist-credentials: false
 
       - name: Revalidate audited checkout and Windows runner contract
@@ -113,8 +113,8 @@ jobs:
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
-          METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+          METAO_OPENAI_CREDENTIAL_PRESENT: ${{ secrets.METAO_OPENAI_API_KEY != '' }}
+          METAO_GEMINI_CREDENTIAL_PRESENT: ${{ secrets.METAO_GEMINI_API_KEY != '' }}
           METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
           METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
           METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
@@ -132,7 +132,7 @@ jobs:
           if ($e.preflight -ne 'PASS' -or -not $e.source_reachable -or -not $e.destination_reachable -or -not $e.distinct_hosts) {
             throw 'preflight readiness evidence is incomplete'
           }
-          if (-not $e.provider_credentials_present -or $e.credentials_emitted -or $e.hosts_emitted -or $e.provider_calls_made) {
+          if (-not $e.provider_credentials_present -or $e.provider_credential_inputs -ne 'presence-only' -or $e.credentials_emitted -or $e.hosts_emitted -or $e.provider_calls_made) {
             throw 'preflight evidence boundary violated'
           }
           $e | ConvertTo-Json -Compress
@@ -156,7 +156,7 @@ jobs:
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_PILOT_TARGET_HEAD: 6121a52a6bd76fbc6d0e74928b9b96f9242ec066
+          METAO_PILOT_TARGET_HEAD: e1bef06c058497fb3ac8b81621ad621dea6f1406
           METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
           METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
           METAO_OPENAI_MODEL: ${{ inputs.openai_model }}

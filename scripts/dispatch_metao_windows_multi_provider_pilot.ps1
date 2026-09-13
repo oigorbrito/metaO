@@ -3,13 +3,13 @@ Set-StrictMode -Version Latest
 
 $Repo = 'oigorbrito/metaO'
 $Workflow = 'project-multi-provider-pilot-windows-fenced.yml'
-$AuditedHead = '6121a52a6bd76fbc6d0e74928b9b96f9242ec066'
+$AuditedHead = 'e1bef06c058497fb3ac8b81621ad621dea6f1406'
 $Authorization = if ($args.Count -gt 0) { $args[0] } else { '' }
 $OpenAIModel = if ($args.Count -gt 1) { $args[1] } else { 'gpt-5.6-luna' }
 $GeminiTarget = if ($args.Count -gt 2) { $args[2] } else { 'gemma-4-26b-a4b-it' }
 
-if ($Authorization -ne 'I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT') {
-    throw 'first argument must be the exact pilot authorization string'
+if ([string]::IsNullOrWhiteSpace($Authorization)) {
+    throw 'first argument must provide the pilot authorization input; workflow validation remains authoritative'
 }
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw 'gh CLI is required' }
 & gh auth status *> $null
@@ -33,6 +33,7 @@ if ($LASTEXITCODE -ne 0) { throw 'Windows credential-backed pilot dispatch faile
     workflow_ref='main'
     audited_head=$AuditedHead
     dependency_runtime='HERMETIC_PREPARED'
+    provider_preflight='PRESENCE_ONLY'
     runner_os='Windows'
     operational_pilot='NOT_RUN'
     project_operational_pass=$false
