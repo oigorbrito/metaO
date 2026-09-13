@@ -137,15 +137,17 @@ jobs:
           }
           $e | ConvertTo-Json -Compress
 
-      - name: Install audited metaO and pinned OpenAI Agents runtime
+      - name: Install audited metaO with hashed bootstrap toolchain
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          python -m pip install --upgrade pip
-          if ($LASTEXITCODE -ne 0) { throw 'pip upgrade failed' }
-          python -m pip install -e .
+          python -m pip install --disable-pip-version-check --only-binary=:all: --require-hashes -r requirements/bootstrap.lock
+          if ($LASTEXITCODE -ne 0) { throw 'hashed bootstrap install failed' }
+          python -m pip install --disable-pip-version-check --no-build-isolation --no-deps -e .
           if ($LASTEXITCODE -ne 0) { throw 'metaO install failed' }
-          python -m pip install 'openai-agents==0.20.0'
+          python scripts/python_dependency_identity.py
+          if ($LASTEXITCODE -ne 0) { throw 'dependency identity evidence failed' }
+          python -m pip install --disable-pip-version-check 'openai-agents==0.20.0'
           if ($LASTEXITCODE -ne 0) { throw 'openai-agents install failed' }
           python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'"
           if ($LASTEXITCODE -ne 0) { throw 'openai-agents version verification failed' }
