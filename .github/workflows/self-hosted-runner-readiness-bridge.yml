@@ -1,0 +1,96 @@
+name: Self-Hosted Runner Readiness Bridge
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_head:
+        description: 'Exact 40-character Git commit SHA to qualify'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-hosted-runner-readiness-bridge
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    runs-on: [self-hosted, linux, x64, metao-project-pilot]
+    timeout-minutes: 5
+    steps:
+      - name: Validate target SHA before checkout
+        shell: bash
+        env:
+          METAO_TARGET_HEAD: ${{ inputs.target_head }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          target = os.environ['METAO_TARGET_HEAD'].strip().lower()
+          if not re.fullmatch(r'[0-9a-f]{40}', target):
+              raise SystemExit('target_head must be an exact 40-character Git SHA')
+          print(f'target SHA accepted: {target}')
+          PY
+
+      - name: Checkout exact target head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_head }}
+          persist-credentials: false
+
+      - name: Revalidate exact target head
+        shell: bash
+        env:
+          METAO_TARGET_HEAD: ${{ inputs.target_head }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$METAO_TARGET_HEAD"
+
+      - name: Run target-head runner readiness helper
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f scripts/self_hosted_runner_readiness.py
+          python3 scripts/self_hosted_runner_readiness.py > "$RUNNER_TEMP/metao-runner-readiness.json"
+          cat "$RUNNER_TEMP/metao-runner-readiness.json"
+
+      - name: Validate bounded readiness evidence
+        shell: bash
+        env:
+          METAO_TARGET_HEAD: ${{ inputs.target_head }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'metao-runner-readiness.json'
+          evidence = json.loads(path.read_text(encoding='utf-8'))
+          assert evidence['runner_readiness'] == 'PASS'
+          assert evidence['linux'] is True
+          assert evidence['x64'] is True
+          assert evidence['python_3_12_plus'] is True
+          assert all(evidence['required_executables'].values())
+          assert evidence['required_labels'] == [
+              'self-hosted', 'linux', 'x64', 'metao-project-pilot'
+          ]
+          assert evidence['registration_token_present'] is False
+          assert evidence['repository_secrets_checked'] is False
+          assert evidence['provider_calls_made'] is False
+          assert evidence['credentials_emitted'] is False
+          assert evidence['host_values_emitted'] is False
+          assert evidence['pilot_operational_pass'] is False
+          assert os.environ['METAO_TARGET_HEAD'] == os.popen('git rev-parse HEAD').read().strip()
+          print(json.dumps({
+              'bootstrap_readiness': 'PASS',
+              'target_head': os.environ['METAO_TARGET_HEAD'],
+              'runner_readiness': evidence['runner_readiness'],
+              'provider_calls_made': False,
+              'repository_secrets_checked': False,
+              'pilot_operational_pass': False,
+          }, sort_keys=True, separators=(',', ':')))
+          PY
