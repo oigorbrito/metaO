@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::failure_causality::{evaluate_retry_eligibility, FailureCausalityFacts, RetryEligibility};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub enum RuntimeHealthError { BlankRuntimeIdentity, BlankRuntimeVersion, BlankConfigIdentity, BlankEvidenceRef, InvalidEvidenceBasis, InvalidObservationWindow, InvalidCounters, InvalidPolicy, InvalidRetryPressureAuthority, RetryPressureBindingMismatch, RetryPressureDuplicateConflict }
+pub enum RuntimeHealthError { BlankRuntimeIdentity, BlankRuntimeVersion, BlankConfigIdentity, BlankEvidenceRef, InvalidEvidenceBasis, InvalidObservationWindow, InvalidCounters, InvalidPolicy, InvalidRetryPressureAuthority, RetryPressureBindingMismatch, RetryPressureDuplicateConflict, RetryPressureStaleExecution }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RuntimeHealthState { Unknown, Healthy, Degraded, Unhealthy, Quarantined, Recovering }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -25,7 +25,7 @@ pub enum ActiveRetryAuthorityBasis { CanonicalExecutionRegistry, CallerDeclared,
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ActiveRetryExecutionState { Active, Settled, Cancelled, Expired }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ActiveRetryExecutionRecord { pub retry_execution_id:String,pub mission_id:crate::MissionId,pub runtime_id:String,pub runtime_version:String,pub config_id:String,pub retry_lineage_id:String,pub authority_generation:u64,pub fencing_token:u64,pub state:ActiveRetryExecutionState,pub evidence_ref:String }
+pub struct ActiveRetryExecutionRecord { pub retry_execution_id:String,pub mission_id:crate::MissionId,pub runtime_id:String,pub runtime_version:String,pub config_id:String,pub retry_lineage_id:String,pub authority_generation:u64,pub fencing_token:u64,pub current_authority_generation:u64,pub current_fencing_token:u64,pub state:ActiveRetryExecutionState,pub evidence_ref:String }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ActiveRetrySetProducer { pub producer_id:String,pub state_version:u64,pub basis:ActiveRetryAuthorityBasis,pub evidence_ref:String,pub records:Vec<ActiveRetryExecutionRecord> }
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -37,7 +37,8 @@ pub fn bind_active_retry_pressure(producer:&ActiveRetrySetProducer,runtime_id:&s
     if producer.producer_id.trim().is_empty()||producer.evidence_ref.trim().is_empty()||producer.state_version==0||producer.basis!=ActiveRetryAuthorityBasis::CanonicalExecutionRegistry||runtime_id.trim().is_empty()||runtime_version.trim().is_empty()||config_id.trim().is_empty(){return Err(RuntimeHealthError::InvalidRetryPressureAuthority)}
     let mut unique:BTreeMap<&str,&ActiveRetryExecutionRecord>=BTreeMap::new();
     for record in &producer.records {
-        if record.retry_execution_id.trim().is_empty()||record.retry_lineage_id.trim().is_empty()||record.runtime_id.trim().is_empty()||record.runtime_version.trim().is_empty()||record.config_id.trim().is_empty()||record.evidence_ref.trim().is_empty()||record.authority_generation==0||record.fencing_token==0{return Err(RuntimeHealthError::InvalidRetryPressureAuthority)}
+        if record.retry_execution_id.trim().is_empty()||record.retry_lineage_id.trim().is_empty()||record.runtime_id.trim().is_empty()||record.runtime_version.trim().is_empty()||record.config_id.trim().is_empty()||record.evidence_ref.trim().is_empty()||record.authority_generation==0||record.fencing_token==0||record.current_authority_generation==0||record.current_fencing_token==0{return Err(RuntimeHealthError::InvalidRetryPressureAuthority)}
+        if record.state==ActiveRetryExecutionState::Active&&(record.authority_generation!=record.current_authority_generation||record.fencing_token!=record.current_fencing_token){return Err(RuntimeHealthError::RetryPressureStaleExecution)}
         if let Some(existing)=unique.get(record.retry_execution_id.as_str()){if *existing!=record{return Err(RuntimeHealthError::RetryPressureDuplicateConflict)}continue;}
         unique.insert(record.retry_execution_id.as_str(),record);
     }
