@@ -8,7 +8,6 @@ without introducing a second scoring engine.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping
 
 from .project_supervision import ExecutorTarget, WorkUnit
 from .strategy import OrchestratorPoolState, select_orchestrator
@@ -54,9 +53,11 @@ class CanonicalProjectExecutorScheduler:
         requirements: tuple[WorkUnitSchedulingRequirements, ...],
         registrations: tuple[ExecutorProviderRegistration, ...],
         now_epoch: float = 0.0,
+        provider_diverse_failover: bool = False,
     ) -> None:
         self._pools = pools
         self._now_epoch = now_epoch
+        self._provider_diverse_failover = provider_diverse_failover
         self._requirements = self._unique_requirements(requirements)
         self._providers = self._unique_registrations(registrations)
 
@@ -107,10 +108,21 @@ class CanonicalProjectExecutorScheduler:
                 f"missing scheduling requirements for work unit: {unit.work_unit_id}"
             )
 
+        excluded_provider_ids = (
+            frozenset(
+                self._providers[executor_id]
+                for executor_id in excluded_executor_ids
+                if executor_id in self._providers
+            )
+            if self._provider_diverse_failover and excluded_executor_ids
+            else frozenset()
+        )
+
         eligible = tuple(
             pool
             for pool in self._pools
             if pool.orchestrator_id not in excluded_executor_ids
+            and self._providers[pool.orchestrator_id] not in excluded_provider_ids
             and requirements.required_capabilities <= pool.capabilities
         )
         selected = select_orchestrator(eligible, now_epoch=self._now_epoch)
