@@ -91,17 +91,17 @@ pub enum ExecutionAccountingError { InvalidOperation, InvalidObservedUsage, Inva
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ExecutionAccountingSnapshot { pub version:u64,pub budget:ExecutionBudget,pub settlement_count:usize }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-pub struct ExecutionAccountingPersistedState { pub version:u64,pub budget:ExecutionBudget,pub settlements:BTreeMap<String,ExecutionAccountingOperation> }
-struct ExecutionAccountingState { version:u64,budget:ExecutionBudget,settlements:BTreeMap<String,ExecutionAccountingOperation> }
+pub struct ExecutionAccountingPersistedState { pub version:u64,pub budget:ExecutionBudget,pub settlements:BTreeMap<String,ExecutionAccountingOperation>,pub settlement_order:Vec<String> }
+struct ExecutionAccountingState { version:u64,budget:ExecutionBudget,settlements:BTreeMap<String,ExecutionAccountingOperation>,settlement_order:Vec<String> }
 pub struct ExecutionAccountingAuthority { state:Mutex<ExecutionAccountingState> }
 impl ExecutionAccountingAuthority {
-    pub fn new(budget:ExecutionBudget)->Result<Self,ExecutionAccountingError>{ budget.validate().map_err(|_|ExecutionAccountingError::InvalidObservedUsage)?; Ok(Self{state:Mutex::new(ExecutionAccountingState{version:1,budget,settlements:BTreeMap::new()})}) }
+    pub fn new(budget:ExecutionBudget)->Result<Self,ExecutionAccountingError>{ budget.validate().map_err(|_|ExecutionAccountingError::InvalidObservedUsage)?; Ok(Self{state:Mutex::new(ExecutionAccountingState{version:1,budget,settlements:BTreeMap::new(),settlement_order:Vec::new()})}) }
     pub fn reopen(persisted:ExecutionAccountingPersistedState)->Result<Self,ExecutionAccountingError>{
         validate_persisted_accounting_state(&persisted)?;
-        Ok(Self{state:Mutex::new(ExecutionAccountingState{version:persisted.version,budget:persisted.budget,settlements:persisted.settlements})})
+        Ok(Self{state:Mutex::new(ExecutionAccountingState{version:persisted.version,budget:persisted.budget,settlements:persisted.settlements,settlement_order:persisted.settlement_order})})
     }
     pub fn snapshot(&self)->ExecutionAccountingSnapshot{ let s=self.state.lock().expect("execution accounting mutex poisoned"); ExecutionAccountingSnapshot{version:s.version,budget:s.budget.clone(),settlement_count:s.settlements.len()} }
-    pub fn export_state(&self)->ExecutionAccountingPersistedState{ let s=self.state.lock().expect("execution accounting mutex poisoned"); ExecutionAccountingPersistedState{version:s.version,budget:s.budget.clone(),settlements:s.settlements.clone()} }
+    pub fn export_state(&self)->ExecutionAccountingPersistedState{ let s=self.state.lock().expect("execution accounting mutex poisoned"); ExecutionAccountingPersistedState{version:s.version,budget:s.budget.clone(),settlements:s.settlements.clone(),settlement_order:s.settlement_order.clone()} }
     pub fn settle(&self,expected_version:u64,op:ExecutionAccountingOperation)->Result<ExecutionSettlementDecision,ExecutionAccountingError>{
         validate_accounting_operation(&op)?;
         let mut s=self.state.lock().expect("execution accounting mutex poisoned");
@@ -112,7 +112,7 @@ impl ExecutionAccountingAuthority {
         let tokens=s.budget.tokens_used.checked_add(op.observed.usage.tokens).ok_or(ExecutionAccountingError::ArithmeticOverflow)?;
         let attempts=s.budget.attempts_used.checked_add(op.observed.usage.attempts).ok_or(ExecutionAccountingError::ArithmeticOverflow)?;
         s.budget.money_used=money; s.budget.tokens_used=tokens; s.budget.wall_time_used_s=wall; s.budget.attempts_used=attempts;
-        s.settlements.insert(op.operation_id.clone(),op); s.version=s.version.checked_add(1).ok_or(ExecutionAccountingError::ArithmeticOverflow)?;
+        s.settlement_order.push(op.operation_id.clone());s.settlements.insert(op.operation_id.clone(),op); s.version=s.version.checked_add(1).ok_or(ExecutionAccountingError::ArithmeticOverflow)?;
         Ok(ExecutionSettlementDecision::Applied)
     }
 }
@@ -125,9 +125,12 @@ fn validate_persisted_accounting_state(persisted:&ExecutionAccountingPersistedSt
     if !persisted.budget.money_limit.is_finite()||!persisted.budget.wall_time_limit_s.is_finite()||!persisted.budget.money_used.is_finite()||!persisted.budget.wall_time_used_s.is_finite()
         ||persisted.budget.money_limit<0.0||persisted.budget.wall_time_limit_s<0.0||persisted.budget.money_used<0.0||persisted.budget.wall_time_used_s<0.0{return Err(ExecutionAccountingError::InvalidPersistedState)}
     let expected_version=(persisted.settlements.len() as u64).checked_add(1).ok_or(ExecutionAccountingError::InvalidPersistedState)?;
-    if persisted.version!=expected_version{return Err(ExecutionAccountingError::InvalidPersistedState)}
+    if persisted.version!=expected_version||persisted.settlement_order.len()!=persisted.settlements.len(){return Err(ExecutionAccountingError::InvalidPersistedState)}
     let mut money=0.0;let mut tokens=0u64;let mut wall=0.0;let mut attempts=0u64;
-    for (operation_id,op) in &persisted.settlements{
+    let mut seen=std::collections::BTreeSet::new();
+    for operation_id in &persisted.settlement_order{
+        if !seen.insert(operation_id.clone()){return Err(ExecutionAccountingError::InvalidPersistedState)}
+        let op=persisted.settlements.get(operation_id).ok_or(ExecutionAccountingError::InvalidPersistedState)?;
         if operation_id!=&op.operation_id{return Err(ExecutionAccountingError::InvalidPersistedState)}
         validate_accounting_operation(op).map_err(|_|ExecutionAccountingError::InvalidPersistedState)?;
         money+=op.observed.usage.money;wall+=op.observed.usage.wall_time_s;
