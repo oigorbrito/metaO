@@ -296,6 +296,7 @@ def supervise_project(
     executors_used: set[str] = set()
     providers_used: set[str] = set()
     checkpoint = repository.initial(objective)
+    checkpoint_holder_executor_id: str | None = None
     corrective_count = 0
 
     def blocked(reason: str) -> ProjectSupervisionResult:
@@ -367,9 +368,34 @@ def supervise_project(
             pinned_target = None
             if target is None:
                 return blocked(f"no executor available for {unit.work_unit_id}")
+
+            if (
+                checkpoint_holder_executor_id is not None
+                and checkpoint_holder_executor_id != target.executor_id
+            ):
+                handed = repository.handoff(
+                    checkpoint,
+                    from_executor_id=checkpoint_holder_executor_id,
+                    to_executor_id=target.executor_id,
+                )
+                if handed != checkpoint:
+                    return blocked("repository checkpoint changed during handoff")
+                trace.append(
+                    ProjectTraceEvent(
+                        ProjectTraceKind.HANDED_OFF,
+                        unit.work_unit_id,
+                        target.executor_id,
+                        checkpoint.checkpoint_id,
+                        checkpoint.state_id,
+                        checkpoint.artifact_ref,
+                    )
+                )
+                checkpoint_holder_executor_id = target.executor_id
+
             selected_target = target
             executors_used.add(target.executor_id)
             providers_used.add(target.provider_id)
+            checkpoint_holder_executor_id = target.executor_id
             trace.append(
                 ProjectTraceEvent(
                     ProjectTraceKind.DISPATCHED,
@@ -421,6 +447,7 @@ def supervise_project(
                         checkpoint.artifact_ref,
                     )
                 )
+                checkpoint_holder_executor_id = next_target.executor_id
                 pinned_target = next_target
                 continue
             if execution.status is WorkExecutionStatus.FAILED:
@@ -436,6 +463,7 @@ def supervise_project(
         executed.add(unit.work_unit_id)
         previous_repository_id = checkpoint.repository_id
         checkpoint = repository.capture(objective, unit, execution)
+        checkpoint_holder_executor_id = execution.executor_id
         if checkpoint.repository_id != previous_repository_id:
             return blocked("captured checkpoint changed repository identity")
         if (
