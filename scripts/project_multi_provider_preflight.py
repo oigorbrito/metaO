@@ -5,6 +5,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -17,7 +18,6 @@ _REQUIRED = (
     "METAO_SSH_SMOKE_DESTINATION_HOST",
     "METAO_SSH_SMOKE_SOURCE_USER",
     "METAO_SSH_SMOKE_DESTINATION_USER",
-    "METAO_SSH_SMOKE_KNOWN_HOSTS",
 )
 _PORT_RE = re.compile(r"^[0-9]{1,5}$")
 
@@ -81,6 +81,16 @@ def _probe_host(*, host: str, user: str, port: str, known_hosts: Path, identity:
     return {"git": git_version, "python": python_version}
 
 
+def _configured_file(name: str) -> Path | None:
+    raw = os.environ.get(name, "").strip()
+    if not raw:
+        return None
+    path = Path(raw)
+    if not path.is_file():
+        raise RuntimeError(f"configured SSH file is not readable: {name}")
+    return path
+
+
 def main() -> int:
     if os.environ.get("METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION", "") != _AUTHORIZATION:
         raise RuntimeError("explicit multi-provider pilot authorization is required")
@@ -97,22 +107,29 @@ def main() -> int:
     source_port = _port("METAO_SSH_SMOKE_SOURCE_PORT")
     destination_port = _port("METAO_SSH_SMOKE_DESTINATION_PORT")
 
-    for executable in ("git", "python3", "ssh", "scp"):
+    for executable in ("git", "ssh", "scp"):
         if shutil.which(executable) is None:
             raise RuntimeError(f"runner executable missing: {executable}")
+    if not sys.executable or not Path(sys.executable).is_file():
+        raise RuntimeError("active Python interpreter is not executable")
 
     with tempfile.TemporaryDirectory(prefix="metao-project-pilot-preflight-") as root:
         root_path = Path(root)
-        known_hosts = root_path / "known_hosts"
-        known_hosts.write_text(_require("METAO_SSH_SMOKE_KNOWN_HOSTS") + "\n", encoding="utf-8")
-        known_hosts.chmod(0o600)
+        known_hosts = _configured_file("METAO_SSH_KNOWN_HOSTS_FILE")
+        if known_hosts is None:
+            known_hosts = root_path / "known_hosts"
+            known_hosts.write_text(_require("METAO_SSH_SMOKE_KNOWN_HOSTS") + "\n", encoding="utf-8")
+            if os.name != "nt":
+                known_hosts.chmod(0o600)
 
-        identity_value = os.environ.get("METAO_SSH_SMOKE_IDENTITY", "")
-        identity: Path | None = None
-        if identity_value.strip():
-            identity = root_path / "identity"
-            identity.write_text(identity_value + "\n", encoding="utf-8")
-            identity.chmod(0o600)
+        identity = _configured_file("METAO_SSH_IDENTITY_FILE")
+        if identity is None:
+            identity_value = os.environ.get("METAO_SSH_SMOKE_IDENTITY", "")
+            if identity_value.strip():
+                identity = root_path / "identity"
+                identity.write_text(identity_value + "\n", encoding="utf-8")
+                if os.name != "nt":
+                    identity.chmod(0o600)
 
         source = _probe_host(
             host=source_host,
