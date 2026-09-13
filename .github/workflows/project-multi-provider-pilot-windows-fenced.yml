@@ -199,3 +199,19 @@ jobs:
           if ([string]$e.runtime_authority_source_commit -notmatch '^[0-9a-f]{40}$') { throw 'invalid runtime authority source commit' }
           if ([string]$e.runtime_authority_uv_lock_blob_sha1 -notmatch '^[0-9a-f]{40}$') { throw 'invalid runtime authority uv.lock blob SHA-1' }
           $e | ConvertTo-Json -Compress
+
+      - name: Cleanup SSH verification files
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = [System.IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+          foreach ($name in @('metao-pilot-known-hosts', 'metao-pilot-identity')) {
+            $path = [System.IO.Path]::GetFullPath((Join-Path $root $name))
+            $parent = [System.IO.Path]::GetDirectoryName($path).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+            if ($parent -ne $root) { throw 'refusing cleanup outside RUNNER_TEMP' }
+            if (Test-Path -LiteralPath $path) {
+              Remove-Item -LiteralPath $path -Force -ErrorAction Stop
+            }
+          }
+          Write-Output 'ssh secret-file cleanup PASS'
