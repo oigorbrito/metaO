@@ -17,15 +17,13 @@ function Require-Command([string]$Name) {
     }
 }
 
-function Get-RemoteRunnerJson {
-    $json = & gh api --paginate "repos/$Repo/actions/runners" 2>$null
-    if ($LASTEXITCODE -ne 0) { return $null }
-    $pages = @($json | ForEach-Object { $_ | ConvertFrom-Json })
+function Get-RemoteRunner {
+    $raw = & gh api --paginate --slurp "repos/$Repo/actions/runners?per_page=100" 2>$null
+    if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace(($raw -join "`n"))) { return $null }
+    $pages = ($raw -join "`n") | ConvertFrom-Json
     $runners = @()
-    foreach ($page in $pages) { $runners += @($page.runners) }
-    $runner = $runners | Where-Object { $_.name -eq $RunnerName } | Select-Object -First 1
-    if ($null -eq $runner) { return $null }
-    return $runner
+    foreach ($page in @($pages)) { $runners += @($page.runners) }
+    return $runners | Where-Object { $_.name -eq $RunnerName } | Select-Object -First 1
 }
 
 if ($Repo -ne 'oigorbrito/metaO') { Fail 'METAO_GITHUB_REPOSITORY must be exactly oigorbrito/metaO' }
@@ -45,7 +43,7 @@ foreach ($command in @('gh','git','ssh','scp')) { Require-Command $command }
 & gh auth status *> $null
 if ($LASTEXITCODE -ne 0) { Fail 'GitHub CLI is not authenticated; run gh auth login first' }
 
-$remoteRunner = Get-RemoteRunnerJson
+$remoteRunner = Get-RemoteRunner
 $runnerMarker = Join-Path $InstallDir '.runner'
 $configCmd = Join-Path $InstallDir 'config.cmd'
 $runCmd = Join-Path $InstallDir 'run.cmd'
@@ -107,7 +105,7 @@ try {
     $registrationToken = $null
 
     if (-not (Test-Path $runnerMarker)) { Fail 'runner configuration did not create .runner' }
-    $remoteRunner = Get-RemoteRunnerJson
+    $remoteRunner = Get-RemoteRunner
     if ($null -eq $remoteRunner) { Fail 'runner configuration completed but GitHub registry does not show the runner' }
     $labels = @($remoteRunner.labels | ForEach-Object { $_.name.ToLowerInvariant() })
     foreach ($required in @('self-hosted','windows','x64',$RunnerLabel)) {
@@ -117,7 +115,7 @@ try {
     [ordered]@{
         installer='PASS'; repository=$Repo; runner_name=$RunnerName; runner_label=$RunnerLabel;
         already_configured=$false; runner_version=$RunnerVersion; runner_asset_sha256=$expectedSha;
-        registration_token_emitted=$false; credentials_emitted=$false; pilot_operational_pass=$false
+        registration_token_persisted=$false; credentials_emitted=$false; pilot_operational_pass=$false
     } | ConvertTo-Json -Compress
 } finally {
     $registrationToken = $null
