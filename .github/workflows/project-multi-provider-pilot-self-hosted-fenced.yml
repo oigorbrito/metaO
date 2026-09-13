@@ -34,10 +34,12 @@ jobs:
     runs-on: [self-hosted, linux, x64, metao-project-pilot]
     timeout-minutes: 5
     steps:
-      - name: Require exact authorized head before secrets
+      - name: Require exact authorized head and provider targets before secrets
         shell: bash
         env:
           METAO_EXPECTED_HEAD: ${{ inputs.expected_head }}
+          METAO_OPENAI_MODEL_INPUT: ${{ inputs.openai_model }}
+          METAO_GEMINI_TARGET_INPUT: ${{ inputs.gemini_target }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -49,7 +51,11 @@ jobs:
               raise SystemExit('expected_head must be an exact 40-character lowercase/uppercase Git SHA')
           if expected != actual:
               raise SystemExit(f'exact-head fence mismatch: expected {expected}, executing {actual}')
-          print(f'exact-head fence PASS: {actual}')
+          if os.environ['METAO_OPENAI_MODEL_INPUT'] != 'gpt-5.6-luna':
+              raise SystemExit('OpenAI model is not approved for operational pilot evidence')
+          if os.environ['METAO_GEMINI_TARGET_INPUT'] != 'gemma-4-26b-a4b-it':
+              raise SystemExit('Gemini target is not approved for operational pilot evidence')
+          print(f'exact-head/provider-target fence PASS: {actual}')
           PY
 
   preflight:
@@ -214,6 +220,10 @@ jobs:
               assert re.fullmatch(r'[0-9a-f]{64}', evidence[key]), key
           assert re.fullmatch(r'[0-9a-f]{40}', evidence['runtime_authority_source_commit'])
           assert re.fullmatch(r'[0-9a-f]{40}', evidence['runtime_authority_uv_lock_blob_sha1'])
+          assert evidence['provider_targets_approved'] is True
+          assert evidence['operational_target_policy'] == 'ALLOWLISTED'
+          assert evidence['openai_model'] == 'gpt-5.6-luna'
+          assert evidence['gemini_target'] == 'gemma-4-26b-a4b-it'
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
       - name: Cleanup SSH verification files
