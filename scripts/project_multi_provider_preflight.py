@@ -11,13 +11,15 @@ from pathlib import Path
 
 
 _AUTHORIZATION = "I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT"
-_REQUIRED = (
-    "METAO_OPENAI_API_KEY",
-    "METAO_GEMINI_API_KEY",
+_REQUIRED_SSH = (
     "METAO_SSH_SMOKE_SOURCE_HOST",
     "METAO_SSH_SMOKE_DESTINATION_HOST",
     "METAO_SSH_SMOKE_SOURCE_USER",
     "METAO_SSH_SMOKE_DESTINATION_USER",
+)
+_PROVIDER_PRESENCE = (
+    "METAO_OPENAI_CREDENTIAL_PRESENT",
+    "METAO_GEMINI_CREDENTIAL_PRESENT",
 )
 _PORT_RE = re.compile(r"^[0-9]{1,5}$")
 
@@ -27,6 +29,12 @@ def _require(name: str) -> str:
     if not value.strip():
         raise RuntimeError(f"required pilot configuration missing: {name}")
     return value
+
+
+def _require_presence(name: str) -> None:
+    value = os.environ.get(name, "").strip()
+    if value != "1":
+        raise RuntimeError(f"required provider credential presence flag missing: {name}")
 
 
 def _port(name: str) -> str:
@@ -94,7 +102,9 @@ def _configured_file(name: str) -> Path | None:
 def main() -> int:
     if os.environ.get("METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION", "") != _AUTHORIZATION:
         raise RuntimeError("explicit multi-provider pilot authorization is required")
-    for name in _REQUIRED:
+    for name in _PROVIDER_PRESENCE:
+        _require_presence(name)
+    for name in _REQUIRED_SSH:
         _require(name)
 
     source_host = _require("METAO_SSH_SMOKE_SOURCE_HOST")
@@ -160,6 +170,7 @@ def main() -> int:
         "destination_remote_git_present": bool(destination["git"]),
         "destination_remote_python_present": bool(destination["python"]),
         "provider_credentials_present": True,
+        "provider_credential_values_received": False,
         "credentials_emitted": False,
         "hosts_emitted": False,
         "provider_calls_made": False,
