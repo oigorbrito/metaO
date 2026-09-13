@@ -1,0 +1,63 @@
+name: Project SSH Cross-Host Checkpoint Smoke
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-ssh-cross-host-checkpoint-smoke
+  cancel-in-progress: false
+
+jobs:
+  cross-host-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
+      METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
+      METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
+      METAO_SSH_SMOKE_DESTINATION_USER: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_USER }}
+      METAO_SSH_SMOKE_SOURCE_PORT: ${{ secrets.METAO_SSH_SMOKE_SOURCE_PORT }}
+      METAO_SSH_SMOKE_DESTINATION_PORT: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_PORT }}
+      METAO_SSH_SMOKE_KNOWN_HOSTS: ${{ secrets.METAO_SSH_SMOKE_KNOWN_HOSTS }}
+      METAO_SSH_SMOKE_IDENTITY: ${{ secrets.METAO_SSH_SMOKE_IDENTITY }}
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install project
+        run: python -m pip install -e .
+
+      - name: Require credential configuration
+        shell: bash
+        run: |
+          set -euo pipefail
+          required=(
+            METAO_SSH_SMOKE_SOURCE_HOST
+            METAO_SSH_SMOKE_DESTINATION_HOST
+            METAO_SSH_SMOKE_SOURCE_USER
+            METAO_SSH_SMOKE_DESTINATION_USER
+            METAO_SSH_SMOKE_KNOWN_HOSTS
+          )
+          for name in "${required[@]}"; do
+            if [[ -z "${!name:-}" ]]; then
+              echo "Required SSH smoke secret is not configured: ${name}" >&2
+              exit 2
+            fi
+          done
+          if [[ "${METAO_SSH_SMOKE_SOURCE_HOST}" == "${METAO_SSH_SMOKE_DESTINATION_HOST}" ]]; then
+            echo "Cross-host smoke requires distinct source and destination hosts" >&2
+            exit 2
+          fi
+
+      - name: Run credential-backed cross-host checkpoint smoke
+        run: >-
+          python -m unittest -v
+          tests.integration.test_issue_536_ssh_cross_host_checkpoint_smoke
