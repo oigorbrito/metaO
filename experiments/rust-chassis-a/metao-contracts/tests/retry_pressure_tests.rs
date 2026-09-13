@@ -80,7 +80,8 @@ fn retry_record(id:&str,state:ActiveRetryExecutionState)->ActiveRetryExecutionRe
     ActiveRetryExecutionRecord{
         retry_execution_id:id.into(),mission_id:MissionId::new("mission-retry-pressure").unwrap(),
         runtime_id:"runtime-a".into(),runtime_version:"1.0.0".into(),config_id:"config-a".into(),
-        retry_lineage_id:"lineage-a".into(),authority_generation:7,fencing_token:11,state,
+        retry_lineage_id:"lineage-a".into(),authority_generation:7,fencing_token:11,
+        current_authority_generation:7,current_fencing_token:11,state,
         evidence_ref:format!("retry-registry://{id}"),
     }
 }
