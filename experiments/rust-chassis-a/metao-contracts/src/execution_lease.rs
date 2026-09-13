@@ -150,6 +150,7 @@ pub struct AdmittedRuntimeHealthConstituent {
 pub enum RuntimeHealthConstituentError {
     NotSingleExecutionObservation,
     InvalidSingleExecutionCounters,
+    OriginOutcomeMismatch,
     Admission(RuntimeHealthFactAdmissionError),
     EmptyConstituentSet,
     RuntimeTupleMismatch,
@@ -175,6 +176,16 @@ pub fn admit_runtime_health_constituent(
         (0, 1, 1) => RuntimeHealthConstituentOutcome::RuntimeLocalTimeout,
         _ => return Err(RuntimeHealthConstituentError::InvalidSingleExecutionCounters),
     };
+    if let Some(origin) = failure_origin {
+        let outcome_matches = matches!(
+            (outcome, origin.original_outcome),
+            (RuntimeHealthConstituentOutcome::RuntimeLocalFailed, Some(crate::failure_causality::FactualExecutionOutcome::Failed))
+                | (RuntimeHealthConstituentOutcome::RuntimeLocalTimeout, Some(crate::failure_causality::FactualExecutionOutcome::Timeout))
+        );
+        if outcome != RuntimeHealthConstituentOutcome::Succeeded && !outcome_matches {
+            return Err(RuntimeHealthConstituentError::OriginOutcomeMismatch);
+        }
+    }
     let fact = admit_runtime_health_fact(claim, producer, result, observation, lease, authority, failure_origin)
         .map_err(RuntimeHealthConstituentError::Admission)?;
     Ok(AdmittedRuntimeHealthConstituent {
@@ -205,7 +216,7 @@ pub fn aggregate_runtime_health_constituents(
             return Err(RuntimeHealthConstituentError::RuntimeTupleMismatch);
         }
         if let Some(existing) = by_result.get(constituent.fact.result_id.as_str()) {
-            if **existing != *constituent {
+            if *existing != constituent {
                 return Err(RuntimeHealthConstituentError::DuplicateResultConflict);
             }
             continue;
@@ -230,7 +241,7 @@ pub fn aggregate_runtime_health_constituents(
         consecutive_failures = consecutive_failures.saturating_add(1);
     }
     let fresh_successes_since_unhealthy = if matches!(prior_state, Some(crate::runtime_health::RuntimeHealthState::Unhealthy | crate::runtime_health::RuntimeHealthState::Quarantined | crate::runtime_health::RuntimeHealthState::Recovering)) {
-        ordered.iter().rev().take_while(|item| item.outcome == RuntimeHealthConstituentOutcome::Succeeded).count() as u32
+        u32::try_from(ordered.iter().rev().take_while(|item| item.outcome == RuntimeHealthConstituentOutcome::Succeeded).count()).unwrap_or(u32::MAX)
     } else { 0 };
     Ok(crate::runtime_health::RuntimeHealthObservation {
         runtime_id: first.fact.runtime_id.clone(),
