@@ -34,7 +34,7 @@ class SshGitRepositoryEndpoint(GitRepositoryEndpoint):
     identity_file: str | None = None
 
     def __post_init__(self) -> None:
-        super().__post_init__()
+        GitRepositoryEndpoint.__post_init__(self)
         if not _HOST_RE.fullmatch(self.host):
             raise ValueError("SSH Git endpoint requires a canonical host name or address")
         if not _USER_RE.fullmatch(self.username):
@@ -44,8 +44,7 @@ class SshGitRepositoryEndpoint(GitRepositoryEndpoint):
         locator = PurePosixPath(self.repository_locator)
         if not locator.is_absolute() or "\x00" in self.repository_locator or "\n" in self.repository_locator:
             raise ValueError("SSH Git repository locator must be an absolute remote path")
-        known_hosts = Path(self.known_hosts_file).expanduser()
-        if not str(known_hosts).strip():
+        if not self.known_hosts_file or not self.known_hosts_file.strip():
             raise ValueError("SSH Git endpoint requires known_hosts_file")
         if self.identity_file is not None and not self.identity_file.strip():
             raise ValueError("SSH identity_file must be non-empty when configured")
@@ -249,10 +248,7 @@ class SshGitRepositoryTransport:
                 raise ValueError("destination SSH Git endpoint did not reach checkpoint")
         finally:
             if remote_temp is not None and _REMOTE_TMP_RE.fullmatch(remote_temp):
-                try:
-                    self.executor.run(destination_remote, ("rm", "-f", "--", remote_temp))
-                except ValueError:
-                    pass
+                self.executor.run(destination_remote, ("rm", "-f", "--", remote_temp))
 
 
 __all__ = [
