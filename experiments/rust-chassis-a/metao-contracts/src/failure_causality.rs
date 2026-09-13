@@ -159,6 +159,48 @@ pub fn bind_failure_origin_producer(
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FailureAttributionTarget {
+    Runtime,
+    Provider,
+    Network,
+    Capacity,
+    Policy,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FailureOriginProjection {
+    pub producer_id: String,
+    pub mission_id: MissionId,
+    pub execution_id: Option<ExecutionId>,
+    pub original_outcome: Option<FactualExecutionOutcome>,
+    pub origin: FailureOrigin,
+    pub attribution: FailureAttributionTarget,
+    pub evidence_ref: String,
+    pub factual: bool,
+}
+
+pub fn project_bound_failure_origin(bound: &BoundFailureOrigin) -> FailureOriginProjection {
+    let attribution = match bound.origin {
+        FailureOrigin::RuntimeLocal => FailureAttributionTarget::Runtime,
+        FailureOrigin::ProviderService => FailureAttributionTarget::Provider,
+        FailureOrigin::NetworkTransport => FailureAttributionTarget::Network,
+        FailureOrigin::Capacity => FailureAttributionTarget::Capacity,
+        FailureOrigin::Policy => FailureAttributionTarget::Policy,
+    };
+
+    FailureOriginProjection {
+        producer_id: bound.producer_id.clone(),
+        mission_id: bound.mission_id.clone(),
+        execution_id: bound.execution_id.clone(),
+        original_outcome: bound.original_outcome,
+        origin: bound.origin,
+        attribution,
+        evidence_ref: bound.evidence_ref.clone(),
+        factual: true,
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecoveryStatus {
     NotRequired,
     NotAttempted,
