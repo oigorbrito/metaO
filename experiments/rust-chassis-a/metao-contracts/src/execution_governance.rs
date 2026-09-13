@@ -269,6 +269,8 @@ fn approval_ticket_matches(
         && candidate.target == current.target
         && candidate.scope == current.scope
         && candidate.authority_epoch == current.authority_epoch
+        && candidate.not_before_epoch == current.not_before_epoch
+        && candidate.expires_at_epoch == current.expires_at_epoch
         && candidate.mission_id == context.mission_id
         && candidate.execution_id == context.execution_id
         && candidate.subject_state_id == context.subject_state_id
@@ -278,16 +280,16 @@ fn approval_ticket_matches(
         && candidate.scope == context.scope
         && candidate
             .not_before_epoch
-            .is_none_or(|not_before| now_epoch >= not_before)
+            .map_or(true, |not_before| now_epoch >= not_before)
         && current
             .not_before_epoch
-            .is_none_or(|not_before| now_epoch >= not_before)
+            .map_or(true, |not_before| now_epoch >= not_before)
         && candidate
             .expires_at_epoch
-            .is_none_or(|expires| now_epoch <= expires)
+            .map_or(true, |expires| now_epoch <= expires)
         && current
             .expires_at_epoch
-            .is_none_or(|expires| now_epoch <= expires)
+            .map_or(true, |expires| now_epoch <= expires)
 }
 
 pub fn project_retry_governance(
