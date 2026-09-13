@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+import tempfile
 import unittest
 
 from metao.adapters.crewai import CrewAIOrchestratorAdapter
@@ -11,6 +13,7 @@ from metao.failure_origin import (
     FactualFailureOutcome,
 )
 from metao.runtime_health import RuntimeHealthState
+from metao.sqlite_runtime_health import SQLiteRuntimeHealthStore
 
 
 class _FailingGraph:
@@ -147,6 +150,39 @@ class Issue483FailureOriginHealthGateTests(unittest.TestCase):
         self.assertEqual(result.status, ExecutionStatus.FAILED)
         self.assertEqual(adapter.runtime_health_facts().attempts, 0)
         self.assertIsNone(adapter.failure_origin_evidence("bound"))
+
+    def test_durable_external_origin_survives_restart_and_blocks_reclassification(self):
+        with tempfile.TemporaryDirectory() as temp:
+            path = Path(temp) / "health.sqlite3"
+            first_store = SQLiteRuntimeHealthStore(path)
+            first = LangGraphOrchestratorAdapter(
+                _FailingGraph(),
+                orchestrator_id="runtime-a",
+                version="1",
+                config_id="cfg-a",
+                health_store=first_store,
+                failure_origin_authority=_StaticOriginAuthority(FailureOrigin.PROVIDER_SERVICE),
+            )
+            self.assertEqual(first.execute(_request("same-execution")).status, ExecutionStatus.FAILED)
+            history = first_store.history(runtime_id="runtime-a", runtime_version="1", config_id="cfg-a")
+            self.assertEqual(len(history), 1)
+            self.assertEqual(history[0].failure_origin, FailureOrigin.PROVIDER_SERVICE)
+            self.assertEqual(first.runtime_health_facts().attempts, 0)
+
+            reopened_store = SQLiteRuntimeHealthStore(path)
+            reopened = LangGraphOrchestratorAdapter(
+                _FailingGraph(),
+                orchestrator_id="runtime-a",
+                version="1",
+                config_id="cfg-a",
+                health_store=reopened_store,
+                failure_origin_authority=_StaticOriginAuthority(FailureOrigin.RUNTIME_LOCAL),
+            )
+            self.assertEqual(reopened.execute(_request("same-execution")).status, ExecutionStatus.FAILED)
+            replay = reopened_store.history(runtime_id="runtime-a", runtime_version="1", config_id="cfg-a")
+            self.assertEqual(len(replay), 1)
+            self.assertEqual(replay[0].failure_origin, FailureOrigin.PROVIDER_SERVICE)
+            self.assertEqual(reopened.runtime_health_facts().attempts, 0)
 
 
 if __name__ == "__main__":
