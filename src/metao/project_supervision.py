@@ -429,7 +429,10 @@ def supervise_project(
         ):
             return blocked(f"work unit did not complete: {unit.work_unit_id}")
         executed.add(unit.work_unit_id)
+        previous_repository_id = checkpoint.repository_id
         checkpoint = repository.capture(objective, unit, execution)
+        if checkpoint.repository_id != previous_repository_id:
+            return blocked("captured checkpoint changed repository identity")
         if (
             checkpoint.state_id != execution.repository_state_id
             or checkpoint.artifact_ref != execution.artifact_ref
@@ -528,6 +531,8 @@ def supervise_project(
             or corrective.corrects_work_unit_id != unit.work_unit_id
         ):
             return blocked("planner returned invalid corrective work")
+        if unit.work_unit_id not in corrective.dependencies:
+            return blocked("corrective work does not depend on corrected work unit")
         if corrective.work_unit_id in {item.work_unit_id for item in units}:
             return blocked("planner returned duplicate corrective work id")
         units.append(corrective)
