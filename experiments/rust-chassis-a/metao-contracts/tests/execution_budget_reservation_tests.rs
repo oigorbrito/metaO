@@ -30,3 +30,15 @@ fn reservation_binding_mismatch_cannot_settle_other_execution(){let a=ExecutionA
 
 #[test]
 fn active_reservation_blocks_snapshot_oversubscription(){let a=ExecutionAccountingAuthority::new(budget()).unwrap();a.reserve(1,reservation("r1","e1")).unwrap();let s=a.snapshot();assert_eq!(s.reserved.money,1.0);assert_eq!(s.reserved.tokens,100);assert_eq!(s.reserved.attempts,1);assert_eq!(a.reserve(s.version,reservation("r2","e2")),Err(ExecutionAccountingError::CapacityExceeded));}
+
+#[test]
+fn active_reservation_survives_reopen_and_still_blocks_capacity(){let a=ExecutionAccountingAuthority::new(budget()).unwrap();a.reserve(1,reservation("r1","e1")).unwrap();let encoded=serde_json::to_string(&a.export_state()).unwrap();let reopened=ExecutionAccountingAuthority::reopen(serde_json::from_str(&encoded).unwrap()).unwrap();let s=reopened.snapshot();assert_eq!(s.version,2);assert_eq!(s.active_reservation_count,1);assert_eq!(s.reserved.attempts,1);assert_eq!(reopened.reserve(s.version,reservation("r2","e2")),Err(ExecutionAccountingError::CapacityExceeded));assert_eq!(reopened.reserve(1,reservation("r1","e1")),Ok(ReservationDecision::Idempotent));}
+
+#[test]
+fn released_reservation_survives_reopen_without_consuming_capacity(){let a=ExecutionAccountingAuthority::new(budget()).unwrap();a.reserve(1,reservation("r1","e1")).unwrap();a.release(2,"r1").unwrap();let reopened=ExecutionAccountingAuthority::reopen(a.export_state()).unwrap();let s=reopened.snapshot();assert_eq!(s.version,3);assert_eq!(s.active_reservation_count,0);assert_eq!(s.reserved.attempts,0);assert_eq!(reopened.release(2,"r1"),Ok(ReservationDecision::AlreadyReleased));assert_eq!(reopened.reserve(s.version,reservation("r2","e2")),Ok(ReservationDecision::Reserved));}
+
+#[test]
+fn settled_reservation_and_charge_survive_reopen_exactly_once(){let a=ExecutionAccountingAuthority::new(budget()).unwrap();a.reserve(1,reservation("r1","e1")).unwrap();a.settle_reserved(2,"r1",op("acct1","e1")).unwrap();let reopened=ExecutionAccountingAuthority::reopen(a.export_state()).unwrap();let s=reopened.snapshot();assert_eq!(s.version,3);assert_eq!(s.active_reservation_count,0);assert_eq!(s.budget.attempts_used,1);assert_eq!(s.settlement_count,1);assert_eq!(reopened.settle_reserved(2,"r1",op("acct1","e1")),Ok(ExecutionSettlementDecision::Idempotent));assert_eq!(reopened.snapshot().budget.attempts_used,1);}
+
+#[test]
+fn corrupted_reservation_persisted_state_fails_closed(){let a=ExecutionAccountingAuthority::new(budget()).unwrap();a.reserve(1,reservation("r1","e1")).unwrap();let mut state=a.export_state();state.version=9;assert!(matches!(ExecutionAccountingAuthority::reopen(state),Err(ExecutionAccountingError::InvalidPersistedState)));let mut state=a.export_state();let r=state.reservations.remove("r1").unwrap();state.reservations.insert("wrong".into(),r);assert!(matches!(ExecutionAccountingAuthority::reopen(state),Err(ExecutionAccountingError::InvalidPersistedState)));}

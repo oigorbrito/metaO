@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::sync::Mutex;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -83,14 +83,16 @@ pub fn bind_retry_governance(facts:&crate::failure_causality::FailureCausalityFa
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ExecutionAccountingOperation { pub operation_id:String,pub mission_id:crate::MissionId,pub execution_id:crate::ExecutionId,pub execution_lineage_id:String,pub observed:ExecutionObservedUsage }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)] pub enum ExecutionSettlementDecision { Applied, Idempotent }
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)] pub enum ExecutionAccountingError { InvalidOperation, InvalidObservedUsage, Conflict, StaleVersion, ArithmeticOverflow, CapacityExceeded, ReservationNotFound, ReservationInactive, ReservationBindingMismatch }
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)] pub enum ExecutionAccountingError { InvalidOperation, InvalidObservedUsage, InvalidPersistedState, Conflict, StaleVersion, ArithmeticOverflow, CapacityExceeded, ReservationNotFound, ReservationInactive, ReservationBindingMismatch }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)] pub enum ReservationStatus { Active, Released, Settled }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ExecutionBudgetReservation { pub reservation_id:String,pub mission_id:crate::MissionId,pub execution_id:crate::ExecutionId,pub action:String,pub requested:ExecutionUsage,pub status:ReservationStatus }
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)] pub enum ReservationDecision { Reserved, Idempotent, Released, AlreadyReleased }
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct ExecutionAccountingSnapshot { pub version:u64,pub budget:ExecutionBudget,pub settlement_count:usize,pub active_reservation_count:usize,pub reserved:ExecutionUsage }
-struct ExecutionAccountingState { version:u64,budget:ExecutionBudget,settlements:BTreeMap<String,ExecutionAccountingOperation>,reservations:BTreeMap<String,ExecutionBudgetReservation> }
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+pub struct ExecutionAccountingPersistedState { pub version:u64,pub budget:ExecutionBudget,pub settlements:BTreeMap<String,ExecutionAccountingOperation>,pub settlement_order:Vec<String>,pub reservations:BTreeMap<String,ExecutionBudgetReservation> }
+struct ExecutionAccountingState { version:u64,budget:ExecutionBudget,settlements:BTreeMap<String,ExecutionAccountingOperation>,settlement_order:Vec<String>,reservations:BTreeMap<String,ExecutionBudgetReservation> }
 pub struct ExecutionAccountingAuthority { state:Mutex<ExecutionAccountingState> }
 
 fn zero_usage()->ExecutionUsage{ExecutionUsage{money:0.0,tokens:0,wall_time_s:0.0,attempts:0}}
@@ -113,11 +115,15 @@ fn capacity_with_reserved(s:&ExecutionAccountingState,request:&ExecutionUsage)->
     let attempts=s.budget.attempts_used.checked_add(combined.attempts).ok_or(ExecutionAccountingError::ArithmeticOverflow)?;
     Ok(money.is_finite()&&wall.is_finite()&&money<=s.budget.money_limit&&tokens<=s.budget.token_limit&&wall<=s.budget.wall_time_limit_s&&attempts<=s.budget.attempt_limit)
 }
+fn validate_operation(op:&ExecutionAccountingOperation)->Result<(),ExecutionAccountingError>{if op.operation_id.trim().is_empty()||op.execution_lineage_id.trim().is_empty(){return Err(ExecutionAccountingError::InvalidOperation)}op.observed.validate().map_err(|_|ExecutionAccountingError::InvalidObservedUsage)}
+fn validate_reservation(r:&ExecutionBudgetReservation)->Result<(),ExecutionAccountingError>{if r.reservation_id.trim().is_empty()||r.action.trim().is_empty(){return Err(ExecutionAccountingError::InvalidOperation)}r.requested.validate().map_err(|_|ExecutionAccountingError::InvalidObservedUsage)}
 impl ExecutionAccountingAuthority {
-    pub fn new(budget:ExecutionBudget)->Result<Self,ExecutionAccountingError>{ budget.validate().map_err(|_|ExecutionAccountingError::InvalidObservedUsage)?; Ok(Self{state:Mutex::new(ExecutionAccountingState{version:1,budget,settlements:BTreeMap::new(),reservations:BTreeMap::new()})}) }
+    pub fn new(budget:ExecutionBudget)->Result<Self,ExecutionAccountingError>{ budget.validate().map_err(|_|ExecutionAccountingError::InvalidObservedUsage)?; Ok(Self{state:Mutex::new(ExecutionAccountingState{version:1,budget,settlements:BTreeMap::new(),settlement_order:Vec::new(),reservations:BTreeMap::new()})}) }
+    pub fn reopen(persisted:ExecutionAccountingPersistedState)->Result<Self,ExecutionAccountingError>{validate_persisted_state(&persisted)?;Ok(Self{state:Mutex::new(ExecutionAccountingState{version:persisted.version,budget:persisted.budget,settlements:persisted.settlements,settlement_order:persisted.settlement_order,reservations:persisted.reservations})})}
+    pub fn export_state(&self)->ExecutionAccountingPersistedState{let s=self.state.lock().expect("execution accounting mutex poisoned");ExecutionAccountingPersistedState{version:s.version,budget:s.budget.clone(),settlements:s.settlements.clone(),settlement_order:s.settlement_order.clone(),reservations:s.reservations.clone()}}
     pub fn snapshot(&self)->ExecutionAccountingSnapshot{ let s=self.state.lock().expect("execution accounting mutex poisoned"); let reserved=active_reserved(&s).unwrap_or_else(|_|zero_usage()); ExecutionAccountingSnapshot{version:s.version,budget:s.budget.clone(),settlement_count:s.settlements.len(),active_reservation_count:s.reservations.values().filter(|r|r.status==ReservationStatus::Active).count(),reserved} }
     pub fn reserve(&self,expected_version:u64,mut reservation:ExecutionBudgetReservation)->Result<ReservationDecision,ExecutionAccountingError>{
-        if reservation.reservation_id.trim().is_empty()||reservation.action.trim().is_empty(){return Err(ExecutionAccountingError::InvalidOperation)} reservation.requested.validate().map_err(|_|ExecutionAccountingError::InvalidObservedUsage)?; reservation.status=ReservationStatus::Active;
+        validate_reservation(&reservation)?; reservation.status=ReservationStatus::Active;
         let mut s=self.state.lock().expect("execution accounting mutex poisoned");
         if let Some(existing)=s.reservations.get(&reservation.reservation_id){let mut normalized=existing.clone();normalized.status=ReservationStatus::Active;return if normalized==reservation&&existing.status==ReservationStatus::Active{Ok(ReservationDecision::Idempotent)}else{Err(ExecutionAccountingError::Conflict)};}
         if expected_version!=s.version{return Err(ExecutionAccountingError::StaleVersion)}
@@ -135,7 +141,7 @@ impl ExecutionAccountingAuthority {
     pub fn settle(&self,expected_version:u64,op:ExecutionAccountingOperation)->Result<ExecutionSettlementDecision,ExecutionAccountingError>{ self.settle_inner(expected_version,None,op) }
     pub fn settle_reserved(&self,expected_version:u64,reservation_id:&str,op:ExecutionAccountingOperation)->Result<ExecutionSettlementDecision,ExecutionAccountingError>{ self.settle_inner(expected_version,Some(reservation_id),op) }
     fn settle_inner(&self,expected_version:u64,reservation_id:Option<&str>,op:ExecutionAccountingOperation)->Result<ExecutionSettlementDecision,ExecutionAccountingError>{
-        if op.operation_id.trim().is_empty()||op.execution_lineage_id.trim().is_empty(){return Err(ExecutionAccountingError::InvalidOperation)} op.observed.validate().map_err(|_|ExecutionAccountingError::InvalidObservedUsage)?;
+        validate_operation(&op)?;
         let mut s=self.state.lock().expect("execution accounting mutex poisoned");
         if let Some(existing)=s.settlements.get(&op.operation_id){return if existing==&op{Ok(ExecutionSettlementDecision::Idempotent)}else{Err(ExecutionAccountingError::Conflict)};}
         if expected_version!=s.version{return Err(ExecutionAccountingError::StaleVersion)}
@@ -145,6 +151,19 @@ impl ExecutionAccountingAuthority {
         let tokens=s.budget.tokens_used.checked_add(op.observed.usage.tokens).ok_or(ExecutionAccountingError::ArithmeticOverflow)?; let attempts=s.budget.attempts_used.checked_add(op.observed.usage.attempts).ok_or(ExecutionAccountingError::ArithmeticOverflow)?;
         s.budget.money_used=money;s.budget.tokens_used=tokens;s.budget.wall_time_used_s=wall;s.budget.attempts_used=attempts;
         if let Some(id)=reservation_id{s.reservations.get_mut(id).expect("reservation exists").status=ReservationStatus::Settled;}
-        s.settlements.insert(op.operation_id.clone(),op);s.version=s.version.checked_add(1).ok_or(ExecutionAccountingError::ArithmeticOverflow)?;Ok(ExecutionSettlementDecision::Applied)
+        s.settlement_order.push(op.operation_id.clone());s.settlements.insert(op.operation_id.clone(),op);s.version=s.version.checked_add(1).ok_or(ExecutionAccountingError::ArithmeticOverflow)?;Ok(ExecutionSettlementDecision::Applied)
     }
+}
+fn validate_persisted_state(p:&ExecutionAccountingPersistedState)->Result<(),ExecutionAccountingError>{
+    if p.version==0||!p.budget.money_limit.is_finite()||!p.budget.wall_time_limit_s.is_finite()||!p.budget.money_used.is_finite()||!p.budget.wall_time_used_s.is_finite()||p.budget.money_limit<0.0||p.budget.wall_time_limit_s<0.0||p.budget.money_used<0.0||p.budget.wall_time_used_s<0.0{return Err(ExecutionAccountingError::InvalidPersistedState)}
+    if p.settlement_order.len()!=p.settlements.len(){return Err(ExecutionAccountingError::InvalidPersistedState)}
+    let released=p.reservations.values().filter(|r|r.status==ReservationStatus::Released).count() as u64;
+    let expected_version=1u64.checked_add(p.settlements.len() as u64).and_then(|v|v.checked_add(p.reservations.len() as u64)).and_then(|v|v.checked_add(released)).ok_or(ExecutionAccountingError::InvalidPersistedState)?;
+    if p.version!=expected_version{return Err(ExecutionAccountingError::InvalidPersistedState)}
+    let mut money=0.0;let mut tokens=0u64;let mut wall=0.0;let mut attempts=0u64;let mut seen=BTreeSet::new();
+    for id in &p.settlement_order{if !seen.insert(id.clone()){return Err(ExecutionAccountingError::InvalidPersistedState)}let op=p.settlements.get(id).ok_or(ExecutionAccountingError::InvalidPersistedState)?;if &op.operation_id!=id{return Err(ExecutionAccountingError::InvalidPersistedState)}validate_operation(op).map_err(|_|ExecutionAccountingError::InvalidPersistedState)?;money+=op.observed.usage.money;wall+=op.observed.usage.wall_time_s;if !money.is_finite()||!wall.is_finite(){return Err(ExecutionAccountingError::InvalidPersistedState)}tokens=tokens.checked_add(op.observed.usage.tokens).ok_or(ExecutionAccountingError::InvalidPersistedState)?;attempts=attempts.checked_add(op.observed.usage.attempts).ok_or(ExecutionAccountingError::InvalidPersistedState)?;}
+    if p.budget.money_used!=money||p.budget.tokens_used!=tokens||p.budget.wall_time_used_s!=wall||p.budget.attempts_used!=attempts{return Err(ExecutionAccountingError::InvalidPersistedState)}
+    for (id,r) in &p.reservations{if &r.reservation_id!=id{return Err(ExecutionAccountingError::InvalidPersistedState)}validate_reservation(r).map_err(|_|ExecutionAccountingError::InvalidPersistedState)?;if r.status==ReservationStatus::Settled&&!p.settlements.values().any(|op|op.mission_id==r.mission_id&&op.execution_id==r.execution_id){return Err(ExecutionAccountingError::InvalidPersistedState)}}
+    let state=ExecutionAccountingState{version:p.version,budget:p.budget.clone(),settlements:p.settlements.clone(),settlement_order:p.settlement_order.clone(),reservations:p.reservations.clone()};active_reserved(&state).map_err(|_|ExecutionAccountingError::InvalidPersistedState)?;
+    Ok(())
 }
