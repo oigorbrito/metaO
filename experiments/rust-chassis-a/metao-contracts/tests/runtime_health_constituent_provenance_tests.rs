@@ -45,12 +45,14 @@ fn claim(execution: &str) -> ExecutionRuntimeBindingClaim {
 }
 
 fn observation(execution: &str, seq: u64, success: bool, timeout: bool) -> RuntimeHealthObservation {
+    let successes = if success { 1 } else { 0 };
+    let failures = if success { 0 } else { 1 };
+    let timeouts = if timeout { 1 } else { 0 };
     RuntimeHealthObservation {
         runtime_id: "runtime-a".into(), runtime_version: "1".into(), config_id: "cfg-a".into(),
         evidence_basis: RuntimeHealthEvidenceBasis::AdapterVerified,
         evidence_ref: format!("health://{execution}"), window_start_sequence: seq, window_end_sequence: seq,
-        attempts: 1, successes: u32::from(success), failures: u32::from(!success),
-        consecutive_failures: u32::from(!success), timeouts: u32::from(timeout), transport_failures: 0,
+        attempts: 1, successes, failures, consecutive_failures: failures, timeouts, transport_failures: 0,
         active_retries: 0, fresh_successes_since_unhealthy: 0, prior_state: None,
         self_reported_healthy: None,
     }
@@ -73,14 +75,18 @@ fn authority() -> RuntimeHealthAdmissionAuthority {
     }
 }
 
-fn origin(execution: &str, origin: FailureOrigin, kind: FailureOriginProducerKind) -> BoundFailureOrigin {
+fn origin_with_outcome(execution: &str, origin: FailureOrigin, kind: FailureOriginProducerKind, outcome: FactualExecutionOutcome) -> BoundFailureOrigin {
     BoundFailureOrigin {
         producer_id: format!("origin-{execution}"), mission_id: MissionId::new("mission-501").unwrap(),
         execution_id: Some(ExecutionId::new(execution).unwrap()), producer_kind: kind,
-        original_outcome: Some(FactualExecutionOutcome::Failed), origin,
+        original_outcome: Some(outcome), origin,
         basis: FailureClassificationBasis::AuthoritativeObservation,
         evidence_ref: format!("origin://{execution}"),
     }
+}
+
+fn origin(execution: &str, origin: FailureOrigin, kind: FailureOriginProducerKind) -> BoundFailureOrigin {
+    origin_with_outcome(execution, origin, kind, FactualExecutionOutcome::Failed)
 }
 
 fn admitted(execution: &str, seq: u64, outcome: RuntimeHealthConstituentOutcome) -> AdmittedRuntimeHealthConstituent {
@@ -123,9 +129,19 @@ fn provider_failure_is_rejected_before_runtime_local_aggregation() {
 #[test]
 fn network_timeout_is_rejected_before_runtime_local_aggregation() {
     let obs = observation("network", 2, false, true);
-    let external = origin("network", FailureOrigin::NetworkTransport, FailureOriginProducerKind::NetworkAdapter);
+    let external = origin_with_outcome("network", FailureOrigin::NetworkTransport, FailureOriginProducerKind::NetworkAdapter, FactualExecutionOutcome::Timeout);
     let err = admit_runtime_health_constituent(&claim("network"), &producer("network"), &result("network"), &obs, &lease("network"), &authority(), Some(&external)).unwrap_err();
     assert_eq!(err, RuntimeHealthConstituentError::Admission(RuntimeHealthFactAdmissionError::ExternalFailureOrigin));
+}
+
+#[test]
+fn timeout_and_failure_origin_outcomes_cannot_be_swapped() {
+    let timeout_obs = observation("timeout", 1, false, true);
+    let failed_origin = origin("timeout", FailureOrigin::RuntimeLocal, FailureOriginProducerKind::RuntimeExecution);
+    assert_eq!(
+        admit_runtime_health_constituent(&claim("timeout"), &producer("timeout"), &result("timeout"), &timeout_obs, &lease("timeout"), &authority(), Some(&failed_origin)),
+        Err(RuntimeHealthConstituentError::OriginOutcomeMismatch)
+    );
 }
 
 #[test]
