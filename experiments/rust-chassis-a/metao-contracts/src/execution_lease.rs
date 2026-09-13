@@ -135,3 +135,120 @@ pub fn admit_runtime_health_fact(
         failure_origin_producer_id,
     })
 }
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeHealthConstituentOutcome { Succeeded, RuntimeLocalFailed, RuntimeLocalTimeout }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AdmittedRuntimeHealthConstituent {
+    pub fact: AdmittedRuntimeHealthFact,
+    pub sequence: u64,
+    pub outcome: RuntimeHealthConstituentOutcome,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeHealthConstituentError {
+    NotSingleExecutionObservation,
+    InvalidSingleExecutionCounters,
+    Admission(RuntimeHealthFactAdmissionError),
+    EmptyConstituentSet,
+    RuntimeTupleMismatch,
+    DuplicateResultConflict,
+    SequenceConflict,
+}
+
+pub fn admit_runtime_health_constituent(
+    claim: &ExecutionRuntimeBindingClaim,
+    producer: &ExecutionRuntimeBindingProducer,
+    result: &ExecutionResultLineageProducer,
+    observation: &crate::runtime_health::RuntimeHealthObservation,
+    lease: &ExecutionLease,
+    authority: &RuntimeHealthAdmissionAuthority,
+    failure_origin: Option<&crate::failure_causality::BoundFailureOrigin>,
+) -> Result<AdmittedRuntimeHealthConstituent, RuntimeHealthConstituentError> {
+    if observation.attempts != 1 || observation.window_start_sequence != observation.window_end_sequence {
+        return Err(RuntimeHealthConstituentError::NotSingleExecutionObservation);
+    }
+    let outcome = match (observation.successes, observation.failures, observation.timeouts) {
+        (1, 0, 0) => RuntimeHealthConstituentOutcome::Succeeded,
+        (0, 1, 0) => RuntimeHealthConstituentOutcome::RuntimeLocalFailed,
+        (0, 1, 1) => RuntimeHealthConstituentOutcome::RuntimeLocalTimeout,
+        _ => return Err(RuntimeHealthConstituentError::InvalidSingleExecutionCounters),
+    };
+    let fact = admit_runtime_health_fact(claim, producer, result, observation, lease, authority, failure_origin)
+        .map_err(RuntimeHealthConstituentError::Admission)?;
+    Ok(AdmittedRuntimeHealthConstituent {
+        fact,
+        sequence: observation.window_start_sequence,
+        outcome,
+    })
+}
+
+pub fn aggregate_runtime_health_constituents(
+    constituents: &[AdmittedRuntimeHealthConstituent],
+    active_retries: u32,
+    prior_state: Option<crate::runtime_health::RuntimeHealthState>,
+    self_reported_healthy: Option<bool>,
+) -> Result<crate::runtime_health::RuntimeHealthObservation, RuntimeHealthConstituentError> {
+    use std::collections::BTreeMap;
+    if constituents.is_empty() {
+        return Err(RuntimeHealthConstituentError::EmptyConstituentSet);
+    }
+    let first = &constituents[0];
+    let mut by_result: BTreeMap<&str, &AdmittedRuntimeHealthConstituent> = BTreeMap::new();
+    let mut by_sequence: BTreeMap<u64, &str> = BTreeMap::new();
+    for constituent in constituents {
+        if constituent.fact.runtime_id != first.fact.runtime_id
+            || constituent.fact.runtime_version != first.fact.runtime_version
+            || constituent.fact.config_id != first.fact.config_id
+        {
+            return Err(RuntimeHealthConstituentError::RuntimeTupleMismatch);
+        }
+        if let Some(existing) = by_result.get(constituent.fact.result_id.as_str()) {
+            if **existing != *constituent {
+                return Err(RuntimeHealthConstituentError::DuplicateResultConflict);
+            }
+            continue;
+        }
+        if let Some(existing_result) = by_sequence.get(&constituent.sequence) {
+            if *existing_result != constituent.fact.result_id.as_str() {
+                return Err(RuntimeHealthConstituentError::SequenceConflict);
+            }
+        }
+        by_sequence.insert(constituent.sequence, constituent.fact.result_id.as_str());
+        by_result.insert(constituent.fact.result_id.as_str(), constituent);
+    }
+    let mut ordered: Vec<&AdmittedRuntimeHealthConstituent> = by_result.values().copied().collect();
+    ordered.sort_by_key(|item| item.sequence);
+    let attempts = u32::try_from(ordered.len()).unwrap_or(u32::MAX);
+    let successes = u32::try_from(ordered.iter().filter(|item| item.outcome == RuntimeHealthConstituentOutcome::Succeeded).count()).unwrap_or(u32::MAX);
+    let failures = attempts.saturating_sub(successes);
+    let timeouts = u32::try_from(ordered.iter().filter(|item| item.outcome == RuntimeHealthConstituentOutcome::RuntimeLocalTimeout).count()).unwrap_or(u32::MAX);
+    let mut consecutive_failures = 0u32;
+    for item in ordered.iter().rev() {
+        if item.outcome == RuntimeHealthConstituentOutcome::Succeeded { break; }
+        consecutive_failures = consecutive_failures.saturating_add(1);
+    }
+    let fresh_successes_since_unhealthy = if matches!(prior_state, Some(crate::runtime_health::RuntimeHealthState::Unhealthy | crate::runtime_health::RuntimeHealthState::Quarantined | crate::runtime_health::RuntimeHealthState::Recovering)) {
+        ordered.iter().rev().take_while(|item| item.outcome == RuntimeHealthConstituentOutcome::Succeeded).count() as u32
+    } else { 0 };
+    Ok(crate::runtime_health::RuntimeHealthObservation {
+        runtime_id: first.fact.runtime_id.clone(),
+        runtime_version: first.fact.runtime_version.clone(),
+        config_id: first.fact.config_id.clone(),
+        evidence_basis: crate::runtime_health::RuntimeHealthEvidenceBasis::IndependentObservation,
+        evidence_ref: format!("admitted-runtime-health-window:{}:{}", first.fact.runtime_id, by_result.keys().copied().collect::<Vec<_>>().join(",")),
+        window_start_sequence: ordered.first().map(|item| item.sequence).unwrap_or(0),
+        window_end_sequence: ordered.last().map(|item| item.sequence).unwrap_or(0),
+        attempts,
+        successes,
+        failures,
+        consecutive_failures,
+        timeouts,
+        transport_failures: 0,
+        active_retries,
+        fresh_successes_since_unhealthy,
+        prior_state,
+        self_reported_healthy,
+    })
+}
