@@ -1,3 +1,4 @@
+use crate::{ExecutionId, MissionId};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -65,6 +66,77 @@ pub struct RetryEligibilityProjection {
     pub eligibility: RetryEligibility,
     pub next_attempt: Option<u64>,
     pub reason: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExecutionRetryAuthorityState {
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub retry_lineage_id: String,
+    pub current_attempt: u64,
+    pub max_attempts: u64,
+    pub state_version: u64,
+    pub evidence_ref: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExecutionRetryAttemptClaim {
+    pub mission_id: MissionId,
+    pub execution_id: ExecutionId,
+    pub retry_lineage_id: String,
+    pub current_attempt: u64,
+    pub max_attempts: u64,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum ExecutionRetryAuthorityError {
+    InvalidAuthoritativeState,
+    BindingMismatch,
+    AttemptStateMismatch,
+}
+
+impl ExecutionRetryAuthorityState {
+    pub fn validate(&self) -> Result<(), ExecutionRetryAuthorityError> {
+        if self.retry_lineage_id.trim().is_empty()
+            || self.evidence_ref.trim().is_empty()
+            || self.current_attempt == 0
+            || self.max_attempts == 0
+            || self.current_attempt > self.max_attempts
+            || self.state_version == 0
+        {
+            return Err(ExecutionRetryAuthorityError::InvalidAuthoritativeState);
+        }
+        Ok(())
+    }
+}
+
+pub fn bind_execution_retry_authority(
+    facts: &FailureCausalityFacts,
+    claim: &ExecutionRetryAttemptClaim,
+    authoritative: &ExecutionRetryAuthorityState,
+) -> Result<FailureCausalityFacts, ExecutionRetryAuthorityError> {
+    authoritative.validate()?;
+
+    if claim.mission_id != authoritative.mission_id
+        || claim.execution_id != authoritative.execution_id
+        || claim.retry_lineage_id.trim().is_empty()
+        || claim.retry_lineage_id != authoritative.retry_lineage_id
+    {
+        return Err(ExecutionRetryAuthorityError::BindingMismatch);
+    }
+
+    if claim.current_attempt != authoritative.current_attempt
+        || claim.max_attempts != authoritative.max_attempts
+        || facts.current_attempt != authoritative.current_attempt
+        || facts.max_attempts != authoritative.max_attempts
+    {
+        return Err(ExecutionRetryAuthorityError::AttemptStateMismatch);
+    }
+
+    let mut bound = facts.clone();
+    bound.current_attempt = authoritative.current_attempt;
+    bound.max_attempts = authoritative.max_attempts;
+    Ok(bound)
 }
 
 fn has_factual_transient_evidence(facts: &FailureCausalityFacts) -> bool {
