@@ -1,5 +1,9 @@
 use serde::{Deserialize, Serialize};
 
+use crate::failure_causality::{
+    evaluate_retry_eligibility, FailureCausalityFacts, RetryEligibility,
+};
+
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RuntimeHealthError {
     BlankRuntimeIdentity,
@@ -83,13 +87,6 @@ impl RuntimeHealthObservation {
         if self.config_id.trim().is_empty() {
             return Err(RuntimeHealthError::BlankConfigIdentity);
         }
-        if !matches!(
-            self.evidence_basis,
-            RuntimeHealthEvidenceBasis::IndependentObservation
-                | RuntimeHealthEvidenceBasis::AdapterVerified
-        ) {
-            return Err(RuntimeHealthError::InvalidEvidenceBasis);
-        }
         if self.evidence_ref.trim().is_empty() {
             return Err(RuntimeHealthError::BlankEvidenceRef);
         }
@@ -104,6 +101,19 @@ impl RuntimeHealthObservation {
         {
             return Err(RuntimeHealthError::InvalidCounters);
         }
+
+        if self.attempts == 0 {
+            if self.evidence_basis != RuntimeHealthEvidenceBasis::Unknown {
+                return Err(RuntimeHealthError::InvalidEvidenceBasis);
+            }
+        } else if !matches!(
+            self.evidence_basis,
+            RuntimeHealthEvidenceBasis::IndependentObservation
+                | RuntimeHealthEvidenceBasis::AdapterVerified
+        ) {
+            return Err(RuntimeHealthError::InvalidEvidenceBasis);
+        }
+
         Ok(())
     }
 }
@@ -220,5 +230,65 @@ pub fn derive_runtime_health(
         retry_pressure_exceeded,
         self_reported_healthy: observation.self_reported_healthy,
         reasons,
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum BoundedRetryEligibility {
+    Eligible,
+    Ineligible,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BoundedRetryProjection {
+    pub eligibility: BoundedRetryEligibility,
+    pub next_attempt: Option<u64>,
+    pub health_state: RuntimeHealthState,
+    pub retry_pressure_exceeded: bool,
+    pub reason: String,
+}
+
+pub fn evaluate_bounded_retry(
+    facts: &FailureCausalityFacts,
+    observation: &RuntimeHealthObservation,
+    policy: &RuntimeHealthPolicy,
+) -> Result<BoundedRetryProjection, RuntimeHealthError> {
+    let health = derive_runtime_health(observation, policy)?;
+    let causal = evaluate_retry_eligibility(facts);
+
+    let blocked = |reason: String| BoundedRetryProjection {
+        eligibility: BoundedRetryEligibility::Ineligible,
+        next_attempt: None,
+        health_state: health.state,
+        retry_pressure_exceeded: health.retry_pressure_exceeded,
+        reason,
+    };
+
+    if causal.eligibility == RetryEligibility::Ineligible {
+        return Ok(blocked(format!("retry causality gate blocked: {}", causal.reason)));
+    }
+
+    if health.retry_pressure_exceeded {
+        return Ok(blocked("runtime retry pressure limit is exceeded".to_string()));
+    }
+
+    Ok(match health.state {
+        RuntimeHealthState::Healthy | RuntimeHealthState::Degraded => BoundedRetryProjection {
+            eligibility: BoundedRetryEligibility::Eligible,
+            next_attempt: causal.next_attempt,
+            health_state: health.state,
+            retry_pressure_exceeded: false,
+            reason: "causal retry is eligible and factual runtime retry pressure is bounded".to_string(),
+        },
+        RuntimeHealthState::Recovering => blocked(
+            "recovering runtime is not eligible for ordinary retry; controlled recovery authority is required"
+                .to_string(),
+        ),
+        RuntimeHealthState::Unknown => blocked(
+            "unknown runtime health cannot be treated as a fresh healthy retry target".to_string(),
+        ),
+        RuntimeHealthState::Unhealthy | RuntimeHealthState::Quarantined => blocked(
+            "unhealthy or quarantined runtime is not eligible for ordinary retry".to_string(),
+        ),
     })
 }
