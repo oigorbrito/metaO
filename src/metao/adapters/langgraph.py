@@ -21,6 +21,13 @@ from metao.core import (
     HealthStatus,
     OrchestratorDescriptor,
 )
+from metao.failure_origin import (
+    BoundFailureOriginEvidence,
+    FailureOrigin,
+    FailureOriginAuthorityPort,
+    FailureOriginEvidenceLedger,
+    validate_failure_origin_binding,
+)
 from metao.runtime_health import (
     RuntimeHealthFacts,
     RuntimeHealthPolicy,
@@ -76,6 +83,7 @@ class LangGraphOrchestratorAdapter:
         config_id: str = "default",
         health_policy: RuntimeHealthPolicy | None = None,
         health_store: RuntimeHealthStorePort | None = None,
+        failure_origin_authority: FailureOriginAuthorityPort | None = None,
     ) -> None:
         self._graph = graph
         self._cancelled: set[str] = set()
@@ -88,6 +96,9 @@ class LangGraphOrchestratorAdapter:
             capabilities=frozenset({"workflow", "agent"}),
             metadata={"adapter": "langgraph"},
         )
+        self._config_id = config_id
+        self._failure_origin_authority = failure_origin_authority
+        self._failure_origins = FailureOriginEvidenceLedger()
         self._runtime_health = RuntimeHealthTracker(
             runtime_id=orchestrator_id,
             runtime_version=version,
@@ -122,6 +133,9 @@ class LangGraphOrchestratorAdapter:
                 self._health_persistence_error = exc
             return self._runtime_health.facts()
 
+    def failure_origin_evidence(self, execution_id: str) -> BoundFailureOriginEvidence | None:
+        return self._failure_origins.get(execution_id)
+
     def configure_runtime_health_store(self, store: RuntimeHealthStorePort) -> None:
         with self._health_lock:
             self._runtime_health.configure_store(store)
@@ -144,9 +158,28 @@ class LangGraphOrchestratorAdapter:
             except Exception as exc:
                 self._health_persistence_error = exc
 
+    def _resolve_failure_origin(
+        self,
+        request: ExecutionRequest,
+        error: Exception,
+    ) -> BoundFailureOriginEvidence | None:
+        authority = self._failure_origin_authority
+        if authority is None:
+            return None
+        evidence = authority.resolve_failure_origin(
+            request=request,
+            runtime_id=self.descriptor.orchestrator_id,
+            runtime_version=self.descriptor.version,
+            config_id=self._config_id,
+            error=error,
+        )
+        validate_failure_origin_binding(evidence, request=request)
+        return self._failure_origins.record(evidence)
+
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         if request.execution_id in self._cancelled:
             return ExecutionResult(request.execution_id, self.descriptor.orchestrator_id, ExecutionStatus.CANCELLED)
+        failure_origin: BoundFailureOriginEvidence | None = None
         try:
             raw = self._graph.invoke({"objective": request.mission.objective, **dict(request.context)})
             output = raw if isinstance(raw, dict) else {"result": raw}
@@ -163,7 +196,14 @@ class LangGraphOrchestratorAdapter:
                 ExecutionStatus.FAILED,
                 error=str(exc),
             )
-        self._record_runtime_health(result.status, execution_id=request.execution_id)
+            try:
+                failure_origin = self._resolve_failure_origin(request, exc)
+            except Exception:
+                failure_origin = None
+        if result.status is ExecutionStatus.SUCCEEDED:
+            self._record_runtime_health(result.status, execution_id=request.execution_id)
+        elif failure_origin is not None and failure_origin.origin is FailureOrigin.RUNTIME_LOCAL:
+            self._record_runtime_health(ExecutionStatus.FAILED, execution_id=request.execution_id)
         return result
 
     def cancel(self, execution_id: str) -> None:
