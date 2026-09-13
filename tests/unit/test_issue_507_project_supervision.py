@@ -82,8 +82,9 @@ class _Runner:
 
 
 class _Repository:
-    def __init__(self, *, mutate_handoff: bool = False) -> None:
+    def __init__(self, *, mutate_handoff: bool = False, mutate_capture_repository: bool = False) -> None:
         self.mutate_handoff = mutate_handoff
+        self.mutate_capture_repository = mutate_capture_repository
         self.handoffs: list[tuple[str, str, str]] = []
 
     def initial(self, objective):
@@ -92,7 +93,7 @@ class _Repository:
     def capture(self, objective, unit, execution):
         return RepositoryCheckpoint(
             f"checkpoint-{unit.work_unit_id}",
-            "repo-1",
+            "repo-other" if self.mutate_capture_repository else "repo-1",
             execution.repository_state_id,
             execution.artifact_ref,
         )
@@ -181,6 +182,18 @@ class Issue507ProjectSupervisionTests(unittest.TestCase):
         self.assertEqual(result.verdict, ProjectVerdict.PROJECT_BLOCKED)
         self.assertIn("checkpoint changed", result.reason)
 
+    def test_capture_cannot_switch_repository_identity(self):
+        result = supervise_project(
+            objective=ProjectObjective("project", "req", "objective"),
+            planner=_Planner(),
+            scheduler=_Scheduler(),
+            runner=_Runner(),
+            repository=_Repository(mutate_capture_repository=True),
+            verifier=_Verifier(),
+        )
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_BLOCKED)
+        self.assertIn("repository identity", result.reason)
+
     def test_executor_cannot_independently_verify_its_own_work(self):
         result = supervise_project(
             objective=ProjectObjective("project", "req", "objective"),
@@ -192,6 +205,28 @@ class Issue507ProjectSupervisionTests(unittest.TestCase):
         )
         self.assertEqual(result.verdict, ProjectVerdict.PROJECT_BLOCKED)
         self.assertIn("not independent", result.reason)
+
+    def test_corrective_work_must_depend_on_the_failed_unit(self):
+        class UnboundCorrectionPlanner(_Planner):
+            def corrective_work(self, objective, failed_unit, verification, graph):
+                return WorkUnit(
+                    "bad-correction",
+                    "unbound correction",
+                    (),
+                    corrective=True,
+                    corrects_work_unit_id=failed_unit.work_unit_id,
+                )
+
+        result = supervise_project(
+            objective=ProjectObjective("project", "req", "objective"),
+            planner=UnboundCorrectionPlanner(),
+            scheduler=_Scheduler(),
+            runner=_Runner(),
+            repository=_Repository(),
+            verifier=_Verifier(),
+        )
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_BLOCKED)
+        self.assertIn("does not depend", result.reason)
 
     def test_non_metao_decomposition_authority_fails_closed(self):
         class ExternalPlanner(_Planner):
