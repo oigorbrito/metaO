@@ -52,6 +52,7 @@ from metao.strategy import OrchestratorPoolState, OrchestratorStatus
 
 _AUTHORIZATION = "I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT"
 _REMOTE_ROOT_RE = re.compile(r"^/tmp/metao-project-pilot\.[A-Za-z0-9]+$")
+_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
 
 
 def required(name: str) -> str:
@@ -64,6 +65,15 @@ def required(name: str) -> str:
 def optional_port(name: str) -> int:
     raw = os.environ.get(name, "").strip()
     return int(raw) if raw else 22
+
+
+def project_head() -> str:
+    explicit = os.environ.get("METAO_PILOT_TARGET_HEAD", "").strip().lower()
+    if explicit:
+        if not _SHA_RE.fullmatch(explicit):
+            raise RuntimeError("METAO_PILOT_TARGET_HEAD must be an exact lowercase 40-character Git SHA")
+        return explicit
+    return os.environ.get("GITHUB_SHA", "local-unqualified")
 
 
 class InjectOneCapacityFailure:
@@ -175,6 +185,7 @@ def main() -> int:
     if required("METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION") != _AUTHORIZATION:
         raise RuntimeError("explicit multi-provider pilot authorization was not supplied")
 
+    target_head = project_head()
     source_host = required("METAO_SSH_SMOKE_SOURCE_HOST")
     destination_host = required("METAO_SSH_SMOKE_DESTINATION_HOST")
     if source_host == destination_host:
@@ -361,7 +372,7 @@ def main() -> int:
             if event.kind is ProjectTraceKind.CHECKPOINTED and event.repository_state_id
         ]
         evidence = {
-            "project_head": os.environ.get("GITHUB_SHA", "local-unqualified"),
+            "project_head": target_head,
             "project_verdict": result.verdict.value,
             "executors_used": sorted(result.executors_used),
             "providers_used": sorted(result.providers_used),
