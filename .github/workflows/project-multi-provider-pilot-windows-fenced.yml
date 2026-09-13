@@ -43,7 +43,7 @@ jobs:
           METAO_GEMINI_TARGET_INPUT: ${{ inputs.gemini_target }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $audited = 'fe2519044f89cdf0111b5e5118a056fce7524e8d'
+          $audited = '85b902624ff8e52130c8de4df00492de7b52d9e3'
           if ($env:METAO_AUTHORIZATION_INPUT -ne 'I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT') {
             throw 'explicit multi-provider pilot authorization is required'
           }
@@ -64,7 +64,7 @@ jobs:
       - name: Checkout audited pilot head without persisting credentials
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: fe2519044f89cdf0111b5e5118a056fce7524e8d
+          ref: 85b902624ff8e52130c8de4df00492de7b52d9e3
           persist-credentials: false
 
       - name: Revalidate audited checkout and Windows runner contract
@@ -164,7 +164,7 @@ jobs:
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_PILOT_TARGET_HEAD: fe2519044f89cdf0111b5e5118a056fce7524e8d
+          METAO_PILOT_TARGET_HEAD: 85b902624ff8e52130c8de4df00492de7b52d9e3
           METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
           METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
           METAO_OPENAI_MODEL: ${{ inputs.openai_model }}
