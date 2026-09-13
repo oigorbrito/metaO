@@ -12,14 +12,14 @@ from pathlib import Path
 
 _AUTHORIZATION = "I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT"
 _REQUIRED = (
-    "METAO_OPENAI_API_KEY",
-    "METAO_GEMINI_API_KEY",
     "METAO_SSH_SMOKE_SOURCE_HOST",
     "METAO_SSH_SMOKE_DESTINATION_HOST",
     "METAO_SSH_SMOKE_SOURCE_USER",
     "METAO_SSH_SMOKE_DESTINATION_USER",
 )
 _PORT_RE = re.compile(r"^[0-9]{1,5}$")
+_TRUE_VALUES = frozenset({"1", "true", "yes"})
+_FALSE_VALUES = frozenset({"0", "false", "no", ""})
 
 
 def _require(name: str) -> str:
@@ -27,6 +27,15 @@ def _require(name: str) -> str:
     if not value.strip():
         raise RuntimeError(f"required pilot configuration missing: {name}")
     return value
+
+
+def _presence(name: str) -> bool:
+    raw = os.environ.get(name, "").strip().lower()
+    if raw in _TRUE_VALUES:
+        return True
+    if raw in _FALSE_VALUES:
+        return False
+    raise RuntimeError(f"invalid boolean presence indicator: {name}")
 
 
 def _port(name: str) -> str:
@@ -97,6 +106,11 @@ def main() -> int:
     for name in _REQUIRED:
         _require(name)
 
+    openai_present = _presence("METAO_OPENAI_CREDENTIAL_PRESENT")
+    gemini_present = _presence("METAO_GEMINI_CREDENTIAL_PRESENT")
+    if not openai_present or not gemini_present:
+        raise RuntimeError("provider credentials must be present before operational preflight")
+
     source_host = _require("METAO_SSH_SMOKE_SOURCE_HOST")
     destination_host = _require("METAO_SSH_SMOKE_DESTINATION_HOST")
     if source_host == destination_host:
@@ -159,7 +173,8 @@ def main() -> int:
         "source_remote_python_present": bool(source["python"]),
         "destination_remote_git_present": bool(destination["git"]),
         "destination_remote_python_present": bool(destination["python"]),
-        "provider_credentials_present": True,
+        "provider_credentials_present": openai_present and gemini_present,
+        "provider_credential_inputs": "presence-only",
         "credentials_emitted": False,
         "hosts_emitted": False,
         "provider_calls_made": False,
