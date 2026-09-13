@@ -101,11 +101,62 @@ class ExecutorGitCheckpointPort:
             raise ValueError(f"unknown executor repository mapping: {executor_id}")
         return repo
 
+    def _validate_checkpoint(self, checkpoint: RepositoryCheckpoint) -> None:
+        if checkpoint.repository_id != self.repository_id:
+            raise ValueError("checkpoint repository identity mismatch")
+        self._assert_commit_id(checkpoint.state_id)
+        if checkpoint.artifact_ref != self._artifact_ref(checkpoint.state_id):
+            raise ValueError("checkpoint artifact ref is not canonical for repository state")
+
+    def _transfer_exact(
+        self,
+        checkpoint: RepositoryCheckpoint,
+        *,
+        source: Path,
+        destination: Path,
+    ) -> RepositoryCheckpoint:
+        self._assert_git_worktree(source)
+        self._assert_git_worktree(destination)
+        self._assert_clean(source)
+        self._assert_clean(destination)
+        self._assert_commit_exists(source, checkpoint.state_id)
+        if self._head(source) != checkpoint.state_id:
+            raise ValueError("source Git HEAD does not match checkpoint")
+
+        if source == destination:
+            if self._head(destination) != checkpoint.state_id:
+                raise ValueError("destination Git HEAD does not match checkpoint")
+            return checkpoint
+
+        self._git(destination, "fetch", "--no-tags", str(source), "HEAD")
+        fetched = self._git(destination, "rev-parse", "FETCH_HEAD")
+        if fetched != checkpoint.state_id:
+            raise ValueError("fetched checkpoint does not match authoritative state")
+        self._git(destination, "reset", "--hard", checkpoint.state_id)
+        if self._head(destination) != checkpoint.state_id:
+            raise ValueError("destination Git HEAD does not match checkpoint after transfer")
+        self._assert_clean(destination)
+        return checkpoint
+
     def initial(self, objective: ProjectObjective) -> RepositoryCheckpoint:
         del objective
         self._assert_git_worktree(self.initial_repo_path)
         self._assert_clean(self.initial_repo_path)
         return self._checkpoint(self._head(self.initial_repo_path))
+
+    def materialize(
+        self,
+        checkpoint: RepositoryCheckpoint,
+        *,
+        to_executor_id: str,
+    ) -> RepositoryCheckpoint:
+        self._validate_checkpoint(checkpoint)
+        destination = self._repo_for_executor(to_executor_id)
+        return self._transfer_exact(
+            checkpoint,
+            source=self.initial_repo_path,
+            destination=destination,
+        )
 
     def capture(
         self,
@@ -131,36 +182,26 @@ class ExecutorGitCheckpointPort:
         from_executor_id: str,
         to_executor_id: str,
     ) -> RepositoryCheckpoint:
-        if checkpoint.repository_id != self.repository_id:
-            raise ValueError("checkpoint repository identity mismatch")
-        self._assert_commit_id(checkpoint.state_id)
-        if checkpoint.artifact_ref != self._artifact_ref(checkpoint.state_id):
-            raise ValueError("checkpoint artifact ref is not canonical for repository state")
-
+        self._validate_checkpoint(checkpoint)
         source = self._repo_for_executor(from_executor_id)
         destination = self._repo_for_executor(to_executor_id)
-        self._assert_git_worktree(source)
-        self._assert_git_worktree(destination)
-        self._assert_clean(source)
-        self._assert_clean(destination)
-        self._assert_commit_exists(source, checkpoint.state_id)
-        if self._head(source) != checkpoint.state_id:
-            raise ValueError("source executor Git HEAD does not match checkpoint")
-
-        if source == destination:
-            if self._head(destination) != checkpoint.state_id:
-                raise ValueError("destination executor Git HEAD does not match checkpoint")
-            return checkpoint
-
-        self._git(destination, "fetch", "--no-tags", str(source), "HEAD")
-        fetched = self._git(destination, "rev-parse", "FETCH_HEAD")
-        if fetched != checkpoint.state_id:
-            raise ValueError("fetched executor checkpoint does not match authoritative state")
-        self._git(destination, "reset", "--hard", checkpoint.state_id)
-        if self._head(destination) != checkpoint.state_id:
-            raise ValueError("destination executor Git HEAD does not match checkpoint after transfer")
-        self._assert_clean(destination)
-        return checkpoint
+        try:
+            return self._transfer_exact(
+                checkpoint,
+                source=source,
+                destination=destination,
+            )
+        except ValueError as exc:
+            message = str(exc)
+            if message == "source Git HEAD does not match checkpoint":
+                raise ValueError("source executor Git HEAD does not match checkpoint") from exc
+            if message == "destination Git HEAD does not match checkpoint":
+                raise ValueError("destination executor Git HEAD does not match checkpoint") from exc
+            if message == "destination Git HEAD does not match checkpoint after transfer":
+                raise ValueError("destination executor Git HEAD does not match checkpoint after transfer") from exc
+            if message == "fetched checkpoint does not match authoritative state":
+                raise ValueError("fetched executor checkpoint does not match authoritative state") from exc
+            raise
 
 
 __all__ = ["ExecutorGitCheckpointPort"]
