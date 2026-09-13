@@ -10,7 +10,12 @@ from metao.git_checkpoint_transport import (
     GitRepositoryEndpoint,
     LocalGitRepositoryTransport,
 )
-from metao.project_supervision import ProjectObjective
+from metao.project_supervision import (
+    ProjectObjective,
+    WorkExecutionResult,
+    WorkExecutionStatus,
+    WorkUnit,
+)
 
 
 def git(repo: Path, *args: str) -> str:
@@ -31,7 +36,7 @@ def commit(repo: Path, filename: str, content: str, message: str) -> str:
 
 
 class LocalGitCheckpointTransportIntegrationTests(unittest.TestCase):
-    def test_materialize_and_handoff_preserve_exact_checkpoint_across_endpoints(self):
+    def test_materialize_capture_and_handoff_preserve_exact_checkpoint_across_endpoints(self):
         with tempfile.TemporaryDirectory() as root:
             root_path = Path(root)
             seed = root_path / "seed"
@@ -64,14 +69,27 @@ class LocalGitCheckpointTransportIntegrationTests(unittest.TestCase):
                 repository_id="repo-metao",
                 transport=LocalGitRepositoryTransport(),
             )
-            checkpoint = port.initial(ProjectObjective("project-360", "req-360", "deliver"))
+            objective = ProjectObjective("project-360", "req-360", "deliver")
+            checkpoint = port.initial(objective)
             self.assertEqual(checkpoint.state_id, initial_sha)
 
             port.materialize(checkpoint, to_executor_id="executor-a")
             self.assertEqual(git(executor_a, "rev-parse", "HEAD"), initial_sha)
 
             produced = commit(executor_a, "work.txt", "work\n", "work")
-            produced_checkpoint = port._checkpoint(produced)
+            execution = WorkExecutionResult(
+                "wu-1",
+                "executor-a",
+                "provider-x",
+                WorkExecutionStatus.SUCCEEDED,
+                produced,
+                f"git://repo-metao/{produced}",
+            )
+            produced_checkpoint = port.capture(
+                objective,
+                WorkUnit("wu-1", "work"),
+                execution,
+            )
             port.handoff(
                 produced_checkpoint,
                 from_executor_id="executor-a",
