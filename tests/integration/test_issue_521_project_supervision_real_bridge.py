@@ -241,11 +241,14 @@ class Issue521ProjectSupervisionRealBridgeTests(unittest.TestCase):
         self.assertEqual(result.providers_used, frozenset({"provider-x", "provider-y"}))
         self.assertEqual(
             repository.handoffs,
-            [("checkpoint-0", "executor-a", "executor-c")],
+            [
+                ("checkpoint-0", "executor-a", "executor-c"),
+                ("checkpoint-1", "executor-c", "executor-a"),
+            ],
         )
         kinds = tuple(event.kind for event in result.trace)
         self.assertIn(ProjectTraceKind.FAILED_CAPACITY, kinds)
-        self.assertIn(ProjectTraceKind.HANDED_OFF, kinds)
+        self.assertEqual(kinds.count(ProjectTraceKind.HANDED_OFF), 2)
         self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_ACCEPTED)
         self.assertEqual(
             [(record.work_unit_id, record.verdict) for record in result.traceability],
