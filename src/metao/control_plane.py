@@ -173,6 +173,31 @@ def _attempt_from_outcome(outcome: MissionOutcome, attempt_number: int, executio
     )
 
 
+_RESERVED_EXECUTION_CONTEXT_KEYS = frozenset(
+    {
+        "obligation_id",
+        "subject_id",
+        "subject_state_id",
+        "verification_context_id",
+        "policy_bundle_id",
+        "verifier_id",
+        "authority_id",
+        "created_at_epoch",
+    }
+)
+
+
+def _copy_external_execution_context(
+    execution_context: Mapping[str, object] | None,
+) -> dict[str, object]:
+    copied = dict(execution_context or {})
+    collisions = _RESERVED_EXECUTION_CONTEXT_KEYS.intersection(copied)
+    if collisions:
+        joined = ", ".join(sorted(collisions))
+        raise ValueError(f"reserved execution context key collision: {joined}")
+    return copied
+
+
 _RUNTIME_ADVISORY_FAILURE_CLASSES = frozenset(
     {
         FailureClass.TRANSIENT,
@@ -209,6 +234,7 @@ def execute_mission_once(
     budget: AcceptanceBudget,
     acceptance_context: AcceptanceContext,
     execution_id: str,
+    execution_context: Mapping[str, object] | None = None,
     now_epoch: float = 0.0,
     attempt_number: int = 1,
     attempt_clock: AttemptClock | None = None,
@@ -219,6 +245,7 @@ def execute_mission_once(
     """Execute one independently accepted mission attempt."""
 
     _validated_epoch(now_epoch, "mission current time")
+    external_context = _copy_external_execution_context(execution_context)
     base_history = (MissionStatus.CREATED, MissionStatus.PLANNING)
     if policy.effect is PolicyEffect.REQUIRE_HUMAN:
         state = _state(
@@ -316,10 +343,9 @@ def execute_mission_once(
         )
         return MissionOutcome(mission.mission_id, selected, None, acceptance, budget, (selected,), state)
 
-    request = ExecutionRequest(
-        execution_id=execution_id,
-        mission=mission,
-        context={
+    request_context = external_context
+    request_context.update(
+        {
             "obligation_id": obligation_ids[0],
             "subject_id": acceptance_context.subject_id,
             "subject_state_id": acceptance_context.subject_state_id,
@@ -328,7 +354,12 @@ def execute_mission_once(
             "verifier_id": "adapter-observer",
             "authority_id": "metao-runtime",
             "created_at_epoch": now_epoch,
-        },
+        }
+    )
+    request = ExecutionRequest(
+        execution_id=execution_id,
+        mission=mission,
+        context=request_context,
     )
     clock = attempt_clock or time
     started_at_epoch = _validated_epoch(clock(), "mission attempt start timestamp")
@@ -458,6 +489,7 @@ def execute_mission(
     budget: AcceptanceBudget,
     acceptance_context: AcceptanceContext,
     execution_id_prefix: str,
+    execution_context: Mapping[str, object] | None = None,
     now_epoch: float = 0.0,
     max_attempts: int = 2,
     attempt_clock: AttemptClock | None = None,
@@ -470,6 +502,7 @@ def execute_mission(
     if max_attempts < 1:
         raise ValueError("max_attempts must be at least 1")
 
+    stable_execution_context = _copy_external_execution_context(execution_context)
     attempted: list[str] = []
     attempt_records: list[MissionAttempt] = []
     current_budget = budget
@@ -490,6 +523,7 @@ def execute_mission(
             budget=current_budget,
             acceptance_context=acceptance_context,
             execution_id=execution_id,
+            execution_context=stable_execution_context,
             now_epoch=now_epoch,
             attempt_number=attempt_index + 1,
             attempt_clock=attempt_clock,
