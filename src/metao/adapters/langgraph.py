@@ -21,6 +21,13 @@ from metao.core import (
     HealthStatus,
     OrchestratorDescriptor,
 )
+from metao.failure_origin import (
+    BoundFailureOriginEvidence,
+    FailureOrigin,
+    FailureOriginAuthorityPort,
+    FailureOriginEvidenceLedger,
+    validate_failure_origin_binding,
+)
 from metao.runtime_health import (
     RuntimeHealthFacts,
     RuntimeHealthPolicy,
@@ -34,66 +41,47 @@ def _digest(value: Any) -> str:
 
 
 def normalize_evidence(
-    *,
-    request: ExecutionRequest,
-    orchestrator_id: str,
-    adapter_version: str,
-    output: Any,
+    *, request: ExecutionRequest, orchestrator_id: str, adapter_version: str, output: Any,
     attempt_id: str = "attempt-1",
 ) -> EvidenceEnvelope:
     context = request.context
     return EvidenceEnvelope(
-        evidence_id=f"{request.execution_id}:result",
-        obligation_id=str(context.get("obligation_id", "execution_result")),
-        mission_id=request.mission.mission_id,
-        execution_id=request.execution_id,
-        orchestrator_id=orchestrator_id,
-        adapter_version=adapter_version,
-        attempt_id=attempt_id,
+        evidence_id=f"{request.execution_id}:result", obligation_id=str(context.get("obligation_id", "execution_result")),
+        mission_id=request.mission.mission_id, execution_id=request.execution_id,
+        orchestrator_id=orchestrator_id, adapter_version=adapter_version, attempt_id=attempt_id,
         subject_id=str(context.get("subject_id", request.mission.mission_id)),
         subject_state_id=str(context.get("subject_state_id", "state-1")),
         verification_context_id=str(context.get("verification_context_id", "default-verification")),
         policy_bundle_id=str(context.get("policy_bundle_id", "default-policy")),
-        verifier_id=str(context.get("verifier_id", "adapter-observer")),
-        payload_digest=_digest(output),
+        verifier_id=str(context.get("verifier_id", "adapter-observer")), payload_digest=_digest(output),
         provenance_root=f"langgraph:{orchestrator_id}:{request.execution_id}",
-        authority_id=str(context.get("authority_id", "metao-runtime")),
-        passed=True,
-        created_at_epoch=float(context.get("created_at_epoch", 0.0)),
-        expires_at_epoch=context.get("expires_at_epoch"),
+        authority_id=str(context.get("authority_id", "metao-runtime")), passed=True,
+        created_at_epoch=float(context.get("created_at_epoch", 0.0)), expires_at_epoch=context.get("expires_at_epoch"),
     )
 
 
 class LangGraphOrchestratorAdapter:
     """Adapts a compiled LangGraph-like object exposing ``invoke``."""
 
-    def __init__(
-        self,
-        graph: Any,
-        *,
-        orchestrator_id: str = "langgraph",
-        version: str = "1",
-        config_id: str = "default",
-        health_policy: RuntimeHealthPolicy | None = None,
-        health_store: RuntimeHealthStorePort | None = None,
-    ) -> None:
+    def __init__(self, graph: Any, *, orchestrator_id: str = "langgraph", version: str = "1",
+                 config_id: str = "default", health_policy: RuntimeHealthPolicy | None = None,
+                 health_store: RuntimeHealthStorePort | None = None,
+                 failure_origin_authority: FailureOriginAuthorityPort | None = None) -> None:
         self._graph = graph
         self._cancelled: set[str] = set()
         self._health_persistence_error: Exception | None = None
-        self._pending_health_facts: deque[tuple[ExecutionStatus, str]] = deque()
+        self._pending_health_facts: deque[tuple[ExecutionStatus, str, FailureOrigin | None, str | None]] = deque()
         self._health_lock = RLock()
         self._descriptor = OrchestratorDescriptor(
-            orchestrator_id=orchestrator_id,
-            version=version,
-            capabilities=frozenset({"workflow", "agent"}),
-            metadata={"adapter": "langgraph"},
+            orchestrator_id=orchestrator_id, version=version,
+            capabilities=frozenset({"workflow", "agent"}), metadata={"adapter": "langgraph"},
         )
+        self._config_id = config_id
+        self._failure_origin_authority = failure_origin_authority
+        self._failure_origins = FailureOriginEvidenceLedger()
         self._runtime_health = RuntimeHealthTracker(
-            runtime_id=orchestrator_id,
-            runtime_version=version,
-            config_id=config_id,
-            policy=health_policy,
-            store=health_store,
+            runtime_id=orchestrator_id, runtime_version=version, config_id=config_id,
+            policy=health_policy, store=health_store,
         )
 
     @property
@@ -109,10 +97,7 @@ class LangGraphOrchestratorAdapter:
                 return self._runtime_health.report()
             except Exception as exc:
                 self._health_persistence_error = exc
-                return HealthReport(
-                    HealthStatus.UNHEALTHY,
-                    f"runtime health evidence unavailable: {type(exc).__name__}",
-                )
+                return HealthReport(HealthStatus.UNHEALTHY, f"runtime health evidence unavailable: {type(exc).__name__}")
 
     def runtime_health_facts(self) -> RuntimeHealthFacts:
         with self._health_lock:
@@ -122,6 +107,9 @@ class LangGraphOrchestratorAdapter:
                 self._health_persistence_error = exc
             return self._runtime_health.facts()
 
+    def failure_origin_evidence(self, execution_id: str) -> BoundFailureOriginEvidence | None:
+        return self._failure_origins.get(execution_id)
+
     def configure_runtime_health_store(self, store: RuntimeHealthStorePort) -> None:
         with self._health_lock:
             self._runtime_health.configure_store(store)
@@ -129,41 +117,62 @@ class LangGraphOrchestratorAdapter:
 
     def _flush_pending_health_facts(self) -> None:
         while self._pending_health_facts:
-            status, execution_id = self._pending_health_facts[0]
-            self._runtime_health.record_execution(status, execution_id=execution_id)
+            status, execution_id, failure_origin, failure_origin_evidence_ref = self._pending_health_facts[0]
+            self._runtime_health.record_execution(
+                status,
+                execution_id=execution_id,
+                failure_origin=failure_origin,
+                failure_origin_evidence_ref=failure_origin_evidence_ref,
+            )
             self._pending_health_facts.popleft()
         self._health_persistence_error = None
 
-    def _record_runtime_health(self, status: ExecutionStatus, *, execution_id: str) -> None:
+    def _record_runtime_health(self, status: ExecutionStatus, *, execution_id: str,
+                               failure_origin: FailureOrigin | None = None,
+                               failure_origin_evidence_ref: str | None = None) -> None:
         if status is ExecutionStatus.CANCELLED:
             return
         with self._health_lock:
-            self._pending_health_facts.append((status, execution_id))
+            self._pending_health_facts.append((status, execution_id, failure_origin, failure_origin_evidence_ref))
             try:
                 self._flush_pending_health_facts()
             except Exception as exc:
                 self._health_persistence_error = exc
 
+    def _resolve_failure_origin(self, request: ExecutionRequest, error: Exception) -> BoundFailureOriginEvidence | None:
+        authority = self._failure_origin_authority
+        if authority is None:
+            return None
+        evidence = authority.resolve_failure_origin(
+            request=request, runtime_id=self.descriptor.orchestrator_id,
+            runtime_version=self.descriptor.version, config_id=self._config_id, error=error,
+        )
+        validate_failure_origin_binding(evidence, request=request)
+        return self._failure_origins.record(evidence)
+
     def execute(self, request: ExecutionRequest) -> ExecutionResult:
         if request.execution_id in self._cancelled:
             return ExecutionResult(request.execution_id, self.descriptor.orchestrator_id, ExecutionStatus.CANCELLED)
+        failure_origin: BoundFailureOriginEvidence | None = None
         try:
             raw = self._graph.invoke({"objective": request.mission.objective, **dict(request.context)})
             output = raw if isinstance(raw, dict) else {"result": raw}
-            result = ExecutionResult(
-                request.execution_id,
-                self.descriptor.orchestrator_id,
-                ExecutionStatus.SUCCEEDED,
-                output=output,
-            )
+            result = ExecutionResult(request.execution_id, self.descriptor.orchestrator_id, ExecutionStatus.SUCCEEDED, output=output)
         except Exception as exc:
-            result = ExecutionResult(
-                request.execution_id,
-                self.descriptor.orchestrator_id,
+            result = ExecutionResult(request.execution_id, self.descriptor.orchestrator_id, ExecutionStatus.FAILED, error=str(exc))
+            try:
+                failure_origin = self._resolve_failure_origin(request, exc)
+            except Exception:
+                failure_origin = None
+        if result.status is ExecutionStatus.SUCCEEDED:
+            self._record_runtime_health(result.status, execution_id=request.execution_id)
+        elif failure_origin is not None:
+            self._record_runtime_health(
                 ExecutionStatus.FAILED,
-                error=str(exc),
+                execution_id=request.execution_id,
+                failure_origin=failure_origin.origin,
+                failure_origin_evidence_ref=failure_origin.evidence_ref,
             )
-        self._record_runtime_health(result.status, execution_id=request.execution_id)
         return result
 
     def cancel(self, execution_id: str) -> None:

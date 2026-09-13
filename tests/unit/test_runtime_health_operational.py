@@ -98,7 +98,7 @@ class RuntimeHealthOperationalTests(unittest.TestCase):
         )
         self.assertEqual(comparable_graph, comparable_crew)
 
-    def test_failed_execution_overrides_structural_readiness(self):
+    def test_unclassified_failed_execution_does_not_mint_runtime_local_health_failure(self):
         class FailingGraph:
             def invoke(self, payload):
                 raise RuntimeError("factual graph failure")
@@ -112,8 +112,9 @@ class RuntimeHealthOperationalTests(unittest.TestCase):
         result = adapter.execute(ExecutionRequest("e-fail", mission))
 
         self.assertEqual(result.status, ExecutionStatus.FAILED)
-        self.assertEqual(adapter.runtime_health_facts().state, RuntimeHealthState.UNHEALTHY)
-        self.assertEqual(adapter.health().status, HealthStatus.UNHEALTHY)
+        self.assertEqual(adapter.runtime_health_facts().state, RuntimeHealthState.UNKNOWN)
+        self.assertEqual(adapter.runtime_health_facts().failures, 0)
+        self.assertEqual(adapter.health().status, HealthStatus.DEGRADED)
 
     def test_three_consecutive_failures_quarantine_and_fresh_window_recovers(self):
         tracker = RuntimeHealthTracker(
