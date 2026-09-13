@@ -1,0 +1,18 @@
+{
+  "package": "openai-agents",
+  "version": "0.20.0",
+  "source_repository": "openai/openai-agents-python",
+  "source_commit": "d2bda3f3110415bf02e526a3983b0d0fa903e0d7",
+  "source_uv_lock_blob_sha1": "c092e351b5f7919c9972a335426e899d0bcb588f",
+  "pypi_wheel": "openai_agents-0.20.0-py3-none-any.whl",
+  "pypi_wheel_sha256": "aaff662b802fa90762ad539e131b9ea387e12e3664b87bc75157ad1b3fc88850",
+  "direct_dependencies": [
+    "openai>=2.45.0,<3",
+    "pydantic>=2.12.2,<3",
+    "griffelib>=2,<3",
+    "typing-extensions>=4.12.2,<5",
+    "requests>=2.0,<3",
+    "websockets>=15.0,<17",
+    "mcp>=1.19.0,<3; python_version >= '3.10'"
+  ]
+}
