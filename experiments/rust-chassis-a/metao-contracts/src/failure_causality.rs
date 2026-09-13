@@ -26,6 +26,139 @@ pub enum FailureClassificationBasis {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FailureOrigin {
+    RuntimeLocal,
+    ProviderService,
+    NetworkTransport,
+    Capacity,
+    Policy,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FailureOriginProducerKind {
+    RuntimeExecution,
+    ProviderAdapter,
+    NetworkAdapter,
+    CapacityAuthority,
+    PolicyAuthority,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FailureOriginProducerEvidence {
+    pub producer_id: String,
+    pub mission_id: MissionId,
+    pub execution_id: Option<ExecutionId>,
+    pub producer_kind: FailureOriginProducerKind,
+    pub original_outcome: Option<FactualExecutionOutcome>,
+    pub origin: FailureOrigin,
+    pub basis: FailureClassificationBasis,
+    pub evidence_ref: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct FailureOriginClaim {
+    pub mission_id: MissionId,
+    pub execution_id: Option<ExecutionId>,
+    pub original_outcome: Option<FactualExecutionOutcome>,
+    pub origin: FailureOrigin,
+    pub evidence_ref: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct BoundFailureOrigin {
+    pub producer_id: String,
+    pub mission_id: MissionId,
+    pub execution_id: Option<ExecutionId>,
+    pub producer_kind: FailureOriginProducerKind,
+    pub original_outcome: Option<FactualExecutionOutcome>,
+    pub origin: FailureOrigin,
+    pub basis: FailureClassificationBasis,
+    pub evidence_ref: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum FailureOriginProducerError {
+    InvalidProducerEvidence,
+    ProducerSemanticMismatch,
+    ClaimBindingMismatch,
+}
+
+fn producer_semantics_match(evidence: &FailureOriginProducerEvidence) -> bool {
+    match evidence.producer_kind {
+        FailureOriginProducerKind::RuntimeExecution => {
+            evidence.origin == FailureOrigin::RuntimeLocal
+                && evidence.execution_id.is_some()
+                && matches!(
+                    evidence.original_outcome,
+                    Some(FactualExecutionOutcome::Failed | FactualExecutionOutcome::Timeout)
+                )
+        }
+        FailureOriginProducerKind::ProviderAdapter => {
+            evidence.origin == FailureOrigin::ProviderService
+                && evidence.execution_id.is_some()
+                && matches!(
+                    evidence.original_outcome,
+                    Some(FactualExecutionOutcome::Failed | FactualExecutionOutcome::Timeout)
+                )
+        }
+        FailureOriginProducerKind::NetworkAdapter => {
+            evidence.origin == FailureOrigin::NetworkTransport
+                && evidence.execution_id.is_some()
+                && matches!(
+                    evidence.original_outcome,
+                    Some(FactualExecutionOutcome::Failed | FactualExecutionOutcome::Timeout)
+                )
+        }
+        FailureOriginProducerKind::CapacityAuthority => {
+            evidence.origin == FailureOrigin::Capacity && evidence.original_outcome.is_none()
+        }
+        FailureOriginProducerKind::PolicyAuthority => {
+            evidence.origin == FailureOrigin::Policy && evidence.original_outcome.is_none()
+        }
+    }
+}
+
+pub fn bind_failure_origin_producer(
+    claim: &FailureOriginClaim,
+    producer: &FailureOriginProducerEvidence,
+) -> Result<BoundFailureOrigin, FailureOriginProducerError> {
+    if producer.producer_id.trim().is_empty()
+        || producer.evidence_ref.trim().is_empty()
+        || !matches!(
+            producer.basis,
+            FailureClassificationBasis::AuthoritativeObservation
+                | FailureClassificationBasis::AdapterNormalization
+        )
+    {
+        return Err(FailureOriginProducerError::InvalidProducerEvidence);
+    }
+
+    if !producer_semantics_match(producer) {
+        return Err(FailureOriginProducerError::ProducerSemanticMismatch);
+    }
+
+    if claim.mission_id != producer.mission_id
+        || claim.execution_id != producer.execution_id
+        || claim.original_outcome != producer.original_outcome
+        || claim.origin != producer.origin
+        || claim.evidence_ref != producer.evidence_ref
+    {
+        return Err(FailureOriginProducerError::ClaimBindingMismatch);
+    }
+
+    Ok(BoundFailureOrigin {
+        producer_id: producer.producer_id.clone(),
+        mission_id: producer.mission_id.clone(),
+        execution_id: producer.execution_id.clone(),
+        producer_kind: producer.producer_kind,
+        original_outcome: producer.original_outcome,
+        origin: producer.origin,
+        basis: producer.basis,
+        evidence_ref: producer.evidence_ref.clone(),
+    })
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RecoveryStatus {
     NotRequired,
     NotAttempted,
