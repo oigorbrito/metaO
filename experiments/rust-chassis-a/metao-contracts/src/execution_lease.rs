@@ -53,3 +53,85 @@ pub fn authorize_runtime_health_admission(
     if !lease.authorizes(&authority.holder_identity,lineage.lease_generation,lineage.fencing_token,authority.admitted_at_epoch){return Err(RuntimeHealthAdmissionError::StaleLeaseOrFence)}
     Ok(AuthorizedRuntimeHealthAdmission{result_id:lineage.result_id.clone(),execution_id:lineage.execution_id.clone(),runtime_id:lineage.runtime_id.clone(),lease_generation:lineage.lease_generation,fencing_token:lineage.fencing_token,admitted_at_epoch:authority.admitted_at_epoch,authority_ref:authority.authority_ref.clone()})
 }
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct AdmittedRuntimeHealthFact {
+    pub result_id: String,
+    pub execution_id: String,
+    pub runtime_id: String,
+    pub runtime_version: String,
+    pub config_id: String,
+    pub lease_generation: u64,
+    pub fencing_token: u64,
+    pub admitted_at_epoch: i64,
+    pub admission_authority_ref: String,
+    pub observation_evidence_ref: String,
+    pub result_evidence_ref: String,
+    pub failure_origin_producer_id: Option<String>,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum RuntimeHealthFactAdmissionError {
+    RuntimeIdentityBinding(ExecutionRuntimeBindingError),
+    ResultLineage(RuntimeHealthLineageError),
+    TrustedAdmission(RuntimeHealthAdmissionError),
+    FailureOriginRequired,
+    FailureOriginBindingMismatch,
+    ExternalFailureOrigin,
+}
+
+pub fn admit_runtime_health_fact(
+    claim: &ExecutionRuntimeBindingClaim,
+    producer: &ExecutionRuntimeBindingProducer,
+    result: &ExecutionResultLineageProducer,
+    observation: &crate::runtime_health::RuntimeHealthObservation,
+    lease: &ExecutionLease,
+    authority: &RuntimeHealthAdmissionAuthority,
+    failure_origin: Option<&crate::failure_causality::BoundFailureOrigin>,
+) -> Result<AdmittedRuntimeHealthFact, RuntimeHealthFactAdmissionError> {
+    let identity = bind_execution_runtime_identity(claim, producer, lease)
+        .map_err(RuntimeHealthFactAdmissionError::RuntimeIdentityBinding)?;
+    let lineage = bind_runtime_health_observation_lineage(&identity, result, observation)
+        .map_err(RuntimeHealthFactAdmissionError::ResultLineage)?;
+    let admission = authorize_runtime_health_admission(&lineage, lease, authority)
+        .map_err(RuntimeHealthFactAdmissionError::TrustedAdmission)?;
+
+    let failure_origin_producer_id = if observation.failures > 0 || observation.timeouts > 0 {
+        let origin = failure_origin.ok_or(RuntimeHealthFactAdmissionError::FailureOriginRequired)?;
+        if origin.mission_id.as_str() != identity.mission_id
+            || origin.execution_id.as_ref().map(crate::ExecutionId::as_str) != Some(identity.execution_id.as_str())
+            || !matches!(
+                origin.original_outcome,
+                Some(
+                    crate::failure_causality::FactualExecutionOutcome::Failed
+                        | crate::failure_causality::FactualExecutionOutcome::Timeout
+                )
+            )
+        {
+            return Err(RuntimeHealthFactAdmissionError::FailureOriginBindingMismatch);
+        }
+        if origin.origin != crate::failure_causality::FailureOrigin::RuntimeLocal
+            || origin.producer_kind != crate::failure_causality::FailureOriginProducerKind::RuntimeExecution
+        {
+            return Err(RuntimeHealthFactAdmissionError::ExternalFailureOrigin);
+        }
+        Some(origin.producer_id.clone())
+    } else {
+        None
+    };
+
+    Ok(AdmittedRuntimeHealthFact {
+        result_id: lineage.result_id,
+        execution_id: lineage.execution_id,
+        runtime_id: lineage.runtime_id,
+        runtime_version: lineage.runtime_version,
+        config_id: lineage.config_id,
+        lease_generation: admission.lease_generation,
+        fencing_token: admission.fencing_token,
+        admitted_at_epoch: admission.admitted_at_epoch,
+        admission_authority_ref: admission.authority_ref,
+        observation_evidence_ref: lineage.observation_evidence_ref,
+        result_evidence_ref: lineage.result_evidence_ref,
+        failure_origin_producer_id,
+    })
+}
