@@ -8,6 +8,7 @@ Related:
 - `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`
 - `docs/ADR-2026-08-27-CHASSIS-DECISION.md`
 - `docs/ADR-2026-08-27-RUST-A-FINAL-SELECTION.md`
+- `docs/CANONICAL-DONOR-EVALUATION-MATRIX.md` — canonical project names, pins, evidence limits, donor roles, redundancy/divergence boundaries, and required next evidence
 
 ## Decision
 
