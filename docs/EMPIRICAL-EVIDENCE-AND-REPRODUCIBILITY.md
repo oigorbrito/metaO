@@ -14,7 +14,51 @@ The protocol is grounded in empirical software engineering guidance, principally
 
 ## 2. Governing principles
 
-### 2.1 Evidence must be bound to a claim
+### 2.1 Grow by empirical selection, not feature accumulation
+
+metaO must grow by **empirical selection** rather than by feature accumulation, architectural preference, donor popularity, or speculative inclusion.
+
+A capability, abstraction, dependency, strategy, optimization, or architectural mechanism is a candidate hypothesis until comparative evidence justifies its promotion.
+
+The default progression is:
+
+```text
+BASELINE
+-> ISOLATED_CANDIDATE_CHANGE
+-> PREDECLARED_COMPARABLE_EVALUATION
+-> RAW_EVIDENCE
+-> BOUNDED_INTERPRETATION
+-> PROMOTE_OR_REJECT
+```
+
+The following rules apply:
+
+- preserve the smallest executable baseline that can answer the research question;
+- introduce candidate capabilities in a removable or replaceable form whenever practical;
+- define the relevant workload, measurements, acceptance criteria, and decision rule before observing the deciding result;
+- compare the candidate against the baseline under a common measurement boundary;
+- measure gains together with regressions, resource cost, complexity, and operational overhead when they are material;
+- retain negative, neutral, blocked, and contradictory outcomes;
+- promote a candidate into the permanent core only when the evidence supports that promotion;
+- reject, remove, or keep optional a candidate whose benefit is not demonstrated strongly enough for the declared decision rule;
+- do not preserve complexity merely because implementation effort has already been spent.
+
+The governing invariants are:
+
+```text
+COMPLEXITY_MUST_EARN_THE_RIGHT_TO_REMAIN
+FEATURE_EXISTS != FEATURE_SHOULD_BE_CORE
+POPULAR_DONOR != EMPIRICALLY_SELECTED_DONOR
+PROMISING_DESIGN != MEASURED_IMPROVEMENT
+ABSENCE_OF_REGRESSION != DEMONSTRATED_BENEFIT
+EMPIRICAL_SELECTION > FEATURE_ACCUMULATION
+```
+
+This principle applies equally to chassis selection, donor adoption, supervisor/executor strategies, decomposition/composition mechanisms, context-management policies, verifiers, adapters, runtimes, and optimizations.
+
+The objective is not the system with the most capabilities. The objective is the **smallest maintainable system that retains the capabilities whose value is supported by traceable empirical evidence for the intended workload**.
+
+### 2.2 Evidence must be bound to a claim
 
 Every empirical PASS, FAIL, BLOCKED, NOT_TESTED, or equivalent conclusion must identify the claim being evaluated and the evidence used to support that conclusion.
 
@@ -28,7 +72,7 @@ EXECUTED != ACCEPTED
 ORCHESTRATOR_DONE != METAO_ACCEPTED
 ```
 
-### 2.2 Observations, analysis, and interpretation are distinct
+### 2.3 Observations, analysis, and interpretation are distinct
 
 Documentation should distinguish, where applicable:
 
@@ -38,7 +82,7 @@ Documentation should distinguish, where applicable:
 
 A conclusion must not obscure the underlying evidence from which it was derived.
 
-### 2.3 Exact identity matters
+### 2.4 Exact identity matters
 
 Empirical evidence should identify the exact evaluated artifact or candidate whenever practical. For repository-based evaluation this normally includes:
 
@@ -51,7 +95,7 @@ Empirical evidence should identify the exact evaluated artifact or candidate whe
 
 Evidence from an older candidate must not be silently represented as evidence for current HEAD.
 
-### 2.4 Reproducibility is conditional on disclosed context
+### 2.5 Reproducibility is conditional on disclosed context
 
 A result cannot be meaningfully reproduced if material execution conditions are hidden. Therefore, the environment relevant to the claim should be documented, including applicable items such as:
 
