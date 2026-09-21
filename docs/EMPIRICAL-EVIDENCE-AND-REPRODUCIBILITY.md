@@ -378,6 +378,14 @@ Before presenting an empirical claim as accepted evidence, verify:
 
 This checklist is a documentation aid, not a numerical score. Items marked not applicable should have a reason when the omission could otherwise affect interpretation.
 
+## 13.1 Architecture incorporation strategy
+
+Architecture and donor-incorporation decisions that depend on this protocol must also follow:
+
+- `docs/ADR-2026-09-21-CONTROLLED-FORK-PARTIAL-DONOR-MIGRATION.md` — controlled fork of the empirically selected chassis, preservation of upstream traceability, partial migration of donor capabilities, redundancy/divergence classification, removability, and local promotion by comparative evidence.
+
+This reference does not authorize a chassis winner or product migration. It defines how externally validated capabilities are incorporated once the applicable architecture gate authorizes that work.
+
 ## 14. References
 
 Primary methodological basis:
