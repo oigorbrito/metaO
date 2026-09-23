@@ -12,6 +12,12 @@ from unittest.mock import patch
 
 from metao.acceptance import AcceptanceContext, AcceptanceDecision
 from metao.adapters.langgraph import normalize_evidence
+from metao.benchmark_evidence import (
+    BenchmarkEvidence,
+    BenchmarkEvidenceSource,
+    BenchmarkMetric,
+)
+from metao.benchmark_store import SQLiteBenchmarkEvidenceStore
 from metao.cli import main
 from metao.core import (
     ExecutionRequest,
@@ -25,6 +31,8 @@ from metao.core import (
 from metao.governance import AcceptanceBudget, evaluate_policy
 from metao.mission_store import InMemoryMissionStore
 from metao.runtime_factory import (
+    BENCHMARK_EVIDENCE_DB_ENV,
+    BENCHMARK_ROUTING_POLICY_ENV,
     RUNTIME_CATALOG_ENV,
     RuntimeCatalogConfigError,
     RuntimePlugin,
@@ -165,6 +173,116 @@ class DeclarativeRuntimeCatalogV1Tests(unittest.TestCase):
                 acceptance_context=self.context,
             )
         self.assertEqual(outcome.acceptance.decision, AcceptanceDecision.ACCEPT)
+
+    def test_environment_factory_can_enable_benchmark_routing_explicitly(self):
+        preferred = Runtime("preferred")
+        alternate = Runtime("alternate")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            catalog_path = manifest(
+                root / "runtimes.json",
+                [
+                    entry(self.plugin("preferred_bench", preferred), cost=0.01, quality=0.99),
+                    entry(self.plugin("alternate_bench", alternate), cost=2.0, quality=0.20),
+                ],
+            )
+            benchmark_db = root / "benchmarks.db"
+            evidence_store = SQLiteBenchmarkEvidenceStore(benchmark_db)
+            for executor_id, evidence_id, value in (
+                ("preferred", "preferred-bench", 0.10),
+                ("alternate", "alternate-bench", 0.99),
+            ):
+                evidence_store.record(
+                    BenchmarkEvidence(
+                        evidence_id=evidence_id,
+                        benchmark_id="software-engineering",
+                        benchmark_version="v1",
+                        task_set="verified",
+                        executor_id=executor_id,
+                        executor_version="v1",
+                        harness_id="test-harness",
+                        harness_version="v1",
+                        model_id="test-model",
+                        provider_id="test-provider",
+                        model_version="v1",
+                        runtime_config_digest=f"runtime-{executor_id}",
+                        tool_policy_digest="tool-policy",
+                        environment_id="unit-test",
+                        observed_at_epoch=100.0,
+                        source=BenchmarkEvidenceSource.METAO_REPRODUCED,
+                        raw_result_ref=f"artifact://{evidence_id}",
+                        metrics=(BenchmarkMetric("resolved_rate", value, "ratio"),),
+                    )
+                )
+            routing_policy = json.dumps(
+                {
+                    "benchmark_id": "software-engineering",
+                    "benchmark_version": "v1",
+                    "task_set": "verified",
+                    "metric_name": "resolved_rate",
+                    "base_weight": 0.1,
+                    "benchmark_weight": 0.9,
+                    "require_fresh": True,
+                    "max_age_seconds": 60.0,
+                }
+            )
+            env = {
+                RUNTIME_CATALOG_ENV: str(catalog_path),
+                BENCHMARK_EVIDENCE_DB_ENV: str(benchmark_db),
+                BENCHMARK_ROUTING_POLICY_ENV: routing_policy,
+            }
+            with patch.dict(os.environ, env, clear=True):
+                operator = create_operator(store=InMemoryMissionStore())
+
+            outcome = operator.run(
+                Mission("wu02-benchmark-routing", "route with evidence", frozenset({"workflow"})),
+                policy=self.policy,
+                budget=self.budget,
+                acceptance_context=self.context,
+                now_epoch=120.0,
+                max_attempts=1,
+            )
+
+        self.assertEqual(outcome.orchestrator_id, "alternate")
+        self.assertEqual(preferred.calls, 0)
+        self.assertEqual(alternate.calls, 1)
+
+    def test_benchmark_routing_environment_configuration_fails_closed(self):
+        runtime = Runtime("cli-runtime")
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            catalog_path = manifest(root / "runtimes.json", [entry(self.plugin("cli_bench", runtime))])
+            with patch.dict(
+                os.environ,
+                {
+                    RUNTIME_CATALOG_ENV: str(catalog_path),
+                    BENCHMARK_EVIDENCE_DB_ENV: str(root / "benchmarks.db"),
+                },
+                clear=True,
+            ):
+                with self.assertRaisesRegex(RuntimeCatalogConfigError, "configured together"):
+                    create_operator(store=InMemoryMissionStore())
+
+            invalid_policy = json.dumps(
+                {
+                    "benchmark_id": "software-engineering",
+                    "benchmark_version": "v1",
+                    "task_set": "verified",
+                    "metric_name": "resolved_rate",
+                    "require_fresh": "false",
+                }
+            )
+            with patch.dict(
+                os.environ,
+                {
+                    RUNTIME_CATALOG_ENV: str(catalog_path),
+                    BENCHMARK_EVIDENCE_DB_ENV: str(root / "benchmarks.db"),
+                    BENCHMARK_ROUTING_POLICY_ENV: invalid_policy,
+                },
+                clear=True,
+            ):
+                with self.assertRaisesRegex(RuntimeCatalogConfigError, "require_fresh must be boolean"):
+                    create_operator(store=InMemoryMissionStore())
 
     def test_cli_run_uses_declarative_catalog_without_custom_operator_factory(self):
         runtime = Runtime("cli-runtime")
