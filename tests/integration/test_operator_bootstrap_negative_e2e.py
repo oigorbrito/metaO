@@ -6,17 +6,18 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import unittest
 
 
 class OperatorBootstrapNegativeE2ETests(unittest.TestCase):
     def metao_executable(self) -> str:
-        scripts_dir = Path(sys.executable).parent
+        scripts_dir = Path(sysconfig.get_path("scripts"))
         executable = shutil.which("metao", path=str(scripts_dir))
         self.assertIsNotNone(
             executable,
-            f"installed metao console script is required in current interpreter directory: {scripts_dir}",
+            f"installed metao console script is required in current interpreter scripts directory: {scripts_dir}",
         )
         assert executable is not None
         return executable
