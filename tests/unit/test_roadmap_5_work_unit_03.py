@@ -226,6 +226,7 @@ class CertificationLifecycleCliV1Tests(unittest.TestCase):
             view["benchmark_evidence"][0]["metrics"][0]["name"],
             "resolved_rate",
         )
+        self.assertTrue(view["benchmark_evidence"][0]["fresh"])
 
     def test_runtime_inspect_requires_complete_freshness_pair(self):
         with tempfile.TemporaryDirectory() as temp:
