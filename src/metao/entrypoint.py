@@ -50,6 +50,7 @@ from .sqlite_store import SQLiteMissionStore
 _RUNTIME_COMMANDS = frozenset(
     {
         "runtimes",
+        "runtime-inspect",
         "runtime-quarantine",
         "runtime-restore",
         "runtime-history",
@@ -108,7 +109,7 @@ def _combined_help(stream: TextIO) -> None:
     stream.write("metaO control-plane operator CLI\n\n")
     stream.write("mission commands: doctor, run, status, inspect, list, events, approve, resume, cancel\n")
     stream.write(
-        "runtime commands: runtimes, runtime-quarantine, runtime-restore, runtime-history, "
+        "runtime commands: runtimes, runtime-inspect, runtime-quarantine, runtime-restore, runtime-history, "
         "runtime-certificates, runtime-certificate-revoke, runtime-certificate-revocations\n"
     )
 
@@ -120,6 +121,15 @@ def _runtime_parser() -> argparse.ArgumentParser:
 
     runtimes = sub.add_parser("runtimes", help="list configured runtime catalog and live/control health")
     runtimes.add_argument("--factory", required=False, help="configured operator factory module:function")
+
+    runtime_inspect = sub.add_parser(
+        "runtime-inspect",
+        help="show one runtime catalog entry with control and certification evidence",
+    )
+    runtime_inspect.add_argument("orchestrator_id")
+    runtime_inspect.add_argument("--factory", required=False, help="configured operator factory module:function")
+    runtime_inspect.add_argument("--now-epoch", type=float)
+    runtime_inspect.add_argument("--max-age-seconds", type=float)
 
     quarantine_parser = sub.add_parser("runtime-quarantine", help="durably quarantine one runtime")
     quarantine_parser.add_argument("orchestrator_id")
@@ -206,6 +216,19 @@ def _runtime_entry_view(item: Any) -> dict[str, Any]:
         "success_rate": item.success_rate,
         "quality": item.quality,
         "reliability": item.reliability,
+    }
+
+
+def _runtime_inspect_view(
+    entry: Any,
+    *,
+    control: RuntimeControlRecord | None,
+    certificates: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "runtime": _runtime_entry_view(entry),
+        "control": None if control is None else _control_view(control),
+        "certificates": list(certificates),
     }
 
 
@@ -314,6 +337,57 @@ def main(
             if not callable(runtime_entries):
                 raise CLIInputError("factory operator does not expose runtime_entries()")
             _write_json([_runtime_entry_view(item) for item in runtime_entries()], out)
+            return 0
+
+        if args.command == "runtime-inspect":
+            if (args.now_epoch is None) != (args.max_age_seconds is None):
+                raise CLIInputError(
+                    "runtime-inspect freshness requires both --now-epoch and --max-age-seconds"
+                )
+            operator = _load_factory_operator(
+                args.factory,
+                db=args.db,
+                control_db=control_db,
+                certification_db=certification_db,
+                certification_revocation_db=certification_revocation_db,
+            )
+            runtime_entries = getattr(operator, "runtime_entries", None)
+            if not callable(runtime_entries):
+                raise CLIInputError("factory operator does not expose runtime_entries()")
+            matches = tuple(
+                item
+                for item in runtime_entries()
+                if item.orchestrator_id == args.orchestrator_id
+            )
+            if not matches:
+                raise CLIInputError(f"runtime not found: {args.orchestrator_id}")
+            if len(matches) != 1:
+                raise CLIInputError(
+                    f"runtime identity is not unique: {args.orchestrator_id}"
+                )
+
+            controls = SQLiteRuntimeControlStore(control_db)
+            certifications = SQLiteRuntimeCertificationStore(certification_db)
+            revocations = SQLiteRuntimeCertificationRevocationStore(
+                certification_revocation_db
+            )
+            certificate_views = [
+                _certificate_view(
+                    item,
+                    revoked=revocations.get(item.certificate_id) is not None,
+                    now_epoch=args.now_epoch,
+                    max_age_seconds=args.max_age_seconds,
+                )
+                for item in certifications.history(args.orchestrator_id)
+            ]
+            _write_json(
+                _runtime_inspect_view(
+                    matches[0],
+                    control=controls.current(args.orchestrator_id),
+                    certificates=certificate_views,
+                ),
+                out,
+            )
             return 0
 
         if args.command == "runtime-quarantine":
