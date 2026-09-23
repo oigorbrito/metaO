@@ -123,12 +123,80 @@ class CertificationLifecycleCliV1Tests(unittest.TestCase):
         for command in (
             "run",
             "runtimes",
+            "runtime-inspect",
             "runtime-quarantine",
             "runtime-certificates",
             "runtime-certificate-revoke",
             "runtime-certificate-revocations",
         ):
             self.assertIn(command, stdout)
+
+    def test_runtime_inspect_aggregates_catalog_control_and_certificate_evidence(self):
+        runtime = Runtime()
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            db = root / "metao.db"
+            manifest = self.write_manifest(root / "runtimes.json", self.bind(runtime))
+            with patch.dict(os.environ, {RUNTIME_CATALOG_ENV: str(manifest)}, clear=False):
+                with patch("metao.runtime_factory.time.time", return_value=100.0):
+                    code, _, stderr = self.invoke(
+                        [
+                            "--db",
+                            str(db),
+                            "runtimes",
+                            "--factory",
+                            "metao.runtime_factory:create_operator",
+                        ]
+                    )
+                self.assertEqual(code, 0, stderr)
+
+                code, stdout, stderr = self.invoke(
+                    [
+                        "--db",
+                        str(db),
+                        "runtime-inspect",
+                        "runtime-a",
+                        "--factory",
+                        "metao.runtime_factory:create_operator",
+                        "--now-epoch",
+                        "120",
+                        "--max-age-seconds",
+                        "60",
+                    ]
+                )
+
+        self.assertEqual(code, 0, stderr)
+        view = json.loads(stdout)
+        self.assertEqual(view["runtime"]["orchestrator_id"], "runtime-a")
+        self.assertEqual(view["runtime"]["version"], "v1")
+        self.assertEqual(view["runtime"]["capabilities"], ["workflow"])
+        self.assertIsNone(view["control"])
+        self.assertEqual(len(view["certificates"]), 1)
+        self.assertTrue(view["certificates"][0]["passed"])
+        self.assertTrue(view["certificates"][0]["fresh"])
+        self.assertTrue(view["certificates"][0]["reusable"])
+
+    def test_runtime_inspect_requires_complete_freshness_pair(self):
+        with tempfile.TemporaryDirectory() as temp:
+            db = Path(temp) / "metao.db"
+            code, stdout, stderr = self.invoke(
+                [
+                    "--db",
+                    str(db),
+                    "runtime-inspect",
+                    "runtime-a",
+                    "--now-epoch",
+                    "10",
+                ]
+            )
+        self.assertEqual(code, 2)
+        self.assertEqual(stdout, "")
+        payload = json.loads(stderr)
+        self.assertEqual(payload["error"], "CLIInputError")
+        self.assertEqual(
+            payload["message"],
+            "runtime-inspect freshness requires both --now-epoch and --max-age-seconds",
+        )
 
     def test_runtime_certificates_is_machine_readable_and_can_compute_freshness(self):
         with tempfile.TemporaryDirectory() as temp:
