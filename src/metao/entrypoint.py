@@ -14,6 +14,7 @@ import os
 import sys
 from typing import Any, Sequence, TextIO
 
+from .benchmark_evidence import is_benchmark_evidence_fresh
 from .benchmark_store import (
     BenchmarkEvidenceConflict,
     BenchmarkEvidenceCorrupt,
@@ -225,7 +226,19 @@ def _load_factory_operator(
     return operator
 
 
-def _benchmark_evidence_view(item: Any) -> dict[str, Any]:
+def _benchmark_evidence_view(
+    item: Any,
+    *,
+    now_epoch: float | None = None,
+    max_age_seconds: float | None = None,
+) -> dict[str, Any]:
+    fresh: bool | None = None
+    if now_epoch is not None and max_age_seconds is not None:
+        fresh = is_benchmark_evidence_fresh(
+            item,
+            now_epoch=now_epoch,
+            max_age_seconds=max_age_seconds,
+        )
     return {
         "evidence_id": item.evidence_id,
         "benchmark_id": item.benchmark_id,
@@ -244,6 +257,7 @@ def _benchmark_evidence_view(item: Any) -> dict[str, Any]:
         "observed_at_epoch": item.observed_at_epoch,
         "source": item.source.value,
         "raw_result_ref": item.raw_result_ref,
+        "fresh": fresh,
         "metrics": [
             {"name": metric.name, "value": metric.value, "unit": metric.unit}
             for metric in item.metrics
@@ -441,7 +455,11 @@ def main(
                 for item in certifications.history(args.orchestrator_id)
             ]
             benchmark_views = [
-                _benchmark_evidence_view(item)
+                _benchmark_evidence_view(
+                    item,
+                    now_epoch=args.now_epoch,
+                    max_age_seconds=args.max_age_seconds,
+                )
                 for item in SQLiteBenchmarkEvidenceStore(args.db).history(
                     args.orchestrator_id
                 )
