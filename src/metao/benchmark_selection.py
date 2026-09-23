@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .benchmark_routing import BenchmarkRoutingPolicy, EvidenceWeightedRouter
 from .benchmark_store import BenchmarkEvidenceStorePort
@@ -13,6 +13,7 @@ from .strategy import OrchestratorPoolState
 class BenchmarkSelectionPolicy:
     store: BenchmarkEvidenceStorePort
     routing_policy: BenchmarkRoutingPolicy
+    _router: EvidenceWeightedRouter = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "_router", EvidenceWeightedRouter(self.routing_policy))
