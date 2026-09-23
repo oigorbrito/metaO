@@ -1,0 +1,192 @@
+name: Project Multi-Provider Supervision Pilot Windows Fenced
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization:
+        description: 'Type I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT exactly'
+        required: true
+        type: string
+      expected_head:
+        description: 'Exact audited pilot SHA'
+        required: true
+        type: string
+      openai_model:
+        description: 'OpenAI model for the provider-backed pilot'
+        required: false
+        default: 'gpt-5.6-luna'
+        type: string
+      gemini_target:
+        description: 'Gemini model target for the provider-backed pilot'
+        required: false
+        default: 'gemma-4-26b-a4b-it'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-multi-provider-supervision-pilot-windows-fenced
+  cancel-in-progress: false
+
+jobs:
+  pilot:
+    runs-on: [self-hosted, Windows, X64, metao-project-pilot]
+    timeout-minutes: 35
+    steps:
+      - name: Validate authorization and audited target before secrets
+        shell: pwsh
+        env:
+          METAO_AUTHORIZATION_INPUT: ${{ inputs.authorization }}
+          METAO_EXPECTED_HEAD_INPUT: ${{ inputs.expected_head }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $audited = 'ccb0c93d761ad0598ea1d9dcc76476cb0a73a861'
+          if ($env:METAO_AUTHORIZATION_INPUT -ne 'I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT') {
+            throw 'explicit multi-provider pilot authorization is required'
+          }
+          if ($env:METAO_EXPECTED_HEAD_INPUT -notmatch '^[0-9a-fA-F]{40}$') {
+            throw 'expected_head must be an exact 40-character Git SHA'
+          }
+          if ($env:METAO_EXPECTED_HEAD_INPUT.ToLowerInvariant() -ne $audited) {
+            throw 'expected_head is not the audited Windows pilot SHA'
+          }
+          "METAO_AUDITED_PILOT_HEAD=$audited" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - name: Checkout audited pilot head without persisting credentials
+        uses: actions/checkout@v4
+        with:
+          ref: ccb0c93d761ad0598ea1d9dcc76476cb0a73a861
+          persist-credentials: false
+
+      - name: Revalidate audited checkout and Windows runner contract
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $actual = (git rev-parse HEAD).Trim().ToLowerInvariant()
+          if ($LASTEXITCODE -ne 0 -or $actual -ne $env:METAO_AUDITED_PILOT_HEAD) {
+            throw 'checked-out HEAD differs from audited Windows pilot SHA'
+          }
+          if ($env:RUNNER_OS -ne 'Windows' -or $env:RUNNER_ARCH -ne 'X64') {
+            throw 'runner metadata must report Windows/X64'
+          }
+          foreach ($name in @('python','git','ssh','scp')) {
+            if (-not (Get-Command $name -ErrorAction SilentlyContinue)) {
+              throw "required runner executable missing: $name"
+            }
+          }
+          $version = python -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+          if ($LASTEXITCODE -ne 0) { throw 'python version probe failed' }
+          $parts = $version.Trim().Split('.')
+          if ([int]$parts[0] -lt 3 -or ([int]$parts[0] -eq 3 -and [int]$parts[1] -lt 12)) {
+            throw 'runner requires Python 3.12+'
+          }
+
+      - name: Materialize SSH verification files after SHA fence
+        shell: pwsh
+        env:
+          METAO_SSH_SMOKE_KNOWN_HOSTS: ${{ secrets.METAO_SSH_SMOKE_KNOWN_HOSTS }}
+          METAO_SSH_SMOKE_IDENTITY: ${{ secrets.METAO_SSH_SMOKE_IDENTITY }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ([string]::IsNullOrWhiteSpace($env:METAO_SSH_SMOKE_KNOWN_HOSTS)) {
+            throw 'METAO_SSH_SMOKE_KNOWN_HOSTS is required'
+          }
+          $utf8 = New-Object System.Text.UTF8Encoding($false)
+          $knownHosts = Join-Path $env:RUNNER_TEMP 'metao-pilot-known-hosts'
+          [System.IO.File]::WriteAllText($knownHosts, $env:METAO_SSH_SMOKE_KNOWN_HOSTS + [Environment]::NewLine, $utf8)
+          "METAO_SSH_KNOWN_HOSTS_FILE=$knownHosts" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+          if (-not [string]::IsNullOrWhiteSpace($env:METAO_SSH_SMOKE_IDENTITY)) {
+            $identityFile = Join-Path $env:RUNNER_TEMP 'metao-pilot-identity'
+            [System.IO.File]::WriteAllText($identityFile, $env:METAO_SSH_SMOKE_IDENTITY + [Environment]::NewLine, $utf8)
+            $identityName = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+            $acl = New-Object System.Security.AccessControl.FileSecurity
+            $acl.SetAccessRuleProtection($true, $false)
+            $rule = New-Object System.Security.AccessControl.FileSystemAccessRule($identityName, 'Read', 'Allow')
+            $acl.AddAccessRule($rule)
+            Set-Acl -LiteralPath $identityFile -AclObject $acl
+            "METAO_SSH_IDENTITY_FILE=$identityFile" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+          }
+
+      - name: Run no-provider-call Windows operational preflight
+        shell: pwsh
+        env:
+          METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
+          METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
+          METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+          METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
+          METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
+          METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
+          METAO_SSH_SMOKE_DESTINATION_USER: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_USER }}
+          METAO_SSH_SMOKE_SOURCE_PORT: ${{ secrets.METAO_SSH_SMOKE_SOURCE_PORT }}
+          METAO_SSH_SMOKE_DESTINATION_PORT: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_PORT }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidencePath = Join-Path $env:RUNNER_TEMP 'project-multi-provider-preflight-windows.json'
+          python scripts/project_multi_provider_preflight.py | Out-File -LiteralPath $evidencePath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'multi-provider preflight failed' }
+          $lines = @(Get-Content -LiteralPath $evidencePath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+          if ($lines.Count -eq 0) { throw 'preflight produced no evidence output' }
+          $e = $lines[-1] | ConvertFrom-Json
+          if ($e.preflight -ne 'PASS' -or -not $e.source_reachable -or -not $e.destination_reachable -or -not $e.distinct_hosts) {
+            throw 'preflight readiness evidence is incomplete'
+          }
+          if (-not $e.provider_credentials_present -or $e.credentials_emitted -or $e.hosts_emitted -or $e.provider_calls_made) {
+            throw 'preflight evidence boundary violated'
+          }
+          $e | ConvertTo-Json -Compress
+
+      - name: Install audited metaO and pinned OpenAI Agents runtime
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          python -m pip install --upgrade pip
+          if ($LASTEXITCODE -ne 0) { throw 'pip upgrade failed' }
+          python -m pip install -e .
+          if ($LASTEXITCODE -ne 0) { throw 'metaO install failed' }
+          python -m pip install 'openai-agents==0.20.0'
+          if ($LASTEXITCODE -ne 0) { throw 'openai-agents install failed' }
+          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'"
+          if ($LASTEXITCODE -ne 0) { throw 'openai-agents version verification failed' }
+
+      - name: Run credential-backed Windows multi-provider project pilot
+        shell: pwsh
+        env:
+          METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
+          METAO_PILOT_TARGET_HEAD: ccb0c93d761ad0598ea1d9dcc76476cb0a73a861
+          METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
+          METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+          METAO_OPENAI_MODEL: ${{ inputs.openai_model }}
+          METAO_GEMINI_TARGET: ${{ inputs.gemini_target }}
+          METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
+          METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
+          METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
+          METAO_SSH_SMOKE_DESTINATION_USER: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_USER }}
+          METAO_SSH_SMOKE_SOURCE_PORT: ${{ secrets.METAO_SSH_SMOKE_SOURCE_PORT }}
+          METAO_SSH_SMOKE_DESTINATION_PORT: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_PORT }}
+          OPENAI_API_KEY: ''
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $evidencePath = Join-Path $env:RUNNER_TEMP 'project-multi-provider-pilot-windows.json'
+          python scripts/project_multi_provider_pilot.py | Out-File -LiteralPath $evidencePath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'credential-backed project pilot failed' }
+
+      - name: Validate bounded Windows pilot evidence
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $path = Join-Path $env:RUNNER_TEMP 'project-multi-provider-pilot-windows.json'
+          $lines = @(Get-Content -LiteralPath $path | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+          if ($lines.Count -eq 0) { throw 'multi-provider pilot produced no evidence output' }
+          $e = $lines[-1] | ConvertFrom-Json
+          if ($e.project_head -ne $env:METAO_AUDITED_PILOT_HEAD) { throw 'pilot evidence head mismatch' }
+          if ($e.project_verdict -ne 'PROJECT_ACCEPTED' -or $e.operational_pilot -ne 'PASS') { throw 'project was not accepted' }
+          if ((@($e.executors_used) -join ',') -ne 'executor-gemini,executor-openai') { throw 'executor evidence mismatch' }
+          if ((@($e.providers_used) -join ',') -ne 'provider-google,provider-openai') { throw 'provider evidence mismatch' }
+          if (-not $e.typed_capacity_failure_injected -or -not $e.provider_diverse_failover_observed) { throw 'capacity failover evidence missing' }
+          if (-not $e.verification_failure_observed -or -not $e.corrective_work_observed) { throw 'corrective replan evidence missing' }
+          if ($e.independent_verifier_id -ne 'project-verifier') { throw 'independent verifier evidence mismatch' }
+          if (-not $e.cross_host -or $e.credentials_emitted -or $e.remote_paths_emitted) { throw 'trust/evidence boundary violated' }
+          if (@($e.checkpoint_sha_lineage).Count -lt 3) { throw 'checkpoint lineage is incomplete' }
+          $e | ConvertTo-Json -Compress
