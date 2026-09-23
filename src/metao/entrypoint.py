@@ -14,6 +14,12 @@ import os
 import sys
 from typing import Any, Sequence, TextIO
 
+from .benchmark_store import (
+    BenchmarkEvidenceConflict,
+    BenchmarkEvidenceCorrupt,
+    SQLiteBenchmarkEvidenceStore,
+    load_benchmark_evidence_json,
+)
 from .cli import (
     CLIInputError,
     DEFAULT_DB,
@@ -49,6 +55,8 @@ from .sqlite_store import SQLiteMissionStore
 
 _RUNTIME_COMMANDS = frozenset(
     {
+        "benchmark-import",
+        "runtime-benchmarks",
         "runtimes",
         "runtime-inspect",
         "runtime-quarantine",
@@ -109,8 +117,9 @@ def _combined_help(stream: TextIO) -> None:
     stream.write("metaO control-plane operator CLI\n\n")
     stream.write("mission commands: doctor, run, status, inspect, list, events, approve, resume, cancel\n")
     stream.write(
-        "runtime commands: runtimes, runtime-inspect, runtime-quarantine, runtime-restore, runtime-history, "
-        "runtime-certificates, runtime-certificate-revoke, runtime-certificate-revocations\n"
+        "runtime commands: benchmark-import, runtime-benchmarks, runtimes, runtime-inspect, "
+        "runtime-quarantine, runtime-restore, runtime-history, runtime-certificates, "
+        "runtime-certificate-revoke, runtime-certificate-revocations\n"
     )
 
 
@@ -118,6 +127,18 @@ def _runtime_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="metao", description="metaO runtime control CLI")
     parser.add_argument("--db", default=DEFAULT_DB, help=f"SQLite database (default: {DEFAULT_DB})")
     sub = parser.add_subparsers(dest="command", required=True)
+
+    benchmark_import = sub.add_parser(
+        "benchmark-import",
+        help="ingest one canonical benchmark evidence JSON file",
+    )
+    benchmark_import.add_argument("evidence_file")
+
+    runtime_benchmarks = sub.add_parser(
+        "runtime-benchmarks",
+        help="list durable benchmark evidence for one executor/runtime id",
+    )
+    runtime_benchmarks.add_argument("executor_id")
 
     runtimes = sub.add_parser("runtimes", help="list configured runtime catalog and live/control health")
     runtimes.add_argument("--factory", required=False, help="configured operator factory module:function")
@@ -202,6 +223,32 @@ def _load_factory_operator(
     if not isinstance(operator, MissionOperator):
         raise CLIInputError("factory must return MissionOperator")
     return operator
+
+
+def _benchmark_evidence_view(item: Any) -> dict[str, Any]:
+    return {
+        "evidence_id": item.evidence_id,
+        "benchmark_id": item.benchmark_id,
+        "benchmark_version": item.benchmark_version,
+        "task_set": item.task_set,
+        "executor_id": item.executor_id,
+        "executor_version": item.executor_version,
+        "harness_id": item.harness_id,
+        "harness_version": item.harness_version,
+        "model_id": item.model_id,
+        "provider_id": item.provider_id,
+        "model_version": item.model_version,
+        "runtime_config_digest": item.runtime_config_digest,
+        "tool_policy_digest": item.tool_policy_digest,
+        "environment_id": item.environment_id,
+        "observed_at_epoch": item.observed_at_epoch,
+        "source": item.source.value,
+        "raw_result_ref": item.raw_result_ref,
+        "metrics": [
+            {"name": metric.name, "value": metric.value, "unit": metric.unit}
+            for metric in item.metrics
+        ],
+    }
 
 
 def _runtime_entry_view(item: Any) -> dict[str, Any]:
@@ -325,6 +372,17 @@ def main(
     certification_revocation_db = _certification_revocation_db(args.db)
 
     try:
+        if args.command == "benchmark-import":
+            evidence = load_benchmark_evidence_json(args.evidence_file)
+            stored = SQLiteBenchmarkEvidenceStore(args.db).record(evidence)
+            _write_json(_benchmark_evidence_view(stored), out)
+            return 0
+
+        if args.command == "runtime-benchmarks":
+            items = SQLiteBenchmarkEvidenceStore(args.db).history(args.executor_id)
+            _write_json([_benchmark_evidence_view(item) for item in items], out)
+            return 0
+
         if args.command == "runtimes":
             operator = _load_factory_operator(
                 args.factory,
@@ -460,6 +518,8 @@ def main(
         raise CLIInputError(f"unsupported runtime command: {args.command}")
     except (
         CLIInputError,
+        BenchmarkEvidenceConflict,
+        BenchmarkEvidenceCorrupt,
         RuntimeControlCorrupt,
         RuntimeCertificationCorrupt,
         RuntimeCertificationRevocationCorrupt,
