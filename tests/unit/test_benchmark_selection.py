@@ -25,7 +25,7 @@ from metao.core import (
 from metao.governance import AcceptanceBudget, evaluate_policy
 from metao.mission_store import InMemoryMissionStore
 from metao.operator import MissionOperator
-from metao.sqlite_benchmark_evidence import SQLiteBenchmarkEvidenceStore
+from metao.benchmark_store import SQLiteBenchmarkEvidenceStore
 from metao.strategy import OrchestratorPoolState, OrchestratorStatus
 
 
