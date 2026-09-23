@@ -73,6 +73,11 @@ def _benchmark_routing_policy_from_env(value: str | None) -> BenchmarkRoutingPol
         raise RuntimeCatalogConfigError(
             f"{BENCHMARK_ROUTING_POLICY_ENV} must contain a JSON object"
         )
+    require_fresh = payload.get("require_fresh", True)
+    if not isinstance(require_fresh, bool):
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_ROUTING_POLICY_ENV}.require_fresh must be boolean"
+        )
     try:
         return BenchmarkRoutingPolicy(
             benchmark_id=str(payload["benchmark_id"]),
@@ -81,7 +86,7 @@ def _benchmark_routing_policy_from_env(value: str | None) -> BenchmarkRoutingPol
             metric_name=str(payload["metric_name"]),
             base_weight=float(payload.get("base_weight", 1.0)),
             benchmark_weight=float(payload.get("benchmark_weight", 1.0)),
-            require_fresh=bool(payload.get("require_fresh", True)),
+            require_fresh=require_fresh,
             max_age_seconds=float(payload.get("max_age_seconds", 86_400.0)),
         )
     except (KeyError, TypeError, ValueError) as exc:
