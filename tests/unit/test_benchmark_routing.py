@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from dataclasses import replace
 
 from metao.benchmark_evidence import (
     BenchmarkEvidence,
@@ -182,11 +183,9 @@ class EvidenceWeightedRoutingTests(unittest.TestCase):
     def test_non_ratio_metric_does_not_enter_routing_score(self):
         candidate = pool("runtime-a")
         item = evidence("runtime-a", evidence_id="absolute", value=0.9)
-        item = BenchmarkEvidence(
-            **{
-                **item.__dict__,
-                "metrics": (BenchmarkMetric("resolved_rate", 0.9, "count"),),
-            }
+        item = replace(
+            item,
+            metrics=(BenchmarkMetric("resolved_rate", 0.9, "count"),),
         )
         router = EvidenceWeightedRouter(self.policy())
 
