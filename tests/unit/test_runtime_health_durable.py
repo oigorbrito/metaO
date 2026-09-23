@@ -19,6 +19,11 @@ from metao.core import (
     OrchestratorRegistry,
 )
 from metao.mission_store import InMemoryMissionStore
+from metao.failure_origin import (
+    BoundFailureOriginEvidence,
+    FailureOrigin,
+    FactualFailureOutcome,
+)
 from metao.runtime_factory import RuntimePlugin, create_operator_from_catalog
 from metao.runtime_health import (
     RuntimeHealthConflict,
@@ -59,6 +64,26 @@ class _UnreadableHealthStore:
 
     def history(self, **kwargs):
         raise OSError("health history unavailable")
+
+
+class _RuntimeLocalFailureOriginAuthority:
+    def resolve_failure_origin(
+        self,
+        *,
+        request,
+        runtime_id,
+        runtime_version,
+        config_id,
+        error,
+    ):
+        return BoundFailureOriginEvidence(
+            producer_id="test-runtime-local-authority",
+            mission_id=request.mission.mission_id,
+            execution_id=request.execution_id,
+            origin=FailureOrigin.RUNTIME_LOCAL,
+            outcome=FactualFailureOutcome.FAILED,
+            evidence_ref=f"test-runtime-local://{request.execution_id}",
+        )
 
 
 class _UnreadableFactsAdapter(LangGraphOrchestratorAdapter):
@@ -204,6 +229,7 @@ class DurableRuntimeHealthTests(unittest.TestCase):
                 config_id="cfg",
                 health_policy=self.policy(),
                 health_store=SQLiteRuntimeHealthStore(path),
+                failure_origin_authority=_RuntimeLocalFailureOriginAuthority(),
             )
             for index in range(3):
                 self.assertEqual(
