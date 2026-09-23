@@ -271,11 +271,13 @@ def _runtime_inspect_view(
     *,
     control: RuntimeControlRecord | None,
     certificates: Sequence[dict[str, Any]],
+    benchmark_evidence: Sequence[dict[str, Any]],
 ) -> dict[str, Any]:
     return {
         "runtime": _runtime_entry_view(entry),
         "control": None if control is None else _control_view(control),
         "certificates": list(certificates),
+        "benchmark_evidence": list(benchmark_evidence),
     }
 
 
@@ -438,11 +440,18 @@ def main(
                 )
                 for item in certifications.history(args.orchestrator_id)
             ]
+            benchmark_views = [
+                _benchmark_evidence_view(item)
+                for item in SQLiteBenchmarkEvidenceStore(args.db).history(
+                    args.orchestrator_id
+                )
+            ]
             _write_json(
                 _runtime_inspect_view(
                     matches[0],
                     control=controls.current(args.orchestrator_id),
                     certificates=certificate_views,
+                    benchmark_evidence=benchmark_views,
                 ),
                 out,
             )
