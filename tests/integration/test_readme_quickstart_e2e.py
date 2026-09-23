@@ -6,17 +6,18 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import unittest
 
 
 class ReadmeQuickstartE2ETests(unittest.TestCase):
     def run_metao(self, cwd: Path, env: dict[str, str], *args: str) -> object:
-        scripts_dir = Path(sys.executable).parent
+        scripts_dir = Path(sysconfig.get_path("scripts"))
         executable = shutil.which("metao", path=str(scripts_dir))
         self.assertIsNotNone(
             executable,
-            f"installed metao console script is required in current interpreter directory: {scripts_dir}",
+            f"installed metao console script is required in current interpreter scripts directory: {scripts_dir}",
         )
         completed = subprocess.run(
             [executable, *args],
