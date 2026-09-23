@@ -82,7 +82,7 @@ class _RuntimeLocalFailureOriginAuthority:
             execution_id=request.execution_id,
             origin=FailureOrigin.RUNTIME_LOCAL,
             outcome=FactualFailureOutcome.FAILED,
-            evidence_ref=f"test-runtime-local://{request.execution_id}",
+            evidence_ref="test-runtime-local://evidence",
         )
 
 
