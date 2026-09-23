@@ -150,6 +150,48 @@ class CertificationLifecycleCliV1Tests(unittest.TestCase):
                     )
                 self.assertEqual(code, 0, stderr)
 
+                benchmark_path = root / "benchmark.json"
+                benchmark_path.write_text(
+                    json.dumps(
+                        {
+                            "evidence_id": "runtime-a-benchmark-1",
+                            "benchmark_id": "software-engineering",
+                            "benchmark_version": "v1",
+                            "task_set": "verified",
+                            "executor_id": "runtime-a",
+                            "executor_version": "v1",
+                            "harness_id": "test-harness",
+                            "harness_version": "v1",
+                            "model_id": "test-model",
+                            "provider_id": "test-provider",
+                            "model_version": "v1",
+                            "runtime_config_digest": "runtime-config",
+                            "tool_policy_digest": "tool-policy",
+                            "environment_id": "unit-test",
+                            "observed_at_epoch": 110.0,
+                            "source": "METAO_REPRODUCED",
+                            "raw_result_ref": "artifact://runtime-a-benchmark-1",
+                            "metrics": [
+                                {
+                                    "name": "resolved_rate",
+                                    "value": 0.75,
+                                    "unit": "ratio",
+                                }
+                            ],
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                code, _, stderr = self.invoke(
+                    [
+                        "--db",
+                        str(db),
+                        "benchmark-import",
+                        str(benchmark_path),
+                    ]
+                )
+                self.assertEqual(code, 0, stderr)
+
                 code, stdout, stderr = self.invoke(
                     [
                         "--db",
@@ -175,6 +217,15 @@ class CertificationLifecycleCliV1Tests(unittest.TestCase):
         self.assertTrue(view["certificates"][0]["passed"])
         self.assertTrue(view["certificates"][0]["fresh"])
         self.assertTrue(view["certificates"][0]["reusable"])
+        self.assertEqual(len(view["benchmark_evidence"]), 1)
+        self.assertEqual(
+            view["benchmark_evidence"][0]["evidence_id"],
+            "runtime-a-benchmark-1",
+        )
+        self.assertEqual(
+            view["benchmark_evidence"][0]["metrics"][0]["name"],
+            "resolved_rate",
+        )
 
     def test_runtime_inspect_requires_complete_freshness_pair(self):
         with tempfile.TemporaryDirectory() as temp:
