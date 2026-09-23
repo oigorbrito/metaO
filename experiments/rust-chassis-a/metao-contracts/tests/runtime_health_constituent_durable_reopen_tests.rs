@@ -2,10 +2,11 @@ use metao_contracts::execution_lease::{
     AdmittedRuntimeHealthConstituent, AdmittedRuntimeHealthFact,
     RuntimeHealthConstituentOutcome, RuntimeHealthConstituentPersistedState,
     RuntimeHealthConstituentRecordDecision, RuntimeHealthConstituentState,
-    RuntimeHealthConstituentStateError,
-};
+    RuntimeHealthConstituentStateError,};
 
 fn constituent(result: &str, execution: &str, sequence: u64, outcome: RuntimeHealthConstituentOutcome) -> AdmittedRuntimeHealthConstituent {
+    let lease_generation = 7;
+    let fencing_token = lease_generation.saturating_add(4);
     AdmittedRuntimeHealthConstituent {
         fact: AdmittedRuntimeHealthFact {
             result_id: result.into(),
@@ -13,8 +14,8 @@ fn constituent(result: &str, execution: &str, sequence: u64, outcome: RuntimeHea
             runtime_id: "runtime-a".into(),
             runtime_version: "1".into(),
             config_id: "cfg-a".into(),
-            lease_generation: 7,
-            fencing_token: 11,
+            lease_generation,
+            fencing_token,
             admitted_at_epoch: 150,
             admission_authority_ref: "clock://501".into(),
             observation_evidence_ref: format!("health://{execution}"),
