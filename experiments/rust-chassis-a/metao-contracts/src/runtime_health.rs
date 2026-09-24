@@ -394,8 +394,12 @@ pub fn project_recovery_probe_governance(
     let mut effective = snapshot.budget.clone();
     effective.money_used += snapshot.reserved.money;
     effective.wall_time_used_s += snapshot.reserved.wall_time_s;
-    effective.tokens_used = effective.tokens_used.saturating_add(snapshot.reserved.tokens);
-    effective.attempts_used = effective.attempts_used.saturating_add(snapshot.reserved.attempts);
+    effective.tokens_used = effective
+        .tokens_used
+        .saturating_add(snapshot.reserved.tokens);
+    effective.attempts_used = effective
+        .attempts_used
+        .saturating_add(snapshot.reserved.attempts);
     let generic_context = crate::execution_governance::RetryApprovalContext {
         mission_id: context.mission_id.clone(),
         execution_id: context.execution_id.clone(),
