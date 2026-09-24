@@ -153,13 +153,32 @@ class ProjectTraceEvent:
     evidence_ref: str | None = None
 
 
+def _validate_traceability_reference(name: str, value: str) -> None:
+    if not value or not value.strip():
+        raise ValueError(f"{name} must be non-empty")
+    if len(value) > 512 or any(character in value for character in ("\r", "\n", "\x00")):
+        raise ValueError(f"{name} must be a bounded single-line reference")
+
+
 @dataclass(frozen=True, slots=True)
 class ProjectTraceabilityRecord:
     requirement_id: str
     work_unit_id: str
     artifact_ref: str
     test_ref: str
+    evidence_ref: str
     verdict: str
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("requirement_id", self.requirement_id),
+            ("work_unit_id", self.work_unit_id),
+            ("artifact_ref", self.artifact_ref),
+            ("test_ref", self.test_ref),
+            ("evidence_ref", self.evidence_ref),
+            ("verdict", self.verdict),
+        ):
+            _validate_traceability_reference(name, value)
 
 
 @dataclass(frozen=True, slots=True)
@@ -561,6 +580,7 @@ def supervise_project(
                     unit.work_unit_id,
                     checkpoint.artifact_ref,
                     verification.test_ref,
+                    verification.evidence_ref,
                     "PASS",
                 )
             )
@@ -574,6 +594,7 @@ def supervise_project(
                         corrected_id,
                         checkpoint.artifact_ref,
                         verification.test_ref,
+                        verification.evidence_ref,
                         "CORRECTED_PASS",
                     )
                 )
@@ -588,6 +609,16 @@ def supervise_project(
                 checkpoint.state_id,
                 checkpoint.artifact_ref,
                 verification.evidence_ref,
+            )
+        )
+        traceability.append(
+            ProjectTraceabilityRecord(
+                objective.requirement_id,
+                unit.work_unit_id,
+                checkpoint.artifact_ref,
+                verification.test_ref,
+                verification.evidence_ref,
+                "FAIL",
             )
         )
         if unit.corrective:

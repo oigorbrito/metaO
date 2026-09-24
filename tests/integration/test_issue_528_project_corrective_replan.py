@@ -251,10 +251,22 @@ class Issue528CorrectiveReplanIntegrationTests(unittest.TestCase):
             self.assertEqual(
                 [(record.work_unit_id, record.verdict) for record in result.traceability],
                 [
+                    ("prepare", "FAIL"),
                     ("repair-prepare", "PASS"),
                     ("prepare", "CORRECTED_PASS"),
                     ("implement", "PASS"),
                 ],
+            )
+            self.assertEqual(
+                [record.evidence_ref.split(":", 1)[0] for record in result.traceability],
+                ["verify", "verify", "verify", "verify"],
+            )
+            self.assertEqual(result.traceability[0].test_ref, "test:prepare")
+            self.assertEqual(result.traceability[1].test_ref, "test:repair-prepare")
+            self.assertEqual(result.traceability[2].test_ref, "test:repair-prepare")
+            self.assertEqual(result.traceability[3].test_ref, "test:implement")
+            self.assertTrue(
+                all(record.requirement_id == "req-360" for record in result.traceability)
             )
             self.assertEqual(len(executor_a.requests), 2)
             self.assertEqual(len(executor_c.requests), 1)
