@@ -12,7 +12,7 @@ import time
 from typing import Any, Callable, Mapping
 
 from .catalog import OrchestratorCatalog
-from .control_plane import EvidenceNormalizer
+from .control_plane import EvidenceNormalizer, SelectionPolicy
 from .core import ExecutionRequest, Mission, OrchestratorContract, OrchestratorRegistry
 from .feedback_catalog import HistoricalFeedbackCatalog
 from .governed_catalog import GovernedOrchestratorCatalog
@@ -77,8 +77,14 @@ class RuntimeCatalogOperator(MissionOperator):
         catalog,
         store: MissionStorePort,
         feedback: RuntimeFeedbackStorePort | None = None,
+        selection_policy: SelectionPolicy | None = None,
     ) -> None:
-        super().__init__(registry=registry, catalog=catalog, store=store)
+        super().__init__(
+            registry=registry,
+            catalog=catalog,
+            store=store,
+            selection_policy=selection_policy,
+        )
         self._runtime_catalog_view = catalog
         self._runtime_feedback = feedback
         self._last_feedback_error: Exception | None = None
@@ -309,6 +315,7 @@ def create_operator_from_catalog(
     certifications: RuntimeCertificationStorePort | None = None,
     certification_revocations: RuntimeCertificationRevocationStorePort | None = None,
     certification_now_epoch: float | None = None,
+    selection_policy: SelectionPolicy | None = None,
 ) -> MissionOperator:
     """Build one operator, optionally certifying entries before admission."""
 
@@ -438,6 +445,7 @@ def create_operator_from_catalog(
         catalog=operational_catalog,
         store=store,
         feedback=feedback,
+        selection_policy=selection_policy,
     )
 
 

@@ -34,14 +34,16 @@ jobs:
     runs-on: [self-hosted, Windows, X64, metao-project-pilot]
     timeout-minutes: 35
     steps:
-      - name: Validate authorization and audited target before secrets
+      - name: Validate authorization audited target and provider targets before secrets
         shell: pwsh
         env:
           METAO_AUTHORIZATION_INPUT: ${{ inputs.authorization }}
           METAO_EXPECTED_HEAD_INPUT: ${{ inputs.expected_head }}
+          METAO_OPENAI_MODEL_INPUT: ${{ inputs.openai_model }}
+          METAO_GEMINI_TARGET_INPUT: ${{ inputs.gemini_target }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $audited = 'ccb0c93d761ad0598ea1d9dcc76476cb0a73a861'
+          $audited = 'd18423df408a958bb1c47e69ce4c5ffa73433daf'
           if ($env:METAO_AUTHORIZATION_INPUT -ne 'I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT') {
             throw 'explicit multi-provider pilot authorization is required'
           }
@@ -51,12 +53,18 @@ jobs:
           if ($env:METAO_EXPECTED_HEAD_INPUT.ToLowerInvariant() -ne $audited) {
             throw 'expected_head is not the audited Windows pilot SHA'
           }
+          if ($env:METAO_OPENAI_MODEL_INPUT -ne 'gpt-5.6-luna') {
+            throw 'OpenAI model is not approved for operational pilot evidence'
+          }
+          if ($env:METAO_GEMINI_TARGET_INPUT -ne 'gemma-4-26b-a4b-it') {
+            throw 'Gemini target is not approved for operational pilot evidence'
+          }
           "METAO_AUDITED_PILOT_HEAD=$audited" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
 
       - name: Checkout audited pilot head without persisting credentials
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ccb0c93d761ad0598ea1d9dcc76476cb0a73a861
+          ref: d18423df408a958bb1c47e69ce4c5ffa73433daf
           persist-credentials: false
 
       - name: Revalidate audited checkout and Windows runner contract
@@ -113,8 +121,8 @@ jobs:
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
-          METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+          METAO_OPENAI_CREDENTIAL_PRESENT: ${{ secrets.METAO_OPENAI_API_KEY != '' }}
+          METAO_GEMINI_CREDENTIAL_PRESENT: ${{ secrets.METAO_GEMINI_API_KEY != '' }}
           METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
           METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
           METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
@@ -132,29 +140,31 @@ jobs:
           if ($e.preflight -ne 'PASS' -or -not $e.source_reachable -or -not $e.destination_reachable -or -not $e.distinct_hosts) {
             throw 'preflight readiness evidence is incomplete'
           }
-          if (-not $e.provider_credentials_present -or $e.credentials_emitted -or $e.hosts_emitted -or $e.provider_calls_made) {
+          if (-not $e.provider_credentials_present -or $e.provider_credential_inputs -ne 'presence-only' -or $e.credentials_emitted -or $e.hosts_emitted -or $e.provider_calls_made) {
             throw 'preflight evidence boundary violated'
           }
           $e | ConvertTo-Json -Compress
 
-      - name: Install audited metaO and pinned OpenAI Agents runtime
+      - name: Install hermetic metaO provider runtime
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          python -m pip install --upgrade pip
-          if ($LASTEXITCODE -ne 0) { throw 'pip upgrade failed' }
-          python -m pip install -e .
-          if ($LASTEXITCODE -ne 0) { throw 'metaO install failed' }
-          python -m pip install 'openai-agents==0.20.0'
-          if ($LASTEXITCODE -ne 0) { throw 'openai-agents install failed' }
-          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'"
-          if ($LASTEXITCODE -ne 0) { throw 'openai-agents version verification failed' }
+          $evidencePath = Join-Path $env:RUNNER_TEMP 'project-pilot-dependency-install-windows.json'
+          python scripts/install_hermetic_pilot_runtime.py | Out-File -LiteralPath $evidencePath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'hermetic provider runtime install failed' }
+          $lines = @(Get-Content -LiteralPath $evidencePath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+          if ($lines.Count -eq 0) { throw 'dependency installer produced no evidence' }
+          $e = $lines[-1] | ConvertFrom-Json
+          if ($e.hermetic_runtime -ne 'PREPARED' -or $e.credentials_emitted) {
+            throw 'dependency installer evidence boundary violated'
+          }
+          $e | ConvertTo-Json -Compress
 
-      - name: Run credential-backed Windows multi-provider project pilot
+      - name: Run credential-backed Windows hermetic multi-provider project pilot
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_PILOT_TARGET_HEAD: ccb0c93d761ad0598ea1d9dcc76476cb0a73a861
+          METAO_PILOT_TARGET_HEAD: d18423df408a958bb1c47e69ce4c5ffa73433daf
           METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
           METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
           METAO_OPENAI_MODEL: ${{ inputs.openai_model }}
@@ -169,8 +179,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $evidencePath = Join-Path $env:RUNNER_TEMP 'project-multi-provider-pilot-windows.json'
-          python scripts/project_multi_provider_pilot.py | Out-File -LiteralPath $evidencePath -Encoding utf8
-          if ($LASTEXITCODE -ne 0) { throw 'credential-backed project pilot failed' }
+          python scripts/run_project_multi_provider_pilot_hermetic.py | Out-File -LiteralPath $evidencePath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'credential-backed hermetic project pilot failed' }
 
       - name: Validate bounded Windows pilot evidence
         shell: pwsh
@@ -189,4 +199,30 @@ jobs:
           if ($e.independent_verifier_id -ne 'project-verifier') { throw 'independent verifier evidence mismatch' }
           if (-not $e.cross_host -or $e.credentials_emitted -or $e.remote_paths_emitted) { throw 'trust/evidence boundary violated' }
           if (@($e.checkpoint_sha_lineage).Count -lt 3) { throw 'checkpoint lineage is incomplete' }
+          if ($e.dependency_identity -ne 'VERIFIED') { throw 'dependency identity evidence missing' }
+          foreach ($name in @('bootstrap_lock_sha256','runtime_requirements_sha256','runtime_authority_openai_agents_wheel_sha256')) {
+            $value = [string]$e.$name
+            if ($value -notmatch '^[0-9a-f]{64}$') { throw "invalid dependency SHA-256 evidence: $name" }
+          }
+          if ([string]$e.runtime_authority_source_commit -notmatch '^[0-9a-f]{40}$') { throw 'invalid runtime authority source commit' }
+          if ([string]$e.runtime_authority_uv_lock_blob_sha1 -notmatch '^[0-9a-f]{40}$') { throw 'invalid runtime authority uv.lock blob SHA-1' }
+          if (-not $e.provider_targets_approved -or $e.operational_target_policy -ne 'ALLOWLISTED') { throw 'provider target policy evidence missing' }
+          if ([string]$e.openai_model -ne 'gpt-5.6-luna') { throw 'unexpected OpenAI model evidence' }
+          if ([string]$e.gemini_target -ne 'gemma-4-26b-a4b-it') { throw 'unexpected Gemini target evidence' }
           $e | ConvertTo-Json -Compress
+
+      - name: Cleanup SSH verification files
+        if: ${{ always() }}
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $root = [System.IO.Path]::GetFullPath($env:RUNNER_TEMP).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+          foreach ($name in @('metao-pilot-known-hosts', 'metao-pilot-identity')) {
+            $path = [System.IO.Path]::GetFullPath((Join-Path $root $name))
+            $parent = [System.IO.Path]::GetDirectoryName($path).TrimEnd([System.IO.Path]::DirectorySeparatorChar, [System.IO.Path]::AltDirectorySeparatorChar)
+            if ($parent -ne $root) { throw 'refusing cleanup outside RUNNER_TEMP' }
+            if (Test-Path -LiteralPath $path) {
+              Remove-Item -LiteralPath $path -Force -ErrorAction Stop
+            }
+          }
+          Write-Output 'ssh secret-file cleanup PASS'

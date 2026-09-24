@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from math import exp, isfinite
 from time import time
-from typing import Dict, Iterable, Optional, Tuple
+from typing import Callable, Dict, Iterable, Optional, Tuple
 
 from .capacity import CapacityRecovery, CapacityStatus, RecoveryEvidenceBasis
 
@@ -170,6 +170,30 @@ def select_orchestrator(pools: Iterable[OrchestratorPoolState], scorer: Optional
     return CostQualityRouter(scorer).select(pools, now_epoch=now_epoch)
 
 
+SelectionPolicy = Callable[[tuple[OrchestratorPoolState, ...], float | None], Optional[str]]
+
+
+def select_with_policy(
+    pools: Iterable[OrchestratorPoolState],
+    policy: SelectionPolicy | None = None,
+    *,
+    now_epoch: float | None = None,
+) -> Optional[str]:
+    ranked = CostQualityRouter().rank(pools, now_epoch=now_epoch)
+    if not ranked:
+        return None
+    if policy is None:
+        return ranked[0].orchestrator_id
+    pool_by_id = {pool.orchestrator_id: pool for pool in pools}
+    routable = tuple(pool_by_id[item.orchestrator_id] for item in ranked)
+    selected = policy(routable, now_epoch)
+    if selected is None:
+        return None
+    if selected not in {item.orchestrator_id for item in ranked}:
+        raise ValueError("selection policy returned non-routable orchestrator")
+    return selected
+
+
 # The control-plane refactor uses executor terminology while the routing
 # contract historically used orchestrator terminology. Keep one state type and
 # one selector until the public naming migration is complete.
@@ -177,4 +201,4 @@ executorPoolState = OrchestratorPoolState
 select_executor = select_orchestrator
 
 
-__all__ = ["SystemSnapshot", "OrchestratorPoolState", "BudgetState", "OrchestratorStatus", "CapacityStatus", "RecoveryEvidenceBasis", "CapacityRecovery", "HistoricalScore", "ScoreBreakdown", "DeterministicScorer", "RoutingCandidate", "CostQualityRouter", "select_orchestrator", "executorPoolState", "select_executor"]
+__all__ = ["SystemSnapshot", "OrchestratorPoolState", "BudgetState", "OrchestratorStatus", "CapacityStatus", "RecoveryEvidenceBasis", "CapacityRecovery", "HistoricalScore", "ScoreBreakdown", "DeterministicScorer", "SelectionPolicy", "RoutingCandidate", "CostQualityRouter", "select_orchestrator", "select_with_policy", "executorPoolState", "select_executor"]

@@ -58,7 +58,10 @@ from .replan import (
 )
 
 
-from .strategy import executorPoolState, select_orchestrator
+from .strategy import SelectionPolicy, executorPoolState, select_orchestrator, select_with_policy
+
+
+select_executor = select_orchestrator
 
 
 
@@ -655,6 +658,9 @@ def execute_mission_once(
     on_attempt_finished: AttemptFinished | None = None,
 
 
+    selection_policy: SelectionPolicy | None = None,
+
+
 ) -> MissionOutcome:
 
 
@@ -794,7 +800,11 @@ def execute_mission_once(
     eligible = _eligible_pools(mission, pools)
 
 
-    selected = select_orchestrator(eligible, now_epoch=now_epoch)
+    selected = (
+        select_executor(eligible, now_epoch=now_epoch)
+        if selection_policy is None
+        else select_with_policy(eligible, selection_policy, now_epoch=now_epoch)
+    )
 
 
     selecting_history = base_history + (MissionStatus.SELECTING,)
@@ -1382,6 +1392,9 @@ def execute_mission(
     on_attempt_finished: AttemptFinished | None = None,
 
 
+    selection_policy: SelectionPolicy | None = None,
+
+
 ) -> MissionOutcome:
 
 
@@ -1478,6 +1491,9 @@ def execute_mission(
 
 
             on_attempt_finished=on_attempt_finished,
+
+
+            selection_policy=selection_policy,
 
 
         )
