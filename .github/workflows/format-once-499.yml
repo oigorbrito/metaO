@@ -12,18 +12,17 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Apply lint fixes and commit
+      - name: Apply remaining lint fixes and commit
         shell: bash
         run: |
           cd experiments/rust-chassis-a
-          perl -0pi -e 's/\.map_or\(true, \|v\| now >= v\)/.is_none_or(|v| now >= v)/g' metao-contracts/src/execution_governance.rs
-          perl -0pi -e 's/(\n)(pub fn project_recovery_probe_governance)/$1#[allow(clippy::too_many_arguments)]\n$2/g' metao-contracts/src/runtime_health.rs
-          perl -0pi -e 's/\.tokens_used\s*\.checked_add\(snapshot\.reserved\.tokens\)\s*\.unwrap_or\(u64::MAX\)/.tokens_used.saturating_add(snapshot.reserved.tokens)/g' metao-contracts/src/runtime_health.rs
+          perl -0pi -e 's/\.map_or\(true, \|v\| now <= v\)/.is_none_or(|v| now <= v)/g' metao-contracts/src/execution_governance.rs
+          perl -0pi -e 's/\.attempts_used\s*\.checked_add\(snapshot\.reserved\.attempts\)\s*\.unwrap_or\(u64::MAX\)/.attempts_used.saturating_add(snapshot.reserved.attempts)/g' metao-contracts/src/runtime_health.rs
           cargo fmt --all
           if ! git diff --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add -A
-            git commit -m 'fix: satisfy Rust qualification lints'
+            git commit -m 'fix: complete Rust qualification lint cleanup'
             git push
           fi
