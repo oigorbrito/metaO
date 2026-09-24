@@ -161,7 +161,7 @@ class Issue507ProjectSupervisionTests(unittest.TestCase):
         self.assertIn(ProjectTraceKind.VERIFICATION_FAILED, kinds)
         self.assertIn(ProjectTraceKind.CORRECTIVE_WORK_CREATED, kinds)
         self.assertIn(ProjectTraceKind.PROJECT_ACCEPTED, kinds)
-        self.assertEqual(repository.handoffs, [("executor-a", "executor-b", "commit-discover")])
+        self.assertEqual(\n            repository.handoffs,\n            [\n                ("executor-a", "executor-b", "commit-discover"),\n                ("executor-b", "executor-a", "commit-implement"),\n            ],\n        )
         implement_calls = [call for call in runner.calls if call[0] == "implement"]
         self.assertEqual(implement_calls[0][1], "executor-a")
         self.assertEqual(implement_calls[1][1], "executor-b")
