@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install metaO
-        run: python -m pip install -e .
+        run: python -m pip install -e ".[test]"
       - name: WU05 deterministic feedback evidence
         run: python tests/unit/test_roadmap_2_work_unit_05.py
       - name: Full unit suite regression

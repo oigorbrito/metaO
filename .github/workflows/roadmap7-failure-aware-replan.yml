@@ -21,7 +21,7 @@ jobs:
       - name: Install metaO
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python -m pip install -e ".[test]"
       - name: Roadmap 7 WU01 focused regression
         run: python tests/unit/test_roadmap_7_work_unit_01.py
       - name: Existing replan primitive regression

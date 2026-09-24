@@ -9,6 +9,9 @@ description = "Framework-neutral meta-orchestrator control plane"
 requires-python = ">=3.12"
 dependencies = []
 
+[project.optional-dependencies]
+test = ["pytest>=8,<9"]
+
 [project.scripts]
 metao = "metao.entrypoint:main"
 

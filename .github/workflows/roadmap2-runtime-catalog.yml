@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install metaO
-        run: python -m pip install -e .
+        run: python -m pip install -e ".[test]"
       - name: WU02 declarative runtime catalog evidence
         run: python tests/unit/test_roadmap_2_work_unit_02.py
       - name: Roadmap 1 full regression

@@ -17,7 +17,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install metaO
-        run: python -m pip install -e .
+        run: python -m pip install -e ".[test]"
       - name: WU01 runtime conformance evidence
         run: python tests/unit/test_roadmap_3_work_unit_01.py
       - name: Full unit suite regression

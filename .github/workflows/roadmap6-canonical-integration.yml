@@ -33,7 +33,7 @@ jobs:
       - name: Install metaO and pinned real runtimes
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e .
+          python -m pip install -e ".[test]"
           python -m pip install 'openai-agents==0.20.0' 'langgraph==1.2.11' 'crewai==1.15.16'
       - name: Confirm pinned runtime versions
         run: |

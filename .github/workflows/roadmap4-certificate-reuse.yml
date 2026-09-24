@@ -20,7 +20,7 @@ jobs:
         with:
           python-version: '3.12'
       - name: Install metaO
-        run: python -m pip install -e .
+        run: python -m pip install -e ".[test]"
       - name: Roadmap 4 WU02 focused evidence
         run: python -m unittest tests.unit.test_roadmap_4_work_unit_02 -v
       - name: Roadmap 4 WU01 regression
