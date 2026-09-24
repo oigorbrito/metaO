@@ -40,6 +40,17 @@ class _HealthyGraph:
     def invoke(self, payload):
         return {"result": payload["objective"]}
 
+class _RuntimeLocalOriginAuthority:
+    def resolve_failure_origin(self, *, request, runtime_id, runtime_version, config_id, error):
+        return BoundFailureOriginEvidence(
+            producer_id="authority:runtime-local",
+            mission_id=request.mission.mission_id,
+            execution_id=request.execution_id,
+            origin=FailureOrigin.RUNTIME_LOCAL,
+            outcome=FactualFailureOutcome.FAILED,
+            evidence_ref=f"origin://{request.execution_id}/runtime-local",
+        )
+
 
 class _HealthyCrew:
     def kickoff(self, *, inputs):
