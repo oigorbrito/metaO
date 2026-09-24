@@ -46,6 +46,7 @@ fn intent_authority() -> RecoveryProbeIntentAuthority {
         evidence_ref: "authority://probe/478".into(),
     }
 }
+#[allow(dead_code)]
 fn intent() {}
 fn bound_intent() -> metao_contracts::runtime_health::BoundRecoveryProbeIntent {
     let a = intent_authority();
