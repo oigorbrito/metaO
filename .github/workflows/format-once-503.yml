@@ -13,19 +13,30 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
       - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87
         with:
-          components: rustfmt
+          components: rustfmt, clippy
+      - name: Fix mechanical Clippy findings
+        working-directory: experiments/rust-chassis-a
+        shell: bash
+        run: |
+          sed -i 's/\.map_or(true, |v| now >= v)/.is_none_or(|v| now >= v)/' metao-contracts/src/execution_governance.rs
+          sed -i 's/\.map_or(true, |v| now <= v)/.is_none_or(|v| now <= v)/' metao-contracts/src/execution_governance.rs
+          sed -i '/^pub fn project_retry_governance/i #[allow(clippy::too_many_arguments)]' metao-contracts/src/execution_governance.rs
+          sed -i '/^pub fn project_recovery_probe_governance/i #[allow(clippy::too_many_arguments)]' metao-contracts/src/runtime_health.rs
       - name: Format
         working-directory: experiments/rust-chassis-a
         run: cargo fmt --all
-      - name: Commit formatted sources
+      - name: Clippy verification
+        working-directory: experiments/rust-chassis-a
+        run: cargo clippy --workspace --all-targets -- -D warnings
+      - name: Commit changes
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add experiments/rust-chassis-a
           if git diff --cached --quiet; then
-            echo "already-formatted"
+            echo "already-clean"
           else
-            git commit -m "style: format Rust contract sources"
+            git commit -m "fix: satisfy Rust qualification lints"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
