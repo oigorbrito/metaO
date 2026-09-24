@@ -43,8 +43,10 @@ def _codex_version() -> str:
         raise SystemExit("codex CLI path is not a regular file")
     safe_environment = os.environ.copy()
     safe_environment["PATH"] = str(executable_path.parent) + os.pathsep + safe_environment.get("PATH", "")
+    # The command and arguments are literals; the validated directory is first in PATH.
+    # nosemgrep: python.lang.security.audit.dangerous-subprocess-use
     completed = subprocess.run(
-        ["codex", "--version"],  # nosec B607 - PATH is prefixed with the validated CLI directory
+        ["codex", "--version"],  # nosec B607
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
