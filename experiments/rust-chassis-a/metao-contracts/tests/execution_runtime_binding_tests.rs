@@ -102,7 +102,12 @@ fn stale_binding_after_takeover_is_rejected_even_when_ids_match() {
 fn bound_identity_contains_no_health_retry_dispatch_or_acceptance_decision() {
     let bound = bind_execution_runtime_identity(&claim(), &producer(), &lease()).unwrap();
     let encoded = serde_json::to_string(&bound).unwrap();
-    for forbidden in ["health_state", "next_attempt", "dispatch_authorized", "AcceptanceDecision"] {
+    for forbidden in [
+        "health_state",
+        "next_attempt",
+        "dispatch_authorized",
+        "AcceptanceDecision",
+    ] {
         assert!(!encoded.contains(forbidden));
     }
 }
