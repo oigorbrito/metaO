@@ -1,0 +1,245 @@
+name: Project Multi-Provider Supervision Pilot Self-Hosted Fenced
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_head:
+        description: 'Exact 40-character Git commit SHA authorized for this operational run'
+        required: true
+        type: string
+      authorization:
+        description: 'Type I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT exactly'
+        required: true
+        type: string
+      openai_model:
+        description: 'OpenAI model for the provider-backed pilot'
+        required: false
+        default: 'gpt-5.6-luna'
+        type: string
+      gemini_target:
+        description: 'Gemini model target for the provider-backed pilot'
+        required: false
+        default: 'gemma-4-26b-a4b-it'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-multi-provider-supervision-pilot-self-hosted-fenced
+  cancel-in-progress: false
+
+jobs:
+  exact-head-gate:
+    runs-on: [self-hosted, linux, x64, metao-project-pilot]
+    timeout-minutes: 5
+    steps:
+      - name: Require exact authorized head and provider targets before secrets
+        shell: bash
+        env:
+          METAO_EXPECTED_HEAD: ${{ inputs.expected_head }}
+          METAO_OPENAI_MODEL_INPUT: ${{ inputs.openai_model }}
+          METAO_GEMINI_TARGET_INPUT: ${{ inputs.gemini_target }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          expected = os.environ['METAO_EXPECTED_HEAD'].strip().lower()
+          actual = os.environ['GITHUB_SHA'].strip().lower()
+          if not re.fullmatch(r'[0-9a-f]{40}', expected):
+              raise SystemExit('expected_head must be an exact 40-character lowercase/uppercase Git SHA')
+          if expected != actual:
+              raise SystemExit(f'exact-head fence mismatch: expected {expected}, executing {actual}')
+          if os.environ['METAO_OPENAI_MODEL_INPUT'] != 'gpt-5.6-luna':
+              raise SystemExit('OpenAI model is not approved for operational pilot evidence')
+          if os.environ['METAO_GEMINI_TARGET_INPUT'] != 'gemma-4-26b-a4b-it':
+              raise SystemExit('Gemini target is not approved for operational pilot evidence')
+          print(f'exact-head/provider-target fence PASS: {actual}')
+          PY
+
+  preflight:
+    needs: exact-head-gate
+    runs-on: [self-hosted, linux, x64, metao-project-pilot]
+    timeout-minutes: 10
+    env:
+      METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
+      METAO_OPENAI_CREDENTIAL_PRESENT: ${{ secrets.METAO_OPENAI_API_KEY != '' }}
+      METAO_GEMINI_CREDENTIAL_PRESENT: ${{ secrets.METAO_GEMINI_API_KEY != '' }}
+      METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
+      METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
+      METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
+      METAO_SSH_SMOKE_DESTINATION_USER: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_USER }}
+      METAO_SSH_SMOKE_SOURCE_PORT: ${{ secrets.METAO_SSH_SMOKE_SOURCE_PORT }}
+      METAO_SSH_SMOKE_DESTINATION_PORT: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_PORT }}
+      METAO_SSH_SMOKE_KNOWN_HOSTS: ${{ secrets.METAO_SSH_SMOKE_KNOWN_HOSTS }}
+      METAO_SSH_SMOKE_IDENTITY: ${{ secrets.METAO_SSH_SMOKE_IDENTITY }}
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.expected_head }}
+          persist-credentials: false
+      - name: Reconfirm checked-out head
+        shell: bash
+        env:
+          METAO_EXPECTED_HEAD: ${{ inputs.expected_head }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$METAO_EXPECTED_HEAD"
+      - name: Run no-provider-call operational preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/project_multi_provider_preflight.py > "$RUNNER_TEMP/project-multi-provider-preflight.json"
+          cat "$RUNNER_TEMP/project-multi-provider-preflight.json"
+      - name: Validate preflight evidence boundary
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          path = Path(os.environ['RUNNER_TEMP']) / 'project-multi-provider-preflight.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'preflight produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['preflight'] == 'PASS'
+          assert evidence['source_reachable'] is True
+          assert evidence['destination_reachable'] is True
+          assert evidence['distinct_hosts'] is True
+          assert evidence['provider_credentials_present'] is True
+          assert evidence['provider_credential_inputs'] == 'presence-only'
+          assert evidence['credentials_emitted'] is False
+          assert evidence['hosts_emitted'] is False
+          assert evidence['provider_calls_made'] is False
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
+
+  multi-provider-pilot:
+    needs: preflight
+    runs-on: [self-hosted, linux, x64, metao-project-pilot]
+    timeout-minutes: 25
+    env:
+      METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
+      METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
+      METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+      METAO_OPENAI_MODEL: ${{ inputs.openai_model }}
+      METAO_GEMINI_TARGET: ${{ inputs.gemini_target }}
+      METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
+      METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
+      METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
+      METAO_SSH_SMOKE_DESTINATION_USER: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_USER }}
+      METAO_SSH_SMOKE_SOURCE_PORT: ${{ secrets.METAO_SSH_SMOKE_SOURCE_PORT }}
+      METAO_SSH_SMOKE_DESTINATION_PORT: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_PORT }}
+      METAO_SSH_SMOKE_KNOWN_HOSTS: ${{ secrets.METAO_SSH_SMOKE_KNOWN_HOSTS }}
+      METAO_SSH_SMOKE_IDENTITY: ${{ secrets.METAO_SSH_SMOKE_IDENTITY }}
+      OPENAI_API_KEY: ''
+    steps:
+      - name: Checkout exact authorized head
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.expected_head }}
+          persist-credentials: false
+      - name: Require exact checkout before provider calls
+        shell: bash
+        env:
+          METAO_EXPECTED_HEAD: ${{ inputs.expected_head }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$METAO_EXPECTED_HEAD"
+          test "$GITHUB_SHA" = "$METAO_EXPECTED_HEAD"
+      - name: Require Python 3.12+
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import sys
+          assert sys.version_info >= (3, 12), sys.version
+          print(sys.version)
+          PY
+      - name: Install hermetic metaO provider runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/install_hermetic_pilot_runtime.py > "$RUNNER_TEMP/project-pilot-dependency-install.json"
+          cat "$RUNNER_TEMP/project-pilot-dependency-install.json"
+      - name: Materialize SSH verification and identity files
+        shell: bash
+        run: |
+          set -euo pipefail
+          KNOWN_HOSTS_FILE="$RUNNER_TEMP/metao-pilot-known-hosts"
+          printf '%s\n' "$METAO_SSH_SMOKE_KNOWN_HOSTS" > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KNOWN_HOSTS_FILE"
+          echo "METAO_SSH_KNOWN_HOSTS_FILE=$KNOWN_HOSTS_FILE" >> "$GITHUB_ENV"
+          if [[ -n "${METAO_SSH_SMOKE_IDENTITY:-}" ]]; then
+            IDENTITY_FILE="$RUNNER_TEMP/metao-pilot-identity"
+            printf '%s\n' "$METAO_SSH_SMOKE_IDENTITY" > "$IDENTITY_FILE"
+            chmod 600 "$IDENTITY_FILE"
+            echo "METAO_SSH_IDENTITY_FILE=$IDENTITY_FILE" >> "$GITHUB_ENV"
+          fi
+      - name: Run credential-backed hermetic multi-provider project pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/run_project_multi_provider_pilot_hermetic.py > "$RUNNER_TEMP/project-multi-provider-pilot.json"
+      - name: Validate bounded pilot evidence
+        shell: bash
+        env:
+          METAO_EXPECTED_HEAD: ${{ inputs.expected_head }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+          path = Path(os.environ['RUNNER_TEMP']) / 'project-multi-provider-pilot.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'multi-provider pilot produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['project_head'] == os.environ['METAO_EXPECTED_HEAD']
+          assert evidence['project_head'] == os.environ['GITHUB_SHA']
+          assert evidence['project_verdict'] == 'PROJECT_ACCEPTED'
+          assert evidence['executors_used'] == ['executor-gemini', 'executor-openai']
+          assert evidence['providers_used'] == ['provider-google', 'provider-openai']
+          assert evidence['typed_capacity_failure_injected'] is True
+          assert evidence['provider_diverse_failover_observed'] is True
+          assert evidence['verification_failure_observed'] is True
+          assert evidence['corrective_work_observed'] is True
+          assert evidence['independent_verifier_id'] == 'project-verifier'
+          assert evidence['cross_host'] is True
+          assert evidence['credentials_emitted'] is False
+          assert evidence['remote_paths_emitted'] is False
+          assert len(evidence['checkpoint_sha_lineage']) >= 3
+          assert evidence['operational_pilot'] == 'PASS'
+          assert evidence['dependency_identity'] == 'VERIFIED'
+          for key in (
+              'bootstrap_lock_sha256',
+              'runtime_requirements_sha256',
+              'runtime_authority_openai_agents_wheel_sha256',
+          ):
+              assert re.fullmatch(r'[0-9a-f]{64}', evidence[key]), key
+          assert re.fullmatch(r'[0-9a-f]{40}', evidence['runtime_authority_source_commit'])
+          assert re.fullmatch(r'[0-9a-f]{40}', evidence['runtime_authority_uv_lock_blob_sha1'])
+          assert evidence['provider_targets_approved'] is True
+          assert evidence['operational_target_policy'] == 'ALLOWLISTED'
+          assert evidence['openai_model'] == 'gpt-5.6-luna'
+          assert evidence['gemini_target'] == 'gemma-4-26b-a4b-it'
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
+      - name: Cleanup SSH verification files
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve()
+          for name in ('metao-pilot-known-hosts', 'metao-pilot-identity'):
+              path = (root / name).resolve(strict=False)
+              if path.parent != root:
+                  raise SystemExit('refusing cleanup outside RUNNER_TEMP')
+              if path.exists():
+                  path.unlink()
+          print('ssh secret-file cleanup PASS')
+          PY

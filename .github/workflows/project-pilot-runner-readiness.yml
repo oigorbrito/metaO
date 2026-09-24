@@ -1,0 +1,90 @@
+name: Project Pilot Self-Hosted Runner Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_head:
+        description: 'Exact 40-character Git commit SHA authorized for this readiness run'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-pilot-self-hosted-runner-readiness
+  cancel-in-progress: false
+
+jobs:
+  readiness:
+    runs-on: [self-hosted, linux, x64, metao-project-pilot]
+    timeout-minutes: 5
+    steps:
+      - name: Require exact authorized head
+        shell: bash
+        env:
+          METAO_EXPECTED_HEAD: ${{ inputs.expected_head }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          import re
+          expected = os.environ['METAO_EXPECTED_HEAD'].strip().lower()
+          actual = os.environ['GITHUB_SHA'].strip().lower()
+          if not re.fullmatch(r'[0-9a-f]{40}', expected):
+              raise SystemExit('expected_head must be an exact 40-character Git SHA')
+          if expected != actual:
+              raise SystemExit(f'exact-head readiness fence mismatch: expected {expected}, executing {actual}')
+          print(f'exact-head readiness fence PASS: {actual}')
+          PY
+
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.expected_head }}
+
+      - name: Reconfirm checked-out head
+        shell: bash
+        env:
+          METAO_EXPECTED_HEAD: ${{ inputs.expected_head }}
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$METAO_EXPECTED_HEAD"
+
+      - name: Evaluate dedicated runner readiness
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/self_hosted_runner_readiness.py > "$RUNNER_TEMP/metao-runner-readiness.json"
+          cat "$RUNNER_TEMP/metao-runner-readiness.json"
+
+      - name: Validate bounded readiness evidence
+        shell: bash
+        env:
+          METAO_EXPECTED_HEAD: ${{ inputs.expected_head }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ["RUNNER_TEMP"]) / "metao-runner-readiness.json"
+          evidence = json.loads(path.read_text(encoding="utf-8"))
+          assert evidence["runner_readiness"] == "PASS"
+          assert evidence["linux"] is True
+          assert evidence["x64"] is True
+          assert evidence["python_3_12_plus"] is True
+          assert all(evidence["required_executables"].values())
+          assert evidence["required_labels"] == [
+              "self-hosted", "linux", "x64", "metao-project-pilot"
+          ]
+          assert evidence["registration_token_present"] is False
+          assert evidence["repository_secrets_checked"] is False
+          assert evidence["provider_calls_made"] is False
+          assert evidence["credentials_emitted"] is False
+          assert evidence["host_values_emitted"] is False
+          assert evidence["pilot_operational_pass"] is False
+          assert os.environ["GITHUB_SHA"] == os.environ["METAO_EXPECTED_HEAD"]
+          print(json.dumps(evidence, sort_keys=True, separators=(",", ":")))
+          PY
