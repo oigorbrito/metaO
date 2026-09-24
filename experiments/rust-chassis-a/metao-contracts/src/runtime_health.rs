@@ -504,7 +504,7 @@ pub fn evaluate_controlled_recovery_probe(
         },
         budget_version: governance.budget_version,
         reason: if eligible {
-            "canonical intent and governance permit a controlled recovery-probe reservation; dispatch remains separate authority".into()
+            "canonical intent and governance permit a controlled recovery-probe reservation; execution remains separate authority".into()
         } else {
             "runtime state does not require controlled recovery probing".into()
         },
