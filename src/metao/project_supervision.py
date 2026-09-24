@@ -368,7 +368,6 @@ def supervise_project(
             pinned_target = None
             if target is None:
                 return blocked(f"no executor available for {unit.work_unit_id}")
-
             if (
                 checkpoint_holder_executor_id is not None
                 and checkpoint_holder_executor_id != target.executor_id
