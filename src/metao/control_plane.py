@@ -800,10 +800,10 @@ def execute_mission_once(
     eligible = _eligible_pools(mission, pools)
 
 
-    selected = (
-        select_executor(eligible, now_epoch=now_epoch)
-        if selection_policy is None
-        else select_with_policy(eligible, selection_policy, now_epoch=now_epoch)
+    selected = select_with_policy(
+        eligible,
+        selection_policy,
+        now_epoch=now_epoch,
     )
 
 
