@@ -25,6 +25,7 @@ jobs:
           perl -0pi -e 's/^fn intent\(\)/#[allow(dead_code)]\nfn intent()/m' metao-contracts/tests/recovery_probe_governance_tests.rs
           sed -i 's/let lease_generation = 7;/let lease_generation: u64 = 7;/' metao-contracts/tests/runtime_health_constituent_durable_reopen_tests.rs
           sed -i 's/let fencing_token = lease_generation\.saturating_add/let fencing_token: u64 = lease_generation.saturating_add/' metao-contracts/tests/runtime_health_constituent_durable_reopen_tests.rs
+          perl -0pi -e 's/evidence_basis: RuntimeHealthEvidenceBasis::IndependentObservation,/evidence_basis: if self.health_attempts == 0 { RuntimeHealthEvidenceBasis::Unknown } else { RuntimeHealthEvidenceBasis::IndependentObservation },/' metao-contracts/tests/control_plane_stateful_property_tests.rs
       - name: Format
         working-directory: experiments/rust-chassis-a
         run: cargo fmt --all
@@ -40,6 +41,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "already-clean"
           else
-            git commit -m "fix: satisfy Rust qualification lints"
+            git commit -m "fix: keep empty health windows unknown"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
