@@ -28,6 +28,7 @@ from metao.runtime_health import (
 )
 from metao.sqlite_runtime_health import SQLiteRuntimeHealthStore
 from metao.strategy import OrchestratorStatus
+from metao.failure_origin import BoundFailureOriginEvidence, FailureOrigin, FactualFailureOutcome
 
 
 class _FailingGraph:
@@ -67,6 +68,20 @@ class _UnreadableFactsAdapter(LangGraphOrchestratorAdapter):
 
     def runtime_health_facts(self):
         raise OSError("factual authority unavailable")
+
+
+class _RuntimeLocalFailureAuthority:
+    def resolve_failure_origin(
+        self, *, request, runtime_id, runtime_version, config_id, error
+    ):
+        return BoundFailureOriginEvidence(
+            producer_id="runtime-local-test-authority",
+            mission_id=request.mission.mission_id,
+            execution_id=request.execution_id,
+            origin=FailureOrigin.RUNTIME_LOCAL,
+            outcome=FactualFailureOutcome.FAILED,
+            evidence_ref=f"test://runtime-local/{request.execution_id}",
+        )
 
 
 def _request(execution_id: str) -> ExecutionRequest:
@@ -204,6 +219,7 @@ class DurableRuntimeHealthTests(unittest.TestCase):
                 config_id="cfg",
                 health_policy=self.policy(),
                 health_store=SQLiteRuntimeHealthStore(path),
+                failure_origin_authority=_RuntimeLocalFailureAuthority(),
             )
             for index in range(3):
                 self.assertEqual(
@@ -222,6 +238,7 @@ class DurableRuntimeHealthTests(unittest.TestCase):
                 config_id="cfg",
                 health_policy=self.policy(),
                 health_store=SQLiteRuntimeHealthStore(path),
+                failure_origin_authority=_RuntimeLocalFailureAuthority(),
             )
             self.assertEqual(
                 restarted.runtime_health_facts().state,
