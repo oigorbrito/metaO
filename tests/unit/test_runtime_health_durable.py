@@ -27,6 +27,7 @@ from metao.runtime_health import (
     RuntimeHealthTracker,
 )
 from metao.sqlite_runtime_health import SQLiteRuntimeHealthStore
+from metao.failure_origin import BoundFailureOriginEvidence, FailureOrigin, FactualFailureOutcome
 from metao.strategy import OrchestratorStatus
 
 
@@ -39,6 +40,17 @@ class _HealthyGraph:
     def invoke(self, payload):
         return {"result": payload["objective"]}
 
+
+class _RuntimeLocalOriginAuthority:
+    def resolve_failure_origin(self, *, request, runtime_id, runtime_version, config_id, error):
+        return BoundFailureOriginEvidence(
+            producer_id="authority:runtime-local",
+            mission_id=request.mission.mission_id,
+            execution_id=request.execution_id,
+            origin=FailureOrigin.RUNTIME_LOCAL,
+            outcome=FactualFailureOutcome.FAILED,
+            evidence_ref=f"origin://{request.execution_id}/runtime-local",
+        )
 
 class _HealthyCrew:
     def kickoff(self, *, inputs):
@@ -204,6 +216,7 @@ class DurableRuntimeHealthTests(unittest.TestCase):
                 config_id="cfg",
                 health_policy=self.policy(),
                 health_store=SQLiteRuntimeHealthStore(path),
+                failure_origin_authority=_RuntimeLocalOriginAuthority(),
             )
             for index in range(3):
                 self.assertEqual(
@@ -222,6 +235,7 @@ class DurableRuntimeHealthTests(unittest.TestCase):
                 config_id="cfg",
                 health_policy=self.policy(),
                 health_store=SQLiteRuntimeHealthStore(path),
+                failure_origin_authority=_RuntimeLocalOriginAuthority(),
             )
             self.assertEqual(
                 restarted.runtime_health_facts().state,
