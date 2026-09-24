@@ -47,7 +47,6 @@ fn intent_authority() -> RecoveryProbeIntentAuthority {
     }
 }
 #[allow(dead_code)]
-#[allow(dead_code)]
 fn intent() {}
 fn bound_intent() -> metao_contracts::runtime_health::BoundRecoveryProbeIntent {
     let a = intent_authority();
