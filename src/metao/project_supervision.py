@@ -378,26 +378,7 @@ def supervise_project(
             pinned_target = None
             if target is None:
                 return blocked(f"no executor available for {unit.work_unit_id}")
-            if checkpoint_holder_executor_id is None and initial_checkpoint_materializer is not None:
-                materialized = initial_checkpoint_materializer.materialize(
-                    checkpoint,
-                    to_executor_id=target.executor_id,
-                )
-                if materialized != checkpoint:
-                    return blocked("repository checkpoint changed during initial materialization")
-                trace.append(
-                    ProjectTraceEvent(
-                        ProjectTraceKind.MATERIALIZED,
-                        unit.work_unit_id,
-                        target.executor_id,
-                        checkpoint.checkpoint_id,
-                        checkpoint.state_id,
-                        checkpoint.artifact_ref,
-                    )
-                )
-                checkpoint_holder_executor_id = target.executor_id
-                checkpoint_holder_target = target
-            elif (
+            if (
                 checkpoint_holder_executor_id is not None
                 and checkpoint_holder_executor_id != target.executor_id
             ):
