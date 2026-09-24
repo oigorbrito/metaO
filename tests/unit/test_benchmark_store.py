@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -101,7 +102,7 @@ class BenchmarkEvidenceStoreTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             db = Path(temp) / "metao.db"
             store = SQLiteBenchmarkEvidenceStore(db)
-            with sqlite3.connect(db) as connection:
+            with closing(sqlite3.connect(db)) as connection, connection:
                 connection.execute(
                     """
                     INSERT INTO benchmark_evidence(
