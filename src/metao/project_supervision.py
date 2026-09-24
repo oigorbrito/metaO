@@ -328,6 +328,7 @@ def supervise_project(
     providers_used: set[str] = set()
     checkpoint = repository.initial(objective)
     checkpoint_holder_executor_id: str | None = None
+    checkpoint_holder_target: ExecutorTarget | None = None
     corrective_count = 0
 
     def blocked(reason: str) -> ProjectSupervisionResult:
@@ -392,9 +393,18 @@ def supervise_project(
         pinned_target: ExecutorTarget | None = None
 
         for _ in range(max_executor_attempts_per_unit):
-            target = pinned_target or scheduler.select(
-                unit,
-                excluded_executor_ids=frozenset(excluded),
+            target = (
+                pinned_target
+                or (
+                    checkpoint_holder_target
+                    if checkpoint_holder_target is not None
+                    and checkpoint_holder_target.executor_id not in excluded
+                    else None
+                )
+                or scheduler.select(
+                    unit,
+                    excluded_executor_ids=frozenset(excluded),
+                )
             )
             pinned_target = None
             if target is None:
@@ -418,6 +428,7 @@ def supervise_project(
                     )
                 )
                 checkpoint_holder_executor_id = target.executor_id
+                checkpoint_holder_target = target
             elif (
                 checkpoint_holder_executor_id is not None
                 and checkpoint_holder_executor_id != target.executor_id
@@ -440,11 +451,13 @@ def supervise_project(
                     )
                 )
                 checkpoint_holder_executor_id = target.executor_id
+                checkpoint_holder_target = target
 
             selected_target = target
             executors_used.add(target.executor_id)
             providers_used.add(target.provider_id)
             checkpoint_holder_executor_id = target.executor_id
+            checkpoint_holder_target = target
             trace.append(
                 ProjectTraceEvent(
                     ProjectTraceKind.DISPATCHED,
@@ -497,6 +510,7 @@ def supervise_project(
                     )
                 )
                 checkpoint_holder_executor_id = next_target.executor_id
+                checkpoint_holder_target = next_target
                 pinned_target = next_target
                 continue
             if execution.status is WorkExecutionStatus.FAILED:
@@ -513,6 +527,7 @@ def supervise_project(
         previous_repository_id = checkpoint.repository_id
         checkpoint = repository.capture(objective, unit, execution)
         checkpoint_holder_executor_id = execution.executor_id
+        checkpoint_holder_target = selected_target
         if checkpoint.repository_id != previous_repository_id:
             return blocked("captured checkpoint changed repository identity")
         if (
