@@ -12,21 +12,14 @@ import unittest
 
 class OperatorInitializationE2ETests(unittest.TestCase):
     def run_metao(self, root: Path, env: dict[str, str], *args: str) -> object:
-        scripts_dirs = [Path(sys.executable).parent]
-        if sys.platform == "win32":
-            scripts_dirs.append(scripts_dirs[0] / "Scripts")
-        executable = next(
-            (
-                shutil.which("metao", path=str(scripts_dir))
-                for scripts_dir in scripts_dirs
-                if scripts_dir.exists()
-            ),
-            None,
-        )
-        self.assertIsNotNone(
-            executable,
-            f"installed metao console script is required in current interpreter directories: {scripts_dirs}",
-        )
+        candidate_dirs = [Path(sys.executable).parent]
+        if os.name == "nt":
+            candidate_dirs.append(Path(sys.executable).parent / "Scripts")
+        executable = next((
+            shutil.which("metao", path=str(directory))
+            for directory in candidate_dirs
+            if shutil.which("metao", path=str(directory)) is not None
+        ), None)
         completed = subprocess.run(
             [executable, *args],
             cwd=root,
