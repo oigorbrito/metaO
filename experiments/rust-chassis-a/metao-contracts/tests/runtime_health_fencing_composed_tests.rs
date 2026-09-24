@@ -5,8 +5,8 @@ use metao_contracts::execution_lease::{
     RuntimeHealthFactAdmissionError,
 };
 use metao_contracts::failure_causality::{
-    bind_failure_origin_producer, FailureClassificationBasis, FailureOrigin, FailureOriginClaim,
-    FailureOriginProducerEvidence, FailureOriginProducerKind, FactualExecutionOutcome,
+    bind_failure_origin_producer, FactualExecutionOutcome, FailureClassificationBasis,
+    FailureOrigin, FailureOriginClaim, FailureOriginProducerEvidence, FailureOriginProducerKind,
 };
 use metao_contracts::runtime_health::{RuntimeHealthEvidenceBasis, RuntimeHealthObservation};
 use metao_contracts::{ExecutionId, MissionId};
@@ -113,7 +113,10 @@ fn authority(at: i64) -> RuntimeHealthAdmissionAuthority {
     }
 }
 
-fn bound_origin(kind: FailureOriginProducerKind, origin: FailureOrigin) -> metao_contracts::failure_causality::BoundFailureOrigin {
+fn bound_origin(
+    kind: FailureOriginProducerKind,
+    origin: FailureOrigin,
+) -> metao_contracts::failure_causality::BoundFailureOrigin {
     let producer = FailureOriginProducerEvidence {
         producer_id: format!("origin-{kind:?}"),
         mission_id: MissionId::new("mission-474").unwrap(),
@@ -137,8 +140,15 @@ fn bound_origin(kind: FailureOriginProducerKind, origin: FailureOrigin) -> metao
 #[test]
 fn canonical_success_chain_admits_factual_health_fact() {
     let admitted = admit_runtime_health_fact(
-        &claim(), &producer(), &result(), &success_observation(), &lease(), &authority(150), None,
-    ).unwrap();
+        &claim(),
+        &producer(),
+        &result(),
+        &success_observation(),
+        &lease(),
+        &authority(150),
+        None,
+    )
+    .unwrap();
     assert_eq!(admitted.execution_id, "execution-474");
     assert_eq!(admitted.runtime_id, "runtime-a");
     assert_eq!(admitted.failure_origin_producer_id, None);
@@ -146,18 +156,37 @@ fn canonical_success_chain_admits_factual_health_fact() {
 
 #[test]
 fn runtime_local_failure_requires_and_accepts_producer_bound_origin() {
-    let origin = bound_origin(FailureOriginProducerKind::RuntimeExecution, FailureOrigin::RuntimeLocal);
+    let origin = bound_origin(
+        FailureOriginProducerKind::RuntimeExecution,
+        FailureOrigin::RuntimeLocal,
+    );
     let admitted = admit_runtime_health_fact(
-        &claim(), &producer(), &result(), &failed_observation(), &lease(), &authority(150), Some(&origin),
-    ).unwrap();
-    assert_eq!(admitted.failure_origin_producer_id.as_deref(), Some("origin-RuntimeExecution"));
+        &claim(),
+        &producer(),
+        &result(),
+        &failed_observation(),
+        &lease(),
+        &authority(150),
+        Some(&origin),
+    )
+    .unwrap();
+    assert_eq!(
+        admitted.failure_origin_producer_id.as_deref(),
+        Some("origin-RuntimeExecution")
+    );
 }
 
 #[test]
 fn failed_observation_without_canonical_origin_fails_closed() {
     assert_eq!(
         admit_runtime_health_fact(
-            &claim(), &producer(), &result(), &failed_observation(), &lease(), &authority(150), None,
+            &claim(),
+            &producer(),
+            &result(),
+            &failed_observation(),
+            &lease(),
+            &authority(150),
+            None,
         ),
         Err(RuntimeHealthFactAdmissionError::FailureOriginRequired)
     );
@@ -166,13 +195,25 @@ fn failed_observation_without_canonical_origin_fails_closed() {
 #[test]
 fn provider_and_network_failures_cannot_contaminate_runtime_local_health() {
     for (kind, origin) in [
-        (FailureOriginProducerKind::ProviderAdapter, FailureOrigin::ProviderService),
-        (FailureOriginProducerKind::NetworkAdapter, FailureOrigin::NetworkTransport),
+        (
+            FailureOriginProducerKind::ProviderAdapter,
+            FailureOrigin::ProviderService,
+        ),
+        (
+            FailureOriginProducerKind::NetworkAdapter,
+            FailureOrigin::NetworkTransport,
+        ),
     ] {
         let bound = bound_origin(kind, origin);
         assert_eq!(
             admit_runtime_health_fact(
-                &claim(), &producer(), &result(), &failed_observation(), &lease(), &authority(150), Some(&bound),
+                &claim(),
+                &producer(),
+                &result(),
+                &failed_observation(),
+                &lease(),
+                &authority(150),
+                Some(&bound),
             ),
             Err(RuntimeHealthFactAdmissionError::ExternalFailureOrigin)
         );
@@ -185,7 +226,13 @@ fn observation_from_other_execution_is_rejected_even_with_same_runtime_tuple() {
     other.execution_id = "execution-old".into();
     assert!(matches!(
         admit_runtime_health_fact(
-            &claim(), &producer(), &other, &success_observation(), &lease(), &authority(150), None,
+            &claim(),
+            &producer(),
+            &other,
+            &success_observation(),
+            &lease(),
+            &authority(150),
+            None,
         ),
         Err(RuntimeHealthFactAdmissionError::ResultLineage(_))
     ));
@@ -198,7 +245,13 @@ fn stale_generation_or_fence_fails_independently_of_valid_lineage() {
     stale.fencing_token = 30;
     assert!(matches!(
         admit_runtime_health_fact(
-            &claim(), &producer(), &result(), &success_observation(), &stale, &authority(150), None,
+            &claim(),
+            &producer(),
+            &result(),
+            &success_observation(),
+            &stale,
+            &authority(150),
+            None,
         ),
         Err(RuntimeHealthFactAdmissionError::RuntimeIdentityBinding(_))
     ));
@@ -208,7 +261,13 @@ fn stale_generation_or_fence_fails_independently_of_valid_lineage() {
 fn trusted_lineage_cannot_rescue_late_admission_after_expiry() {
     assert!(matches!(
         admit_runtime_health_fact(
-            &claim(), &producer(), &result(), &success_observation(), &lease(), &authority(201), None,
+            &claim(),
+            &producer(),
+            &result(),
+            &success_observation(),
+            &lease(),
+            &authority(201),
+            None,
         ),
         Err(RuntimeHealthFactAdmissionError::TrustedAdmission(_))
     ));
@@ -216,12 +275,21 @@ fn trusted_lineage_cannot_rescue_late_admission_after_expiry() {
 
 #[test]
 fn caller_or_event_time_cannot_replace_trusted_admission_clock() {
-    for basis in [AdmissionTimeBasis::CallerDeclared, AdmissionTimeBasis::EvidenceMetadata] {
+    for basis in [
+        AdmissionTimeBasis::CallerDeclared,
+        AdmissionTimeBasis::EvidenceMetadata,
+    ] {
         let mut untrusted = authority(150);
         untrusted.time_basis = basis;
         assert!(matches!(
             admit_runtime_health_fact(
-                &claim(), &producer(), &result(), &success_observation(), &lease(), &untrusted, None,
+                &claim(),
+                &producer(),
+                &result(),
+                &success_observation(),
+                &lease(),
+                &untrusted,
+                None,
             ),
             Err(RuntimeHealthFactAdmissionError::TrustedAdmission(_))
         ));
@@ -236,7 +304,13 @@ fn zero_attempt_bootstrap_state_is_not_execution_bound_admissible_fact() {
     zero.evidence_basis = RuntimeHealthEvidenceBasis::Unknown;
     assert!(matches!(
         admit_runtime_health_fact(
-            &claim(), &producer(), &result(), &zero, &lease(), &authority(150), None,
+            &claim(),
+            &producer(),
+            &result(),
+            &zero,
+            &lease(),
+            &authority(150),
+            None,
         ),
         Err(RuntimeHealthFactAdmissionError::ResultLineage(_))
     ));
@@ -245,10 +319,22 @@ fn zero_attempt_bootstrap_state_is_not_execution_bound_admissible_fact() {
 #[test]
 fn admitted_fact_contains_no_health_state_retry_dispatch_or_acceptance_authority() {
     let admitted = admit_runtime_health_fact(
-        &claim(), &producer(), &result(), &success_observation(), &lease(), &authority(150), None,
-    ).unwrap();
+        &claim(),
+        &producer(),
+        &result(),
+        &success_observation(),
+        &lease(),
+        &authority(150),
+        None,
+    )
+    .unwrap();
     let encoded = serde_json::to_string(&admitted).unwrap();
-    for forbidden in ["health_state", "next_attempt", "dispatch", "AcceptanceDecision"] {
+    for forbidden in [
+        "health_state",
+        "next_attempt",
+        "dispatch",
+        "AcceptanceDecision",
+    ] {
         assert!(!encoded.contains(forbidden));
     }
 }
