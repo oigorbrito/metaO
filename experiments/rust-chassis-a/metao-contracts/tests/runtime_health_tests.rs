@@ -80,6 +80,7 @@ fn empty_window_is_unknown_not_healthy() {
     value.successes = 0;
     value.window_start_sequence = 11;
     value.window_end_sequence = 11;
+    value.evidence_basis = RuntimeHealthEvidenceBasis::Unknown;
     let result = derive_runtime_health(&value, &policy()).expect("projection");
     assert_eq!(result.state, RuntimeHealthState::Unknown);
 }
