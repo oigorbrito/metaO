@@ -1,5 +1,8 @@
 name: Temporary format 503
 on:
+  push:
+    branches:
+      - feat/runtime-health-constituent-provenance-501
   workflow_dispatch:
 permissions:
   contents: write
