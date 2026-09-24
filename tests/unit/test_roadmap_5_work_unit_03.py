@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 import sys
 import tempfile
-from types import ModuleType
+from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -248,6 +248,51 @@ class CertificationLifecycleCliV1Tests(unittest.TestCase):
         self.assertEqual(
             payload["message"],
             "runtime-inspect freshness requires both --now-epoch and --max-age-seconds",
+        )
+
+    def test_runtime_inspect_rejects_missing_runtime_identity(self):
+        entry = SimpleNamespace(
+            orchestrator_id="runtime-a",
+            version="v1",
+            capabilities=frozenset({"workflow"}),
+            health=HealthStatus.HEALTHY,
+            cost=0.1,
+            latency_ms=10.0,
+        )
+        with patch("metao.entrypoint._load_factory_operator") as load_operator:
+            load_operator.return_value = SimpleNamespace(runtime_entries=lambda: [entry])
+            code, stdout, stderr = self.invoke(
+                ["runtime-inspect", "runtime-missing"]
+            )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(stdout, "")
+        payload = json.loads(stderr)
+        self.assertEqual(payload["error"], "CLIInputError")
+        self.assertEqual(payload["message"], "runtime not found: runtime-missing")
+
+    def test_runtime_inspect_rejects_non_unique_runtime_identity(self):
+        entry = SimpleNamespace(
+            orchestrator_id="runtime-a",
+            version="v1",
+            capabilities=frozenset({"workflow"}),
+            health=HealthStatus.HEALTHY,
+            cost=0.1,
+            latency_ms=10.0,
+        )
+        with patch("metao.entrypoint._load_factory_operator") as load_operator:
+            load_operator.return_value = SimpleNamespace(runtime_entries=lambda: [entry, entry])
+            code, stdout, stderr = self.invoke(
+                ["runtime-inspect", "runtime-a"]
+            )
+
+        self.assertEqual(code, 2)
+        self.assertEqual(stdout, "")
+        payload = json.loads(stderr)
+        self.assertEqual(payload["error"], "CLIInputError")
+        self.assertEqual(
+            payload["message"],
+            "runtime identity is not unique: runtime-a",
         )
 
     def test_runtime_certificates_is_machine_readable_and_can_compute_freshness(self):
