@@ -1,0 +1,166 @@
+name: Project Multi-Provider Supervision Pilot Self-Hosted
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization:
+        description: 'Type I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT exactly'
+        required: true
+        type: string
+      openai_model:
+        description: 'OpenAI model for the provider-backed pilot'
+        required: false
+        default: 'gpt-5.6-luna'
+        type: string
+      gemini_target:
+        description: 'Gemini model target for the provider-backed pilot'
+        required: false
+        default: 'gemma-4-26b-a4b-it'
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: project-multi-provider-supervision-pilot-self-hosted
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: [self-hosted, linux, x64, metao-project-pilot]
+    timeout-minutes: 10
+    env:
+      METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
+      METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
+      METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+      METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
+      METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
+      METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
+      METAO_SSH_SMOKE_DESTINATION_USER: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_USER }}
+      METAO_SSH_SMOKE_SOURCE_PORT: ${{ secrets.METAO_SSH_SMOKE_SOURCE_PORT }}
+      METAO_SSH_SMOKE_DESTINATION_PORT: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_PORT }}
+      METAO_SSH_SMOKE_KNOWN_HOSTS: ${{ secrets.METAO_SSH_SMOKE_KNOWN_HOSTS }}
+      METAO_SSH_SMOKE_IDENTITY: ${{ secrets.METAO_SSH_SMOKE_IDENTITY }}
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+      - name: Confirm dedicated runner contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${RUNNER_OS}" = "Linux"
+          python3 --version
+          git --version
+          ssh -V
+      - name: Run no-provider-call operational preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/project_multi_provider_preflight.py > "$RUNNER_TEMP/project-multi-provider-preflight.json"
+          cat "$RUNNER_TEMP/project-multi-provider-preflight.json"
+      - name: Validate preflight evidence boundary
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          path = Path(os.environ['RUNNER_TEMP']) / 'project-multi-provider-preflight.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'preflight produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['preflight'] == 'PASS'
+          assert evidence['source_reachable'] is True
+          assert evidence['destination_reachable'] is True
+          assert evidence['distinct_hosts'] is True
+          assert evidence['provider_credentials_present'] is True
+          assert evidence['credentials_emitted'] is False
+          assert evidence['hosts_emitted'] is False
+          assert evidence['provider_calls_made'] is False
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
+
+  multi-provider-pilot:
+    needs: preflight
+    runs-on: [self-hosted, linux, x64, metao-project-pilot]
+    timeout-minutes: 25
+    env:
+      METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
+      METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
+      METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+      METAO_OPENAI_MODEL: ${{ inputs.openai_model }}
+      METAO_GEMINI_TARGET: ${{ inputs.gemini_target }}
+      METAO_SSH_SMOKE_SOURCE_HOST: ${{ secrets.METAO_SSH_SMOKE_SOURCE_HOST }}
+      METAO_SSH_SMOKE_DESTINATION_HOST: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_HOST }}
+      METAO_SSH_SMOKE_SOURCE_USER: ${{ secrets.METAO_SSH_SMOKE_SOURCE_USER }}
+      METAO_SSH_SMOKE_DESTINATION_USER: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_USER }}
+      METAO_SSH_SMOKE_SOURCE_PORT: ${{ secrets.METAO_SSH_SMOKE_SOURCE_PORT }}
+      METAO_SSH_SMOKE_DESTINATION_PORT: ${{ secrets.METAO_SSH_SMOKE_DESTINATION_PORT }}
+      METAO_SSH_SMOKE_KNOWN_HOSTS: ${{ secrets.METAO_SSH_SMOKE_KNOWN_HOSTS }}
+      METAO_SSH_SMOKE_IDENTITY: ${{ secrets.METAO_SSH_SMOKE_IDENTITY }}
+      OPENAI_API_KEY: ''
+    steps:
+      - name: Checkout exact head
+        uses: actions/checkout@v4
+      - name: Require Python 3.12+
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import sys
+          assert sys.version_info >= (3, 12), sys.version
+          print(sys.version)
+          PY
+      - name: Install metaO and pinned OpenAI Agents runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -e .
+          python3 -m pip install 'openai-agents==0.20.0'
+          python3 -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'"
+      - name: Materialize SSH verification and identity files
+        shell: bash
+        run: |
+          set -euo pipefail
+          KNOWN_HOSTS_FILE="$RUNNER_TEMP/metao-pilot-known-hosts"
+          printf '%s\n' "$METAO_SSH_SMOKE_KNOWN_HOSTS" > "$KNOWN_HOSTS_FILE"
+          chmod 600 "$KNOWN_HOSTS_FILE"
+          echo "METAO_SSH_KNOWN_HOSTS_FILE=$KNOWN_HOSTS_FILE" >> "$GITHUB_ENV"
+          if [[ -n "${METAO_SSH_SMOKE_IDENTITY:-}" ]]; then
+            IDENTITY_FILE="$RUNNER_TEMP/metao-pilot-identity"
+            printf '%s\n' "$METAO_SSH_SMOKE_IDENTITY" > "$IDENTITY_FILE"
+            chmod 600 "$IDENTITY_FILE"
+            echo "METAO_SSH_IDENTITY_FILE=$IDENTITY_FILE" >> "$GITHUB_ENV"
+          fi
+      - name: Run credential-backed multi-provider project pilot
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 scripts/project_multi_provider_pilot.py > "$RUNNER_TEMP/project-multi-provider-pilot.json"
+      - name: Validate bounded pilot evidence
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          path = Path(os.environ['RUNNER_TEMP']) / 'project-multi-provider-pilot.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'multi-provider pilot produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['project_head'] == os.environ['GITHUB_SHA']
+          assert evidence['project_verdict'] == 'PROJECT_ACCEPTED'
+          assert evidence['executors_used'] == ['executor-gemini', 'executor-openai']
+          assert evidence['providers_used'] == ['provider-google', 'provider-openai']
+          assert evidence['typed_capacity_failure_injected'] is True
+          assert evidence['provider_diverse_failover_observed'] is True
+          assert evidence['verification_failure_observed'] is True
+          assert evidence['corrective_work_observed'] is True
+          assert evidence['independent_verifier_id'] == 'project-verifier'
+          assert evidence['cross_host'] is True
+          assert evidence['credentials_emitted'] is False
+          assert evidence['remote_paths_emitted'] is False
+          assert len(evidence['checkpoint_sha_lineage']) >= 3
+          assert evidence['operational_pilot'] == 'PASS'
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
