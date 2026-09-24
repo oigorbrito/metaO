@@ -215,7 +215,7 @@ class DurableRuntimeHealthTests(unittest.TestCase):
                 version="1.2.11",
                 config_id="cfg",
                 health_policy=self.policy(),
-                health_store=SQLiteRuntimeHealthStore(path),
+                health_store=SQLiteRuntimeHealthStore(path),`n                failure_origin_authority=_RuntimeLocalOriginAuthority(),
             )
             for index in range(3):
                 self.assertEqual(
@@ -233,7 +233,7 @@ class DurableRuntimeHealthTests(unittest.TestCase):
                 version="1.2.11",
                 config_id="cfg",
                 health_policy=self.policy(),
-                health_store=SQLiteRuntimeHealthStore(path),
+                health_store=SQLiteRuntimeHealthStore(path),`n                failure_origin_authority=_RuntimeLocalOriginAuthority(),
             )
             self.assertEqual(
                 restarted.runtime_health_facts().state,
