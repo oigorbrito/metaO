@@ -57,6 +57,7 @@ from .sqlite_store import SQLiteMissionStore
 _RUNTIME_COMMANDS = frozenset(
     {
         "benchmark-import",
+        "runtime-benchmark-import",
         "runtime-benchmarks",
         "runtimes",
         "runtime-inspect",
@@ -118,7 +119,7 @@ def _combined_help(stream: TextIO) -> None:
     stream.write("metaO control-plane operator CLI\n\n")
     stream.write("mission commands: doctor, run, status, inspect, list, events, approve, resume, cancel\n")
     stream.write(
-        "runtime commands: benchmark-import, runtime-benchmarks, runtimes, runtime-inspect, "
+        "runtime commands: runtime-benchmark-import (benchmark-import), runtime-benchmarks, runtimes, runtime-inspect, "
         "runtime-quarantine, runtime-restore, runtime-history, runtime-certificates, "
         "runtime-certificate-revoke, runtime-certificate-revocations\n"
     )
@@ -130,16 +131,19 @@ def _runtime_parser() -> argparse.ArgumentParser:
     sub = parser.add_subparsers(dest="command", required=True)
 
     benchmark_import = sub.add_parser(
-        "benchmark-import",
+        "runtime-benchmark-import",
+        aliases=["benchmark-import"],
         help="ingest one canonical benchmark evidence JSON file",
     )
     benchmark_import.add_argument("evidence_file")
 
     runtime_benchmarks = sub.add_parser(
         "runtime-benchmarks",
-        help="list durable benchmark evidence for one executor/runtime id",
+        help="list durable benchmark evidence for one orchestrator/runtime id",
     )
-    runtime_benchmarks.add_argument("executor_id")
+    runtime_benchmarks.add_argument("orchestrator_id")
+    runtime_benchmarks.add_argument("--now-epoch", type=float)
+    runtime_benchmarks.add_argument("--max-age-seconds", type=float)
 
     runtimes = sub.add_parser("runtimes", help="list configured runtime catalog and live/control health")
     runtimes.add_argument("--factory", required=False, help="configured operator factory module:function")
@@ -388,15 +392,31 @@ def main(
     certification_revocation_db = _certification_revocation_db(args.db)
 
     try:
-        if args.command == "benchmark-import":
+        if args.command in {"benchmark-import", "runtime-benchmark-import"}:
+            benchmark_store = SQLiteBenchmarkEvidenceStore(certification_db)
             evidence = load_benchmark_evidence_json(args.evidence_file)
-            stored = SQLiteBenchmarkEvidenceStore(args.db).record(evidence)
+            stored = benchmark_store.record(evidence)
             _write_json(_benchmark_evidence_view(stored), out)
             return 0
 
         if args.command == "runtime-benchmarks":
-            items = SQLiteBenchmarkEvidenceStore(args.db).history(args.executor_id)
-            _write_json([_benchmark_evidence_view(item) for item in items], out)
+            if (args.now_epoch is None) != (args.max_age_seconds is None):
+                raise CLIInputError(
+                    "runtime-benchmarks freshness requires both --now-epoch and --max-age-seconds"
+                )
+            benchmark_store = SQLiteBenchmarkEvidenceStore(certification_db)
+            items = benchmark_store.history(args.orchestrator_id)
+            _write_json(
+                [
+                    _benchmark_evidence_view(
+                        item,
+                        now_epoch=args.now_epoch,
+                        max_age_seconds=args.max_age_seconds,
+                    )
+                    for item in items
+                ],
+                out,
+            )
             return 0
 
         if args.command == "runtimes":
@@ -460,7 +480,7 @@ def main(
                     now_epoch=args.now_epoch,
                     max_age_seconds=args.max_age_seconds,
                 )
-                for item in SQLiteBenchmarkEvidenceStore(args.db).history(
+                for item in SQLiteBenchmarkEvidenceStore(certification_db).history(
                     args.orchestrator_id
                 )
             ]
