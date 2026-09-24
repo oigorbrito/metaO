@@ -43,7 +43,7 @@ jobs:
           METAO_GEMINI_TARGET_INPUT: ${{ inputs.gemini_target }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $audited = 'fe2519044f89cdf0111b5e5118a056fce7524e8d'
+          $audited = 'd18423df408a958bb1c47e69ce4c5ffa73433daf'
           if ($env:METAO_AUTHORIZATION_INPUT -ne 'I_AUTHORIZE_METAO_MULTI_PROVIDER_PROJECT_PILOT') {
             throw 'explicit multi-provider pilot authorization is required'
           }
@@ -64,7 +64,7 @@ jobs:
       - name: Checkout audited pilot head without persisting credentials
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: fe2519044f89cdf0111b5e5118a056fce7524e8d
+          ref: d18423df408a958bb1c47e69ce4c5ffa73433daf
           persist-credentials: false
 
       - name: Revalidate audited checkout and Windows runner contract
@@ -145,24 +145,26 @@ jobs:
           }
           $e | ConvertTo-Json -Compress
 
-      - name: Install audited metaO and pinned OpenAI Agents runtime
+      - name: Install hermetic metaO provider runtime
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          python -m pip install --upgrade pip
-          if ($LASTEXITCODE -ne 0) { throw 'pip upgrade failed' }
-          python -m pip install -e .
-          if ($LASTEXITCODE -ne 0) { throw 'metaO install failed' }
-          python -m pip install 'openai-agents==0.20.0'
-          if ($LASTEXITCODE -ne 0) { throw 'openai-agents install failed' }
-          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'"
-          if ($LASTEXITCODE -ne 0) { throw 'openai-agents version verification failed' }
+          $evidencePath = Join-Path $env:RUNNER_TEMP 'project-pilot-dependency-install-windows.json'
+          python scripts/install_hermetic_pilot_runtime.py | Out-File -LiteralPath $evidencePath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'hermetic provider runtime install failed' }
+          $lines = @(Get-Content -LiteralPath $evidencePath | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
+          if ($lines.Count -eq 0) { throw 'dependency installer produced no evidence' }
+          $e = $lines[-1] | ConvertFrom-Json
+          if ($e.hermetic_runtime -ne 'PREPARED' -or $e.credentials_emitted) {
+            throw 'dependency installer evidence boundary violated'
+          }
+          $e | ConvertTo-Json -Compress
 
-      - name: Run credential-backed Windows multi-provider project pilot
+      - name: Run credential-backed Windows hermetic multi-provider project pilot
         shell: pwsh
         env:
           METAO_MULTI_PROVIDER_PILOT_AUTHORIZATION: ${{ inputs.authorization }}
-          METAO_PILOT_TARGET_HEAD: fe2519044f89cdf0111b5e5118a056fce7524e8d
+          METAO_PILOT_TARGET_HEAD: d18423df408a958bb1c47e69ce4c5ffa73433daf
           METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
           METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
           METAO_OPENAI_MODEL: ${{ inputs.openai_model }}
@@ -177,8 +179,8 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $evidencePath = Join-Path $env:RUNNER_TEMP 'project-multi-provider-pilot-windows.json'
-          python scripts/project_multi_provider_pilot.py | Out-File -LiteralPath $evidencePath -Encoding utf8
-          if ($LASTEXITCODE -ne 0) { throw 'credential-backed project pilot failed' }
+          python scripts/run_project_multi_provider_pilot_hermetic.py | Out-File -LiteralPath $evidencePath -Encoding utf8
+          if ($LASTEXITCODE -ne 0) { throw 'credential-backed hermetic project pilot failed' }
 
       - name: Validate bounded Windows pilot evidence
         shell: pwsh

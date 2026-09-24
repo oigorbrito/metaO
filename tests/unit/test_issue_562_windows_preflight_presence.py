@@ -12,7 +12,7 @@ class WindowsPreflightPresenceTests(unittest.TestCase):
     def test_preflight_exposes_presence_flags_not_provider_key_values(self) -> None:
         source = WORKFLOW.read_text(encoding="utf-8")
         start = source.index("- name: Run no-provider-call Windows operational preflight")
-        end = source.index("- name: Install audited metaO", start)
+        end = source.index("- name: Install hermetic metaO provider runtime", start)
         preflight = source[start:end]
         self.assertIn("METAO_OPENAI_CREDENTIAL_PRESENT", preflight)
         self.assertIn("METAO_GEMINI_CREDENTIAL_PRESENT", preflight)
@@ -24,7 +24,7 @@ class WindowsPreflightPresenceTests(unittest.TestCase):
         source = DISPATCH.read_text(encoding="utf-8")
         self.assertIn("provider_preflight='PRESENCE_ONLY'", source)
         self.assertIn("provider_targets='ALLOWLISTED'", source)
-        self.assertIn("$AuditedHead = 'fe2519044f89cdf0111b5e5118a056fce7524e8d'", source)
+        self.assertIn("$AuditedHead = 'd18423df408a958bb1c47e69ce4c5ffa73433daf'", source)
 
 
 if __name__ == "__main__":
