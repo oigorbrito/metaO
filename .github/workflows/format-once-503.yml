@@ -18,10 +18,8 @@ jobs:
         working-directory: experiments/rust-chassis-a
         shell: bash
         run: |
-          sed -i 's/\.map_or(true, |v| now >= v)/.is_none_or(|v| now >= v)/' metao-contracts/src/execution_governance.rs
-          sed -i 's/\.map_or(true, |v| now <= v)/.is_none_or(|v| now <= v)/' metao-contracts/src/execution_governance.rs
-          sed -i '396,403 s/\.checked_add(/.saturating_add(/' metao-contracts/src/runtime_health.rs
-          sed -i '396,403 /\.unwrap_or(u64::MAX);/d' metao-contracts/src/runtime_health.rs
+          perl -0pi -e 's/\.map_or\(true, \|v\| now >= v\)/.is_none_or(|v| now >= v)/g; s/\.map_or\(true, \|v\| now <= v\)/.is_none_or(|v| now <= v)/g' metao-contracts/src/execution_governance.rs
+          perl -0pi -e 's/\.checked_add\(snapshot\.reserved\.tokens\)\s*\.unwrap_or\(u64::MAX\)/.saturating_add(snapshot.reserved.tokens)/g; s/\.checked_add\(snapshot\.reserved\.attempts\)\s*\.unwrap_or\(u64::MAX\)/.saturating_add(snapshot.reserved.attempts)/g' metao-contracts/src/runtime_health.rs
           perl -0pi -e 's/^pub fn project_retry_governance/#[allow(clippy::too_many_arguments)]\npub fn project_retry_governance/m' metao-contracts/src/execution_governance.rs
           perl -0pi -e 's/^pub fn project_recovery_probe_governance/#[allow(clippy::too_many_arguments)]\npub fn project_recovery_probe_governance/m' metao-contracts/src/runtime_health.rs
       - name: Format
