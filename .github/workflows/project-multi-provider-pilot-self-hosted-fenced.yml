@@ -216,3 +216,20 @@ jobs:
           assert re.fullmatch(r'[0-9a-f]{40}', evidence['runtime_authority_uv_lock_blob_sha1'])
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
+      - name: Cleanup SSH verification files
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP']).resolve()
+          for name in ('metao-pilot-known-hosts', 'metao-pilot-identity'):
+              path = (root / name).resolve(strict=False)
+              if path.parent != root:
+                  raise SystemExit('refusing cleanup outside RUNNER_TEMP')
+              if path.exists():
+                  path.unlink()
+          print('ssh secret-file cleanup PASS')
+          PY
