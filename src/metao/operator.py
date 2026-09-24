@@ -19,6 +19,7 @@ from metao.control_plane import (
     EvidenceNormalizer,
     MissionOutcome,
     MissionState,
+    SelectionPolicy,
     MissionStatus,
     execute_mission,
     execute_mission_once,
@@ -115,6 +116,7 @@ class MissionOperator:
         catalog: OrchestratorCatalog | None = None,
         pools: tuple[OrchestratorPoolState, ...] = (),
         normalizers: Mapping[str, EvidenceNormalizer] | None = None,
+        selection_policy: SelectionPolicy | None = None,
     ) -> None:
         if catalog is not None and (pools or normalizers is not None):
             raise ValueError("configure MissionOperator with catalog or pools/normalizers, not both")
@@ -126,6 +128,7 @@ class MissionOperator:
         self._pools = tuple(pools)
         self._normalizers = dict(normalizers or {})
         self._store = store
+        self._selection_policy = selection_policy
         self._execution_handles: ExecutionHandleStorePort | None = None
         self._cancel_poll_interval_s = 0.05
         self._watchers: dict[str, tuple[Event, Thread]] = {}
@@ -342,6 +345,7 @@ class MissionOperator:
             execution_id_prefix=prefix,
             now_epoch=now_epoch,
             max_attempts=max_attempts,
+            selection_policy=self._selection_policy,
             **self._execution_kwargs(mission.mission_id),
         )
         outcome = self._promote_replan_escalation(mission, outcome)
@@ -454,6 +458,7 @@ class MissionOperator:
             execution_id=f"{context.execution_id_prefix}-{next_attempt}",
             now_epoch=now_epoch,
             attempt_number=next_attempt,
+            selection_policy=self._selection_policy,
             **self._execution_kwargs(current.mission_id),
         )
         assert continued.state is not None
