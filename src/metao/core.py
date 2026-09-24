@@ -6,6 +6,7 @@ from types import MappingProxyType
 from typing import Any, Mapping, Protocol, runtime_checkable
 
 from .capacity import CapacityObservation
+from .capabilities import Capability
 
 
 class HealthStatus(StrEnum):
@@ -21,16 +22,20 @@ class ExecutionStatus(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
-class OrchestratorDescriptor:
+class ExecutorDescriptor:
     orchestrator_id: str
     version: str
-    capabilities: frozenset[str]
+    capabilities: frozenset[Capability]
     metadata: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.orchestrator_id or not self.version or not self.capabilities:
-            raise ValueError("orchestrator descriptor requires id, version and capabilities")
+            raise ValueError("executor descriptor requires id, version and capabilities")
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
+
+    @property
+    def executor_id(self) -> str:
+        return self.orchestrator_id
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,7 +48,7 @@ class HealthReport:
 class Mission:
     mission_id: str
     objective: str
-    required_capabilities: frozenset[str] = frozenset()
+    required_capabilities: frozenset[Capability] = frozenset()
 
     def __post_init__(self) -> None:
         if not self.mission_id or not self.objective:
@@ -97,6 +102,10 @@ class EvidenceEnvelope:
         if self.verification_cost_units < 0:
             raise ValueError("verification_cost_units must be non-negative")
 
+    @property
+    def executor_id(self) -> str:
+        return self.orchestrator_id
+
 
 @dataclass(frozen=True, slots=True)
 class ExecutionResult:
@@ -113,39 +122,43 @@ class ExecutionResult:
             raise ValueError("execution result requires identities")
         object.__setattr__(self, "output", MappingProxyType(dict(self.output)))
 
+    @property
+    def executor_id(self) -> str:
+        return self.orchestrator_id
+
 
 @runtime_checkable
-class OrchestratorContract(Protocol):
+class ExecutorContract(Protocol):
     @property
-    def descriptor(self) -> OrchestratorDescriptor: ...
+    def descriptor(self) -> ExecutorDescriptor: ...
     def health(self) -> HealthReport: ...
     def execute(self, request: ExecutionRequest) -> ExecutionResult: ...
     def cancel(self, execution_id: str) -> None: ...
 
 
-class OrchestratorRegistry:
+class ExecutorRegistry:
     def __init__(self) -> None:
-        self._items: dict[str, OrchestratorContract] = {}
+        self._items: dict[str, ExecutorContract] = {}
 
-    def register(self, orchestrator: OrchestratorContract) -> None:
-        key = orchestrator.descriptor.orchestrator_id
+    def register(self, executor: ExecutorContract) -> None:
+        key = executor.descriptor.executor_id
         if key in self._items:
-            raise ValueError(f"orchestrator already registered: {key}")
-        self._items[key] = orchestrator
+            raise ValueError(f"executor already registered: {key}")
+        self._items[key] = executor
 
-    def unregister(self, orchestrator_id: str) -> None:
-        self._items.pop(orchestrator_id, None)
+    def unregister(self, executor_id: str) -> None:
+        self._items.pop(executor_id, None)
 
-    def get(self, orchestrator_id: str) -> OrchestratorContract:
-        if orchestrator_id not in self._items:
-            raise KeyError(f"unknown orchestrator: {orchestrator_id}")
-        return self._items[orchestrator_id]
+    def get(self, executor_id: str) -> ExecutorContract:
+        if executor_id not in self._items:
+            raise KeyError(f"unknown executor: {executor_id}")
+        return self._items[executor_id]
 
-    def descriptors(self) -> tuple[OrchestratorDescriptor, ...]:
+    def descriptors(self) -> tuple[ExecutorDescriptor, ...]:
         return tuple(item.descriptor for _, item in sorted(self._items.items()))
 
-    def eligible(self, mission: Mission) -> tuple[OrchestratorContract, ...]:
-        result: list[OrchestratorContract] = []
+    def eligible(self, mission: Mission) -> tuple[ExecutorContract, ...]:
+        result: list[ExecutorContract] = []
         for _, item in sorted(self._items.items()):
             if item.health().status not in {HealthStatus.HEALTHY, HealthStatus.DEGRADED}:
                 continue
@@ -153,3 +166,11 @@ class OrchestratorRegistry:
                 continue
             result.append(item)
         return tuple(result)
+
+
+# Backward-compatible public names. The executor terminology is the current
+# control-plane vocabulary, while adapters and existing clients still expose
+# the orchestrator names.
+OrchestratorDescriptor = ExecutorDescriptor
+OrchestratorContract = ExecutorContract
+OrchestratorRegistry = ExecutorRegistry

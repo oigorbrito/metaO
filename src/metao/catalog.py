@@ -42,11 +42,7 @@ class _CatalogProfile:
 
 
 class OrchestratorCatalog:
-    """Operational metadata for orchestrators already registered in Core.
-
-    Core owns the stable orchestrator contract. The catalog owns mutable-ish
-    product routing metadata and observes live health through that contract.
-    """
+    """Operational metadata for orchestrators already registered in Core."""
 
     def __init__(self, registry: OrchestratorRegistry) -> None:
         self._registry = registry
@@ -79,24 +75,13 @@ class OrchestratorCatalog:
             raise ValueError("catalog cost and latency must be non-negative")
         if not trust_profile:
             raise ValueError("trust_profile is required")
-        for name, value in (
-            ("success_rate", success_rate),
-            ("quality", quality),
-            ("reliability", reliability),
-        ):
+        for name, value in (("success_rate", success_rate), ("quality", quality), ("reliability", reliability)):
             self._validate_unit_interval(name, value)
 
-        # Fail immediately if the catalog references a runtime not owned by Core.
         self._registry.get(orchestrator_id)
         self._profiles[orchestrator_id] = _CatalogProfile(
-            orchestrator_id,
-            normalizer,
-            cost,
-            latency_ms,
-            trust_profile,
-            success_rate,
-            quality,
-            reliability,
+            orchestrator_id, normalizer, cost, latency_ms, trust_profile,
+            success_rate, quality, reliability,
         )
 
     @staticmethod
@@ -122,30 +107,17 @@ class OrchestratorCatalog:
         try:
             report = orchestrator.health()
         except Exception:
-            # Health observation failure is not evidence of runtime health. It is
-            # nevertheless an operational inability to establish routability, so
-            # the catalog fails closed rather than treating the runtime UNKNOWN.
             return OrchestratorStatus.UNHEALTHY
-
         facts_reader = getattr(orchestrator, "runtime_health_facts", None)
         if not callable(facts_reader):
             return self._map_health(report.status)
-
         try:
             factual_status = self._map_factual_health(facts_reader().state)
         except Exception:
-            # A factual authority that cannot be read must not silently degrade to
-            # coarse readiness or bootstrap UNKNOWN.
             return OrchestratorStatus.UNHEALTHY
-
-        if (
-            report.status is HealthStatus.UNHEALTHY
-            and factual_status
-            not in {OrchestratorStatus.UNHEALTHY, OrchestratorStatus.QUARANTINED}
-        ):
-            # Structural readiness is still a hard operational prerequisite.
-            # Historical facts cannot make a runtime routable when its callable
-            # runtime surface is currently unavailable.
+        if report.status is HealthStatus.UNHEALTHY and factual_status not in {
+            OrchestratorStatus.UNHEALTHY, OrchestratorStatus.QUARANTINED,
+        }:
             return OrchestratorStatus.UNHEALTHY
         return factual_status
 
@@ -155,43 +127,25 @@ class OrchestratorCatalog:
             profile = self._profiles[orchestrator_id]
             orchestrator = self._registry.get(orchestrator_id)
             descriptor = orchestrator.descriptor
-            result.append(
-                OrchestratorCatalogEntry(
-                    orchestrator_id=orchestrator_id,
-                    version=descriptor.version,
-                    capabilities=descriptor.capabilities,
-                    health=self._runtime_status(orchestrator),
-                    cost=profile.cost,
-                    latency_ms=profile.latency_ms,
-                    trust_profile=profile.trust_profile,
-                    success_rate=profile.success_rate,
-                    quality=profile.quality,
-                    reliability=profile.reliability,
-                )
-            )
+            result.append(OrchestratorCatalogEntry(
+                orchestrator_id=orchestrator_id, version=descriptor.version,
+                capabilities=descriptor.capabilities, health=self._runtime_status(orchestrator),
+                cost=profile.cost, latency_ms=profile.latency_ms,
+                trust_profile=profile.trust_profile, success_rate=profile.success_rate,
+                quality=profile.quality, reliability=profile.reliability,
+            ))
         return tuple(result)
 
     def pools(self) -> tuple[OrchestratorPoolState, ...]:
-        return tuple(
-            OrchestratorPoolState(
-                orchestrator_id=entry.orchestrator_id,
-                status=entry.health,
-                capabilities=entry.capabilities,
-                success_rate=entry.success_rate,
-                quality=entry.quality,
-                reliability=entry.reliability,
-                latency_ms=entry.latency_ms,
-                cost=entry.cost,
-            )
-            for entry in self.entries()
-        )
+        return tuple(OrchestratorPoolState(
+            orchestrator_id=entry.orchestrator_id, status=entry.health,
+            capabilities=entry.capabilities, success_rate=entry.success_rate,
+            quality=entry.quality, reliability=entry.reliability,
+            latency_ms=entry.latency_ms, cost=entry.cost,
+        ) for entry in self.entries())
 
     def normalizers(self) -> dict[str, EvidenceNormalizer]:
         return {key: self._profiles[key].normalizer for key in sorted(self._profiles)}
 
 
-__all__ = [
-    "CatalogEntryAlreadyExists",
-    "OrchestratorCatalogEntry",
-    "OrchestratorCatalog",
-]
+__all__ = ["CatalogEntryAlreadyExists", "OrchestratorCatalogEntry", "OrchestratorCatalog"]

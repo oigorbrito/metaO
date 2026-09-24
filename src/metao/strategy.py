@@ -56,15 +56,12 @@ class OrchestratorPoolState:
     recover_at_epoch: float | None = None
     recovery: CapacityRecovery | None = None
 
-    def capacity_available(self, *, now_epoch: float | None = None) -> bool:
-        """Return dispatch capacity without conflating it with runtime health.
+    @property
+    def executor_id(self) -> str:
+        """Compatibility name used by the executor-facing control plane."""
+        return self.orchestrator_id
 
-        Temporary rate limiting and temporary quota exhaustion may become
-        dispatchable only after a recovery deadline carrying explicit, valid
-        evidence. A raw timestamp is retained for compatibility/observation but
-        cannot manufacture evidenced recovery by itself. Other non-available
-        capacity states require an explicit refreshed capacity observation.
-        """
+    def capacity_available(self, *, now_epoch: float | None = None) -> bool:
         if self.capacity_status is CapacityStatus.AVAILABLE:
             return True
         if self.capacity_status not in {
@@ -97,27 +94,13 @@ class HistoricalScore:
     cost_ema: float = 0.0
     samples: int = 0
 
-    def update(
-        self,
-        *,
-        outcome: float,
-        quality: float,
-        latency_ms: float,
-        cost: float,
-        alpha: float = 0.2,
-    ) -> "HistoricalScore":
+    def update(self, *, outcome: float, quality: float, latency_ms: float, cost: float, alpha: float = 0.2) -> "HistoricalScore":
         if not 0 < alpha <= 1:
             raise ValueError("alpha must be in (0, 1]")
         if self.samples == 0:
             return HistoricalScore(outcome, quality, latency_ms, cost, 1)
         blend = lambda old, new: alpha * new + (1 - alpha) * old
-        return HistoricalScore(
-            outcome_ema=blend(self.outcome_ema, outcome),
-            quality_ema=blend(self.quality_ema, quality),
-            latency_ema_ms=blend(self.latency_ema_ms, latency_ms),
-            cost_ema=blend(self.cost_ema, cost),
-            samples=self.samples + 1,
-        )
+        return HistoricalScore(blend(self.outcome_ema, outcome), blend(self.quality_ema, quality), blend(self.latency_ema_ms, latency_ms), blend(self.cost_ema, cost), self.samples + 1)
 
 
 @dataclass(frozen=True)
@@ -130,78 +113,31 @@ class ScoreBreakdown:
 
 
 class DeterministicScorer:
-    """Simple deterministic cost-quality scorer.
-
-    Higher outcome/quality are rewarded. Latency and cost are monotonically
-    penalized with bounded transforms so one unbounded signal cannot dominate.
-    """
-
-    def __init__(
-        self,
-        *,
-        outcome_weight: float = 0.35,
-        quality_weight: float = 0.35,
-        latency_weight: float = 0.15,
-        cost_weight: float = 0.15,
-        latency_scale_ms: float = 1_000.0,
-        cost_scale: float = 1.0,
-    ) -> None:
+    def __init__(self, *, outcome_weight: float = 0.35, quality_weight: float = 0.35, latency_weight: float = 0.15, cost_weight: float = 0.15, latency_scale_ms: float = 1_000.0, cost_scale: float = 1.0) -> None:
         weights = (outcome_weight, quality_weight, latency_weight, cost_weight)
         if not all(isfinite(value) for value in (*weights, latency_scale_ms, cost_scale)):
             raise ValueError("scorer weights and scales must be finite")
         if any(w < 0 for w in weights) or sum(weights) <= 0:
             raise ValueError("weights must be non-negative and not all zero")
-        self.outcome_weight = outcome_weight
-        self.quality_weight = quality_weight
-        self.latency_weight = latency_weight
-        self.cost_weight = cost_weight
-        self.latency_scale_ms = max(latency_scale_ms, 1e-9)
-        self.cost_scale = max(cost_scale, 1e-9)
+        self.outcome_weight, self.quality_weight = outcome_weight, quality_weight
+        self.latency_weight, self.cost_weight = latency_weight, cost_weight
+        self.latency_scale_ms, self.cost_scale = max(latency_scale_ms, 1e-9), max(cost_scale, 1e-9)
 
     @staticmethod
     def _clamp01(value: float) -> float:
         return max(0.0, min(1.0, value))
 
-    def score(
-        self,
-        *,
-        outcome: float,
-        quality: float,
-        latency_ms: float,
-        cost: float,
-    ) -> ScoreBreakdown:
+    def score(self, *, outcome: float, quality: float, latency_ms: float, cost: float) -> ScoreBreakdown:
         if not all(isfinite(value) for value in (outcome, quality, latency_ms, cost)):
             raise ValueError("scorer inputs must be finite")
         outcome_component = self.outcome_weight * self._clamp01(outcome)
         quality_component = self.quality_weight * self._clamp01(quality)
-        latency_utility = exp(-max(latency_ms, 0.0) / self.latency_scale_ms)
-        cost_utility = exp(-max(cost, 0.0) / self.cost_scale)
-        latency_component = self.latency_weight * latency_utility
-        cost_component = self.cost_weight * cost_utility
-        total = (
-            outcome_component
-            + quality_component
-            + latency_component
-            + cost_component
-        )
-        return ScoreBreakdown(
-            total=total,
-            outcome_component=outcome_component,
-            quality_component=quality_component,
-            latency_component=latency_component,
-            cost_component=cost_component,
-        )
+        latency_component = self.latency_weight * exp(-max(latency_ms, 0.0) / self.latency_scale_ms)
+        cost_component = self.cost_weight * exp(-max(cost, 0.0) / self.cost_scale)
+        return ScoreBreakdown(outcome_component + quality_component + latency_component + cost_component, outcome_component, quality_component, latency_component, cost_component)
 
     def score_history(self, history: HistoricalScore) -> ScoreBreakdown:
-        return self.score(
-            outcome=history.outcome_ema,
-            quality=history.quality_ema,
-            latency_ms=history.latency_ema_ms,
-            cost=history.cost_ema,
-        )
-
-
-SelectionPolicy = Callable[[tuple[OrchestratorPoolState, ...], float | None], Optional[str]]
+        return self.score(outcome=history.outcome_ema, quality=history.quality_ema, latency_ms=history.latency_ema_ms, cost=history.cost_ema)
 
 
 @dataclass(frozen=True)
@@ -211,64 +147,30 @@ class RoutingCandidate:
 
 
 class CostQualityRouter:
-    _NORMAL_ROUTABLE = frozenset(
-        {
-            OrchestratorStatus.HEALTHY,
-            OrchestratorStatus.DEGRADED,
-        }
-    )
+    _NORMAL_ROUTABLE = frozenset({OrchestratorStatus.HEALTHY, OrchestratorStatus.DEGRADED})
 
     def __init__(self, scorer: Optional[DeterministicScorer] = None) -> None:
         self.scorer = scorer or DeterministicScorer()
 
-    def rank(
-        self,
-        pools: Iterable[OrchestratorPoolState],
-        *,
-        now_epoch: float | None = None,
-    ) -> Tuple[RoutingCandidate, ...]:
-        available = tuple(
-            pool for pool in pools if pool.capacity_available(now_epoch=now_epoch)
-        )
-        normal = tuple(
-            pool for pool in available if pool.status in self._NORMAL_ROUTABLE
-        )
-        recovering = tuple(
-            pool for pool in available if pool.status is OrchestratorStatus.RECOVERING
-        )
-        unknown = tuple(
-            pool for pool in available if pool.status is OrchestratorStatus.UNKNOWN
-        )
+    def rank(self, pools: Iterable[OrchestratorPoolState], *, now_epoch: float | None = None) -> Tuple[RoutingCandidate, ...]:
+        available = tuple(pool for pool in pools if pool.capacity_available(now_epoch=now_epoch))
+        normal = tuple(pool for pool in available if pool.status in self._NORMAL_ROUTABLE)
+        recovering = tuple(pool for pool in available if pool.status is OrchestratorStatus.RECOVERING)
+        unknown = tuple(pool for pool in available if pool.status is OrchestratorStatus.UNKNOWN)
         routable = normal or recovering or unknown
-
-        candidates = []
-        for pool in routable:
-            score = self.scorer.score(
-                outcome=pool.success_rate,
-                quality=pool.quality,
-                latency_ms=pool.latency_ms,
-                cost=pool.cost,
-            ).total
-            candidates.append(RoutingCandidate(pool.orchestrator_id, score))
+        candidates = [RoutingCandidate(pool.orchestrator_id, self.scorer.score(outcome=pool.success_rate, quality=pool.quality, latency_ms=pool.latency_ms, cost=pool.cost).total) for pool in routable]
         return tuple(sorted(candidates, key=lambda item: (-item.score, item.orchestrator_id)))
 
-    def select(
-        self,
-        pools: Iterable[OrchestratorPoolState],
-        *,
-        now_epoch: float | None = None,
-    ) -> Optional[str]:
+    def select(self, pools: Iterable[OrchestratorPoolState], *, now_epoch: float | None = None) -> Optional[str]:
         ranked = self.rank(pools, now_epoch=now_epoch)
         return ranked[0].orchestrator_id if ranked else None
 
 
-def select_orchestrator(
-    pools: Iterable[OrchestratorPoolState],
-    scorer: Optional[DeterministicScorer] = None,
-    *,
-    now_epoch: float | None = None,
-) -> Optional[str]:
+def select_orchestrator(pools: Iterable[OrchestratorPoolState], scorer: Optional[DeterministicScorer] = None, *, now_epoch: float | None = None) -> Optional[str]:
     return CostQualityRouter(scorer).select(pools, now_epoch=now_epoch)
+
+
+SelectionPolicy = Callable[[tuple[OrchestratorPoolState, ...], float | None], Optional[str]]
 
 
 def select_with_policy(
@@ -277,18 +179,11 @@ def select_with_policy(
     *,
     now_epoch: float | None = None,
 ) -> Optional[str]:
-    """Select from the base router's routable set, optionally reordering by policy.
-
-    The custom policy never sees quarantined/unhealthy/capacity-blocked candidates,
-    so it cannot bypass the existing hard routing gate.
-    """
-
     ranked = CostQualityRouter().rank(pools, now_epoch=now_epoch)
     if not ranked:
         return None
     if policy is None:
         return ranked[0].orchestrator_id
-
     pool_by_id = {pool.orchestrator_id: pool for pool in pools}
     routable = tuple(pool_by_id[item.orchestrator_id] for item in ranked)
     selected = policy(routable, now_epoch)
@@ -299,20 +194,11 @@ def select_with_policy(
     return selected
 
 
-__all__ = [
-    "SystemSnapshot",
-    "OrchestratorPoolState",
-    "BudgetState",
-    "OrchestratorStatus",
-    "CapacityStatus",
-    "RecoveryEvidenceBasis",
-    "CapacityRecovery",
-    "HistoricalScore",
-    "ScoreBreakdown",
-    "DeterministicScorer",
-    "SelectionPolicy",
-    "RoutingCandidate",
-    "CostQualityRouter",
-    "select_orchestrator",
-    "select_with_policy",
-]
+# The control-plane refactor uses executor terminology while the routing
+# contract historically used orchestrator terminology. Keep one state type and
+# one selector until the public naming migration is complete.
+executorPoolState = OrchestratorPoolState
+select_executor = select_orchestrator
+
+
+__all__ = ["SystemSnapshot", "OrchestratorPoolState", "BudgetState", "OrchestratorStatus", "CapacityStatus", "RecoveryEvidenceBasis", "CapacityRecovery", "HistoricalScore", "ScoreBreakdown", "DeterministicScorer", "SelectionPolicy", "RoutingCandidate", "CostQualityRouter", "select_orchestrator", "select_with_policy", "executorPoolState", "select_executor"]

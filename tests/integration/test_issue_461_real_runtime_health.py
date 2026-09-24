@@ -13,6 +13,7 @@ from metao.adapters.crewai import CrewAIOrchestratorAdapter, normalize_evidence 
 from metao.adapters.langgraph import LangGraphOrchestratorAdapter, normalize_evidence as normalize_langgraph
 from metao.catalog import OrchestratorCatalog
 from metao.core import ExecutionRequest, ExecutionStatus, HealthStatus, Mission, OrchestratorRegistry
+from metao.failure_origin import BoundFailureOriginEvidence, FailureOrigin, FactualFailureOutcome
 from metao.runtime_health import RuntimeHealthState
 from metao.strategy import OrchestratorStatus, select_orchestrator
 
@@ -45,6 +46,18 @@ class _SandboxLLM(BaseLLM):
 class _GraphState(TypedDict, total=False):
     objective: str
     result: str
+
+
+class _RuntimeLocalAuthority:
+    def resolve_failure_origin(self, *, request, runtime_id, runtime_version, config_id, error):
+        return BoundFailureOriginEvidence(
+            producer_id=f"runtime-authority:{runtime_id}",
+            mission_id=request.mission.mission_id,
+            execution_id=request.execution_id,
+            origin=FailureOrigin.RUNTIME_LOCAL,
+            outcome=FactualFailureOutcome.FAILED,
+            evidence_ref=f"runtime-local-evidence:{runtime_id}:{request.execution_id}",
+        )
 
 
 def _build_crew(*, fail: bool = False, response: str = "crewai-real-ok") -> Crew:
@@ -97,18 +110,21 @@ class Issue461RealRuntimeHealthTests(unittest.TestCase):
     def test_two_real_runtimes_feed_equivalent_failed_health_facts(self):
         self.assertEqual(package_version("langgraph"), LANGGRAPH_VERSION)
         self.assertEqual(package_version("crewai"), CREWAI_VERSION)
+        authority = _RuntimeLocalAuthority()
 
         graph = LangGraphOrchestratorAdapter(
             _build_graph(fail=True),
             orchestrator_id="langgraph-real-health",
             version=LANGGRAPH_VERSION,
             config_id="issue-461",
+            failure_origin_authority=authority,
         )
         crew = CrewAIOrchestratorAdapter(
             _build_crew(fail=True),
             orchestrator_id="crewai-real-health",
             version=CREWAI_VERSION,
             config_id="issue-461",
+            failure_origin_authority=authority,
         )
 
         graph_result = graph.execute(_request("issue-461-lg-fail"))
@@ -148,6 +164,7 @@ class Issue461RealRuntimeHealthTests(unittest.TestCase):
             orchestrator_id="langgraph-real-health",
             version=LANGGRAPH_VERSION,
             config_id="issue-461",
+            failure_origin_authority=_RuntimeLocalAuthority(),
         )
         crew = CrewAIOrchestratorAdapter(
             _build_crew(response="crewai factual success"),

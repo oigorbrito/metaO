@@ -1,12 +1,8 @@
 """Framework-neutral factual runtime health for real adapter executions.
 
-This module mirrors the authority boundary of the canonical Rust runtime-health
-contract: adapter-verified execution outcomes are factual health evidence;
-structural readiness and runtime self-report are not.
-
-Health stores persist execution facts, never derived state. A tracker replays
-those append-only facts so restart/failover cannot reset an unhealthy history
-to UNKNOWN when the same runtime/version/config binding is reconstructed.
+Health stores persist execution facts, never derived state. Failure origin is
+persisted with failed executions so provider/network evidence survives replay
+without contaminating runtime-local health counters.
 """
 
 from __future__ import annotations
@@ -18,6 +14,7 @@ from threading import RLock
 from typing import Protocol, runtime_checkable
 
 from .core import ExecutionStatus, HealthReport, HealthStatus
+from .failure_origin import FailureOrigin
 
 
 class RuntimeHealthState(StrEnum):
@@ -63,6 +60,8 @@ class RuntimeHealthExecutionFact:
     execution_id: str
     status: ExecutionStatus
     sequence: int
+    failure_origin: FailureOrigin | None = None
+    failure_origin_evidence_ref: str | None = None
 
     def __post_init__(self) -> None:
         for name, value in (
@@ -80,6 +79,14 @@ class RuntimeHealthExecutionFact:
             raise ValueError("runtime health facts only persist SUCCEEDED or FAILED")
         if self.sequence < 1:
             raise ValueError("runtime health fact sequence must be positive")
+        if self.status is ExecutionStatus.SUCCEEDED:
+            if self.failure_origin is not None or self.failure_origin_evidence_ref is not None:
+                raise ValueError("successful runtime health fact cannot carry failure origin")
+        else:
+            if not isinstance(self.failure_origin, FailureOrigin):
+                raise ValueError("failed runtime health fact requires failure origin")
+            if not self.failure_origin_evidence_ref or not self.failure_origin_evidence_ref.strip():
+                raise ValueError("failed runtime health fact requires failure-origin evidence ref")
 
 
 @runtime_checkable
@@ -92,6 +99,8 @@ class RuntimeHealthStorePort(Protocol):
         config_id: str,
         execution_id: str,
         status: ExecutionStatus,
+        failure_origin: FailureOrigin | None = None,
+        failure_origin_evidence_ref: str | None = None,
     ) -> RuntimeHealthExecutionFact: ...
 
     def history(
@@ -118,7 +127,12 @@ class InMemoryRuntimeHealthStore:
         config_id: str,
         execution_id: str,
         status: ExecutionStatus,
+        failure_origin: FailureOrigin | None = None,
+        failure_origin_evidence_ref: str | None = None,
     ) -> RuntimeHealthExecutionFact:
+        if status is ExecutionStatus.FAILED and failure_origin is None:
+            failure_origin = FailureOrigin.RUNTIME_LOCAL
+            failure_origin_evidence_ref = failure_origin_evidence_ref or f"legacy-runtime-local://{execution_id}"
         probe = RuntimeHealthExecutionFact(
             runtime_id,
             runtime_version,
@@ -126,12 +140,18 @@ class InMemoryRuntimeHealthStore:
             execution_id,
             status,
             1,
+            failure_origin,
+            failure_origin_evidence_ref,
         )
         key = (runtime_id, runtime_version, config_id, execution_id)
         with self._lock:
             existing = self._facts.get(key)
             if existing is not None:
-                if existing.status is not status:
+                if (
+                    existing.status is not probe.status
+                    or existing.failure_origin is not probe.failure_origin
+                    or existing.failure_origin_evidence_ref != probe.failure_origin_evidence_ref
+                ):
                     raise RuntimeHealthConflict(execution_id)
                 return existing
             sequence = (
@@ -157,6 +177,8 @@ class InMemoryRuntimeHealthStore:
                 probe.execution_id,
                 probe.status,
                 sequence,
+                probe.failure_origin,
+                probe.failure_origin_evidence_ref,
             )
             self._facts[key] = fact
             return fact
@@ -264,6 +286,8 @@ class RuntimeHealthTracker:
         status: ExecutionStatus,
         *,
         execution_id: str,
+        failure_origin: FailureOrigin | None = None,
+        failure_origin_evidence_ref: str | None = None,
     ) -> RuntimeHealthFacts:
         if not execution_id:
             raise ValueError("execution_id must be non-empty")
@@ -273,6 +297,9 @@ class RuntimeHealthTracker:
             return self.facts()
         if status not in {ExecutionStatus.SUCCEEDED, ExecutionStatus.FAILED}:
             raise ValueError(f"unsupported execution status for runtime health: {status}")
+        if status is ExecutionStatus.FAILED and failure_origin is None:
+            failure_origin = FailureOrigin.RUNTIME_LOCAL
+            failure_origin_evidence_ref = failure_origin_evidence_ref or f"legacy-runtime-local://{execution_id}"
 
         with self._lock:
             self._store.record(
@@ -281,6 +308,8 @@ class RuntimeHealthTracker:
                 config_id=self._config_id,
                 execution_id=execution_id,
                 status=status,
+                failure_origin=failure_origin,
+                failure_origin_evidence_ref=failure_origin_evidence_ref,
             )
             return self._facts_from_history(self._history_unlocked())
 
@@ -339,6 +368,11 @@ class RuntimeHealthTracker:
                     "runtime health fact sequence is not contiguous"
                 )
             prior_sequence = fact.sequence
+            if (
+                fact.status is ExecutionStatus.FAILED
+                and fact.failure_origin is not FailureOrigin.RUNTIME_LOCAL
+            ):
+                continue
             previous_state = state
             succeeded = fact.status is ExecutionStatus.SUCCEEDED
             window.append(
@@ -361,7 +395,7 @@ class RuntimeHealthTracker:
         start_sequence = window[0].sequence if window else prior_sequence
         end_sequence = window[-1].sequence if window else prior_sequence
         evidence_ref = (
-            window[-1].execution_id if window else "no-execution-observation"
+            window[-1].execution_id if window else "no-runtime-local-execution-observation"
         )
         return RuntimeHealthFacts(
             runtime_id=self._runtime_id,

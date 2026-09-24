@@ -8,6 +8,7 @@ import sqlite3
 from typing import Any
 
 from .core import ExecutionStatus
+from .failure_origin import FailureOrigin
 from .runtime_health import RuntimeHealthConflict, RuntimeHealthExecutionFact
 
 
@@ -39,6 +40,8 @@ class SQLiteRuntimeHealthStore:
                     execution_id TEXT NOT NULL,
                     status TEXT NOT NULL,
                     sequence INTEGER NOT NULL CHECK (sequence >= 1),
+                    failure_origin TEXT,
+                    failure_origin_evidence_ref TEXT,
                     PRIMARY KEY (
                         runtime_id, runtime_version, config_id, execution_id
                     ),
@@ -47,6 +50,27 @@ class SQLiteRuntimeHealthStore:
                     )
                 )
                 """
+            )
+            columns = {
+                str(row[1])
+                for row in connection.execute("PRAGMA table_info(runtime_health_execution_facts)")
+            }
+            if "failure_origin" not in columns:
+                connection.execute(
+                    "ALTER TABLE runtime_health_execution_facts ADD COLUMN failure_origin TEXT"
+                )
+            if "failure_origin_evidence_ref" not in columns:
+                connection.execute(
+                    "ALTER TABLE runtime_health_execution_facts ADD COLUMN failure_origin_evidence_ref TEXT"
+                )
+            connection.execute(
+                """
+                UPDATE runtime_health_execution_facts
+                SET failure_origin=?,
+                    failure_origin_evidence_ref='legacy-runtime-local://' || execution_id
+                WHERE status=? AND failure_origin IS NULL
+                """,
+                (FailureOrigin.RUNTIME_LOCAL.value, ExecutionStatus.FAILED.value),
             )
             connection.execute(
                 "CREATE INDEX IF NOT EXISTS idx_runtime_health_binding_sequence "
@@ -57,13 +81,18 @@ class SQLiteRuntimeHealthStore:
     @staticmethod
     def _decode(row: tuple[Any, ...]) -> RuntimeHealthExecutionFact:
         try:
+            status = ExecutionStatus(str(row[4]))
+            origin = FailureOrigin(str(row[6])) if row[6] is not None else None
+            evidence_ref = str(row[7]) if row[7] is not None else None
             return RuntimeHealthExecutionFact(
                 runtime_id=str(row[0]),
                 runtime_version=str(row[1]),
                 config_id=str(row[2]),
                 execution_id=str(row[3]),
-                status=ExecutionStatus(str(row[4])),
+                status=status,
                 sequence=int(row[5]),
+                failure_origin=origin,
+                failure_origin_evidence_ref=evidence_ref,
             )
         except (TypeError, ValueError) as exc:
             raise RuntimeHealthStoreCorrupt("invalid runtime health fact row") from exc
@@ -76,21 +105,29 @@ class SQLiteRuntimeHealthStore:
         config_id: str,
         execution_id: str,
         status: ExecutionStatus,
+        failure_origin: FailureOrigin | None = None,
+        failure_origin_evidence_ref: str | None = None,
     ) -> RuntimeHealthExecutionFact:
-        RuntimeHealthExecutionFact(
+        if status is ExecutionStatus.FAILED and failure_origin is None:
+            failure_origin = FailureOrigin.RUNTIME_LOCAL
+            failure_origin_evidence_ref = failure_origin_evidence_ref or f"legacy-runtime-local://{execution_id}"
+        probe = RuntimeHealthExecutionFact(
             runtime_id,
             runtime_version,
             config_id,
             execution_id,
             status,
             1,
+            failure_origin,
+            failure_origin_evidence_ref,
         )
         binding = (runtime_id, runtime_version, config_id)
         with closing(self._connect()) as connection, connection:
             connection.execute("BEGIN IMMEDIATE")
             row = connection.execute(
                 """
-                SELECT runtime_id,runtime_version,config_id,execution_id,status,sequence
+                SELECT runtime_id,runtime_version,config_id,execution_id,status,sequence,
+                       failure_origin,failure_origin_evidence_ref
                 FROM runtime_health_execution_facts
                 WHERE runtime_id=? AND runtime_version=? AND config_id=? AND execution_id=?
                 """,
@@ -98,7 +135,11 @@ class SQLiteRuntimeHealthStore:
             ).fetchone()
             if row is not None:
                 existing = self._decode(row)
-                if existing.status is not status:
+                if (
+                    existing.status is not probe.status
+                    or existing.failure_origin is not probe.failure_origin
+                    or existing.failure_origin_evidence_ref != probe.failure_origin_evidence_ref
+                ):
                     raise RuntimeHealthConflict(execution_id)
                 return existing
 
@@ -114,10 +155,18 @@ class SQLiteRuntimeHealthStore:
             connection.execute(
                 """
                 INSERT INTO runtime_health_execution_facts(
-                    runtime_id,runtime_version,config_id,execution_id,status,sequence
-                ) VALUES(?,?,?,?,?,?)
+                    runtime_id,runtime_version,config_id,execution_id,status,sequence,
+                    failure_origin,failure_origin_evidence_ref
+                ) VALUES(?,?,?,?,?,?,?,?)
                 """,
-                (*binding, execution_id, status.value, sequence),
+                (
+                    *binding,
+                    execution_id,
+                    status.value,
+                    sequence,
+                    failure_origin.value if failure_origin is not None else None,
+                    failure_origin_evidence_ref,
+                ),
             )
 
         return RuntimeHealthExecutionFact(
@@ -127,6 +176,8 @@ class SQLiteRuntimeHealthStore:
             execution_id,
             status,
             sequence,
+            failure_origin,
+            failure_origin_evidence_ref,
         )
 
     def history(
@@ -139,7 +190,8 @@ class SQLiteRuntimeHealthStore:
         with closing(self._connect()) as connection, connection:
             rows = connection.execute(
                 """
-                SELECT runtime_id,runtime_version,config_id,execution_id,status,sequence
+                SELECT runtime_id,runtime_version,config_id,execution_id,status,sequence,
+                       failure_origin,failure_origin_evidence_ref
                 FROM runtime_health_execution_facts
                 WHERE runtime_id=? AND runtime_version=? AND config_id=?
                 ORDER BY sequence

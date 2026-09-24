@@ -78,6 +78,7 @@ fn empty_window_is_unknown_not_healthy() {
     let mut value = observation();
     value.attempts = 0;
     value.successes = 0;
+    value.evidence_basis = RuntimeHealthEvidenceBasis::Unknown;
     value.window_start_sequence = 11;
     value.window_end_sequence = 11;
     let result = derive_runtime_health(&value, &policy()).expect("projection");
