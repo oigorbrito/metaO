@@ -370,7 +370,6 @@ pub enum RecoveryProbeGovernanceError {
     InvalidApprovalContext,
 }
 #[allow(clippy::too_many_arguments)]
-#[allow(clippy::too_many_arguments)]
 pub fn project_recovery_probe_governance(
     intent: &BoundRecoveryProbeIntent,
     policy: crate::execution_governance::ExecutionPolicyEffect,
