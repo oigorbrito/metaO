@@ -41,14 +41,17 @@ def _codex_version() -> str:
     executable_path = Path(executable).resolve()
     if not executable_path.is_file():
         raise SystemExit("codex CLI path is not a regular file")
+    safe_environment = os.environ.copy()
+    safe_environment["PATH"] = str(executable_path.parent) + os.pathsep + safe_environment.get("PATH", "")
     completed = subprocess.run(
-        [str(executable_path), "--version"],
+        ["codex", "--version"],  # nosec B607 - PATH is prefixed with the validated CLI directory
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
-    )  # nosec B603 - absolute allowlisted executable and constant arguments
+        env=safe_environment,
+    )  # nosec B603 - literal arguments and controlled PATH
     version = completed.stdout.strip()
     if _EXPECTED_CLI_VERSION not in version:
         raise AssertionError(
