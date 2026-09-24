@@ -34,6 +34,30 @@ def evidence_payload() -> dict:
     }
 
 
+def family_identity_payload() -> dict:
+    payload = evidence_payload()
+    return {
+        key: payload[key]
+        for key in (
+            "evidence_id",
+            "task_set",
+            "executor_id",
+            "executor_version",
+            "harness_id",
+            "harness_version",
+            "model_id",
+            "provider_id",
+            "model_version",
+            "runtime_config_digest",
+            "tool_policy_digest",
+            "environment_id",
+            "observed_at_epoch",
+            "source",
+            "raw_result_ref",
+        )
+    }
+
+
 class BenchmarkEvidenceCliTests(unittest.TestCase):
     @staticmethod
     def invoke(argv):
@@ -46,7 +70,34 @@ class BenchmarkEvidenceCliTests(unittest.TestCase):
         code, stdout, stderr = self.invoke(["--help"])
         self.assertEqual(code, 0, stderr)
         self.assertIn("benchmark-import", stdout)
+        self.assertIn("benchmark-family-import", stdout)
         self.assertIn("runtime-benchmarks", stdout)
+
+    def test_family_import_normalizes_raw_result_with_identity_manifest(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            db = root / "metao.db"
+            raw_result = root / "swe-result.json"
+            identity = root / "identity.json"
+            raw_result.write_text(json.dumps({"resolved": 8, "total": 10}), encoding="utf-8")
+            identity.write_text(json.dumps(family_identity_payload()), encoding="utf-8")
+
+            code, stdout, stderr = self.invoke(
+                [
+                    "--db",
+                    str(db),
+                    "benchmark-family-import",
+                    "swe-bench",
+                    str(raw_result),
+                    "--identity-file",
+                    str(identity),
+                ]
+            )
+
+        self.assertEqual(code, 0, stderr)
+        imported = json.loads(stdout)
+        self.assertEqual(imported["benchmark_id"], "swe-bench")
+        self.assertEqual(imported["metrics"][0]["value"], 0.8)
 
     def test_import_and_list_round_trip(self):
         with tempfile.TemporaryDirectory() as temp:
