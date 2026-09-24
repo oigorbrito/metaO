@@ -18,3 +18,51 @@ fn concurrent_duplicate_settlement_charges_once(){let a=Arc::new(ExecutionAccoun
 fn factual_overage_is_preserved_and_blocks_future_capacity(){let mut b=budget();b.money_limit=1.0;let a=ExecutionAccountingAuthority::new(b).unwrap();a.settle(1,op("acct-over",2.0)).unwrap();let s=a.snapshot();assert_eq!(s.budget.money_used,2.0);assert!(!s.budget.has_pre_runtime_capacity(&ExecutionUsage{money:0.0,tokens:0,wall_time_s:0.0,attempts:0}));}
 #[test]
 fn evidence_ref_is_not_accounting_identity(){let a=ExecutionAccountingAuthority::new(budget()).unwrap();let mut one=op("acct-a",1.0);let mut two=op("acct-b",1.0);one.observed.evidence_ref="same-ref".into();two.observed.evidence_ref="same-ref".into();a.settle(1,one).unwrap();a.settle(2,two).unwrap();assert_eq!(a.snapshot().settlement_count,2);}
+
+#[test]
+fn durable_reopen_preserves_exactly_once_identity(){
+    let a=ExecutionAccountingAuthority::new(budget()).unwrap();
+    a.settle(1,op("acct-reopen",1.0)).unwrap();
+    let encoded=serde_json::to_string(&a.export_state()).unwrap();
+    let persisted=serde_json::from_str(&encoded).unwrap();
+    let reopened=ExecutionAccountingAuthority::reopen(persisted).unwrap();
+    assert_eq!(reopened.settle(1,op("acct-reopen",1.0)),Ok(ExecutionSettlementDecision::Idempotent));
+    let s=reopened.snapshot();
+    assert_eq!(s.version,2);
+    assert_eq!(s.budget.money_used,1.0);
+    assert_eq!(s.budget.attempts_used,1);
+    assert_eq!(s.settlement_count,1);
+}
+
+#[test]
+fn durable_reopen_preserves_conflict_and_cas_version(){
+    let a=ExecutionAccountingAuthority::new(budget()).unwrap();
+    a.settle(1,op("acct-reopen",1.0)).unwrap();
+    let reopened=ExecutionAccountingAuthority::reopen(a.export_state()).unwrap();
+    assert_eq!(reopened.settle(2,op("acct-reopen",2.0)),Err(ExecutionAccountingError::Conflict));
+    assert_eq!(reopened.settle(1,op("acct-new",1.0)),Err(ExecutionAccountingError::StaleVersion));
+    assert_eq!(reopened.settle(2,op("acct-new",1.0)),Ok(ExecutionSettlementDecision::Applied));
+    assert_eq!(reopened.snapshot().settlement_count,2);
+}
+
+#[test]
+fn corrupted_persisted_state_fails_closed(){
+    let a=ExecutionAccountingAuthority::new(budget()).unwrap();
+    a.settle(1,op("acct-reopen",1.0)).unwrap();
+    let mut state=a.export_state();
+    state.version=99;
+    assert!(matches!(ExecutionAccountingAuthority::reopen(state),Err(ExecutionAccountingError::InvalidPersistedState)));
+
+    let mut state=a.export_state();
+    state.budget.tokens_used=999;
+    assert!(matches!(ExecutionAccountingAuthority::reopen(state),Err(ExecutionAccountingError::InvalidPersistedState)));
+
+    let mut state=a.export_state();
+    let operation=state.settlements.remove("acct-reopen").unwrap();
+    state.settlements.insert("wrong-key".into(),operation);
+    assert!(matches!(ExecutionAccountingAuthority::reopen(state),Err(ExecutionAccountingError::InvalidPersistedState)));
+
+    let mut state=a.export_state();
+    state.settlement_order.push("acct-reopen".into());
+    assert!(matches!(ExecutionAccountingAuthority::reopen(state),Err(ExecutionAccountingError::InvalidPersistedState)));
+}
