@@ -265,6 +265,7 @@ fn approval_ticket_matches(
         && candidate.expires_at_epoch.is_none_or(|v| now <= v)
 }
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::too_many_arguments)]
 pub fn project_retry_governance(
     policy: ExecutionPolicyEffect,
     risk: ExecutionRiskDecision,
