@@ -38,6 +38,6 @@ class DefaultLinearPlan(ExecutionPlan):
             PlanStep(step_id=f"attempt_{i+1}", description=f"Mission attempt {i+1}")
             for i in range(max_attempts)
         ]
-        super().__init__(plan_id=plan_id, steps=tuple(steps))
+        ExecutionPlan.__init__(self, plan_id=plan_id, steps=tuple(steps))
 
 __all__ = ["PlanStepStatus", "PlanStep", "ExecutionPlan", "DefaultLinearPlan"]

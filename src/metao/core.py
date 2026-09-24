@@ -24,15 +24,19 @@ class ExecutionStatus(StrEnum):
 
 @dataclass(frozen=True, slots=True)
 class ExecutorDescriptor:
-    executor_id: str
+    orchestrator_id: str
     version: str
     capabilities: frozenset[Capability]
     metadata: Mapping[str, str] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
-        if not self.executor_id or not self.version or not self.capabilities:
+        if not self.orchestrator_id or not self.version or not self.capabilities:
             raise ValueError("executor descriptor requires id, version and capabilities")
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
+
+    @property
+    def executor_id(self) -> str:
+        return self.orchestrator_id
 
 
 @dataclass(frozen=True, slots=True)
@@ -68,7 +72,7 @@ class ExecutionRequest:
 class EvidenceEnvelope:
     mission_id: str
     execution_id: str
-    executor_id: str
+    orchestrator_id: str
     adapter_id: str
     adapter_version: str
     attempt_id: str
@@ -86,7 +90,7 @@ class EvidenceEnvelope:
 
     def __post_init__(self) -> None:
         required = (
-            self.mission_id, self.execution_id, self.executor_id,
+            self.mission_id, self.execution_id, self.orchestrator_id,
             self.adapter_id, self.adapter_version, self.attempt_id,
             self.subject_id, self.subject_state_id, self.verification_context_id,
             self.policy_bundle_id, self.evidence_payload_digest,
@@ -99,11 +103,15 @@ class EvidenceEnvelope:
         if self.verification_cost_units < 0:
             raise ValueError("verification_cost_units must be non-negative")
 
+    @property
+    def executor_id(self) -> str:
+        return self.orchestrator_id
+
 
 @dataclass(frozen=True, slots=True)
 class ExecutionResult:
     execution_id: str
-    executor_id: str
+    orchestrator_id: str
     status: ExecutionStatus
     output: Mapping[str, Any] = field(default_factory=dict)
     evidence: tuple[EvidenceEnvelope, ...] = ()
@@ -111,9 +119,13 @@ class ExecutionResult:
     capacity_observation: CapacityObservation | None = None
 
     def __post_init__(self) -> None:
-        if not self.execution_id or not self.executor_id:
+        if not self.execution_id or not self.orchestrator_id:
             raise ValueError("execution result requires identities")
         object.__setattr__(self, "output", MappingProxyType(dict(self.output)))
+
+    @property
+    def executor_id(self) -> str:
+        return self.orchestrator_id
 
 
 @runtime_checkable
@@ -155,3 +167,11 @@ class ExecutorRegistry:
                 continue
             result.append(item)
         return tuple(result)
+
+
+# Backward-compatible public names. The executor terminology is the current
+# control-plane vocabulary, while adapters and existing clients still expose
+# the orchestrator names.
+OrchestratorDescriptor = ExecutorDescriptor
+OrchestratorContract = ExecutorContract
+OrchestratorRegistry = ExecutorRegistry

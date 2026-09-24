@@ -58,7 +58,7 @@ from .replan import (
 )
 
 
-from .strategy import executorPoolState, select_executor
+from .strategy import executorPoolState, select_orchestrator
 
 
 
@@ -115,7 +115,7 @@ class MissionStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
-from .execution_plan import ExecutionPlan, PlanStep, PlanStepStatus
+from .execution_plan import DefaultLinearPlan, ExecutionPlan, PlanStep, PlanStepStatus
 
 
 
@@ -145,6 +145,10 @@ class AttemptExecutionContext:
 
 
     cost: float
+
+    @property
+    def orchestrator_id(self) -> str:
+        return self.executor_id
 
 
 
@@ -177,7 +181,7 @@ class MissionAttempt:
     execution_id: str
 
 
-    executor_id: str
+    orchestrator_id: str
 
 
     execution_status: ExecutionStatus | None
@@ -213,7 +217,7 @@ class MissionAttempt:
             raise ValueError("mission attempt number must be positive")
 
 
-        if not self.execution_id or not self.executor_id:
+        if not self.execution_id or not self.orchestrator_id:
 
 
             raise ValueError("mission attempt requires execution and executor ids")
@@ -266,11 +270,14 @@ class MissionAttempt:
 
             raise ValueError("mission attempt cost must be finite")
 
-
         if self.cost < 0:
 
 
             raise ValueError("mission attempt cost must be non-negative")
+
+    @property
+    def executor_id(self) -> str:
+        return self.orchestrator_id
 
 
 
@@ -332,7 +339,7 @@ class MissionOutcome:
     mission_id: str
 
 
-    executor_id: str | None
+    orchestrator_id: str | None
 
 
     execution: ExecutionResult | None
@@ -344,10 +351,18 @@ class MissionOutcome:
     budget: AcceptanceBudget
 
 
-    attempted_executors: tuple[str, ...] = ()
+    attempted_orchestrators: tuple[str, ...] = ()
 
 
     state: MissionState | None = None
+
+    @property
+    def executor_id(self) -> str | None:
+        return self.orchestrator_id
+
+    @property
+    def attempted_executors(self) -> tuple[str, ...]:
+        return self.attempted_orchestrators
 
 
 
@@ -779,7 +794,7 @@ def execute_mission_once(
     eligible = _eligible_pools(mission, pools)
 
 
-    selected = select_executor(eligible, now_epoch=now_epoch)
+    selected = select_orchestrator(eligible, now_epoch=now_epoch)
 
 
     selecting_history = base_history + (MissionStatus.SELECTING,)
@@ -801,7 +816,7 @@ def execute_mission_once(
         )
 
 
-        return MissionOutcome(mission.mission_id, None, None, _blocked("no_eligible_executor"), budget, state=state)
+        return MissionOutcome(mission.mission_id, None, None, _blocked("no_eligible_orchestrator"), budget, state=state)
 
 
 
@@ -1213,7 +1228,7 @@ def execute_mission_once(
         request=request,
 
 
-        executor_id=selected,
+        orchestrator_id=selected,
 
 
         adapter_version=executor.descriptor.version,
@@ -1498,10 +1513,10 @@ def execute_mission(
             history.append(terminal)
 
 
-            state = _state(mission.mission_id, terminal, attempts=tuple(attempt_records, plan=plan, completed_steps=completed_steps), history=tuple(history, plan=plan, completed_steps=completed_steps), plan=plan, completed_steps=completed_steps)
+            state = _state(mission.mission_id, terminal, attempts=tuple(attempt_records), history=tuple(history), plan=plan, completed_steps=completed_steps)
 
 
-            return replace(outcome, attempted_executors=tuple(attempted), state=state)
+            return replace(outcome, attempted_orchestrators=tuple(attempted), state=state)
 
 
 
@@ -1546,7 +1561,7 @@ def execute_mission(
             )
 
 
-            return replace(outcome, attempted_executors=tuple(attempted), state=state)
+            return replace(outcome, attempted_orchestrators=tuple(attempted), state=state)
 
 
 
@@ -1577,7 +1592,7 @@ def execute_mission(
             )
 
 
-            return replace(outcome, attempted_executors=tuple(attempted), state=state)
+            return replace(outcome, attempted_orchestrators=tuple(attempted), state=state)
 
 
 
@@ -1611,6 +1626,9 @@ def execute_mission(
 
 
             history.append(MissionStatus.REPLANNING)
+
+
+            completed_steps |= {step.step_id}
 
 
             continue
@@ -1688,7 +1706,7 @@ def execute_mission(
             acceptance=acceptance,
 
 
-            attempted_executors=tuple(attempted),
+            attempted_orchestrators=tuple(attempted),
 
 
             state=state,
@@ -1751,7 +1769,7 @@ def execute_mission(
         acceptance=acceptance,
 
 
-        attempted_executors=tuple(attempted),
+        attempted_orchestrators=tuple(attempted),
 
 
         state=state,
