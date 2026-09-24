@@ -1,5 +1,6 @@
 name: Temporary fix 498
 on:
+  workflow_dispatch:
   push:
     branches: [feat/runtime-health-result-lineage-481]
 jobs:
