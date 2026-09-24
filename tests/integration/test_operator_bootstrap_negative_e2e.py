@@ -12,14 +12,14 @@ import unittest
 
 class OperatorBootstrapNegativeE2ETests(unittest.TestCase):
     def metao_executable(self) -> str:
-        scripts_dir = Path(sys.executable).parent
-        executable = shutil.which("metao", path=str(scripts_dir))
-        self.assertIsNotNone(
-            executable,
-            f"installed metao console script is required in current interpreter directory: {scripts_dir}",
-        )
-        assert executable is not None
-        return executable
+        candidate_dirs = [Path(sys.executable).parent]
+        if os.name == "nt":
+            candidate_dirs.append(Path(sys.executable).parent / "Scripts")
+        for scripts_dir in candidate_dirs:
+            executable = shutil.which("metao", path=str(scripts_dir))
+            if executable is not None:
+                return executable
+        self.fail("installed metao console script is required in Python or Scripts directory: {candidate_dirs}")
 
     def run_metao(self, cwd: Path, env: dict[str, str], *args: str) -> subprocess.CompletedProcess[str]:
         return subprocess.run(
