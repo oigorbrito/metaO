@@ -11,6 +11,7 @@ from dataclasses import asdict
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 
 from metao.adapters.codex_app_server import (
@@ -34,8 +35,14 @@ def _require_authorized_environment() -> None:
 
 
 def _codex_version() -> str:
+    executable = shutil.which("codex")
+    if executable is None:
+        raise SystemExit("codex CLI is not installed")
+    executable_path = Path(executable).resolve()
+    if not executable_path.is_file():
+        raise SystemExit("codex CLI path is not a regular file")
     completed = subprocess.run(
-        ["codex", "--version"],
+        [str(executable_path), "--version"],
         check=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
