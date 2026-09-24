@@ -11,9 +11,19 @@ import argparse
 from inspect import Parameter, signature
 import json
 import os
+from pathlib import Path
 import sys
 from typing import Any, Sequence, TextIO
 
+from .benchmark_evidence import is_benchmark_evidence_fresh
+from .benchmark_evidence import BenchmarkEvidenceSource
+from .benchmark_ingestion import ingest_benchmark_family_result
+from .benchmark_store import (
+    BenchmarkEvidenceConflict,
+    BenchmarkEvidenceCorrupt,
+    SQLiteBenchmarkEvidenceStore,
+    load_benchmark_evidence_json,
+)
 from .cli import (
     CLIInputError,
     DEFAULT_DB,
@@ -49,7 +59,12 @@ from .sqlite_store import SQLiteMissionStore
 
 _RUNTIME_COMMANDS = frozenset(
     {
+        "benchmark-import",
+        "runtime-benchmark-import",
+        "benchmark-family-import",
+        "runtime-benchmarks",
         "runtimes",
+        "runtime-inspect",
         "runtime-quarantine",
         "runtime-restore",
         "runtime-history",
@@ -108,8 +123,9 @@ def _combined_help(stream: TextIO) -> None:
     stream.write("metaO control-plane operator CLI\n\n")
     stream.write("mission commands: doctor, run, status, inspect, list, events, approve, resume, cancel\n")
     stream.write(
-        "runtime commands: runtimes, runtime-quarantine, runtime-restore, runtime-history, "
-        "runtime-certificates, runtime-certificate-revoke, runtime-certificate-revocations\n"
+        "runtime commands: runtime-benchmark-import (benchmark-import), benchmark-family-import, runtime-benchmarks, runtimes, runtime-inspect, "
+        "runtime-quarantine, runtime-restore, runtime-history, runtime-certificates, "
+        "runtime-certificate-revoke, runtime-certificate-revocations\n"
     )
 
 
@@ -118,8 +134,44 @@ def _runtime_parser() -> argparse.ArgumentParser:
     parser.add_argument("--db", default=DEFAULT_DB, help=f"SQLite database (default: {DEFAULT_DB})")
     sub = parser.add_subparsers(dest="command", required=True)
 
+    benchmark_import = sub.add_parser(
+        "runtime-benchmark-import",
+        aliases=["benchmark-import"],
+        help="ingest one canonical benchmark evidence JSON file",
+    )
+    benchmark_import.add_argument("evidence_file")
+
+    family_import = sub.add_parser(
+        "benchmark-family-import",
+        help="normalize one pinned benchmark-family result using an identity manifest",
+    )
+    family_import.add_argument("family", choices=("swe-bench", "terminal-bench-core", "agentgovbench"))
+    family_import.add_argument("result_file")
+    family_import.add_argument(
+        "--identity-file",
+        required=True,
+        help="JSON manifest containing canonical executor/model/runtime identity",
+    )
+
+    runtime_benchmarks = sub.add_parser(
+        "runtime-benchmarks",
+        help="list durable benchmark evidence for one orchestrator/runtime id",
+    )
+    runtime_benchmarks.add_argument("orchestrator_id")
+    runtime_benchmarks.add_argument("--now-epoch", type=float)
+    runtime_benchmarks.add_argument("--max-age-seconds", type=float)
+
     runtimes = sub.add_parser("runtimes", help="list configured runtime catalog and live/control health")
     runtimes.add_argument("--factory", required=False, help="configured operator factory module:function")
+
+    runtime_inspect = sub.add_parser(
+        "runtime-inspect",
+        help="show one runtime catalog entry with control and certification evidence",
+    )
+    runtime_inspect.add_argument("orchestrator_id")
+    runtime_inspect.add_argument("--factory", required=False, help="configured operator factory module:function")
+    runtime_inspect.add_argument("--now-epoch", type=float)
+    runtime_inspect.add_argument("--max-age-seconds", type=float)
 
     quarantine_parser = sub.add_parser("runtime-quarantine", help="durably quarantine one runtime")
     quarantine_parser.add_argument("orchestrator_id")
@@ -194,6 +246,45 @@ def _load_factory_operator(
     return operator
 
 
+def _benchmark_evidence_view(
+    item: Any,
+    *,
+    now_epoch: float | None = None,
+    max_age_seconds: float | None = None,
+) -> dict[str, Any]:
+    fresh: bool | None = None
+    if now_epoch is not None and max_age_seconds is not None:
+        fresh = is_benchmark_evidence_fresh(
+            item,
+            now_epoch=now_epoch,
+            max_age_seconds=max_age_seconds,
+        )
+    return {
+        "evidence_id": item.evidence_id,
+        "benchmark_id": item.benchmark_id,
+        "benchmark_version": item.benchmark_version,
+        "task_set": item.task_set,
+        "executor_id": item.executor_id,
+        "executor_version": item.executor_version,
+        "harness_id": item.harness_id,
+        "harness_version": item.harness_version,
+        "model_id": item.model_id,
+        "provider_id": item.provider_id,
+        "model_version": item.model_version,
+        "runtime_config_digest": item.runtime_config_digest,
+        "tool_policy_digest": item.tool_policy_digest,
+        "environment_id": item.environment_id,
+        "observed_at_epoch": item.observed_at_epoch,
+        "source": item.source.value,
+        "raw_result_ref": item.raw_result_ref,
+        "fresh": fresh,
+        "metrics": [
+            {"name": metric.name, "value": metric.value, "unit": metric.unit}
+            for metric in item.metrics
+        ],
+    }
+
+
 def _runtime_entry_view(item: Any) -> dict[str, Any]:
     return {
         "orchestrator_id": item.orchestrator_id,
@@ -206,6 +297,21 @@ def _runtime_entry_view(item: Any) -> dict[str, Any]:
         "success_rate": item.success_rate,
         "quality": item.quality,
         "reliability": item.reliability,
+    }
+
+
+def _runtime_inspect_view(
+    entry: Any,
+    *,
+    control: RuntimeControlRecord | None,
+    certificates: Sequence[dict[str, Any]],
+    benchmark_evidence: Sequence[dict[str, Any]],
+) -> dict[str, Any]:
+    return {
+        "runtime": _runtime_entry_view(entry),
+        "control": None if control is None else _control_view(control),
+        "certificates": list(certificates),
+        "benchmark_evidence": list(benchmark_evidence),
     }
 
 
@@ -302,6 +408,59 @@ def main(
     certification_revocation_db = _certification_revocation_db(args.db)
 
     try:
+        if args.command in {"benchmark-import", "runtime-benchmark-import"}:
+            benchmark_store = SQLiteBenchmarkEvidenceStore(certification_db)
+            evidence = load_benchmark_evidence_json(args.evidence_file)
+            stored = benchmark_store.record(evidence)
+            _write_json(_benchmark_evidence_view(stored), out)
+            return 0
+
+        if args.command == "benchmark-family-import":
+            try:
+                result_payload = json.loads(
+                    Path(args.result_file).read_text(encoding="utf-8")
+                )
+                identity = json.loads(
+                    Path(args.identity_file).read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError) as exc:
+                raise CLIInputError(f"cannot read benchmark-family JSON: {exc}") from exc
+            if not isinstance(result_payload, dict) or not isinstance(identity, dict):
+                raise CLIInputError("benchmark-family JSON files must contain objects")
+            try:
+                identity["source"] = BenchmarkEvidenceSource(str(identity["source"]))
+                evidence = ingest_benchmark_family_result(
+                    args.family,
+                    result_payload,
+                    **identity,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise CLIInputError(str(exc)) from exc
+            benchmark_store = SQLiteBenchmarkEvidenceStore(certification_db)
+            stored = benchmark_store.record(evidence)
+            _write_json(_benchmark_evidence_view(stored), out)
+            return 0
+
+        if args.command == "runtime-benchmarks":
+            if (args.now_epoch is None) != (args.max_age_seconds is None):
+                raise CLIInputError(
+                    "runtime-benchmarks freshness requires both --now-epoch and --max-age-seconds"
+                )
+            benchmark_store = SQLiteBenchmarkEvidenceStore(certification_db)
+            items = benchmark_store.history(args.orchestrator_id)
+            _write_json(
+                [
+                    _benchmark_evidence_view(
+                        item,
+                        now_epoch=args.now_epoch,
+                        max_age_seconds=args.max_age_seconds,
+                    )
+                    for item in items
+                ],
+                out,
+            )
+            return 0
+
         if args.command == "runtimes":
             operator = _load_factory_operator(
                 args.factory,
@@ -314,6 +473,68 @@ def main(
             if not callable(runtime_entries):
                 raise CLIInputError("factory operator does not expose runtime_entries()")
             _write_json([_runtime_entry_view(item) for item in runtime_entries()], out)
+            return 0
+
+        if args.command == "runtime-inspect":
+            if (args.now_epoch is None) != (args.max_age_seconds is None):
+                raise CLIInputError(
+                    "runtime-inspect freshness requires both --now-epoch and --max-age-seconds"
+                )
+            operator = _load_factory_operator(
+                args.factory,
+                db=args.db,
+                control_db=control_db,
+                certification_db=certification_db,
+                certification_revocation_db=certification_revocation_db,
+            )
+            runtime_entries = getattr(operator, "runtime_entries", None)
+            if not callable(runtime_entries):
+                raise CLIInputError("factory operator does not expose runtime_entries()")
+            matches = tuple(
+                item
+                for item in runtime_entries()
+                if item.orchestrator_id == args.orchestrator_id
+            )
+            if not matches:
+                raise CLIInputError(f"runtime not found: {args.orchestrator_id}")
+            if len(matches) != 1:
+                raise CLIInputError(
+                    f"runtime identity is not unique: {args.orchestrator_id}"
+                )
+
+            controls = SQLiteRuntimeControlStore(control_db)
+            certifications = SQLiteRuntimeCertificationStore(certification_db)
+            revocations = SQLiteRuntimeCertificationRevocationStore(
+                certification_revocation_db
+            )
+            certificate_views = [
+                _certificate_view(
+                    item,
+                    revoked=revocations.get(item.certificate_id) is not None,
+                    now_epoch=args.now_epoch,
+                    max_age_seconds=args.max_age_seconds,
+                )
+                for item in certifications.history(args.orchestrator_id)
+            ]
+            benchmark_views = [
+                _benchmark_evidence_view(
+                    item,
+                    now_epoch=args.now_epoch,
+                    max_age_seconds=args.max_age_seconds,
+                )
+                for item in SQLiteBenchmarkEvidenceStore(certification_db).history(
+                    args.orchestrator_id
+                )
+            ]
+            _write_json(
+                _runtime_inspect_view(
+                    matches[0],
+                    control=controls.current(args.orchestrator_id),
+                    certificates=certificate_views,
+                    benchmark_evidence=benchmark_views,
+                ),
+                out,
+            )
             return 0
 
         if args.command == "runtime-quarantine":
@@ -386,6 +607,8 @@ def main(
         raise CLIInputError(f"unsupported runtime command: {args.command}")
     except (
         CLIInputError,
+        BenchmarkEvidenceConflict,
+        BenchmarkEvidenceCorrupt,
         RuntimeControlCorrupt,
         RuntimeCertificationCorrupt,
         RuntimeCertificationRevocationCorrupt,

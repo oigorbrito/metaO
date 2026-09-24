@@ -1,0 +1,80 @@
+name: OpenAI Agents Manual Provider Success Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization:
+        description: 'Type I_AUTHORIZE_OPENAI_AGENTS_PROVIDER_SUCCESS_SMOKE exactly'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  openai-agents-provider-success:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate explicit authorization before secrets
+        shell: bash
+        env:
+          METAO_AUTHORIZATION_INPUT: ${{ inputs.authorization }}
+        run: |
+          set -euo pipefail
+          test "$METAO_AUTHORIZATION_INPUT" = 'I_AUTHORIZE_OPENAI_AGENTS_PROVIDER_SUCCESS_SMOKE'
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pinned OpenAI Agents runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e .
+          python -m pip install 'openai-agents==0.20.0'
+          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'"
+
+      - name: Run explicitly authorized OpenAI Agents provider-success smoke
+        shell: bash
+        env:
+          METAO_OPENAI_AGENTS_SUCCESS_AUTHORIZATION: ${{ inputs.authorization }}
+          METAO_OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
+          OPENAI_API_KEY: ''
+        run: |
+          set -euo pipefail
+          python scripts/openai_agents_live_success_smoke.py > "$RUNNER_TEMP/openai-agents-live-success-smoke.json"
+
+      - name: Validate provider-success evidence boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'openai-agents-live-success-smoke.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'OpenAI Agents live-success smoke produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['adapter'] == 'openai-agents'
+          assert evidence['agents_sdk_version'] == '0.20.0'
+          assert evidence['model'] == 'gpt-5.6-luna'
+          assert evidence['execution_status'] == 'SUCCEEDED'
+          assert evidence['output_marker_present'] is True
+          assert evidence['credential_value_emitted'] is False
+          assert evidence['tracing_disabled'] is True
+          assert evidence['explicit_authorization_observed'] is True
+          assert evidence['provider_backed_execution'] == 'PASS'
+          assert evidence['metao_final_acceptance'] == 'NOT_TESTED'
+          assert evidence['evidence_id']
+          assert re.fullmatch(r'[0-9a-f]{64}', evidence['payload_digest'])
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
