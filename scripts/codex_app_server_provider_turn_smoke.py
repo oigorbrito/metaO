@@ -12,7 +12,7 @@ import json
 import os
 from pathlib import Path
 import shutil
-import subprocess
+import subprocess  # nosec B404 - the smoke must invoke the pinned local Codex CLI
 
 from metao.adapters.codex_app_server import (
     CodexAppServerOrchestratorAdapter,
@@ -48,7 +48,7 @@ def _codex_version() -> str:
         stderr=subprocess.PIPE,
         text=True,
         encoding="utf-8",
-    )
+    )  # nosec B603 - absolute allowlisted executable and constant arguments
     version = completed.stdout.strip()
     if _EXPECTED_CLI_VERSION not in version:
         raise AssertionError(
