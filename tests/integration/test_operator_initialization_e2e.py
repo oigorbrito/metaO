@@ -6,17 +6,33 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import sysconfig
 import tempfile
 import unittest
 
 
 class OperatorInitializationE2ETests(unittest.TestCase):
     def run_metao(self, root: Path, env: dict[str, str], *args: str) -> object:
-        scripts_dir = Path(sys.executable).parent
-        executable = shutil.which("metao", path=str(scripts_dir))
+        scripts_dirs = (
+            Path(sysconfig.get_path("scripts")),
+            Path(sys.executable).resolve().parent,
+        )
+        executable = next(
+            (
+                str(candidate)
+                for candidate in (
+                    *(scripts_dir / "metao.exe" for scripts_dir in scripts_dirs),
+                    *(scripts_dir / "metao" for scripts_dir in scripts_dirs),
+                    *(scripts_dir / "Scripts" / "metao.exe" for scripts_dir in scripts_dirs),
+                    *(scripts_dir / "Scripts" / "metao" for scripts_dir in scripts_dirs),
+                )
+                if candidate.is_file()
+            ),
+            None,
+        ) or shutil.which("metao")
         self.assertIsNotNone(
             executable,
-            f"installed metao console script is required in current interpreter directory: {scripts_dir}",
+            f"installed metao console script is required in current interpreter scripts directories: {scripts_dirs}",
         )
         completed = subprocess.run(
             [executable, *args],
