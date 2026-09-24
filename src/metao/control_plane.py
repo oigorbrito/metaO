@@ -18,7 +18,7 @@ from .replan import (
     classify_failure,
     evaluate as evaluate_replan,
 )
-from .strategy import OrchestratorPoolState, select_orchestrator
+from .strategy import OrchestratorPoolState, SelectionPolicy, select_orchestrator
 
 EvidenceNormalizer = Callable[..., object]
 AttemptClock = Callable[[], float]
