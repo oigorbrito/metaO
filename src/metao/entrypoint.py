@@ -11,10 +11,13 @@ import argparse
 from inspect import Parameter, signature
 import json
 import os
+from pathlib import Path
 import sys
 from typing import Any, Sequence, TextIO
 
 from .benchmark_evidence import is_benchmark_evidence_fresh
+from .benchmark_evidence import BenchmarkEvidenceSource
+from .benchmark_ingestion import ingest_benchmark_family_result
 from .benchmark_store import (
     BenchmarkEvidenceConflict,
     BenchmarkEvidenceCorrupt,
@@ -58,6 +61,7 @@ _RUNTIME_COMMANDS = frozenset(
     {
         "benchmark-import",
         "runtime-benchmark-import",
+        "benchmark-family-import",
         "runtime-benchmarks",
         "runtimes",
         "runtime-inspect",
@@ -119,7 +123,7 @@ def _combined_help(stream: TextIO) -> None:
     stream.write("metaO control-plane operator CLI\n\n")
     stream.write("mission commands: doctor, run, status, inspect, list, events, approve, resume, cancel\n")
     stream.write(
-        "runtime commands: runtime-benchmark-import (benchmark-import), runtime-benchmarks, runtimes, runtime-inspect, "
+        "runtime commands: runtime-benchmark-import (benchmark-import), benchmark-family-import, runtime-benchmarks, runtimes, runtime-inspect, "
         "runtime-quarantine, runtime-restore, runtime-history, runtime-certificates, "
         "runtime-certificate-revoke, runtime-certificate-revocations\n"
     )
@@ -136,6 +140,18 @@ def _runtime_parser() -> argparse.ArgumentParser:
         help="ingest one canonical benchmark evidence JSON file",
     )
     benchmark_import.add_argument("evidence_file")
+
+    family_import = sub.add_parser(
+        "benchmark-family-import",
+        help="normalize one pinned benchmark-family result using an identity manifest",
+    )
+    family_import.add_argument("family", choices=("swe-bench", "terminal-bench-core", "agentgovbench"))
+    family_import.add_argument("result_file")
+    family_import.add_argument(
+        "--identity-file",
+        required=True,
+        help="JSON manifest containing canonical executor/model/runtime identity",
+    )
 
     runtime_benchmarks = sub.add_parser(
         "runtime-benchmarks",
@@ -395,6 +411,32 @@ def main(
         if args.command in {"benchmark-import", "runtime-benchmark-import"}:
             benchmark_store = SQLiteBenchmarkEvidenceStore(certification_db)
             evidence = load_benchmark_evidence_json(args.evidence_file)
+            stored = benchmark_store.record(evidence)
+            _write_json(_benchmark_evidence_view(stored), out)
+            return 0
+
+        if args.command == "benchmark-family-import":
+            try:
+                result_payload = json.loads(
+                    Path(args.result_file).read_text(encoding="utf-8")
+                )
+                identity = json.loads(
+                    Path(args.identity_file).read_text(encoding="utf-8")
+                )
+            except (OSError, json.JSONDecodeError) as exc:
+                raise CLIInputError(f"cannot read benchmark-family JSON: {exc}") from exc
+            if not isinstance(result_payload, dict) or not isinstance(identity, dict):
+                raise CLIInputError("benchmark-family JSON files must contain objects")
+            try:
+                identity["source"] = BenchmarkEvidenceSource(str(identity["source"]))
+                evidence = ingest_benchmark_family_result(
+                    args.family,
+                    result_payload,
+                    **identity,
+                )
+            except (KeyError, TypeError, ValueError) as exc:
+                raise CLIInputError(str(exc)) from exc
+            benchmark_store = SQLiteBenchmarkEvidenceStore(certification_db)
             stored = benchmark_store.record(evidence)
             _write_json(_benchmark_evidence_view(stored), out)
             return 0
