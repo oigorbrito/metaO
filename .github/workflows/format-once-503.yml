@@ -22,8 +22,8 @@ jobs:
           sed -i 's/\.map_or(true, |v| now <= v)/.is_none_or(|v| now <= v)/' metao-contracts/src/execution_governance.rs
           sed -i '396,403 s/\.checked_add(/.saturating_add(/' metao-contracts/src/runtime_health.rs
           sed -i '396,403 /\.unwrap_or(u64::MAX);/d' metao-contracts/src/runtime_health.rs
-          sed -i '/^pub fn project_retry_governance/i #[allow(clippy::too_many_arguments)]' metao-contracts/src/execution_governance.rs
-          sed -i '/^pub fn project_recovery_probe_governance/i #[allow(clippy::too_many_arguments)]' metao-contracts/src/runtime_health.rs
+          sed -i '/^pub fn project_retry_governance/i\#[allow(clippy::too_many_arguments)]' metao-contracts/src/execution_governance.rs
+          sed -i '/^pub fn project_recovery_probe_governance/i\#[allow(clippy::too_many_arguments)]' metao-contracts/src/runtime_health.rs
       - name: Format
         working-directory: experiments/rust-chassis-a
         run: cargo fmt --all
