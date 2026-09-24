@@ -22,6 +22,7 @@ jobs:
           perl -0pi -e 's/\.checked_add\(snapshot\.reserved\.tokens\)\s*\.unwrap_or\(u64::MAX\)/.saturating_add(snapshot.reserved.tokens)/g; s/\.checked_add\(snapshot\.reserved\.attempts\)\s*\.unwrap_or\(u64::MAX\)/.saturating_add(snapshot.reserved.attempts)/g' metao-contracts/src/runtime_health.rs
           perl -0pi -e 's/^pub fn project_retry_governance/#[allow(clippy::too_many_arguments)]\npub fn project_retry_governance/m' metao-contracts/src/execution_governance.rs
           perl -0pi -e 's/^pub fn project_recovery_probe_governance/#[allow(clippy::too_many_arguments)]\npub fn project_recovery_probe_governance/m' metao-contracts/src/runtime_health.rs
+          sed -i 's/let fencing_token = lease_generation\.saturating_add/let fencing_token: u64 = lease_generation.saturating_add/' metao-contracts/tests/runtime_health_constituent_durable_reopen_tests.rs
       - name: Format
         working-directory: experiments/rust-chassis-a
         run: cargo fmt --all
