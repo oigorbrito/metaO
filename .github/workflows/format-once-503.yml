@@ -28,6 +28,7 @@ jobs:
           sed -i 's/let fencing_token = lease_generation\.saturating_add/let fencing_token: u64 = lease_generation.saturating_add/' metao-contracts/tests/runtime_health_constituent_durable_reopen_tests.rs
           perl -0pi -e 's/evidence_basis: RuntimeHealthEvidenceBasis::IndependentObservation,/evidence_basis: if self.health_attempts == 0 { RuntimeHealthEvidenceBasis::Unknown } else { RuntimeHealthEvidenceBasis::IndependentObservation },/' metao-contracts/tests/control_plane_stateful_property_tests.rs
           perl -0pi -e 's/dispatch remains separate authority/execution remains separate authority/g' metao-contracts/src/runtime_health.rs
+          perl -0pi -e 's/(value\.attempts = 0;\n)/$1    value.evidence_basis = RuntimeHealthEvidenceBasis::Unknown;\n/' metao-contracts/tests/runtime_health_tests.rs
       - name: Format
         working-directory: experiments/rust-chassis-a
         run: cargo fmt --all
@@ -43,6 +44,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "already-clean"
           else
-            git commit -m "fix: keep recovery probe authority wording precise"
+            git commit -m "fix: validate empty runtime-health windows"
             git push origin "HEAD:${GITHUB_REF_NAME}"
           fi
