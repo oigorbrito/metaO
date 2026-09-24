@@ -1,7 +1,7 @@
 use metao_contracts::failure_causality::{
-    bind_failure_origin_producer, project_bound_failure_origin, FailureAttributionTarget,
-    FailureClassificationBasis, FailureOrigin, FailureOriginClaim, FailureOriginProducerEvidence,
-    FailureOriginProducerKind, FactualExecutionOutcome,
+    bind_failure_origin_producer, project_bound_failure_origin, FactualExecutionOutcome,
+    FailureAttributionTarget, FailureClassificationBasis, FailureOrigin, FailureOriginClaim,
+    FailureOriginProducerEvidence, FailureOriginProducerKind,
 };
 use metao_contracts::{ExecutionId, MissionId};
 
@@ -13,7 +13,10 @@ fn execution() -> ExecutionId {
     ExecutionId::new("execution-472").unwrap()
 }
 
-fn producer(kind: FailureOriginProducerKind, origin: FailureOrigin) -> FailureOriginProducerEvidence {
+fn producer(
+    kind: FailureOriginProducerKind,
+    origin: FailureOrigin,
+) -> FailureOriginProducerEvidence {
     let pre_execution = matches!(
         kind,
         FailureOriginProducerKind::CapacityAuthority | FailureOriginProducerKind::PolicyAuthority
@@ -42,12 +45,18 @@ fn claim(p: &FailureOriginProducerEvidence) -> FailureOriginClaim {
 
 #[test]
 fn runtime_local_projection_requires_runtime_producer_binding() {
-    let p = producer(FailureOriginProducerKind::RuntimeExecution, FailureOrigin::RuntimeLocal);
+    let p = producer(
+        FailureOriginProducerKind::RuntimeExecution,
+        FailureOrigin::RuntimeLocal,
+    );
     let bound = bind_failure_origin_producer(&claim(&p), &p).unwrap();
     let projection = project_bound_failure_origin(&bound);
     assert!(projection.factual);
     assert_eq!(projection.attribution, FailureAttributionTarget::Runtime);
-    assert_eq!(projection.original_outcome, Some(FactualExecutionOutcome::Failed));
+    assert_eq!(
+        projection.original_outcome,
+        Some(FactualExecutionOutcome::Failed)
+    );
 }
 
 #[test]
@@ -96,11 +105,19 @@ fn capacity_and_policy_projection_preserve_absent_execution_outcome() {
 
 #[test]
 fn projection_contains_producer_identity_and_no_retry_or_acceptance_authority() {
-    let p = producer(FailureOriginProducerKind::RuntimeExecution, FailureOrigin::RuntimeLocal);
+    let p = producer(
+        FailureOriginProducerKind::RuntimeExecution,
+        FailureOrigin::RuntimeLocal,
+    );
     let bound = bind_failure_origin_producer(&claim(&p), &p).unwrap();
     let encoded = serde_json::to_string(&project_bound_failure_origin(&bound)).unwrap();
     assert!(encoded.contains("producer_id"));
-    for forbidden in ["next_attempt", "dispatch", "AcceptanceDecision", "retry_executed"] {
+    for forbidden in [
+        "next_attempt",
+        "dispatch",
+        "AcceptanceDecision",
+        "retry_executed",
+    ] {
         assert!(!encoded.contains(forbidden));
     }
 }

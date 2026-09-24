@@ -2,9 +2,7 @@ use metao_contracts::execution_governance::{
     project_retry_governance, ExecutionBudget, ExecutionGateDecision, ExecutionPolicyEffect,
     ExecutionRiskDecision, ExecutionUsage, RetryApprovalContext,
 };
-use metao_contracts::{
-    ApprovalAuthorityPort, ApprovalAuthorityTicket, ExecutionId, MissionId,
-};
+use metao_contracts::{ApprovalAuthorityPort, ApprovalAuthorityTicket, ExecutionId, MissionId};
 
 #[derive(Clone)]
 struct Port(ApprovalAuthorityTicket);

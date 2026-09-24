@@ -5,12 +5,10 @@ use metao_contracts::execution_governance::{
 };
 use metao_contracts::failure_causality::{
     bind_execution_retry_authority, evaluate_retry_eligibility, ExecutionRetryAttemptClaim,
-    ExecutionRetryAuthorityState, FailureCausalityFacts, FailureClass, FailureClassificationBasis,
-    FactualExecutionOutcome, RecoveryStatus, RetryEligibility,
+    ExecutionRetryAuthorityState, FactualExecutionOutcome, FailureCausalityFacts, FailureClass,
+    FailureClassificationBasis, RecoveryStatus, RetryEligibility,
 };
-use metao_contracts::{
-    ApprovalAuthorityPort, ApprovalAuthorityTicket, ExecutionId, MissionId,
-};
+use metao_contracts::{ApprovalAuthorityPort, ApprovalAuthorityTicket, ExecutionId, MissionId};
 
 #[derive(Clone)]
 struct ApprovalPort {

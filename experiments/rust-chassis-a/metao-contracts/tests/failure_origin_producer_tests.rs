@@ -1,7 +1,7 @@
 use metao_contracts::failure_causality::{
-    bind_failure_origin_producer, FailureClassificationBasis, FailureOrigin, FailureOriginClaim,
-    FailureOriginProducerError, FailureOriginProducerEvidence, FailureOriginProducerKind,
-    FactualExecutionOutcome,
+    bind_failure_origin_producer, FactualExecutionOutcome, FailureClassificationBasis,
+    FailureOrigin, FailureOriginClaim, FailureOriginProducerError, FailureOriginProducerEvidence,
+    FailureOriginProducerKind,
 };
 use metao_contracts::{ExecutionId, MissionId};
 
@@ -41,7 +41,10 @@ fn canonical_runtime_local_producer_binds_runtime_origin() {
     let producer = runtime_producer();
     let bound = bind_failure_origin_producer(&claim_from(&producer), &producer).unwrap();
     assert_eq!(bound.origin, FailureOrigin::RuntimeLocal);
-    assert_eq!(bound.producer_kind, FailureOriginProducerKind::RuntimeExecution);
+    assert_eq!(
+        bound.producer_kind,
+        FailureOriginProducerKind::RuntimeExecution
+    );
 }
 
 #[test]
@@ -71,8 +74,14 @@ fn network_origin_remains_external() {
 #[test]
 fn capacity_and_policy_do_not_mint_execution_failure() {
     for (kind, origin) in [
-        (FailureOriginProducerKind::CapacityAuthority, FailureOrigin::Capacity),
-        (FailureOriginProducerKind::PolicyAuthority, FailureOrigin::Policy),
+        (
+            FailureOriginProducerKind::CapacityAuthority,
+            FailureOrigin::Capacity,
+        ),
+        (
+            FailureOriginProducerKind::PolicyAuthority,
+            FailureOrigin::Policy,
+        ),
     ] {
         let producer = FailureOriginProducerEvidence {
             producer_id: format!("preexec-{kind:?}"),
@@ -136,7 +145,10 @@ fn weak_or_blank_producer_evidence_fails_closed() {
 
 #[test]
 fn success_or_cancelled_cannot_be_failure_producer() {
-    for outcome in [FactualExecutionOutcome::Succeeded, FactualExecutionOutcome::Cancelled] {
+    for outcome in [
+        FactualExecutionOutcome::Succeeded,
+        FactualExecutionOutcome::Cancelled,
+    ] {
         let mut producer = runtime_producer();
         producer.original_outcome = Some(outcome);
         assert_eq!(
