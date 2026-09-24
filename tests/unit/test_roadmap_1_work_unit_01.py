@@ -199,6 +199,71 @@ class MissionLifecycleControlPlaneV1Tests(unittest.TestCase):
         self.assertIn("budget_exhausted", outcome.acceptance.reasons)
         self.assertEqual(runtime.calls, 0)
 
+    def test_selection_policy_can_reorder_only_routable_candidates(self):
+        primary = FakeOrchestrator("primary")
+        fallback = FakeOrchestrator("fallback")
+        seen = []
+
+        def choose_fallback(candidates, now_epoch):
+            seen.append((tuple(item.orchestrator_id for item in candidates), now_epoch))
+            return "fallback"
+
+        outcome = execute_mission_once(
+            mission=self.mission,
+            registry=registry_with(primary, fallback),
+            pools=(pool("primary", preferred=True), pool("fallback")),
+            normalizers={"primary": normalizer(), "fallback": normalizer()},
+            policy=self.policy,
+            budget=budget(),
+            acceptance_context=self.context,
+            execution_id="r1-policy-1",
+            now_epoch=100.0,
+            selection_policy=choose_fallback,
+        )
+
+        self.assertEqual(outcome.orchestrator_id, "fallback")
+        self.assertEqual(primary.calls, 0)
+        self.assertEqual(fallback.calls, 1)
+        self.assertEqual(seen, [(("primary", "fallback"), 100.0)])
+
+    def test_selection_policy_cannot_reintroduce_quarantined_runtime(self):
+        healthy = FakeOrchestrator("healthy")
+        quarantined = FakeOrchestrator("quarantined")
+        quarantined_pool = OrchestratorPoolState(
+            "quarantined",
+            OrchestratorStatus.QUARANTINED,
+            frozenset({"workflow"}),
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.0,
+        )
+
+        def choose_quarantined(candidates, now_epoch):
+            self.assertEqual(
+                tuple(item.orchestrator_id for item in candidates),
+                ("healthy",),
+            )
+            return "quarantined"
+
+        with self.assertRaisesRegex(ValueError, "non-routable orchestrator"):
+            execute_mission_once(
+                mission=self.mission,
+                registry=registry_with(healthy, quarantined),
+                pools=(pool("healthy"), quarantined_pool),
+                normalizers={"healthy": normalizer(), "quarantined": normalizer()},
+                policy=self.policy,
+                budget=budget(),
+                acceptance_context=self.context,
+                execution_id="r1-policy-2",
+                now_epoch=100.0,
+                selection_policy=choose_quarantined,
+            )
+
+        self.assertEqual(healthy.calls, 0)
+        self.assertEqual(quarantined.calls, 0)
+
     def test_runtime_failure_replans_to_fallback(self):
         primary = FakeOrchestrator("primary", succeeds=False)
         fallback = FakeOrchestrator("fallback")
