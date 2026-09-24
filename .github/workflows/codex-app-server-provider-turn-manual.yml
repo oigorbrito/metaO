@@ -1,0 +1,89 @@
+name: Codex App Server Manual Provider Turn Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization:
+        description: 'Type I_AUTHORIZE_CODEX_PROVIDER_TURN_SMOKE exactly'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  codex-provider-turn:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Validate explicit authorization before secrets
+        shell: bash
+        env:
+          METAO_AUTHORIZATION_INPUT: ${{ inputs.authorization }}
+        run: |
+          set -euo pipefail
+          test "$METAO_AUTHORIZATION_INPUT" = 'I_AUTHORIZE_CODEX_PROVIDER_TURN_SMOKE'
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Install metaO and pinned Codex CLI
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e .
+          npm install -g '@openai/codex@0.153.3'
+          codex --version | grep '0.153.3'
+          echo "CODEX_HOME=$RUNNER_TEMP/codex-provider-turn-home" >> "$GITHUB_ENV"
+          mkdir -p "$RUNNER_TEMP/codex-provider-turn-home"
+
+      - name: Run explicitly authorized Codex provider-turn smoke
+        shell: bash
+        env:
+          METAO_CODEX_TURN_SMOKE_AUTHORIZATION: ${{ inputs.authorization }}
+          OPENAI_API_KEY: ${{ secrets.METAO_OPENAI_API_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/codex_app_server_provider_turn_smoke.py > "$RUNNER_TEMP/codex-provider-turn-smoke.json"
+
+      - name: Validate provider-turn evidence boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          import re
+          from pathlib import Path
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'codex-provider-turn-smoke.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'Codex provider-turn smoke produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['adapter'] == 'codex-app-server'
+          assert evidence['adapter_version'] == 'v2'
+          assert '0.153.3' in evidence['codex_cli_version']
+          assert evidence['thread_ephemeral'] is True
+          assert evidence['thread_id_present'] is True
+          assert evidence['approval_policy'] == 'never'
+          assert evidence['sandbox'] == 'read-only'
+          assert evidence['execution_status'] == 'SUCCEEDED'
+          assert evidence['output_marker_present'] is True
+          assert evidence['repository_diff_present'] is False
+          assert evidence['credential_value_emitted'] is False
+          assert evidence['explicit_authorization_observed'] is True
+          assert evidence['provider_backed_turn'] == 'PASS'
+          assert evidence['metao_final_acceptance'] == 'NOT_TESTED'
+          assert evidence['evidence_id']
+          assert re.fullmatch(r'[0-9a-f]{64}', evidence['payload_digest'])
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
