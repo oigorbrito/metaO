@@ -12,19 +12,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Fix authority-boundary wording and commit
+      - name: Fix recovery wording and commit
         shell: bash
         run: |
           cd experiments/rust-chassis-a
-          matches=$(rg -l 'dispatch remains separate authority' . || true)
-          if [ -n "$matches" ]; then
-            perl -pi -e 's/dispatch remains separate authority/execution remains separate authority/g' $matches
-          fi
+          perl -0pi -e 's/dispatch remains separate\s+authority/execution remains separate authority/g' metao-contracts/src/runtime_health.rs
           cargo fmt --all
           if ! git diff --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add -A
-            git commit -m 'fix: clarify recovery authority boundary wording'
+            git commit -m 'fix: remove dispatch wording from recovery projection'
             git push
           fi
