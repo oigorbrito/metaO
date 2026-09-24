@@ -20,7 +20,7 @@ jobs:
         run: |
           perl -0pi -e 's/\.map_or\(true, \|v\| now >= v\)/.is_none_or(|v| now >= v)/g; s/\.map_or\(true, \|v\| now <= v\)/.is_none_or(|v| now <= v)/g' metao-contracts/src/execution_governance.rs
           perl -0pi -e 's/\.checked_add\(snapshot\.reserved\.tokens\)\s*\.unwrap_or\(u64::MAX\)/.saturating_add(snapshot.reserved.tokens)/g; s/\.checked_add\(snapshot\.reserved\.attempts\)\s*\.unwrap_or\(u64::MAX\)/.saturating_add(snapshot.reserved.attempts)/g' metao-contracts/src/runtime_health.rs
-          perl -0pi -e 's/^#\[allow\(clippy::too_many_arguments\)\]\n//mg' metao-contracts/src/execution_governance.rs metao-contracts/src/runtime_health.rs
+          perl -0pi -e 's/^#\[allow\(clippy::too_many_arguments\)\]\n//mg; s/^#\[allow\(dead_code\)\]\n//mg' metao-contracts/src/execution_governance.rs metao-contracts/src/runtime_health.rs metao-contracts/tests/recovery_probe_governance_tests.rs
           perl -0pi -e 's/^pub fn project_retry_governance/#[allow(clippy::too_many_arguments)]\npub fn project_retry_governance/m' metao-contracts/src/execution_governance.rs
           perl -0pi -e 's/^pub fn project_recovery_probe_governance/#[allow(clippy::too_many_arguments)]\npub fn project_recovery_probe_governance/m' metao-contracts/src/runtime_health.rs
           perl -0pi -e 's/^fn intent\(\)/#[allow(dead_code)]\nfn intent()/m' metao-contracts/tests/recovery_probe_governance_tests.rs
