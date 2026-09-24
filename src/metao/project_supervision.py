@@ -26,6 +26,7 @@ class WorkExecutionStatus(StrEnum):
 
 class ProjectTraceKind(StrEnum):
     PLANNED = "PLANNED"
+    MATERIALIZED = "MATERIALIZED"
     DISPATCHED = "DISPATCHED"
     FAILED_CAPACITY = "FAILED_CAPACITY"
     CHECKPOINTED = "CHECKPOINTED"
@@ -228,6 +229,16 @@ class RepositoryCheckpointPort(Protocol):
 
 
 @runtime_checkable
+class InitialCheckpointMaterializerPort(Protocol):
+    def materialize(
+        self,
+        checkpoint: RepositoryCheckpoint,
+        *,
+        to_executor_id: str,
+    ) -> RepositoryCheckpoint: ...
+
+
+@runtime_checkable
 class WorkUnitVerifierPort(Protocol):
     def verify(
         self,
@@ -278,6 +289,7 @@ def supervise_project(
     runner: WorkUnitRunnerPort,
     repository: RepositoryCheckpointPort,
     verifier: WorkUnitVerifierPort,
+    initial_checkpoint_materializer: InitialCheckpointMaterializerPort | None = None,
     max_executor_attempts_per_unit: int = 3,
     max_corrective_units: int = 3,
 ) -> ProjectSupervisionResult:
@@ -368,7 +380,25 @@ def supervise_project(
             pinned_target = None
             if target is None:
                 return blocked(f"no executor available for {unit.work_unit_id}")
-            if (
+            if checkpoint_holder_executor_id is None and initial_checkpoint_materializer is not None:
+                materialized = initial_checkpoint_materializer.materialize(
+                    checkpoint,
+                    to_executor_id=target.executor_id,
+                )
+                if materialized != checkpoint:
+                    return blocked("repository checkpoint changed during initial materialization")
+                trace.append(
+                    ProjectTraceEvent(
+                        ProjectTraceKind.MATERIALIZED,
+                        unit.work_unit_id,
+                        target.executor_id,
+                        checkpoint.checkpoint_id,
+                        checkpoint.state_id,
+                        checkpoint.artifact_ref,
+                    )
+                )
+                checkpoint_holder_executor_id = target.executor_id
+            elif (
                 checkpoint_holder_executor_id is not None
                 and checkpoint_holder_executor_id != target.executor_id
             ):
@@ -599,6 +629,7 @@ __all__ = [
     "ExecutorSchedulerPort",
     "WorkUnitRunnerPort",
     "RepositoryCheckpointPort",
+    "InitialCheckpointMaterializerPort",
     "WorkUnitVerifierPort",
     "supervise_project",
 ]
