@@ -42,7 +42,7 @@ class BenchmarkFamilyIngestionTests(unittest.TestCase):
             "swe-bench", {"resolved": 8, "total": 10}, **identity()
         )
         terminal = ingest_benchmark_family_result(
-            "terminal-bench-core", {"pass_rate": 0.75}, **identity(evidence_id="terminal")
+            "terminal-bench-core", {"pass_rate": 3 / 4}, **identity(evidence_id="terminal")
         )
         self.assertEqual(swe.task_set, "verified")
         self.assertEqual(swe.metrics[0].value, 0.8)
@@ -59,14 +59,14 @@ class BenchmarkFamilyIngestionTests(unittest.TestCase):
 
     def test_unknown_or_malformed_results_fail_closed(self):
         with self.assertRaisesRegex(ValueError, "unsupported benchmark family"):
-            ingest_benchmark_family_result("unknown", {"pass_rate": 1}, **identity())
+            ingest_benchmark_family_result("unknown", {"pass_rate": 1 / 1}, **identity())
         with self.assertRaisesRegex(ValueError, "supported aggregate metric"):
             ingest_benchmark_family_result(
                 "swe-bench", {"not_a_metric": 1}, **identity()
             )
         with self.assertRaisesRegex(ValueError, "finite ratio"):
             ingest_benchmark_family_result(
-                "terminal-bench-core", {"pass_rate": 2}, **identity()
+                "terminal-bench-core", {"pass_rate": 2 / 1}, **identity()
             )
 
 
