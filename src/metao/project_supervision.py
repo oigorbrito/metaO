@@ -380,7 +380,6 @@ def supervise_project(
             pinned_target = None
             if target is None:
                 return blocked(f"no executor available for {unit.work_unit_id}")
-
             if checkpoint_holder_executor_id is None and initial_checkpoint_materializer is not None:
                 materialized = initial_checkpoint_materializer.materialize(
                     checkpoint,
