@@ -18,7 +18,7 @@ from .replan import (
     classify_failure,
     evaluate as evaluate_replan,
 )
-from .strategy import OrchestratorPoolState, select_orchestrator
+from .strategy import OrchestratorPoolState, SelectionPolicy, select_with_policy
 
 EvidenceNormalizer = Callable[..., object]
 AttemptClock = Callable[[], float]
@@ -215,6 +215,7 @@ def execute_mission_once(
     cancellation_requested: CancellationCheck | None = None,
     on_attempt_started: AttemptStarted | None = None,
     on_attempt_finished: AttemptFinished | None = None,
+    selection_policy: SelectionPolicy | None = None,
 ) -> MissionOutcome:
     """Execute one independently accepted mission attempt."""
 
@@ -264,7 +265,11 @@ def execute_mission_once(
         return MissionOutcome(mission.mission_id, None, None, _blocked("budget_exhausted"), budget, state=state)
 
     eligible = _eligible_pools(mission, pools)
-    selected = select_orchestrator(eligible, now_epoch=now_epoch)
+    selected = select_with_policy(
+        eligible,
+        selection_policy,
+        now_epoch=now_epoch,
+    )
     selecting_history = base_history + (MissionStatus.SELECTING,)
     if selected is None:
         state = _state(
@@ -464,6 +469,7 @@ def execute_mission(
     cancellation_requested: CancellationCheck | None = None,
     on_attempt_started: AttemptStarted | None = None,
     on_attempt_finished: AttemptFinished | None = None,
+    selection_policy: SelectionPolicy | None = None,
 ) -> MissionOutcome:
     """Run a mission with failure-aware, auditable, bounded failover."""
 
@@ -496,6 +502,7 @@ def execute_mission(
             cancellation_requested=cancellation_requested,
             on_attempt_started=on_attempt_started,
             on_attempt_finished=on_attempt_finished,
+            selection_policy=selection_policy,
         )
         record = _attempt_from_outcome(outcome, attempt_index + 1, execution_id)
         if record is not None:
@@ -603,6 +610,7 @@ __all__ = [
     "AttemptExecutionContext",
     "AttemptStarted",
     "AttemptFinished",
+    "SelectionPolicy",
     "MissionStatus",
     "MissionAttempt",
     "MissionState",
