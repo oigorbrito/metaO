@@ -261,7 +261,7 @@ fn approval_ticket_matches(
         && candidate.action == context.action
         && candidate.target == context.target
         && candidate.scope == context.scope
-        && candidate.not_before_epoch.map_or(true, |v| now >= v)
+        && candidate.not_before_epoch.is_none_or(|v| now >= v)
         && candidate.expires_at_epoch.map_or(true, |v| now <= v)
 }
 pub fn project_retry_governance(
