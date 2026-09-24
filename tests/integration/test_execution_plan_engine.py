@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from dataclasses import dataclass
-from src.metao.control_plane import Mission, MissionStatus, AcceptanceDecision
+from src.metao.control_plane import MissionStatus, AcceptanceDecision
 from src.metao.core import ExecutionStatus
 from src.metao.acceptance import AcceptanceResult
 

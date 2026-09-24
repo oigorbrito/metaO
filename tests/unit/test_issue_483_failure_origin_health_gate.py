@@ -43,7 +43,7 @@ class _StaticOriginAuthority:
             execution_id=request.execution_id,
             origin=self.origin,
             outcome=self.outcome,
-            evidence_ref=f"origin://{request.execution_id}/{self.origin.value}",
+            evidence_ref=f"origin-evidence:{request.execution_id}:{self.origin.value}",
         )
 
 
