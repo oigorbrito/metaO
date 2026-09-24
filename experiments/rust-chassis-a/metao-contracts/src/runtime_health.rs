@@ -369,6 +369,7 @@ pub enum RecoveryProbeGovernanceError {
     IntentBindingMismatch,
     InvalidApprovalContext,
 }
+#[allow(clippy::too_many_arguments)]
 pub fn project_recovery_probe_governance(
     intent: &BoundRecoveryProbeIntent,
     policy: crate::execution_governance::ExecutionPolicyEffect,
@@ -395,12 +396,10 @@ pub fn project_recovery_probe_governance(
     effective.wall_time_used_s += snapshot.reserved.wall_time_s;
     effective.tokens_used = effective
         .tokens_used
-        .checked_add(snapshot.reserved.tokens)
-        .unwrap_or(u64::MAX);
+        .saturating_add(snapshot.reserved.tokens);
     effective.attempts_used = effective
         .attempts_used
-        .checked_add(snapshot.reserved.attempts)
-        .unwrap_or(u64::MAX);
+        .saturating_add(snapshot.reserved.attempts);
     let generic_context = crate::execution_governance::RetryApprovalContext {
         mission_id: context.mission_id.clone(),
         execution_id: context.execution_id.clone(),

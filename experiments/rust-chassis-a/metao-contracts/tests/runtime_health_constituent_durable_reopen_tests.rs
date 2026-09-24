@@ -10,8 +10,8 @@ fn constituent(
     sequence: u64,
     outcome: RuntimeHealthConstituentOutcome,
 ) -> AdmittedRuntimeHealthConstituent {
-    let lease_generation = 7;
-    let fencing_token = lease_generation.saturating_add(4);
+    let lease_generation: u64 = 7;
+    let fencing_token: u64 = lease_generation.saturating_add(4);
     AdmittedRuntimeHealthConstituent {
         fact: AdmittedRuntimeHealthFact {
             result_id: result.into(),
