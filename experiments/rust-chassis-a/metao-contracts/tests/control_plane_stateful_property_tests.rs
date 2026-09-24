@@ -67,7 +67,11 @@ impl LifecycleModel {
             runtime_id: "runtime-a".to_string(),
             runtime_version: "1.0.0".to_string(),
             config_id: "config-a".to_string(),
-            evidence_basis: RuntimeHealthEvidenceBasis::IndependentObservation,
+            evidence_basis: if self.health_attempts == 0 {
+                RuntimeHealthEvidenceBasis::Unknown
+            } else {
+                RuntimeHealthEvidenceBasis::IndependentObservation
+            },
             evidence_ref: format!("stateful-health:gen-{}", self.generation),
             window_start_sequence: 0,
             window_end_sequence: u64::from(self.health_attempts),
