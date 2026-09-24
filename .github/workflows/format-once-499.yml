@@ -12,16 +12,16 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
-      - name: Apply final lint fix and commit
+      - name: Apply final test lint fix and commit
         shell: bash
         run: |
           cd experiments/rust-chassis-a
-          perl -0pi -e 's/(\n)(pub fn project_retry_governance)/$1#[allow(clippy::too_many_arguments)]\n$2/g' metao-contracts/src/execution_governance.rs
+          perl -0pi -e 's/(\n)(fn intent\(\) \{\})/$1#[allow(dead_code)]\n$2/g' metao-contracts/tests/recovery_probe_governance_tests.rs
           cargo fmt --all
           if ! git diff --quiet; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
             git add -A
-            git commit -m 'fix: allow composed retry governance signature'
+            git commit -m 'fix: satisfy recovery probe test lint'
             git push
           fi
