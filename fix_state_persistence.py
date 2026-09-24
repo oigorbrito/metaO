@@ -1,5 +1,3 @@
-import sys
-
 def fix_control_plane():
     path = "D:/projetos/metaO/src/metao/control_plane.py"
     with open(path, "r", encoding="utf-8") as f:
@@ -47,20 +45,6 @@ def fix_control_plane():
         content = f.read()
     
     # Fix definition
-    old_def = """def _state(
-    mission_id: str,
-    status: MissionStatus,
-    *,
-    attempts: tuple[MissionAttempt, ...] = (),
-    history: tuple[MissionStatus, ...],
-) -> MissionState:
-    return MissionState(
-        mission_id=mission_id,
-        status=status,
-        attempts=attempts,
-        history=history,
-    )"""
-    
     # The file has weird indentation and double newlines. 
     # I'll use a regex or a more flexible replacement.
     import re

@@ -7,7 +7,6 @@ from typing import Any, Mapping, Protocol, runtime_checkable
 
 from .capacity import CapacityObservation
 from .capabilities import Capability
-from .capabilities import Capability
 
 
 class HealthStatus(StrEnum):

@@ -1,5 +1,3 @@
-import re
-
 def fix_control_plane():
     path = "D:/projetos/metaO/src/metao/control_plane.py"
     with open(path, "r", encoding="utf-8") as f:
@@ -11,11 +9,6 @@ def fix_control_plane():
     
     # This pattern matches 'def _state' and everything until the return MissionState(...) line.
     # We use [^def] logically or just look for the function structure.
-    
-    def_pattern = re.compile(
-        r'def _state\s*\(\s*mission_id: str,\s*status: MissionStatus,\s*\*,\s*attempts: tuple\[MissionAttempt, ...\] = \(\),\s*history: tuple\[MissionStatus, ...\],\s*\)\s*-> MissionState:\s*return MissionState\(mission_id, status, attempts, history\)',
-        re.DOTALL
-    )
     
     # Because of the double newlines in the file, we normalize newlines temporarily for the replacement
     # or we just match them.

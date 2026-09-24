@@ -19,7 +19,6 @@ def fix_control_plane_v3():
     start_def = content.find("def _state(")
     if start_def != -1:
         # Find the end of the return statement
-        end_ret = content.find(")", start_def)
         # Wait, return MissionState(...) has its own closing paren.
         # Let's find the return line.
         ret_start = content.find("return MissionState", start_def)
