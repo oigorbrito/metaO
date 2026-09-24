@@ -1,0 +1,3 @@
+## 2026-03-30 - CLI Error Formatting Accessibility
+**Learning:** In CLI applications without a frontend UI, string representation of exceptions provides the primary user-facing error feedback. Standard Python `KeyError` stringification formats exception arguments as repr string (e.g. `'mission_id'`), which leads to raw JSON CLI errors like `{"error": "MissionNotFound", "message": "'m1'"}`. Explicit human-readable error messages improve developer experience.
+**Action:** Define explicit `__str__` methods on custom CLI domain exceptions so CLI error payloads render descriptive, readable messages (e.g. `mission not found: m1`).
