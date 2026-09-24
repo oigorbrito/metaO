@@ -232,6 +232,7 @@ class MetaOCliV1Tests(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIsNone(out)
         self.assertEqual(err["error"], "MissionNotFound")
+        self.assertEqual(err["message"], "mission not found: missing")
 
     def test_bad_factory_contract_fails_closed(self):
         bad = ModuleType("metao_bad_factory")

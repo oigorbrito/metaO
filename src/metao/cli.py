@@ -164,7 +164,9 @@ def resolve_factory_spec(explicit_spec: str | None) -> str:
     env_spec = __import__("os").environ.get(FACTORY_ENV_VAR)
     if env_spec:
         return env_spec
-    raise CLIInputError(f"Operator factory not configured. Provide --factory or set {FACTORY_ENV_VAR} environment variable.")
+    raise CLIInputError(
+        f"Operator factory not configured. Provide --factory, set {FACTORY_ENV_VAR}, or run 'metao doctor' for status."
+    )
 
 
 def load_factory_callable(factory_spec: str) -> Callable[..., Any]:
