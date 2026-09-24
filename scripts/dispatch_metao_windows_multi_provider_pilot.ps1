@@ -3,7 +3,7 @@ Set-StrictMode -Version Latest
 
 $Repo = 'oigorbrito/metaO'
 $Workflow = 'project-multi-provider-pilot-windows-fenced.yml'
-$AuditedHead = 'fe2519044f89cdf0111b5e5118a056fce7524e8d'
+$AuditedHead = 'd18423df408a958bb1c47e69ce4c5ffa73433daf'
 $Authorization = if ($args.Count -gt 0) { $args[0] } else { '' }
 $OpenAIModel = if ($args.Count -gt 1) { $args[1] } else { 'gpt-5.6-luna' }
 $GeminiTarget = if ($args.Count -gt 2) { $args[2] } else { 'gemma-4-26b-a4b-it' }
