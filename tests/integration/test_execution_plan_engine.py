@@ -1,12 +1,9 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from dataclasses import dataclass
-from typing import Any
-
-from src.metao.control_plane import execute_mission, Mission, MissionStatus, AcceptanceDecision
-from src.metao.core import ExecutionResult, ExecutionStatus
+from src.metao.control_plane import Mission, MissionStatus, AcceptanceDecision
+from src.metao.core import ExecutionStatus
 from src.metao.acceptance import AcceptanceResult
-from src.metao.execution_plan import DefaultLinearPlan
 
 @dataclass
 class MockMission:

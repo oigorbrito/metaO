@@ -118,7 +118,7 @@ class MissionStatus(StrEnum):
     CANCELLED = "CANCELLED"
 
 
-from .execution_plan import DefaultLinearPlan, ExecutionPlan, PlanStepStatus
+from .execution_plan import DefaultLinearPlan, ExecutionPlan
 
 
 

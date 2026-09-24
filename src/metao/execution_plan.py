@@ -1,7 +1,7 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import StrEnum
-from typing import Optional, Sequence, Tuple
+from typing import Optional, Sequence
 
 class PlanStepStatus(StrEnum):
     PENDING = "PENDING"
