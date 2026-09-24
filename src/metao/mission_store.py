@@ -24,6 +24,9 @@ class MissionAlreadyExists(RuntimeError):
 class MissionNotFound(KeyError):
     """Raised when a mission record does not exist."""
 
+    def __str__(self) -> str:
+        return f"mission not found: {self.args[0]}" if self.args else "mission not found"
+
 
 @dataclass(frozen=True)
 class MissionRunContext:
