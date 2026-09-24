@@ -102,6 +102,7 @@ class OperatorUXDoctorTests(unittest.TestCase):
         data = json.loads(out)
         factory_check = self.checks_by_name(data)["FACTORY_CONFIG"]
         self.assertEqual(factory_check["status"], "NOT_CONFIGURED")
+        self.assertIn("metao doctor", factory_check["message"])
 
     def test_t04_valid_factory_reaches_operator_and_catalog_readiness(self) -> None:
         factory_spec = f"{__name__}:valid_operator_factory"
