@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from io import StringIO
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
 
 from metao.entrypoint import main
+from metao.runtime_factory import RUNTIME_CERTIFICATION_DB_ENV
 
 
 def evidence_payload() -> dict:
@@ -64,13 +66,49 @@ class BenchmarkEvidenceCliTests(unittest.TestCase):
             self.assertEqual(imported["metrics"][0]["name"], "resolved_rate")
 
             code, stdout, stderr = self.invoke(
-                ["--db", str(db), "runtime-benchmarks", "runtime-a"]
+                ["--db", str(db), "runtime-benchmarks", "runtime-a", "--now-epoch", "110", "--max-age-seconds", "20"]
             )
 
         self.assertEqual(code, 0, stderr)
         items = json.loads(stdout)
         self.assertEqual(len(items), 1)
         self.assertEqual(items[0]["benchmark_version"], "v1")
+        self.assertTrue(items[0]["fresh"])
+
+    def test_legacy_import_alias_and_certification_database_override(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            default_db = root / "default.db"
+            certification_db = root / "certification.db"
+            evidence_file = root / "evidence.json"
+            evidence_file.write_text(json.dumps(evidence_payload()), encoding="utf-8")
+
+            previous = os.environ.get(RUNTIME_CERTIFICATION_DB_ENV)
+            os.environ[RUNTIME_CERTIFICATION_DB_ENV] = str(certification_db)
+            try:
+                code, _, stderr = self.invoke(
+                    ["--db", str(default_db), "benchmark-import", str(evidence_file)]
+                )
+                self.assertEqual(code, 0, stderr)
+                code, stdout, stderr = self.invoke(
+                    ["--db", str(default_db), "runtime-benchmarks", "runtime-a"]
+                )
+            finally:
+                if previous is None:
+                    os.environ.pop(RUNTIME_CERTIFICATION_DB_ENV, None)
+                else:
+                    os.environ[RUNTIME_CERTIFICATION_DB_ENV] = previous
+
+        self.assertEqual(code, 0, stderr)
+        self.assertEqual(len(json.loads(stdout)), 1)
+
+    def test_runtime_benchmarks_requires_complete_freshness_pair(self):
+        code, stdout, stderr = self.invoke(
+            ["runtime-benchmarks", "runtime-a", "--now-epoch", "110"]
+        )
+        self.assertEqual(code, 2)
+        self.assertEqual(stdout, "")
+        self.assertEqual(json.loads(stderr)["error"], "CLIInputError")
 
     def test_duplicate_import_is_idempotent(self):
         with tempfile.TemporaryDirectory() as temp:
