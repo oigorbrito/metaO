@@ -21,7 +21,7 @@ jobs:
           perl -0pi -e 's/(\n)(pub fn project_retry_governance)/$1#[allow(clippy::too_many_arguments)]\n$2/g; s/(\n)(pub fn project_recovery_probe_governance)/$1#[allow(clippy::too_many_arguments)]\n$2/g' metao-contracts/src/execution_governance.rs metao-contracts/src/runtime_health.rs
           perl -0pi -e 's/\.tokens_used\s*\.checked_add\(snapshot\.reserved\.tokens\)\s*\.unwrap_or\(u64::MAX\)/.tokens_used.saturating_add(snapshot.reserved.tokens)/g; s/\.attempts_used\s*\.checked_add\(snapshot\.reserved\.attempts\)\s*\.unwrap_or\(u64::MAX\)/.attempts_used.saturating_add(snapshot.reserved.attempts)/g' metao-contracts/src/runtime_health.rs
           perl -0pi -e 's/(#\[allow\(clippy::too_many_arguments\)\]\n)+/#\[allow(clippy::too_many_arguments)\]\n/g' metao-contracts/src/execution_governance.rs metao-contracts/src/runtime_health.rs
-          perl -0pi -e 's/(\n)(fn intent\(\) \{\})/$1#[allow(dead_code)]\n$2/g' metao-contracts/tests/recovery_probe_governance_tests.rs
+
           cargo fmt --all
           if ! git diff --quiet; then
             git config user.name 'github-actions[bot]'
