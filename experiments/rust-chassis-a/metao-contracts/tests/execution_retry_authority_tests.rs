@@ -1,7 +1,7 @@
 use metao_contracts::failure_causality::{
     bind_execution_retry_authority, evaluate_retry_eligibility, ExecutionRetryAttemptClaim,
-    ExecutionRetryAuthorityError, ExecutionRetryAuthorityState, FailureCausalityFacts,
-    FailureClass, FailureClassificationBasis, FactualExecutionOutcome, RecoveryStatus,
+    ExecutionRetryAuthorityError, ExecutionRetryAuthorityState, FactualExecutionOutcome,
+    FailureCausalityFacts, FailureClass, FailureClassificationBasis, RecoveryStatus,
     RetryEligibility,
 };
 use metao_contracts::{ExecutionId, MissionId};
@@ -84,7 +84,10 @@ fn omitted_or_invalid_authoritative_state_fails_closed() {
     state.evidence_ref = "   ".into();
     let error = bind_execution_retry_authority(&facts(2, 4), &claim(2, 4), &state)
         .expect_err("invalid authority evidence must fail closed");
-    assert_eq!(error, ExecutionRetryAuthorityError::InvalidAuthoritativeState);
+    assert_eq!(
+        error,
+        ExecutionRetryAuthorityError::InvalidAuthoritativeState
+    );
 }
 
 #[test]
