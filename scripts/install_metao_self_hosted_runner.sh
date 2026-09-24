@@ -52,7 +52,7 @@ required = {"self-hosted", "linux", "x64", os.environ["RUNNER_LABEL"].lower()}
 raise SystemExit(1 if required - labels else 0)
 PY
   sudo "${INSTALL_DIR}/svc.sh" start >/dev/null
-  printf '{"installer":"PASS","repository":"%s","runner_name":"%s","runner_label":"%s","runner_version":"%s","already_configured":true,"registration_token_emitted":false,"credentials_emitted":false,"pilot_operational_pass":false}\n' \
+  printf '{"installer":"PASS","repository":"%s","runner_name":"%s","runner_label":"%s","runner_version":"%s","already_configured":true,"registration_mode":"existing-match","registration_token_emitted":false,"credentials_emitted":false,"pilot_operational_pass":false}\n' \
     "$REPO" "$RUNNER_NAME" "$RUNNER_LABEL" "$RUNNER_VERSION"
   exit 0
 fi
@@ -111,8 +111,7 @@ registration_token="$(gh api --method POST "repos/${REPO}/actions/runners/regist
     --token "$registration_token" \
     --name "$RUNNER_NAME" \
     --labels "$RUNNER_LABEL" \
-    --work _work \
-    --replace
+    --work _work
 )
 unset registration_token
 
@@ -133,5 +132,5 @@ required = {"self-hosted", "linux", "x64", os.environ["RUNNER_LABEL"].lower()}
 raise SystemExit(1 if required - labels else 0)
 PY
 
-printf '{"installer":"PASS","repository":"%s","runner_name":"%s","runner_label":"%s","runner_version":"%s","runner_asset_sha256":"%s","already_configured":false,"registration_token_emitted":false,"credentials_emitted":false,"pilot_operational_pass":false}\n' \
+printf '{"installer":"PASS","repository":"%s","runner_name":"%s","runner_label":"%s","runner_version":"%s","runner_asset_sha256":"%s","already_configured":false,"registration_mode":"first-install-no-replace","registration_token_emitted":false,"credentials_emitted":false,"pilot_operational_pass":false}\n' \
   "$REPO" "$RUNNER_NAME" "$RUNNER_LABEL" "$RUNNER_VERSION" "$asset_sha256"
