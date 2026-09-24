@@ -1,0 +1,6 @@
+# Trust-boundary changes require explicit owner review.
+/.github/workflows/ @oigorbrito
+/.github/CODEOWNERS @oigorbrito
+/scripts/ @oigorbrito
+/src/metao/ @oigorbrito
+/experiments/rust-chassis-a/ @oigorbrito
