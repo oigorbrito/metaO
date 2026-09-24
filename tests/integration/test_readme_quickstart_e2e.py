@@ -12,11 +12,25 @@ import unittest
 
 class ReadmeQuickstartE2ETests(unittest.TestCase):
     def run_metao(self, cwd: Path, env: dict[str, str], *args: str) -> object:
-        scripts_dir = Path(sys.executable).parent
-        executable = shutil.which("metao", path=str(scripts_dir))
+        python_dir = Path(sys.executable).parent
+        script_dirs = [python_dir]
+        if sys.platform == "win32":
+            script_dirs.append(python_dir / "Scripts")
+        executable = next(
+            (
+                candidate
+                for scripts_dir in script_dirs
+                for candidate in (
+                    shutil.which("metao", path=str(scripts_dir)),
+                    shutil.which("metao.exe", path=str(scripts_dir)),
+                )
+                if candidate is not None
+            ),
+            None,
+        )
         self.assertIsNotNone(
             executable,
-            f"installed metao console script is required in current interpreter directory: {scripts_dir}",
+            f"installed metao console script is required near interpreter: {python_dir}",
         )
         completed = subprocess.run(
             [executable, *args],
