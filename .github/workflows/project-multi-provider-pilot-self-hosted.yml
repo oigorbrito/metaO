@@ -43,7 +43,7 @@ jobs:
       METAO_SSH_SMOKE_IDENTITY: ${{ secrets.METAO_SSH_SMOKE_IDENTITY }}
     steps:
       - name: Checkout exact head
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Confirm dedicated runner contract
         shell: bash
         run: |
@@ -101,7 +101,7 @@ jobs:
       OPENAI_API_KEY: ''
     steps:
       - name: Checkout exact head
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - name: Require Python 3.12+
         shell: bash
         run: |
