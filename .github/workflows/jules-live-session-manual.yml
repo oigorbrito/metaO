@@ -1,0 +1,88 @@
+name: Jules Manual Live Session Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization:
+        description: 'Type I_AUTHORIZE_JULES_LIVE_SESSION_SMOKE exactly'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  jules-live-session:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Validate explicit authorization before secrets
+        shell: bash
+        env:
+          METAO_AUTHORIZATION_INPUT: ${{ inputs.authorization }}
+        run: |
+          set -euo pipefail
+          test "$METAO_AUTHORIZATION_INPUT" = 'I_AUTHORIZE_JULES_LIVE_SESSION_SMOKE'
+
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.12'
+
+      - name: Install metaO
+        shell: bash
+        run: |
+          set -euo pipefail
+          python -m pip install -e .
+
+      - name: Run explicitly authorized Jules live-session smoke
+        shell: bash
+        env:
+          METAO_JULES_SESSION_SMOKE_AUTHORIZATION: ${{ inputs.authorization }}
+          METAO_JULES_API_KEY: ${{ secrets.METAO_JULES_API_KEY }}
+        run: |
+          set -euo pipefail
+          python scripts/jules_live_session_smoke.py > "$RUNNER_TEMP/jules-live-session-smoke.json"
+
+      - name: Validate live-session evidence boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'jules-live-session-smoke.json'
+          lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
+          assert lines, 'Jules live-session smoke produced no evidence output'
+          evidence = json.loads(lines[-1])
+          assert evidence['adapter'] == 'jules'
+          assert evidence['adapter_version'] == 'v1alpha'
+          assert evidence['base_url'] == 'https://jules.googleapis.com/v1alpha'
+          assert evidence['source'] == 'sources/github/oigorbrito/metaO'
+          assert evidence['starting_branch'] == 'main'
+          assert evidence['session_created'] is True
+          assert evidence['session_id_present'] is True
+          assert evidence['observed_session_state'] in {
+              'QUEUED',
+              'PLANNING',
+              'AWAITING_PLAN_APPROVAL',
+              'AWAITING_USER_FEEDBACK',
+              'PAUSED',
+          }
+          assert evidence['require_plan_approval'] is True
+          assert evidence['plan_approved'] is False
+          assert evidence['message_sent'] is False
+          assert evidence['auto_create_pr'] is False
+          assert evidence['session_cleanup_delete'] is True
+          assert evidence['credential_value_emitted'] is False
+          assert evidence['explicit_authorization_observed'] is True
+          assert evidence['live_provider_session_smoke'] == 'PASS'
+          assert evidence['provider_backed_execution'] == 'NOT_TESTED'
+          assert evidence['metao_final_acceptance'] == 'NOT_TESTED'
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
