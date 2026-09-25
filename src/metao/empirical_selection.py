@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from enum import StrEnum
 from math import isfinite
 from typing import Mapping
 
@@ -20,6 +21,11 @@ from .routing_decision import (
 from .strategy import OrchestratorPoolState, SelectionContext
 
 
+class MissingObservedEvidencePolicy(StrEnum):
+    PRIOR_ONLY = "prior_only"
+    EXCLUDE_CANDIDATE = "exclude_candidate"
+
+
 @dataclass(frozen=True, slots=True)
 class ObservedPerformanceRoutingPolicy:
     metric_name: str = "success_rate"
@@ -27,10 +33,13 @@ class ObservedPerformanceRoutingPolicy:
     observed_weight: float = 1.0
     max_age_seconds: float = 86_400.0
     min_samples: int = 1
+    missing_evidence: MissingObservedEvidencePolicy = MissingObservedEvidencePolicy.PRIOR_ONLY
 
     def __post_init__(self) -> None:
-        if not self.metric_name.strip():
-            raise ValueError("observed routing metric_name is required")
+        if self.metric_name not in {"success_rate", "quality", "reliability"}:
+            raise ValueError(
+                "observed routing v1 supports only normalized success/quality/reliability metrics"
+            )
         if not all(
             isfinite(value) and value >= 0
             for value in (self.prior_weight, self.observed_weight)
@@ -97,7 +106,16 @@ class EmpiricalTaskFamilySelectionPolicy:
             for candidate in candidates
         }
         fused: list[
-            tuple[float, str, float, float, float | None, str | None, str | None, str]
+            tuple[
+                float,
+                str,
+                float,
+                float,
+                float | None,
+                str | None,
+                tuple[str, ...],
+                str,
+            ]
         ] = []
         denominator = family.observed.prior_weight + family.observed.observed_weight
         for item in benchmark_ranked:
@@ -110,10 +128,15 @@ class EmpiricalTaskFamilySelectionPolicy:
                 min_samples=family.observed.min_samples,
             )
             if observed_match is None:
+                if (
+                    family.observed.missing_evidence
+                    is MissingObservedEvidencePolicy.EXCLUDE_CANDIDATE
+                ):
+                    continue
                 fused_score = item.total_score
                 observed_score = None
                 observed_evidence_ids: tuple[str, ...] = ()
-                reason = item.reason + "+no_applicable_observed_performance"
+                reason = item.reason + "+missing_observed_prior_only"
             else:
                 if observed_match.metric_unit != "ratio" or not 0.0 <= observed_match.value <= 1.0:
                     fused_score = item.total_score
@@ -188,6 +211,7 @@ class EmpiricalTaskFamilySelectionPolicy:
                         "observed_weight": family.observed.observed_weight,
                         "max_age_seconds": family.observed.max_age_seconds,
                         "min_samples": family.observed.min_samples,
+                        "missing_evidence": family.observed.missing_evidence.value,
                     },
                 }
             )
@@ -216,6 +240,7 @@ class EmpiricalTaskFamilySelectionPolicy:
 
 
 __all__ = [
+    "MissingObservedEvidencePolicy",
     "ObservedPerformanceRoutingPolicy",
     "EmpiricalFamilyRoutingPolicy",
     "EmpiricalTaskFamilySelectionPolicy",
