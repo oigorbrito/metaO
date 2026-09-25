@@ -19,6 +19,8 @@ Project / Roadmap
 
 Chat, local terminals, and external research may help execute the work, but they are not the durable source of truth for work status.
 
+Local worktree, commit, branch, remote-synchronization, and PR-size hygiene is governed by `docs/LOCAL-WORK-COMMIT-REMOTE-SYNC-POLICY.md`. That policy is part of the repository workflow and must be applied before review-ready status.
+
 ## Sources of truth
 
 ### Project
@@ -195,6 +197,8 @@ If a required dependency is unresolved, keep it `Blocked` rather than silently i
 
 ### 3. Create a branch
 
+Before branching from a remote-tracked base, fetch/prune remote state and reconcile local residue. A branch for new material work must start from an intentional base with unrelated local changes removed, committed to their own work unit, or otherwise explicitly reconciled.
+
 Branch from the correct dependency/base state.
 
 Do not branch from `main` by habit when the Issue explicitly depends on an unmerged integration candidate. Conversely, repository-governance or independent operational work should not be stacked on a functional candidate without need.
@@ -216,6 +220,8 @@ Any material scope expansion must be recorded in the Issue before implementation
 ### 5. Open a draft PR
 
 The PR should exist early enough to hold review/evidence, but draft status must not be confused with merge readiness.
+
+Before review-ready status, run the repository change-hygiene guard and record the change class, exact base/head/merge-base, changed files/lines, ahead/behind state, worktree cleanliness, and decomposition decision. Ordinary/documentation changes above the normal review budget must be decomposed; eligible large mechanical/generated/vendor/evidence/migration changes require an explicit exception. See `docs/LOCAL-WORK-COMMIT-REMOTE-SYNC-POLICY.md`.
 
 The PR template requires:
 
@@ -267,7 +273,8 @@ A PR becomes merge-ready only when:
 - evidence belongs to the exact head SHA being reviewed;
 - unresolved review threads are cleared;
 - dependency/base state is valid;
-- documentation is current.
+- documentation is current;
+- local/remote change hygiene is PASS, or a documented eligible large-change exception is under explicit review.
 
 ### 9. Merge and close
 
