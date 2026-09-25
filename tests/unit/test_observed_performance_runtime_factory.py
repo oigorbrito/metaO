@@ -183,6 +183,20 @@ class ObservedPerformanceRuntimeFactoryTests(unittest.TestCase):
                 observed_store.record(observed("beta", "obs-beta-2", 1.0, 110.0))
 
                 routing_policy = {
+                    "identities": {
+                        "alpha": {
+                            "executor_version": "1.0",
+                            "runtime_config_digest": "runtime-alpha",
+                            "tool_policy_digest": "tool-policy",
+                            "environment_id": "test",
+                        },
+                        "beta": {
+                            "executor_version": "1.0",
+                            "runtime_config_digest": "runtime-beta",
+                            "tool_policy_digest": "tool-policy",
+                            "environment_id": "test",
+                        },
+                    },
                     "families": {
                         "coding": {
                             "benchmark_id": "matrix",
@@ -269,6 +283,14 @@ class ObservedPerformanceRuntimeFactoryTests(unittest.TestCase):
                     encoding="utf-8",
                 )
                 routing_policy = {
+                    "identities": {
+                        "alpha": {
+                            "executor_version": "1.0",
+                            "runtime_config_digest": "runtime-alpha",
+                            "tool_policy_digest": "tool-policy",
+                            "environment_id": "test",
+                        }
+                    },
                     "families": {
                         "coding": {
                             "benchmark_id": "matrix",
@@ -290,6 +312,68 @@ class ObservedPerformanceRuntimeFactoryTests(unittest.TestCase):
                 ):
                     os.environ.pop(OBSERVED_PERFORMANCE_DB_ENV, None)
                     with self.assertRaisesRegex(ValueError, "required for empirical routing"):
+                        create_operator(store=InMemoryMissionStore())
+        finally:
+            sys.modules.pop(module_name, None)
+
+    def test_empirical_identity_version_must_match_catalog_runtime(self):
+        module_name = "metao_observed_routing_version_mismatch_plugins"
+        module = ModuleType(module_name)
+        runtime = Runtime("alpha")
+        module.alpha = lambda: RuntimePlugin(runtime, normalizer)
+        sys.modules[module_name] = module
+
+        try:
+            with tempfile.TemporaryDirectory() as temp:
+                root = Path(temp)
+                catalog = root / "runtimes.json"
+                benchmark_db = root / "benchmark.db"
+                observed_db = root / "observed.db"
+                catalog.write_text(
+                    json.dumps(
+                        {
+                            "runtimes": [
+                                {
+                                    "factory": f"{module_name}:alpha",
+                                    "success_rate": 0.8,
+                                    "quality": 0.8,
+                                    "reliability": 0.8,
+                                }
+                            ]
+                        }
+                    ),
+                    encoding="utf-8",
+                )
+                routing_policy = {
+                    "identities": {
+                        "alpha": {
+                            "executor_version": "2.0",
+                            "runtime_config_digest": "runtime-alpha",
+                            "tool_policy_digest": "tool-policy",
+                            "environment_id": "test",
+                        }
+                    },
+                    "families": {
+                        "coding": {
+                            "benchmark_id": "matrix",
+                            "benchmark_version": "v1",
+                            "task_set": "coding",
+                            "metric_name": "success_rate",
+                            "observed": {"metric_name": "success_rate"},
+                        }
+                    },
+                }
+                with patch.dict(
+                    os.environ,
+                    {
+                        RUNTIME_CATALOG_ENV: str(catalog),
+                        BENCHMARK_EVIDENCE_DB_ENV: str(benchmark_db),
+                        OBSERVED_PERFORMANCE_DB_ENV: str(observed_db),
+                        BENCHMARK_ROUTING_POLICY_ENV: json.dumps(routing_policy),
+                    },
+                    clear=False,
+                ):
+                    with self.assertRaisesRegex(ValueError, "version mismatch"):
                         create_operator(store=InMemoryMissionStore())
         finally:
             sys.modules.pop(module_name, None)
