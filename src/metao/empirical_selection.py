@@ -82,12 +82,17 @@ class EmpiricalFamilyRoutingPolicy:
 @dataclass(frozen=True, slots=True)
 class EmpiricalTaskFamilyRoutingPolicy:
     families: Mapping[str, EmpiricalFamilyRoutingPolicy]
+    identities: Mapping[str, EmpiricalExecutorIdentity]
 
     def __post_init__(self) -> None:
         normalized = dict(self.families)
+        normalized_identities = dict(self.identities)
         if not normalized or any(not key.strip() for key in normalized):
             raise ValueError("empirical task-family routing policy requires family mappings")
+        if not normalized_identities or any(not key.strip() for key in normalized_identities):
+            raise ValueError("empirical task-family routing policy requires executor identities")
         object.__setattr__(self, "families", normalized)
+        object.__setattr__(self, "identities", normalized_identities)
 
 
 @dataclass(frozen=True, slots=True)
