@@ -25,6 +25,7 @@ Last reconciled commit: `7c8fef9a841dbc454cabc6a0b5b1bed49afbda02`
 - `docs/RELEASE-READINESS.md`
 - `docs/LOCAL-RELEASE-GATE.md`
 - `docs/GITHUB-WORKFLOW.md`
+- `docs/LOCAL-WORK-COMMIT-REMOTE-SYNC-POLICY.md`
 - `docs/GITHUB-LABEL-TAXONOMY.md`
 - `docs/GITHUB-ACTIONS-SUPPORT-PACKET.md`
 - `docs/RELEASE-EVIDENCE-VALIDATOR.md`
@@ -83,6 +84,7 @@ Last reconciled commit: `7c8fef9a841dbc454cabc6a0b5b1bed49afbda02`
 - `CHASSIS-SCORECARD-SCHEMA-2026-08-26.md` owns the frozen chassis comparison contract; methodological guidance must not silently change its hard gates or weights;
 - `CANONICAL-DONOR-EVALUATION-MATRIX.md` owns current donor research dispositions; donor claims remain bounded by their recorded evidence grade;
 - operational documents own execution/run-state and blocker descriptions;
+- `LOCAL-WORK-COMMIT-REMOTE-SYNC-POLICY.md` owns worktree/commit/branch/remote synchronization, change classification, review budgets, decomposition, and large-change exception rules; its thresholds are repository governance triggers rather than empirical quality scores;
 - `EMPIRICAL-EVIDENCE-AUDIT.md` records traceability/reproducibility gaps and must not silently rewrite historical evidence or architecture decisions;
 - reference documents may be used as evidence but not as mutable authority for current status;
 - historical documents are immutable except for pointer updates and supersession notices;
