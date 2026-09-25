@@ -20,7 +20,7 @@ class RoutingCandidateReceipt:
     base_score: float
     benchmark_score: float | None
     evidence_id: str | None
-    observed_evidence_id: str | None = None
+    observed_evidence_ids: tuple[str, ...] = ()
     reason: str = ""
 
     def __post_init__(self) -> None:
