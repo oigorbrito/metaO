@@ -369,6 +369,7 @@ def _record_to_json(record: MissionRecord) -> str:
             "mission_id": record.mission.mission_id,
             "objective": record.mission.objective,
             "required_capabilities": sorted(record.mission.required_capabilities),
+            "task_family": record.mission.task_family,
         },
         "outcome": {
             "mission_id": outcome.mission_id,
@@ -400,6 +401,11 @@ def _record_from_json(raw: str) -> MissionRecord:
             mission_id=str(mission_data["mission_id"]),
             objective=str(mission_data["objective"]),
             required_capabilities=frozenset(str(item) for item in mission_data.get("required_capabilities", [])),
+            task_family=(
+                None
+                if mission_data.get("task_family") is None
+                else str(mission_data["task_family"])
+            ),
         )
         outcome = MissionOutcome(
             mission_id=str(outcome_data["mission_id"]),
