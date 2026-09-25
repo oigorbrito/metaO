@@ -1,5 +1,7 @@
 """Canonical metaO-observed executor performance evidence.
 
+Evidence aggregation is deterministic over exact compatible identity.
+
 This evidence is routing/audit input only. It cannot mint eligibility, dispatch,
 spending, retry, verification or Acceptance authority.
 """
