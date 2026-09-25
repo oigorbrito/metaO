@@ -54,6 +54,26 @@ class ObservedPerformanceRoutingPolicy:
 
 
 @dataclass(frozen=True, slots=True)
+class EmpiricalExecutorIdentity:
+    executor_version: str
+    runtime_config_digest: str
+    tool_policy_digest: str
+    environment_id: str
+
+    def __post_init__(self) -> None:
+        if not all(
+            value.strip()
+            for value in (
+                self.executor_version,
+                self.runtime_config_digest,
+                self.tool_policy_digest,
+                self.environment_id,
+            )
+        ):
+            raise ValueError("empirical executor identity requires exact non-empty fields")
+
+
+@dataclass(frozen=True, slots=True)
 class EmpiricalFamilyRoutingPolicy:
     benchmark: BenchmarkRoutingPolicy
     observed: ObservedPerformanceRoutingPolicy
@@ -75,11 +95,14 @@ class EmpiricalTaskFamilySelectionPolicy:
     benchmark_store: BenchmarkEvidenceStorePort
     observed_store: ObservedPerformanceStorePort
     families: Mapping[str, EmpiricalFamilyRoutingPolicy]
+    identities: Mapping[str, EmpiricalExecutorIdentity]
     decision_store: RoutingDecisionStorePort | None = None
 
     def __post_init__(self) -> None:
         if not self.families or any(not key.strip() for key in self.families):
             raise ValueError("empirical task-family policy requires family mappings")
+        if not self.identities or any(not key.strip() for key in self.identities):
+            raise ValueError("empirical task-family policy requires executor identities")
 
     def __call__(
         self,
@@ -102,20 +125,44 @@ class EmpiricalTaskFamilySelectionPolicy:
         if family is None:
             return None
 
-        benchmark_by_executor = {
-            candidate.orchestrator_id: self.benchmark_store.history(candidate.orchestrator_id)
-            for candidate in candidates
-        }
+        benchmark_by_executor = {}
+        for candidate in candidates:
+            identity = self.identities.get(candidate.orchestrator_id)
+            if identity is None:
+                benchmark_by_executor[candidate.orchestrator_id] = ()
+                continue
+            benchmark_by_executor[candidate.orchestrator_id] = tuple(
+                item
+                for item in self.benchmark_store.history(candidate.orchestrator_id)
+                if (
+                    item.executor_version == identity.executor_version
+                    and item.runtime_config_digest == identity.runtime_config_digest
+                    and item.tool_policy_digest == identity.tool_policy_digest
+                    and item.environment_id == identity.environment_id
+                )
+            )
         benchmark_ranked = EvidenceWeightedRouter(family.benchmark).rank(
             candidates,
             benchmark_by_executor,
             now_epoch=now_epoch,
         )
 
-        observed_by_executor = {
-            candidate.orchestrator_id: self.observed_store.history(candidate.orchestrator_id)
-            for candidate in candidates
-        }
+        observed_by_executor = {}
+        for candidate in candidates:
+            identity = self.identities.get(candidate.orchestrator_id)
+            if identity is None:
+                observed_by_executor[candidate.orchestrator_id] = ()
+                continue
+            observed_by_executor[candidate.orchestrator_id] = tuple(
+                item
+                for item in self.observed_store.history(candidate.orchestrator_id)
+                if (
+                    item.executor_version == identity.executor_version
+                    and item.runtime_config_digest == identity.runtime_config_digest
+                    and item.tool_policy_digest == identity.tool_policy_digest
+                    and item.environment_id == identity.environment_id
+                )
+            )
         fused: list[
             tuple[
                 float,
@@ -216,6 +263,15 @@ class EmpiricalTaskFamilySelectionPolicy:
                         "require_fresh": family.benchmark.require_fresh,
                         "max_age_seconds": family.benchmark.max_age_seconds,
                     },
+                    "executor_identities": {
+                        executor_id: {
+                            "executor_version": identity.executor_version,
+                            "runtime_config_digest": identity.runtime_config_digest,
+                            "tool_policy_digest": identity.tool_policy_digest,
+                            "environment_id": identity.environment_id,
+                        }
+                        for executor_id, identity in sorted(self.identities.items())
+                    },
                     "observed": {
                         "metric_name": family.observed.metric_name,
                         "prior_weight": family.observed.prior_weight,
@@ -251,6 +307,7 @@ class EmpiricalTaskFamilySelectionPolicy:
 
 
 __all__ = [
+    "EmpiricalExecutorIdentity",
     "MissingObservedEvidencePolicy",
     "ObservedPerformanceRoutingPolicy",
     "EmpiricalFamilyRoutingPolicy",
