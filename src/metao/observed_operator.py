@@ -150,6 +150,7 @@ class ObservableMissionOperator:
             payload={
                 "objective": mission.objective,
                 "required_capabilities": sorted(mission.required_capabilities),
+                "task_family": mission.task_family,
             },
             now_epoch=now_epoch,
         )
