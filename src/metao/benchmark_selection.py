@@ -65,6 +65,7 @@ class BenchmarkSelectionPolicy:
         selected = ranked[0].orchestrator_id
         if self.decision_store is not None:
             policy_payload = {
+                "task_family": context.task_family,
                 "benchmark_id": self.routing_policy.benchmark_id,
                 "benchmark_version": self.routing_policy.benchmark_version,
                 "task_set": self.routing_policy.task_set,

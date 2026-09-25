@@ -49,10 +49,13 @@ class Mission:
     mission_id: str
     objective: str
     required_capabilities: frozenset[Capability] = frozenset()
+    task_family: str | None = None
 
     def __post_init__(self) -> None:
         if not self.mission_id or not self.objective:
             raise ValueError("mission requires mission_id and objective")
+        if self.task_family is not None and not self.task_family.strip():
+            raise ValueError("mission task_family must be non-empty when provided")
 
 
 @dataclass(frozen=True, slots=True)
