@@ -60,6 +60,17 @@ class EmpiricalFamilyRoutingPolicy:
 
 
 @dataclass(frozen=True, slots=True)
+class EmpiricalTaskFamilyRoutingPolicy:
+    families: Mapping[str, EmpiricalFamilyRoutingPolicy]
+
+    def __post_init__(self) -> None:
+        normalized = dict(self.families)
+        if not normalized or any(not key.strip() for key in normalized):
+            raise ValueError("empirical task-family routing policy requires family mappings")
+        object.__setattr__(self, "families", normalized)
+
+
+@dataclass(frozen=True, slots=True)
 class EmpiricalTaskFamilySelectionPolicy:
     benchmark_store: BenchmarkEvidenceStorePort
     observed_store: ObservedPerformanceStorePort
@@ -243,5 +254,6 @@ __all__ = [
     "MissingObservedEvidencePolicy",
     "ObservedPerformanceRoutingPolicy",
     "EmpiricalFamilyRoutingPolicy",
+    "EmpiricalTaskFamilyRoutingPolicy",
     "EmpiricalTaskFamilySelectionPolicy",
 ]
