@@ -58,7 +58,7 @@ from .replan import (
 )
 
 
-from .strategy import SelectionPolicy, executorPoolState, select_orchestrator, select_with_policy
+from .strategy import SelectionContext, SelectionPolicy, executorPoolState, select_orchestrator, select_with_policy
 
 
 select_executor = select_orchestrator
@@ -833,6 +833,11 @@ def execute_mission_once(
         eligible,
         selection_policy,
         now_epoch=now_epoch,
+        context=SelectionContext(
+            mission_id=mission.mission_id,
+            execution_id=execution_id,
+            attempt_number=attempt_number,
+        ),
     )
 
 

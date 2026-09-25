@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 from math import exp, isfinite
 from time import time
-from typing import Callable, Dict, Iterable, Optional, Tuple
+from typing import Callable, Dict, Iterable, Optional, Protocol, Tuple, runtime_checkable
 
 from .capacity import CapacityRecovery, CapacityStatus, RecoveryEvidenceBasis
 
@@ -170,7 +170,30 @@ def select_orchestrator(pools: Iterable[OrchestratorPoolState], scorer: Optional
     return CostQualityRouter(scorer).select(pools, now_epoch=now_epoch)
 
 
+@dataclass(frozen=True, slots=True)
+class SelectionContext:
+    mission_id: str
+    execution_id: str
+    attempt_number: int
+
+    def __post_init__(self) -> None:
+        if not self.mission_id.strip() or not self.execution_id.strip():
+            raise ValueError("selection context requires mission and execution ids")
+        if self.attempt_number < 1:
+            raise ValueError("selection context attempt number must be positive")
+
+
 SelectionPolicy = Callable[[tuple[OrchestratorPoolState, ...], float | None], Optional[str]]
+
+
+@runtime_checkable
+class ContextualSelectionPolicy(Protocol):
+    def select_with_context(
+        self,
+        candidates: tuple[OrchestratorPoolState, ...],
+        now_epoch: float | None,
+        context: SelectionContext,
+    ) -> Optional[str]: ...
 
 
 def select_with_policy(
@@ -178,6 +201,7 @@ def select_with_policy(
     policy: SelectionPolicy | None = None,
     *,
     now_epoch: float | None = None,
+    context: SelectionContext | None = None,
 ) -> Optional[str]:
     ranked = CostQualityRouter().rank(pools, now_epoch=now_epoch)
     if not ranked:
@@ -186,7 +210,10 @@ def select_with_policy(
         return ranked[0].orchestrator_id
     pool_by_id = {pool.orchestrator_id: pool for pool in pools}
     routable = tuple(pool_by_id[item.orchestrator_id] for item in ranked)
-    selected = policy(routable, now_epoch)
+    if context is not None and isinstance(policy, ContextualSelectionPolicy):
+        selected = policy.select_with_context(routable, now_epoch, context)
+    else:
+        selected = policy(routable, now_epoch)
     if selected is None:
         return None
     if selected not in {item.orchestrator_id for item in ranked}:
@@ -201,4 +228,4 @@ executorPoolState = OrchestratorPoolState
 select_executor = select_orchestrator
 
 
-__all__ = ["SystemSnapshot", "OrchestratorPoolState", "BudgetState", "OrchestratorStatus", "CapacityStatus", "RecoveryEvidenceBasis", "CapacityRecovery", "HistoricalScore", "ScoreBreakdown", "DeterministicScorer", "SelectionPolicy", "RoutingCandidate", "CostQualityRouter", "select_orchestrator", "select_with_policy", "executorPoolState", "select_executor"]
+__all__ = ["SystemSnapshot", "OrchestratorPoolState", "BudgetState", "OrchestratorStatus", "CapacityStatus", "RecoveryEvidenceBasis", "CapacityRecovery", "HistoricalScore", "ScoreBreakdown", "DeterministicScorer", "SelectionContext", "SelectionPolicy", "ContextualSelectionPolicy", "RoutingCandidate", "CostQualityRouter", "select_orchestrator", "select_with_policy", "executorPoolState", "select_executor"]

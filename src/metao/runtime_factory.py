@@ -14,6 +14,7 @@ from typing import Any, Callable, Mapping
 from .benchmark_routing import BenchmarkRoutingPolicy
 from .benchmark_selection import BenchmarkSelectionPolicy
 from .benchmark_store import SQLiteBenchmarkEvidenceStore
+from .routing_decision import SQLiteRoutingDecisionStore
 from .catalog import OrchestratorCatalog
 from .control_plane import EvidenceNormalizer, SelectionPolicy
 from .core import ExecutionRequest, Mission, OrchestratorContract, OrchestratorRegistry
@@ -547,6 +548,7 @@ def create_operator(
         selection_policy = BenchmarkSelectionPolicy(
             SQLiteBenchmarkEvidenceStore(benchmark_path),
             resolved_benchmark_policy,
+            decision_store=SQLiteRoutingDecisionStore(benchmark_path),
         )
 
     return create_operator_from_catalog(

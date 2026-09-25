@@ -26,6 +26,7 @@ from metao.governance import AcceptanceBudget, evaluate_policy
 from metao.mission_store import InMemoryMissionStore
 from metao.operator import MissionOperator
 from metao.benchmark_store import SQLiteBenchmarkEvidenceStore
+from metao.routing_decision import SQLiteRoutingDecisionStore
 from metao.strategy import OrchestratorPoolState, OrchestratorStatus
 
 
@@ -119,6 +120,7 @@ class BenchmarkSelectionPolicyIntegrationTests(unittest.TestCase):
             evidence_store.record(
                 benchmark("fallback", evidence_id="fallback-bench", value=0.95)
             )
+            decision_store = SQLiteRoutingDecisionStore(Path(temp) / "benchmarks.db")
             selection_policy = BenchmarkSelectionPolicy(
                 evidence_store,
                 BenchmarkRoutingPolicy(
@@ -130,6 +132,7 @@ class BenchmarkSelectionPolicyIntegrationTests(unittest.TestCase):
                     benchmark_weight=0.9,
                     max_age_seconds=60.0,
                 ),
+                decision_store=decision_store,
             )
 
             operator = MissionOperator(
@@ -174,9 +177,18 @@ class BenchmarkSelectionPolicyIntegrationTests(unittest.TestCase):
                 max_attempts=1,
             )
 
-        self.assertEqual(outcome.orchestrator_id, "fallback")
-        self.assertEqual(primary.calls, 0)
-        self.assertEqual(fallback.calls, 1)
+            self.assertEqual(outcome.orchestrator_id, "fallback")
+            self.assertEqual(primary.calls, 0)
+            self.assertEqual(fallback.calls, 1)
+            receipts = decision_store.history("mission-benchmark-routing")
+            self.assertEqual(len(receipts), 1)
+            self.assertEqual(receipts[0].selected_executor_id, "fallback")
+            self.assertEqual(
+                tuple(item.executor_id for item in receipts[0].candidates),
+                ("fallback", "primary"),
+            )
+            self.assertEqual(receipts[0].candidates[0].evidence_id, "fallback-bench")
+            self.assertEqual(receipts[0].authority_scope, "routing-audit-only")
 
     def test_selection_policy_requires_explicit_mission_time(self):
         with tempfile.TemporaryDirectory() as temp:
