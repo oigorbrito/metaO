@@ -30,14 +30,17 @@ jobs:
             test: |
               cargo fmt --all --check
               cargo clippy --workspace --all-targets --all-features -- -D warnings
-              cargo test --workspace --all-targets --all-features
+              cargo build -p agent-client-protocol-conductor --all-features
+              cargo build -p agent-client-protocol-test --bin testy --all-features
+              cargo build -p agent-client-protocol-test --bin mcp-echo-server --example arrow_proxy --all-features
+              cargo test --all --workspace --all-features
           - name: vigla
             repo: Kilbex/Vigla
             ref: bbd19ae2d5a77401502756c550b5dcd4ae59bbc9
             test: |
               cargo fmt --all --check
-              cargo clippy -p orchestrator -p vigla-event-schema --all-targets --all-features -- -D warnings
-              cargo test -p orchestrator -p vigla-event-schema
+              cargo clippy -p vigla-orchestrator -p vigla-event-schema --all-targets --all-features -- -D warnings
+              cargo test -p vigla-orchestrator -p vigla-event-schema
           - name: duroxide
             repo: microsoft/duroxide
             ref: 8ecb61debc771480bfccd0d93f272a5679f1f840
@@ -96,9 +99,13 @@ jobs:
           cat > ../gate-command.sh <<'EOF'
           ${{ matrix.test }}
           EOF
+          set +e
           bash ../gate-command.sh 2>&1 | tee ../gate.log
+          status=${PIPESTATUS[0]}
+          set -e
           ended=$(date +%s)
           printf '%s\n' "$((ended-started))" > ../elapsed-seconds.txt
+          exit "$status"
 
       - name: Record machine-readable receipt
         if: always()
