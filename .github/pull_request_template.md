@@ -19,6 +19,32 @@
 
 -
 
+## Change hygiene
+
+<!-- Repository-governance metadata. This is not a quality or Acceptance score. -->
+
+- Change class: `ORDINARY | DOCUMENTATION | MECHANICAL | GENERATED | DEPENDENCY_VENDOR | EVIDENCE_ARTIFACT | MIGRATION`
+- Base ref:
+- Base SHA:
+- Head SHA:
+- Merge-base SHA:
+- Changed files:
+- Changed lines:
+- Ahead / behind:
+- Worktree clean: `YES | NO`
+- Budget state: `PASS | WARN | BLOCK`
+- Exception ID: `N/A`
+- Decomposition decision:
+
+For review-ready changes, run when applicable:
+
+```console
+git fetch --prune origin
+python scripts/check_change_hygiene.py --base-ref origin/main --change-class <CLASS> --require-current-base
+```
+
+A normal `ORDINARY` or `DOCUMENTATION` PR above 40 changed files or 1200 changed lines must be decomposed. Large-change exceptions are restricted to eligible classes and require an explicit exception identifier. See `docs/LOCAL-WORK-COMMIT-REMOTE-SYNC-POLICY.md`.
+
 ## Architecture / safety invariants
 
 <!-- Keep only the applicable invariants and add others from the governing Issue. -->
