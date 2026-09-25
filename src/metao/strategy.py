@@ -175,12 +175,15 @@ class SelectionContext:
     mission_id: str
     execution_id: str
     attempt_number: int
+    task_family: str | None = None
 
     def __post_init__(self) -> None:
         if not self.mission_id.strip() or not self.execution_id.strip():
             raise ValueError("selection context requires mission and execution ids")
         if self.attempt_number < 1:
             raise ValueError("selection context attempt number must be positive")
+        if self.task_family is not None and not self.task_family.strip():
+            raise ValueError("selection context task_family must be non-empty when provided")
 
 
 SelectionPolicy = Callable[[tuple[OrchestratorPoolState, ...], float | None], Optional[str]]
