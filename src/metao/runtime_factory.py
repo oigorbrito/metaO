@@ -60,7 +60,6 @@ class RuntimeCatalogConfigError(ValueError):
     """Raised when a declarative runtime catalog is invalid or unsafe to use."""
 
 
-
 def _benchmark_routing_policy_from_env(value: str | None) -> BenchmarkRoutingPolicy | None:
     if value is None:
         return None
@@ -533,7 +532,6 @@ def create_operator(
         if revocation_path
         else None
     )
-
 
     benchmark_path = benchmark_evidence_db or os.environ.get(BENCHMARK_EVIDENCE_DB_ENV)
     resolved_benchmark_policy = benchmark_routing_policy or _benchmark_routing_policy_from_env(
