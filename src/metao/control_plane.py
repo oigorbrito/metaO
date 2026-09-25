@@ -837,6 +837,7 @@ def execute_mission_once(
             mission_id=mission.mission_id,
             execution_id=execution_id,
             attempt_number=attempt_number,
+            task_family=mission.task_family,
         ),
     )
 
