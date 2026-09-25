@@ -32,6 +32,10 @@ from .cli import (
     resolve_factory_spec,
 )
 from .operator import MissionOperator
+from .observed_performance_store import (
+    SQLiteObservedPerformanceStore,
+    load_observed_performance_json,
+)
 from .runtime_certification import RuntimeCertification, is_certificate_fresh
 from .runtime_certification_revocation import (
     RuntimeCertificationRevocation,
@@ -44,6 +48,7 @@ from .runtime_factory import (
     RUNTIME_CERTIFICATION_DB_ENV,
     RUNTIME_CERTIFICATION_REVOCATION_DB_ENV,
     RUNTIME_CONTROL_DB_ENV,
+    OBSERVED_PERFORMANCE_DB_ENV,
 )
 from .sqlite_runtime_certification import (
     RuntimeCertificationCorrupt,
@@ -63,6 +68,8 @@ _RUNTIME_COMMANDS = frozenset(
         "runtime-benchmark-import",
         "benchmark-family-import",
         "runtime-benchmarks",
+        "observed-performance-import",
+        "runtime-observed-performance",
         "runtimes",
         "runtime-inspect",
         "runtime-quarantine",
@@ -111,6 +118,10 @@ def _certification_db(db: str) -> str:
     return os.environ.get(RUNTIME_CERTIFICATION_DB_ENV) or _control_db(db)
 
 
+def _observed_performance_db(db: str) -> str:
+    return os.environ.get(OBSERVED_PERFORMANCE_DB_ENV) or db
+
+
 def _certification_revocation_db(db: str) -> str:
     return (
         os.environ.get(RUNTIME_CERTIFICATION_REVOCATION_DB_ENV)
@@ -123,7 +134,7 @@ def _combined_help(stream: TextIO) -> None:
     stream.write("metaO control-plane operator CLI\n\n")
     stream.write("mission commands: doctor, run, status, inspect, list, events, approve, resume, cancel\n")
     stream.write(
-        "runtime commands: runtime-benchmark-import (benchmark-import), benchmark-family-import, runtime-benchmarks, runtimes, runtime-inspect, "
+        "runtime commands: runtime-benchmark-import (benchmark-import), benchmark-family-import, runtime-benchmarks, observed-performance-import, runtime-observed-performance, runtimes, runtime-inspect, "
         "runtime-quarantine, runtime-restore, runtime-history, runtime-certificates, "
         "runtime-certificate-revoke, runtime-certificate-revocations\n"
     )
@@ -160,6 +171,18 @@ def _runtime_parser() -> argparse.ArgumentParser:
     runtime_benchmarks.add_argument("orchestrator_id")
     runtime_benchmarks.add_argument("--now-epoch", type=float)
     runtime_benchmarks.add_argument("--max-age-seconds", type=float)
+
+    observed_import = sub.add_parser(
+        "observed-performance-import",
+        help="ingest one canonical observed-performance evidence JSON file",
+    )
+    observed_import.add_argument("evidence_file")
+
+    runtime_observed = sub.add_parser(
+        "runtime-observed-performance",
+        help="list durable observed-performance evidence for one runtime id",
+    )
+    runtime_observed.add_argument("orchestrator_id")
 
     runtimes = sub.add_parser("runtimes", help="list configured runtime catalog and live/control health")
     runtimes.add_argument("--factory", required=False, help="configured operator factory module:function")
@@ -406,6 +429,7 @@ def main(
     control_db = _control_db(args.db)
     certification_db = _certification_db(args.db)
     certification_revocation_db = _certification_revocation_db(args.db)
+    observed_performance_db = _observed_performance_db(args.db)
 
     try:
         if args.command in {"benchmark-import", "runtime-benchmark-import"}:
@@ -439,6 +463,62 @@ def main(
             benchmark_store = SQLiteBenchmarkEvidenceStore(certification_db)
             stored = benchmark_store.record(evidence)
             _write_json(_benchmark_evidence_view(stored), out)
+            return 0
+
+        if args.command == "observed-performance-import":
+            try:
+                evidence = load_observed_performance_json(args.evidence_file)
+            except ValueError as exc:
+                raise CLIInputError(str(exc)) from exc
+            store = SQLiteObservedPerformanceStore(observed_performance_db)
+            stored = store.record(evidence)
+            _write_json(
+                {
+                    "evidence_id": stored.evidence_id,
+                    "executor_id": stored.executor_id,
+                    "executor_version": stored.executor_version,
+                    "task_family": stored.task_family,
+                    "runtime_config_digest": stored.runtime_config_digest,
+                    "tool_policy_digest": stored.tool_policy_digest,
+                    "environment_id": stored.environment_id,
+                    "observed_at_epoch": stored.observed_at_epoch,
+                    "source": stored.source.value,
+                    "raw_result_ref": stored.raw_result_ref,
+                    "sample_count": stored.sample_count,
+                    "metrics": [
+                        {"name": item.name, "value": item.value, "unit": item.unit}
+                        for item in stored.metrics
+                    ],
+                },
+                out,
+            )
+            return 0
+
+        if args.command == "runtime-observed-performance":
+            store = SQLiteObservedPerformanceStore(observed_performance_db)
+            _write_json(
+                [
+                    {
+                        "evidence_id": item.evidence_id,
+                        "executor_id": item.executor_id,
+                        "executor_version": item.executor_version,
+                        "task_family": item.task_family,
+                        "runtime_config_digest": item.runtime_config_digest,
+                        "tool_policy_digest": item.tool_policy_digest,
+                        "environment_id": item.environment_id,
+                        "observed_at_epoch": item.observed_at_epoch,
+                        "source": item.source.value,
+                        "raw_result_ref": item.raw_result_ref,
+                        "sample_count": item.sample_count,
+                        "metrics": [
+                            {"name": metric.name, "value": metric.value, "unit": metric.unit}
+                            for metric in item.metrics
+                        ],
+                    }
+                    for item in store.history(args.orchestrator_id)
+                ],
+                out,
+            )
             return 0
 
         if args.command == "runtime-benchmarks":
