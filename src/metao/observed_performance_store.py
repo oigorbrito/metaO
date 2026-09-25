@@ -78,6 +78,18 @@ def observed_performance_from_mapping(payload: Mapping[str, Any]) -> ObservedPer
     )
 
 
+def load_observed_performance_json(path: str | Path) -> ObservedPerformanceEvidence:
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ValueError(f"cannot read observed performance file: {path}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"invalid observed performance JSON: {path}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("observed performance file must contain a JSON object")
+    return observed_performance_from_mapping(payload)
+
+
 class SQLiteObservedPerformanceStore:
     def __init__(self, path: str | Path) -> None:
         self._path = str(path)
@@ -194,4 +206,5 @@ __all__ = [
     "ObservedPerformanceStorePort",
     "SQLiteObservedPerformanceStore",
     "observed_performance_from_mapping",
+    "load_observed_performance_json",
 ]
