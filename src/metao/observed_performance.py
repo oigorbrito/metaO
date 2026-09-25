@@ -62,6 +62,8 @@ class ObservedPerformanceEvidence:
             raise ValueError("observed performance evidence requires stable identity")
         if not isfinite(self.observed_at_epoch) or self.observed_at_epoch < 0:
             raise ValueError("observed performance time must be finite and non-negative")
+        if isinstance(self.sample_count, bool) or not isinstance(self.sample_count, int):
+            raise ValueError("observed performance sample_count must be an integer")
         if self.sample_count < 1:
             raise ValueError("observed performance sample_count must be positive")
         if not self.metrics:
