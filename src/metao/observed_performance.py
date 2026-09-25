@@ -86,7 +86,23 @@ def is_observed_performance_fresh(
     return 0.0 <= age <= max_age_seconds
 
 
-def latest_compatible_observation(
+@dataclass(frozen=True, slots=True)
+class ObservedPerformanceAggregate:
+    executor_id: str
+    executor_version: str
+    task_family: str
+    runtime_config_digest: str
+    tool_policy_digest: str
+    environment_id: str
+    metric_name: str
+    metric_unit: str
+    value: float
+    sample_count: int
+    observed_at_epoch: float
+    evidence_ids: tuple[str, ...]
+
+
+def aggregate_compatible_observations(
     evidence: Iterable[ObservedPerformanceEvidence],
     *,
     task_family: str,
@@ -94,10 +110,10 @@ def latest_compatible_observation(
     now_epoch: float,
     max_age_seconds: float,
     min_samples: int,
-) -> tuple[ObservedPerformanceEvidence, ObservedPerformanceMetric] | None:
-    matches: list[tuple[float, str, ObservedPerformanceEvidence, ObservedPerformanceMetric]] = []
+) -> ObservedPerformanceAggregate | None:
+    compatible: list[tuple[ObservedPerformanceEvidence, ObservedPerformanceMetric]] = []
     for item in evidence:
-        if item.task_family != task_family or item.sample_count < min_samples:
+        if item.task_family != task_family:
             continue
         if not is_observed_performance_fresh(
             item,
@@ -108,11 +124,53 @@ def latest_compatible_observation(
         metric = item.metric(metric_name)
         if metric is None:
             continue
-        matches.append((item.observed_at_epoch, item.evidence_id, item, metric))
-    if not matches:
+        compatible.append((item, metric))
+    if not compatible:
         return None
-    _, _, item, metric = max(matches, key=lambda value: (value[0], value[1]))
-    return item, metric
+
+    identities = {
+        (
+            item.executor_id,
+            item.executor_version,
+            item.runtime_config_digest,
+            item.tool_policy_digest,
+            item.environment_id,
+            metric.unit,
+        )
+        for item, metric in compatible
+    }
+    if len(identities) != 1:
+        return None
+
+    total_samples = sum(item.sample_count for item, _ in compatible)
+    if total_samples < min_samples:
+        return None
+    weighted = sum(metric.value * item.sample_count for item, metric in compatible)
+    latest = max(item.observed_at_epoch for item, _ in compatible)
+    ordered_ids = tuple(
+        item.evidence_id
+        for item, _ in sorted(
+            compatible,
+            key=lambda pair: (pair[0].observed_at_epoch, pair[0].evidence_id),
+        )
+    )
+    executor_id, executor_version, runtime_digest, tool_digest, environment_id, unit = next(
+        iter(identities)
+    )
+    return ObservedPerformanceAggregate(
+        executor_id=executor_id,
+        executor_version=executor_version,
+        task_family=task_family,
+        runtime_config_digest=runtime_digest,
+        tool_policy_digest=tool_digest,
+        environment_id=environment_id,
+        metric_name=metric_name,
+        metric_unit=unit,
+        value=weighted / total_samples,
+        sample_count=total_samples,
+        observed_at_epoch=latest,
+        evidence_ids=ordered_ids,
+    )
 
 
 __all__ = [
@@ -120,5 +178,6 @@ __all__ = [
     "ObservedPerformanceMetric",
     "ObservedPerformanceEvidence",
     "is_observed_performance_fresh",
-    "latest_compatible_observation",
+    "ObservedPerformanceAggregate",
+    "aggregate_compatible_observations",
 ]
