@@ -8,7 +8,7 @@ from typing import Mapping
 
 from .benchmark_routing import BenchmarkRoutingPolicy, EvidenceWeightedRouter
 from .benchmark_store import BenchmarkEvidenceStorePort
-from .observed_performance import latest_compatible_observation
+from .observed_performance import aggregate_compatible_observations
 from .observed_performance_store import ObservedPerformanceStorePort
 from .routing_decision import (
     RoutingCandidateReceipt,
@@ -101,7 +101,7 @@ class EmpiricalTaskFamilySelectionPolicy:
         ] = []
         denominator = family.observed.prior_weight + family.observed.observed_weight
         for item in benchmark_ranked:
-            observed_match = latest_compatible_observation(
+            observed_match = aggregate_compatible_observations(
                 observed_by_executor.get(item.orchestrator_id, ()),
                 task_family=context.task_family,
                 metric_name=family.observed.metric_name,
@@ -112,18 +112,17 @@ class EmpiricalTaskFamilySelectionPolicy:
             if observed_match is None:
                 fused_score = item.total_score
                 observed_score = None
-                observed_evidence_id = None
+                observed_evidence_ids: tuple[str, ...] = ()
                 reason = item.reason + "+no_applicable_observed_performance"
             else:
-                observed_evidence, metric = observed_match
-                if metric.unit != "ratio" or not 0.0 <= metric.value <= 1.0:
+                if observed_match.metric_unit != "ratio" or not 0.0 <= observed_match.value <= 1.0:
                     fused_score = item.total_score
                     observed_score = None
-                    observed_evidence_id = None
+                    observed_evidence_ids = ()
                     reason = item.reason + "+invalid_observed_metric"
                 else:
-                    observed_score = metric.value
-                    observed_evidence_id = observed_evidence.evidence_id
+                    observed_score = observed_match.value
+                    observed_evidence_ids = observed_match.evidence_ids
                     fused_score = (
                         family.observed.prior_weight * item.total_score
                         + family.observed.observed_weight * observed_score
@@ -137,7 +136,7 @@ class EmpiricalTaskFamilySelectionPolicy:
                     item.benchmark_score if item.benchmark_score is not None else -1.0,
                     observed_score,
                     item.evidence_id,
-                    observed_evidence_id,
+                    observed_evidence_ids,
                     reason,
                 )
             )
@@ -156,7 +155,7 @@ class EmpiricalTaskFamilySelectionPolicy:
                     base_score=base_score,
                     benchmark_score=None if benchmark_score < 0 else benchmark_score,
                     evidence_id=benchmark_evidence_id,
-                    observed_evidence_id=observed_evidence_id,
+                    observed_evidence_ids=observed_evidence_ids,
                     reason=reason,
                 )
                 for index, (
@@ -166,7 +165,7 @@ class EmpiricalTaskFamilySelectionPolicy:
                     benchmark_score,
                     _observed_score,
                     benchmark_evidence_id,
-                    observed_evidence_id,
+                    observed_evidence_ids,
                     reason,
                 ) in enumerate(fused, start=1)
             )
