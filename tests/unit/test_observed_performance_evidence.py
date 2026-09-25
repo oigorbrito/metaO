@@ -115,6 +115,50 @@ class ObservedPerformanceEvidenceTests(unittest.TestCase):
         )
         self.assertIsNone(result)
 
+    def test_mapping_rejects_fractional_or_boolean_sample_count(self):
+        from metao.observed_performance_store import observed_performance_from_mapping
+
+        payload = {
+            "evidence_id": "e1",
+            "executor_id": "runtime-a",
+            "executor_version": "1.0",
+            "task_family": "coding",
+            "runtime_config_digest": "runtime-a-config",
+            "tool_policy_digest": "tool-policy",
+            "environment_id": "test",
+            "observed_at_epoch": 100.0,
+            "source": "metao_execution",
+            "raw_result_ref": "artifact://e1",
+            "sample_count": 1.5,
+            "metrics": [{"name": "success_rate", "value": 0.8, "unit": "ratio"}],
+        }
+        with self.assertRaisesRegex(ValueError, "sample_count"):
+            observed_performance_from_mapping(payload)
+
+        payload["sample_count"] = True
+        with self.assertRaisesRegex(ValueError, "sample_count"):
+            observed_performance_from_mapping(payload)
+
+    def test_mapping_rejects_boolean_metric_value(self):
+        from metao.observed_performance_store import observed_performance_from_mapping
+
+        payload = {
+            "evidence_id": "e1",
+            "executor_id": "runtime-a",
+            "executor_version": "1.0",
+            "task_family": "coding",
+            "runtime_config_digest": "runtime-a-config",
+            "tool_policy_digest": "tool-policy",
+            "environment_id": "test",
+            "observed_at_epoch": 100.0,
+            "source": "metao_execution",
+            "raw_result_ref": "artifact://e1",
+            "sample_count": 1,
+            "metrics": [{"name": "success_rate", "value": True, "unit": "ratio"}],
+        }
+        with self.assertRaisesRegex(ValueError, "metric value"):
+            observed_performance_from_mapping(payload)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
