@@ -67,6 +67,21 @@ def observed(executor_id: str, score: float, *, at: float = 110.0, samples: int 
 
 
 class EmpiricalSelectionTests(unittest.TestCase):
+    def test_routing_candidate_receipt_keeps_legacy_reason_position(self):
+        from metao.routing_decision import RoutingCandidateReceipt
+
+        receipt = RoutingCandidateReceipt(
+            "alpha",
+            1,
+            0.9,
+            0.8,
+            0.7,
+            "bench-alpha",
+            "legacy-reason",
+        )
+        self.assertEqual(receipt.reason, "legacy-reason")
+        self.assertEqual(receipt.observed_evidence_ids, ())
+
     def test_observed_performance_can_change_rank_without_reintroducing_candidates(self):
         with tempfile.TemporaryDirectory() as temp:
             db = Path(temp) / "metao.db"
