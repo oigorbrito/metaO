@@ -74,6 +74,7 @@ def _load_run_spec(path: str | Path) -> dict[str, Any]:
         _required_string(mission_data, "mission_id"),
         _required_string(mission_data, "objective"),
         _string_set(mission_data, "required_capabilities"),
+        None if mission_data.get("task_family") is None else _required_string(mission_data, "task_family"),
     )
 
     allowed = policy_data.get("allowed")
@@ -243,6 +244,7 @@ def _record_view(record: MissionRecord, *, detailed: bool) -> dict[str, Any]:
             "mission": {
                 "objective": record.mission.objective,
                 "required_capabilities": sorted(record.mission.required_capabilities),
+                "task_family": record.mission.task_family,
             },
             "history": [item.value for item in record.outcome.state.history],
             "attempts": _attempt_view(record),
