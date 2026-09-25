@@ -15,6 +15,11 @@ from .benchmark_routing import BenchmarkRoutingPolicy
 from .benchmark_selection import BenchmarkSelectionPolicy
 from .benchmark_store import SQLiteBenchmarkEvidenceStore
 from .routing_decision import SQLiteRoutingDecisionStore
+from .task_family_selection import (
+    MissingTaskFamilyPolicy,
+    TaskFamilyBenchmarkSelectionPolicy,
+    TaskFamilyRoutingPolicy,
+)
 from .catalog import OrchestratorCatalog
 from .control_plane import EvidenceNormalizer, SelectionPolicy
 from .core import ExecutionRequest, Mission, OrchestratorContract, OrchestratorRegistry
@@ -61,24 +66,14 @@ class RuntimeCatalogConfigError(ValueError):
     """Raised when a declarative runtime catalog is invalid or unsafe to use."""
 
 
-def _benchmark_routing_policy_from_env(value: str | None) -> BenchmarkRoutingPolicy | None:
-    if value is None:
-        return None
-    try:
-        payload = json.loads(value)
-    except json.JSONDecodeError as exc:
-        raise RuntimeCatalogConfigError(
-            f"{BENCHMARK_ROUTING_POLICY_ENV} must contain valid JSON"
-        ) from exc
-    if not isinstance(payload, dict):
-        raise RuntimeCatalogConfigError(
-            f"{BENCHMARK_ROUTING_POLICY_ENV} must contain a JSON object"
-        )
+def _benchmark_policy_from_mapping(
+    payload: Mapping[str, Any],
+    *,
+    context: str,
+) -> BenchmarkRoutingPolicy:
     require_fresh = payload.get("require_fresh", True)
     if not isinstance(require_fresh, bool):
-        raise RuntimeCatalogConfigError(
-            f"{BENCHMARK_ROUTING_POLICY_ENV}.require_fresh must be boolean"
-        )
+        raise RuntimeCatalogConfigError(f"{context}.require_fresh must be boolean")
     try:
         return BenchmarkRoutingPolicy(
             benchmark_id=str(payload["benchmark_id"]),
@@ -91,9 +86,62 @@ def _benchmark_routing_policy_from_env(value: str | None) -> BenchmarkRoutingPol
             max_age_seconds=float(payload.get("max_age_seconds", 86_400.0)),
         )
     except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeCatalogConfigError(f"{context} is invalid") from exc
+
+
+def _benchmark_routing_policy_from_env(
+    value: str | None,
+) -> BenchmarkRoutingPolicy | TaskFamilyRoutingPolicy | None:
+    if value is None:
+        return None
+    try:
+        payload = json.loads(value)
+    except json.JSONDecodeError as exc:
         raise RuntimeCatalogConfigError(
-            f"{BENCHMARK_ROUTING_POLICY_ENV} is invalid"
+            f"{BENCHMARK_ROUTING_POLICY_ENV} must contain valid JSON"
         ) from exc
+    if not isinstance(payload, dict):
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_ROUTING_POLICY_ENV} must contain a JSON object"
+        )
+
+    families = payload.get("families")
+    if families is None:
+        return _benchmark_policy_from_mapping(
+            payload,
+            context=BENCHMARK_ROUTING_POLICY_ENV,
+        )
+    if not isinstance(families, dict) or not families:
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_ROUTING_POLICY_ENV}.families must be a non-empty object"
+        )
+    try:
+        missing_family = MissingTaskFamilyPolicy(
+            str(payload.get("missing_family", MissingTaskFamilyPolicy.FAIL_CLOSED.value))
+        )
+    except ValueError as exc:
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_ROUTING_POLICY_ENV}.missing_family is invalid"
+        ) from exc
+
+    family_policies: dict[str, BenchmarkRoutingPolicy] = {}
+    for family_id, family_payload in families.items():
+        if not isinstance(family_id, str) or not family_id.strip():
+            raise RuntimeCatalogConfigError(
+                f"{BENCHMARK_ROUTING_POLICY_ENV}.families requires non-empty family ids"
+            )
+        if not isinstance(family_payload, dict):
+            raise RuntimeCatalogConfigError(
+                f"{BENCHMARK_ROUTING_POLICY_ENV}.families.{family_id} must be an object"
+            )
+        family_policies[family_id] = _benchmark_policy_from_mapping(
+            family_payload,
+            context=f"{BENCHMARK_ROUTING_POLICY_ENV}.families.{family_id}",
+        )
+    return TaskFamilyRoutingPolicy(
+        family_policies,
+        missing_family=missing_family,
+    )
 
 
 @dataclass(frozen=True)
@@ -500,7 +548,7 @@ def create_operator(
     runtime_certification_revocation_db: str | Path | None = None,
     certification_now_epoch: float | None = None,
     benchmark_evidence_db: str | Path | None = None,
-    benchmark_routing_policy: BenchmarkRoutingPolicy | None = None,
+    benchmark_routing_policy: BenchmarkRoutingPolicy | TaskFamilyRoutingPolicy | None = None,
 ) -> MissionOperator:
     """CLI-compatible factory using environment-backed runtime configuration."""
 
@@ -545,11 +593,20 @@ def create_operator(
         )
     selection_policy = None
     if benchmark_path is not None and resolved_benchmark_policy is not None:
-        selection_policy = BenchmarkSelectionPolicy(
-            SQLiteBenchmarkEvidenceStore(benchmark_path),
-            resolved_benchmark_policy,
-            decision_store=SQLiteRoutingDecisionStore(benchmark_path),
-        )
+        evidence_store = SQLiteBenchmarkEvidenceStore(benchmark_path)
+        decision_store = SQLiteRoutingDecisionStore(benchmark_path)
+        if isinstance(resolved_benchmark_policy, TaskFamilyRoutingPolicy):
+            selection_policy = TaskFamilyBenchmarkSelectionPolicy(
+                evidence_store,
+                resolved_benchmark_policy,
+                decision_store=decision_store,
+            )
+        else:
+            selection_policy = BenchmarkSelectionPolicy(
+                evidence_store,
+                resolved_benchmark_policy,
+                decision_store=decision_store,
+            )
 
     return create_operator_from_catalog(
         path,
