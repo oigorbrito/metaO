@@ -8,6 +8,7 @@ from metao.benchmark_evidence import BenchmarkEvidence, BenchmarkEvidenceSource,
 from metao.benchmark_routing import BenchmarkRoutingPolicy
 from metao.benchmark_store import SQLiteBenchmarkEvidenceStore
 from metao.empirical_selection import (
+    EmpiricalExecutorIdentity,
     EmpiricalFamilyRoutingPolicy,
     EmpiricalTaskFamilySelectionPolicy,
     ObservedPerformanceRoutingPolicy,
@@ -66,6 +67,18 @@ def observed(executor_id: str, score: float, *, at: float = 110.0, samples: int 
     )
 
 
+def identities(*executor_ids: str) -> dict[str, EmpiricalExecutorIdentity]:
+    return {
+        executor_id: EmpiricalExecutorIdentity(
+            executor_version="1",
+            runtime_config_digest=f"r-{executor_id}",
+            tool_policy_digest="t",
+            environment_id="env",
+        )
+        for executor_id in executor_ids
+    }
+
+
 class EmpiricalSelectionTests(unittest.TestCase):
     def test_routing_candidate_receipt_keeps_legacy_reason_position(self):
         from metao.routing_decision import RoutingCandidateReceipt
@@ -119,6 +132,7 @@ class EmpiricalSelectionTests(unittest.TestCase):
                         ),
                     )
                 },
+                identities("alpha", "beta"),
                 decision_store=decision_store,
             )
             candidates = (
@@ -168,6 +182,62 @@ class EmpiricalSelectionTests(unittest.TestCase):
                         ),
                     )
                 },
+                identities("alpha", "beta"),
+            )
+            selected = policy.select_with_context(
+                (
+                    OrchestratorPoolState("alpha", OrchestratorStatus.HEALTHY),
+                    OrchestratorPoolState("beta", OrchestratorStatus.HEALTHY),
+                ),
+                120.0,
+                SelectionContext("mission", "exec", 1, "coding"),
+            )
+            self.assertEqual(selected, "alpha")
+
+    def test_wrong_runtime_identity_evidence_is_ignored(self):
+        with tempfile.TemporaryDirectory() as temp:
+            db = Path(temp) / "metao.db"
+            benchmark_store = SQLiteBenchmarkEvidenceStore(db)
+            observed_store = SQLiteObservedPerformanceStore(db)
+            benchmark_store.record(bench("alpha", 0.7))
+            benchmark_store.record(bench("beta", 0.6))
+            wrong = ObservedPerformanceEvidence(
+                evidence_id="obs-beta-wrong-config",
+                executor_id="beta",
+                executor_version="1",
+                task_family="coding",
+                runtime_config_digest="wrong-config",
+                tool_policy_digest="t",
+                environment_id="env",
+                observed_at_epoch=110.0,
+                source=ObservedPerformanceSource.METAO_EXECUTION,
+                raw_result_ref="artifact://wrong",
+                sample_count=10,
+                metrics=(ObservedPerformanceMetric("success_rate", 1.0, "ratio"),),
+            )
+            observed_store.record(wrong)
+
+            policy = EmpiricalTaskFamilySelectionPolicy(
+                benchmark_store,
+                observed_store,
+                {
+                    "coding": EmpiricalFamilyRoutingPolicy(
+                        BenchmarkRoutingPolicy(
+                            benchmark_id="matrix",
+                            benchmark_version="v1",
+                            task_set="coding",
+                            metric_name="success_rate",
+                            max_age_seconds=60.0,
+                        ),
+                        ObservedPerformanceRoutingPolicy(
+                            metric_name="success_rate",
+                            observed_weight=10.0,
+                            min_samples=1,
+                            max_age_seconds=60.0,
+                        ),
+                    )
+                },
+                identities("alpha", "beta"),
             )
             selected = policy.select_with_context(
                 (
