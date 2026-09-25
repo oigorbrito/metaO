@@ -34,17 +34,21 @@ def observed_performance_from_mapping(payload: Mapping[str, Any]) -> ObservedPer
     metrics_raw = payload.get("metrics")
     if not isinstance(metrics_raw, list):
         raise ValueError("observed performance metrics must be a list")
-    metrics = tuple(
-        ObservedPerformanceMetric(
-            name=str(item.get("name", "")),
-            value=float(item["value"]),
-            unit=str(item.get("unit", "")),
+    metrics_list: list[ObservedPerformanceMetric] = []
+    for item in metrics_raw:
+        if not isinstance(item, dict):
+            raise ValueError("observed performance metric must be an object")
+        value = item.get("value")
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError("observed performance metric value must be numeric")
+        metrics_list.append(
+            ObservedPerformanceMetric(
+                name=str(item.get("name", "")),
+                value=float(value),
+                unit=str(item.get("unit", "")),
+            )
         )
-        for item in metrics_raw
-        if isinstance(item, dict)
-    )
-    if len(metrics) != len(metrics_raw):
-        raise ValueError("observed performance metric must be an object")
+    metrics = tuple(metrics_list)
     try:
         source = ObservedPerformanceSource(str(payload["source"]))
     except (KeyError, ValueError) as exc:
@@ -56,11 +60,14 @@ def observed_performance_from_mapping(payload: Mapping[str, Any]) -> ObservedPer
             raise ValueError(f"observed performance evidence requires {key}")
         return value
 
-    try:
-        observed_at_epoch = float(payload["observed_at_epoch"])
-        sample_count = int(payload["sample_count"])
-    except (KeyError, TypeError, ValueError) as exc:
-        raise ValueError("observed performance evidence requires time/sample_count") from exc
+    observed_at_raw = payload.get("observed_at_epoch")
+    if isinstance(observed_at_raw, bool) or not isinstance(observed_at_raw, (int, float)):
+        raise ValueError("observed performance observed_at_epoch must be numeric")
+    sample_count_raw = payload.get("sample_count")
+    if isinstance(sample_count_raw, bool) or not isinstance(sample_count_raw, int):
+        raise ValueError("observed performance sample_count must be an integer")
+    observed_at_epoch = float(observed_at_raw)
+    sample_count = sample_count_raw
 
     return ObservedPerformanceEvidence(
         evidence_id=required("evidence_id"),
