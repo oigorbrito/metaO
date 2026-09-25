@@ -11,6 +11,7 @@ Current canonical baseline:
 - [`docs/CAPABILITY-MAP.md`](docs/CAPABILITY-MAP.md)
 - [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md)
 - [`docs/QUALITY-MODEL.md`](docs/QUALITY-MODEL.md)
+- [`docs/DOCUMENT-AUTHORITY-MAP.md`](docs/DOCUMENT-AUTHORITY-MAP.md) — ownership and precedence across current, operational, and historical documentation.
 
 ## Engineering workflow
 
@@ -29,6 +30,8 @@ Project / Roadmap
 
 Operational rules and evidence discipline are documented in:
 
+- [`AGENTS.md`](AGENTS.md) — concise agent entrypoint and authority router.
+- [`docs/AGENT-HARNESS-ENGINEERING-GUIDE.md`](docs/AGENT-HARNESS-ENGINEERING-GUIDE.md) — empirically grounded instruction/harness authoring, progressive disclosure, anti-redundancy, and evaluation rules.
 - [`docs/GITHUB-WORKFLOW.md`](docs/GITHUB-WORKFLOW.md) — Issue/branch/PR lifecycle, merge gates, failure classification, and architecture guardrails.
 - [`docs/GITHUB-LABEL-TAXONOMY.md`](docs/GITHUB-LABEL-TAXONOMY.md) — canonical status/type/priority/area labels.
 - [`docs/GITHUB-ACTIONS-SUPPORT-PACKET.md`](docs/GITHUB-ACTIONS-SUPPORT-PACKET.md) — current hosted-runner pre-step blocker evidence and escalation packet.

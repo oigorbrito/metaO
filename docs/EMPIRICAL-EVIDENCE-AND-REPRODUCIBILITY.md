@@ -347,7 +347,23 @@ Primary methodological basis:
 4. ACM Artifact Review and Badging policy.
    https://www.acm.org/publications/policies/artifact-review-and-badging-current
 
-## 15. Non-goals
+## 15. Agent and harness experiments
+
+Material changes to repository agent instructions or model harness behavior are empirical engineering changes when they claim to improve task success, compliance, retrieval/context efficiency, cost, latency, reliability, or another observable property.
+
+Such changes must follow this protocol and the additional authoring/evaluation requirements in `docs/AGENT-HARNESS-ENGINEERING-GUIDE.md`.
+
+At minimum, preserve the distinction:
+
+```text
+TASK_SUCCESS != INSTRUCTION_COMPLIANCE
+PAPER_RESULT != METAO_RESULT
+BENCHMARK_EVIDENCE != METAO_ACCEPTANCE
+```
+
+External benchmark and paper results may motivate a hypothesis or experimental design, but a metaO-specific performance claim requires metaO-bound evidence with exact harness/model/task/protocol identity.
+
+## 16. Non-goals
 
 This document intentionally does not:
 
