@@ -177,15 +177,18 @@ class BenchmarkSelectionPolicyIntegrationTests(unittest.TestCase):
                 max_attempts=1,
             )
 
-        self.assertEqual(outcome.orchestrator_id, "fallback")
-        self.assertEqual(primary.calls, 0)
-        self.assertEqual(fallback.calls, 1)
-        receipts = decision_store.history("mission-benchmark-routing")
-        self.assertEqual(len(receipts), 1)
-        self.assertEqual(receipts[0].selected_executor_id, "fallback")
-        self.assertEqual(tuple(item.executor_id for item in receipts[0].candidates), ("fallback", "primary"))
-        self.assertEqual(receipts[0].candidates[0].evidence_id, "fallback-bench")
-        self.assertEqual(receipts[0].authority_scope, "routing-audit-only")
+            self.assertEqual(outcome.orchestrator_id, "fallback")
+            self.assertEqual(primary.calls, 0)
+            self.assertEqual(fallback.calls, 1)
+            receipts = decision_store.history("mission-benchmark-routing")
+            self.assertEqual(len(receipts), 1)
+            self.assertEqual(receipts[0].selected_executor_id, "fallback")
+            self.assertEqual(
+                tuple(item.executor_id for item in receipts[0].candidates),
+                ("fallback", "primary"),
+            )
+            self.assertEqual(receipts[0].candidates[0].evidence_id, "fallback-bench")
+            self.assertEqual(receipts[0].authority_scope, "routing-audit-only")
 
     def test_selection_policy_requires_explicit_mission_time(self):
         with tempfile.TemporaryDirectory() as temp:
