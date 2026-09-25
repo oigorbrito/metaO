@@ -75,9 +75,11 @@ class EmpiricalSelectionTests(unittest.TestCase):
             decision_store = SQLiteRoutingDecisionStore(db)
             for executor_id, score in (("alpha", 0.9), ("beta", 0.8), ("outside", 1.0)):
                 benchmark_store.record(bench(executor_id, score))
-            observed_store.record(observed("alpha", 0.1))
-            observed_store.record(observed("beta", 1.0))
-            observed_store.record(observed("outside", 1.0))
+            observed_store.record(observed("alpha", 0.1, at=108.0, samples=1))
+            observed_store.record(observed("alpha", 0.3, at=109.0, samples=1))
+            observed_store.record(observed("beta", 1.0, at=108.0, samples=1))
+            observed_store.record(observed("beta", 0.9, at=110.0, samples=1))
+            observed_store.record(observed("outside", 1.0, at=110.0, samples=2))
 
             policy = EmpiricalTaskFamilySelectionPolicy(
                 benchmark_store,
@@ -118,7 +120,10 @@ class EmpiricalSelectionTests(unittest.TestCase):
             receipt = decision_store.history("mission")[0]
             self.assertEqual(tuple(item.executor_id for item in receipt.candidates), ("beta", "alpha"))
             self.assertEqual(receipt.candidates[0].evidence_id, "bench-beta")
-            self.assertEqual(receipt.candidates[0].observed_evidence_id, "obs-beta-110.0")
+            self.assertEqual(
+                receipt.candidates[0].observed_evidence_ids,
+                ("obs-beta-108.0", "obs-beta-110.0"),
+            )
             self.assertNotIn("outside", {item.executor_id for item in receipt.candidates})
 
     def test_stale_or_low_sample_observation_does_not_gain_advantage(self):
