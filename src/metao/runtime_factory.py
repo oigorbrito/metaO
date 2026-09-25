@@ -11,6 +11,9 @@ from pathlib import Path
 import time
 from typing import Any, Callable, Mapping
 
+from .benchmark_routing import BenchmarkRoutingPolicy
+from .benchmark_selection import BenchmarkSelectionPolicy
+from .benchmark_store import SQLiteBenchmarkEvidenceStore
 from .catalog import OrchestratorCatalog
 from .control_plane import EvidenceNormalizer, SelectionPolicy
 from .core import ExecutionRequest, Mission, OrchestratorContract, OrchestratorRegistry
@@ -49,10 +52,48 @@ RUNTIME_FEEDBACK_DB_ENV = "METAO_RUNTIME_FEEDBACK_DB"
 RUNTIME_HEALTH_DB_ENV = "METAO_RUNTIME_HEALTH_DB"
 RUNTIME_CERTIFICATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_DB"
 RUNTIME_CERTIFICATION_REVOCATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_REVOCATION_DB"
+BENCHMARK_EVIDENCE_DB_ENV = "METAO_BENCHMARK_EVIDENCE_DB"
+BENCHMARK_ROUTING_POLICY_ENV = "METAO_BENCHMARK_ROUTING_POLICY"
 
 
 class RuntimeCatalogConfigError(ValueError):
     """Raised when a declarative runtime catalog is invalid or unsafe to use."""
+
+
+
+def _benchmark_routing_policy_from_env(value: str | None) -> BenchmarkRoutingPolicy | None:
+    if value is None:
+        return None
+    try:
+        payload = json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_ROUTING_POLICY_ENV} must contain valid JSON"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_ROUTING_POLICY_ENV} must contain a JSON object"
+        )
+    require_fresh = payload.get("require_fresh", True)
+    if not isinstance(require_fresh, bool):
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_ROUTING_POLICY_ENV}.require_fresh must be boolean"
+        )
+    try:
+        return BenchmarkRoutingPolicy(
+            benchmark_id=str(payload["benchmark_id"]),
+            benchmark_version=str(payload["benchmark_version"]),
+            task_set=str(payload["task_set"]),
+            metric_name=str(payload["metric_name"]),
+            base_weight=float(payload.get("base_weight", 1.0)),
+            benchmark_weight=float(payload.get("benchmark_weight", 1.0)),
+            require_fresh=require_fresh,
+            max_age_seconds=float(payload.get("max_age_seconds", 86_400.0)),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_ROUTING_POLICY_ENV} is invalid"
+        ) from exc
 
 
 @dataclass(frozen=True)
@@ -458,6 +499,8 @@ def create_operator(
     runtime_certification_db: str | Path | None = None,
     runtime_certification_revocation_db: str | Path | None = None,
     certification_now_epoch: float | None = None,
+    benchmark_evidence_db: str | Path | None = None,
+    benchmark_routing_policy: BenchmarkRoutingPolicy | None = None,
 ) -> MissionOperator:
     """CLI-compatible factory using environment-backed runtime configuration."""
 
@@ -490,6 +533,24 @@ def create_operator(
         if revocation_path
         else None
     )
+
+
+    benchmark_path = benchmark_evidence_db or os.environ.get(BENCHMARK_EVIDENCE_DB_ENV)
+    resolved_benchmark_policy = benchmark_routing_policy or _benchmark_routing_policy_from_env(
+        os.environ.get(BENCHMARK_ROUTING_POLICY_ENV)
+    )
+    if (benchmark_path is None) != (resolved_benchmark_policy is None):
+        raise RuntimeCatalogConfigError(
+            f"{BENCHMARK_EVIDENCE_DB_ENV} and {BENCHMARK_ROUTING_POLICY_ENV} "
+            "must be configured together"
+        )
+    selection_policy = None
+    if benchmark_path is not None and resolved_benchmark_policy is not None:
+        selection_policy = BenchmarkSelectionPolicy(
+            SQLiteBenchmarkEvidenceStore(benchmark_path),
+            resolved_benchmark_policy,
+        )
+
     return create_operator_from_catalog(
         path,
         store=store,
@@ -499,6 +560,7 @@ def create_operator(
         certifications=certifications,
         certification_revocations=certification_revocations,
         certification_now_epoch=certification_now_epoch,
+        selection_policy=selection_policy,
     )
 
 
@@ -509,6 +571,8 @@ __all__ = [
     "RUNTIME_HEALTH_DB_ENV",
     "RUNTIME_CERTIFICATION_DB_ENV",
     "RUNTIME_CERTIFICATION_REVOCATION_DB_ENV",
+    "BENCHMARK_EVIDENCE_DB_ENV",
+    "BENCHMARK_ROUTING_POLICY_ENV",
     "RuntimeCatalogConfigError",
     "RuntimePlugin",
     "RuntimeCatalogOperator",
