@@ -17,6 +17,7 @@ Last reconciled commit: `7c8fef9a841dbc454cabc6a0b5b1bed49afbda02`
 - `docs/CLOSURE-PLAN.md`
 - `docs/TRACEABILITY.md`
 - `docs/EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md`
+- `docs/AGENT-HARNESS-ENGINEERING-GUIDE.md`
 - `docs/CHASSIS-SCORECARD-SCHEMA-2026-08-26.md`
 - `docs/CANONICAL-DONOR-EVALUATION-MATRIX.md`
 
@@ -80,6 +81,8 @@ Last reconciled commit: `7c8fef9a841dbc454cabc6a0b5b1bed49afbda02`
 - `EMPIRICAL-EVIDENCE-AND-REPRODUCIBILITY.md` owns current empirical-claim documentation and formal reproduction/replication terminology;
 - `EMPIRICAL-RESEARCH-AND-REPRODUCIBILITY.md` is superseded for formal reproduction/replication terminology and remains reference-only for non-conflicting historical/domain-specific rules;
 - empirical-method documents do not mint architecture, policy, score/weight, evidence, or acceptance authority;
+- `AGENT-HARNESS-ENGINEERING-GUIDE.md` owns agent/harness authoring, progressive-disclosure, anti-redundancy, and evaluation guidance; it does not override architecture, governance, benchmark identity, verification, or Acceptance authority;
+- `AGENTS.md` is an execution entrypoint/router and must remain subordinate to canonical owner documents rather than becoming a parallel source of project truth;
 - `CHASSIS-SCORECARD-SCHEMA-2026-08-26.md` owns the frozen chassis comparison contract; methodological guidance must not silently change its hard gates or weights;
 - `CANONICAL-DONOR-EVALUATION-MATRIX.md` owns current donor research dispositions; donor claims remain bounded by their recorded evidence grade;
 - operational documents own execution/run-state and blocker descriptions;
