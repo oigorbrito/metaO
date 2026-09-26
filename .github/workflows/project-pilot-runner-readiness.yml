@@ -74,7 +74,7 @@ jobs:
           assert evidence["runner_readiness"] == "PASS"
           assert evidence["linux"] is True
           assert evidence["x64"] is True
-          assert evidence["python_3_12_plus"] is True
+          assert evidence["python_3_13_plus"] is True
           assert all(evidence["required_executables"].values())
           assert evidence["required_labels"] == [
               "self-hosted", "linux", "x64", "metao-project-pilot"

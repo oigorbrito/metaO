@@ -62,7 +62,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'python version probe failed' }
           $parts = $py.Trim().Split('.')
           if ([int]$parts[0] -lt 3 -or ([int]$parts[0] -eq 3 -and [int]$parts[1] -lt 12)) {
-            throw 'runner requires Python 3.12+'
+            throw 'runner requires Python 3.13+'
           }
           $probe = Join-Path $env:RUNNER_TEMP ('metao-readiness-' + [guid]::NewGuid().ToString('N'))
           New-Item -ItemType Directory -Path $probe | Out-Null
@@ -75,7 +75,7 @@ jobs:
           }
           [ordered]@{
             bootstrap_readiness='PASS'; target_head=$env:METAO_TARGET_HEAD.ToLowerInvariant();
-            checked_out_head_matches=$true; windows=$true; x64=$true; python_3_12_plus=$true;
+            checked_out_head_matches=$true; windows=$true; x64=$true; python_3_13_plus=$true;
             required_executables=$executables;
             required_labels=@('self-hosted','Windows','X64','metao-project-pilot');
             repository_secrets_checked=$false; provider_calls_made=$false; credentials_emitted=$false;

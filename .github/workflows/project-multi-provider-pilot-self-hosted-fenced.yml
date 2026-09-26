@@ -149,12 +149,12 @@ jobs:
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$METAO_EXPECTED_HEAD"
           test "$GITHUB_SHA" = "$METAO_EXPECTED_HEAD"
-      - name: Require Python 3.12+
+      - name: Require Python 3.13+
         shell: bash
         run: |
           python3 - <<'PY'
           import sys
-          assert sys.version_info >= (3, 12), sys.version
+          assert sys.version_info >= (3, 13), sys.version
           print(sys.version)
           PY
       - name: Install hermetic metaO provider runtime

@@ -81,8 +81,8 @@ jobs:
               raise SystemExit('runner must be Linux')
           if machine not in {'x86_64', 'amd64'}:
               raise SystemExit('runner must be x64')
-          if sys.version_info < (3, 12):
-              raise SystemExit('runner requires Python 3.12+')
+          if sys.version_info < (3, 13):
+              raise SystemExit('runner requires Python 3.13+')
 
           executables = {
               name: shutil.which(name) is not None
@@ -104,7 +104,7 @@ jobs:
               'checked_out_head_matches': True,
               'linux': True,
               'x64': True,
-              'python_3_12_plus': True,
+              'python_3_13_plus': True,
               'required_executables': executables,
               'required_labels': ['self-hosted', 'linux', 'x64', 'metao-project-pilot'],
               'repository_secrets_checked': False,

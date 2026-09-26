@@ -25,7 +25,7 @@ A readiness PASS means only that the local machine has the minimum tool surface 
 
 Required local tools:
 
-- Python 3.12+
+- Python 3.13+
 - Git
 - OpenSSH client (`ssh`, `scp`)
 - `curl`

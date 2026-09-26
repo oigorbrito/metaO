@@ -17,7 +17,7 @@ Do not retarget an arbitrary shared runner to satisfy this workflow. The dedicat
 
 The runner must provide:
 
-- Python 3.12+
+- Python 3.13+
 - Git
 - OpenSSH client (`ssh`, `scp`)
 - outbound HTTPS access required by OpenAI/Gemini APIs and Python package installation

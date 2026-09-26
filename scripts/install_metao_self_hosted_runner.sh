@@ -32,9 +32,9 @@ done
 
 gh auth status >/dev/null 2>&1 || fail "GitHub CLI is not authenticated; run gh auth login first"
 
-python3 - <<'PY' || fail "Python 3.12+ is required"
+python3 - <<'PY' || fail "Python 3.13+ is required"
 import sys
-raise SystemExit(0 if sys.version_info >= (3, 12) else 1)
+raise SystemExit(0 if sys.version_info >= (3, 13) else 1)
 PY
 
 remote_runner_json="$(gh api --paginate "repos/${REPO}/actions/runners" --jq \

@@ -87,7 +87,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'python version probe failed' }
           $parts = $version.Trim().Split('.')
           if ([int]$parts[0] -lt 3 -or ([int]$parts[0] -eq 3 -and [int]$parts[1] -lt 12)) {
-            throw 'runner requires Python 3.12+'
+            throw 'runner requires Python 3.13+'
           }
 
       - name: Materialize SSH verification files after SHA fence

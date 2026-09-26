@@ -14,7 +14,7 @@ Installer success only proves that the runner package was verified, configured, 
 
 Use a dedicated Linux x64 host or VM with:
 
-- Python 3.12+
+- Python 3.13+
 - `gh`
 - `curl`
 - `tar`

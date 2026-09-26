@@ -102,12 +102,12 @@ jobs:
     steps:
       - name: Checkout exact head
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Require Python 3.12+
+      - name: Require Python 3.13+
         shell: bash
         run: |
           python3 - <<'PY'
           import sys
-          assert sys.version_info >= (3, 12), sys.version
+          assert sys.version_info >= (3, 13), sys.version
           print(sys.version)
           PY
       - name: Install metaO and pinned OpenAI Agents runtime

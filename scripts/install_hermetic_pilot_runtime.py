@@ -32,8 +32,8 @@ def run_pip(*args: str) -> None:
 
 
 def main() -> int:
-    if sys.version_info < (3, 12):
-        raise SystemExit("hermetic pilot runtime requires Python 3.12+")
+    if sys.version_info < (3, 13):
+        raise SystemExit("hermetic pilot runtime requires Python 3.13+")
     if not BOOTSTRAP_LOCK.is_file():
         raise SystemExit(f"bootstrap lock missing: {BOOTSTRAP_LOCK}")
 

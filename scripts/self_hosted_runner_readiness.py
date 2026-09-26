@@ -16,7 +16,7 @@ def evaluate_readiness() -> dict[str, object]:
     machine = platform.machine().lower()
     linux = system == "linux"
     x64 = machine in {"x86_64", "amd64"}
-    python_ok = sys.version_info >= (3, 12)
+    python_ok = sys.version_info >= (3, 13)
 
     executables = {
         name: shutil.which(name) is not None for name in _REQUIRED_EXECUTABLES
@@ -40,7 +40,7 @@ def evaluate_readiness() -> dict[str, object]:
         "runner_readiness": "PASS" if ready else "FAIL",
         "linux": linux,
         "x64": x64,
-        "python_3_12_plus": python_ok,
+        "python_3_13_plus": python_ok,
         "required_executables": executables,
         "temp_write_ok": temp_write_ok,
         "required_labels": list(_REQUIRED_LABELS),
