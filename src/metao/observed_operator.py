@@ -255,6 +255,18 @@ class ObservableMissionOperator:
         )
         if isinstance(result, MissionRecord):
             self._record_terminal(result.outcome, now_epoch=now_epoch)
+        else:
+            # A cancellation request may race with the executing process's
+            # final persistence.  If that process already committed a
+            # terminal outcome before this observer appended the request,
+            # project the terminal event again so the append-only ledger keeps
+            # the request before the terminal observation.
+            try:
+                current = self._operator.inspect(mission_id)
+            except MissionNotFound:
+                current = None
+            if current is not None:
+                self._record_terminal(current.outcome, now_epoch=now_epoch)
         return result
 
     def status(self, mission_id: str) -> MissionStatus:
