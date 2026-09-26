@@ -21,6 +21,7 @@ class RoutingCandidateReceipt:
     benchmark_score: float | None
     evidence_id: str | None
     reason: str
+    observed_evidence_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         if not self.executor_id.strip() or self.rank < 1 or not self.reason.strip():
@@ -156,7 +157,14 @@ class SQLiteRoutingDecisionStore:
         try:
             payload = json.loads(payload_json)
             candidates = tuple(
-                RoutingCandidateReceipt(**candidate)
+                RoutingCandidateReceipt(
+                    **{
+                        **candidate,
+                        "observed_evidence_ids": tuple(
+                            candidate.get("observed_evidence_ids", ())
+                        ),
+                    }
+                )
                 for candidate in payload.pop("candidates")
             )
             return RoutingDecisionReceipt(candidates=candidates, **payload)

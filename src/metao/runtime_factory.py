@@ -15,6 +15,15 @@ from .benchmark_routing import BenchmarkRoutingPolicy
 from .benchmark_selection import BenchmarkSelectionPolicy
 from .benchmark_store import SQLiteBenchmarkEvidenceStore
 from .routing_decision import SQLiteRoutingDecisionStore
+from .empirical_selection import (
+    EmpiricalExecutorIdentity,
+    EmpiricalFamilyRoutingPolicy,
+    EmpiricalTaskFamilyRoutingPolicy,
+    EmpiricalTaskFamilySelectionPolicy,
+    MissingObservedEvidencePolicy,
+    ObservedPerformanceRoutingPolicy,
+)
+from .observed_performance_store import SQLiteObservedPerformanceStore
 from .task_family_selection import (
     MissingTaskFamilyPolicy,
     TaskFamilyBenchmarkSelectionPolicy,
@@ -60,6 +69,7 @@ RUNTIME_CERTIFICATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_DB"
 RUNTIME_CERTIFICATION_REVOCATION_DB_ENV = "METAO_RUNTIME_CERTIFICATION_REVOCATION_DB"
 BENCHMARK_EVIDENCE_DB_ENV = "METAO_BENCHMARK_EVIDENCE_DB"
 BENCHMARK_ROUTING_POLICY_ENV = "METAO_BENCHMARK_ROUTING_POLICY"
+OBSERVED_PERFORMANCE_DB_ENV = "METAO_OBSERVED_PERFORMANCE_DB"
 
 
 class RuntimeCatalogConfigError(ValueError):
@@ -89,9 +99,30 @@ def _benchmark_policy_from_mapping(
         raise RuntimeCatalogConfigError(f"{context} is invalid") from exc
 
 
+def _observed_policy_from_mapping(
+    payload: Mapping[str, Any],
+    *,
+    context: str,
+) -> ObservedPerformanceRoutingPolicy:
+    try:
+        missing = MissingObservedEvidencePolicy(
+            str(payload.get("missing_evidence", MissingObservedEvidencePolicy.PRIOR_ONLY.value))
+        )
+        return ObservedPerformanceRoutingPolicy(
+            metric_name=str(payload.get("metric_name", "success_rate")),
+            prior_weight=float(payload.get("prior_weight", 1.0)),
+            observed_weight=float(payload.get("observed_weight", 1.0)),
+            max_age_seconds=float(payload.get("max_age_seconds", 86_400.0)),
+            min_samples=int(payload.get("min_samples", 1)),
+            missing_evidence=missing,
+        )
+    except (TypeError, ValueError) as exc:
+        raise RuntimeCatalogConfigError(f"{context} is invalid") from exc
+
+
 def _benchmark_routing_policy_from_env(
     value: str | None,
-) -> BenchmarkRoutingPolicy | TaskFamilyRoutingPolicy | None:
+) -> BenchmarkRoutingPolicy | TaskFamilyRoutingPolicy | EmpiricalTaskFamilyRoutingPolicy | None:
     if value is None:
         return None
     try:
@@ -115,6 +146,68 @@ def _benchmark_routing_policy_from_env(
         raise RuntimeCatalogConfigError(
             f"{BENCHMARK_ROUTING_POLICY_ENV}.families must be a non-empty object"
         )
+
+    has_observed = any(
+        isinstance(family_payload, dict) and "observed" in family_payload
+        for family_payload in families.values()
+    )
+    if has_observed:
+        identities_payload = payload.get("identities")
+        if not isinstance(identities_payload, dict) or not identities_payload:
+            raise RuntimeCatalogConfigError(
+                f"{BENCHMARK_ROUTING_POLICY_ENV}.identities must be a non-empty object "
+                "for empirical routing"
+            )
+        identities: dict[str, EmpiricalExecutorIdentity] = {}
+        for executor_id, identity_payload in identities_payload.items():
+            if not isinstance(executor_id, str) or not executor_id.strip():
+                raise RuntimeCatalogConfigError(
+                    f"{BENCHMARK_ROUTING_POLICY_ENV}.identities requires non-empty executor ids"
+                )
+            if not isinstance(identity_payload, dict):
+                raise RuntimeCatalogConfigError(
+                    f"{BENCHMARK_ROUTING_POLICY_ENV}.identities.{executor_id} must be an object"
+                )
+            try:
+                identities[executor_id] = EmpiricalExecutorIdentity(
+                    executor_version=_required_string(identity_payload, "executor_version"),
+                    runtime_config_digest=_required_string(identity_payload, "runtime_config_digest"),
+                    tool_policy_digest=_required_string(identity_payload, "tool_policy_digest"),
+                    environment_id=_required_string(identity_payload, "environment_id"),
+                )
+            except RuntimeCatalogConfigError as exc:
+                raise RuntimeCatalogConfigError(
+                    f"{BENCHMARK_ROUTING_POLICY_ENV}.identities.{executor_id} is invalid"
+                ) from exc
+
+        empirical: dict[str, EmpiricalFamilyRoutingPolicy] = {}
+        for family_id, family_payload in families.items():
+            if not isinstance(family_id, str) or not family_id.strip():
+                raise RuntimeCatalogConfigError(
+                    f"{BENCHMARK_ROUTING_POLICY_ENV}.families requires non-empty family ids"
+                )
+            if not isinstance(family_payload, dict):
+                raise RuntimeCatalogConfigError(
+                    f"{BENCHMARK_ROUTING_POLICY_ENV}.families.{family_id} must be an object"
+                )
+            observed_payload = family_payload.get("observed")
+            if not isinstance(observed_payload, dict):
+                raise RuntimeCatalogConfigError(
+                    f"{BENCHMARK_ROUTING_POLICY_ENV}.families.{family_id}.observed "
+                    "must be configured for every empirical family"
+                )
+            empirical[family_id] = EmpiricalFamilyRoutingPolicy(
+                benchmark=_benchmark_policy_from_mapping(
+                    family_payload,
+                    context=f"{BENCHMARK_ROUTING_POLICY_ENV}.families.{family_id}",
+                ),
+                observed=_observed_policy_from_mapping(
+                    observed_payload,
+                    context=f"{BENCHMARK_ROUTING_POLICY_ENV}.families.{family_id}.observed",
+                ),
+            )
+        return EmpiricalTaskFamilyRoutingPolicy(empirical, identities)
+
     try:
         missing_family = MissingTaskFamilyPolicy(
             str(payload.get("missing_family", MissingTaskFamilyPolicy.FAIL_CLOSED.value))
@@ -548,7 +641,13 @@ def create_operator(
     runtime_certification_revocation_db: str | Path | None = None,
     certification_now_epoch: float | None = None,
     benchmark_evidence_db: str | Path | None = None,
-    benchmark_routing_policy: BenchmarkRoutingPolicy | TaskFamilyRoutingPolicy | None = None,
+    observed_performance_db: str | Path | None = None,
+    benchmark_routing_policy: (
+        BenchmarkRoutingPolicy
+        | TaskFamilyRoutingPolicy
+        | EmpiricalTaskFamilyRoutingPolicy
+        | None
+    ) = None,
 ) -> MissionOperator:
     """CLI-compatible factory using environment-backed runtime configuration."""
 
@@ -583,6 +682,7 @@ def create_operator(
     )
 
     benchmark_path = benchmark_evidence_db or os.environ.get(BENCHMARK_EVIDENCE_DB_ENV)
+    observed_path = observed_performance_db or os.environ.get(OBSERVED_PERFORMANCE_DB_ENV)
     resolved_benchmark_policy = benchmark_routing_policy or _benchmark_routing_policy_from_env(
         os.environ.get(BENCHMARK_ROUTING_POLICY_ENV)
     )
@@ -595,7 +695,23 @@ def create_operator(
     if benchmark_path is not None and resolved_benchmark_policy is not None:
         evidence_store = SQLiteBenchmarkEvidenceStore(benchmark_path)
         decision_store = SQLiteRoutingDecisionStore(benchmark_path)
-        if isinstance(resolved_benchmark_policy, TaskFamilyRoutingPolicy):
+        if isinstance(resolved_benchmark_policy, EmpiricalTaskFamilyRoutingPolicy):
+            if observed_path is None:
+                raise RuntimeCatalogConfigError(
+                    f"{OBSERVED_PERFORMANCE_DB_ENV} is required for empirical routing"
+                )
+            selection_policy = EmpiricalTaskFamilySelectionPolicy(
+                evidence_store,
+                SQLiteObservedPerformanceStore(observed_path),
+                resolved_benchmark_policy.families,
+                resolved_benchmark_policy.identities,
+                decision_store=decision_store,
+            )
+        elif observed_path is not None:
+            raise RuntimeCatalogConfigError(
+                f"{OBSERVED_PERFORMANCE_DB_ENV} requires empirical family routing policy"
+            )
+        elif isinstance(resolved_benchmark_policy, TaskFamilyRoutingPolicy):
             selection_policy = TaskFamilyBenchmarkSelectionPolicy(
                 evidence_store,
                 resolved_benchmark_policy,
@@ -607,8 +723,12 @@ def create_operator(
                 resolved_benchmark_policy,
                 decision_store=decision_store,
             )
+    elif observed_path is not None:
+        raise RuntimeCatalogConfigError(
+            f"{OBSERVED_PERFORMANCE_DB_ENV} requires benchmark routing configuration"
+        )
 
-    return create_operator_from_catalog(
+    operator = create_operator_from_catalog(
         path,
         store=store,
         controls=controls,
@@ -619,6 +739,23 @@ def create_operator(
         certification_now_epoch=certification_now_epoch,
         selection_policy=selection_policy,
     )
+    if isinstance(resolved_benchmark_policy, EmpiricalTaskFamilyRoutingPolicy):
+        catalog_versions = {
+            item.orchestrator_id: item.version
+            for item in operator.runtime_entries()
+        }
+        for executor_id, identity in resolved_benchmark_policy.identities.items():
+            runtime_version = catalog_versions.get(executor_id)
+            if runtime_version is None:
+                raise RuntimeCatalogConfigError(
+                    f"empirical executor identity is not present in runtime catalog: {executor_id}"
+                )
+            if runtime_version != identity.executor_version:
+                raise RuntimeCatalogConfigError(
+                    f"empirical executor version mismatch for {executor_id}: "
+                    f"catalog={runtime_version} policy={identity.executor_version}"
+                )
+    return operator
 
 
 __all__ = [
@@ -630,6 +767,7 @@ __all__ = [
     "RUNTIME_CERTIFICATION_REVOCATION_DB_ENV",
     "BENCHMARK_EVIDENCE_DB_ENV",
     "BENCHMARK_ROUTING_POLICY_ENV",
+    "OBSERVED_PERFORMANCE_DB_ENV",
     "RuntimeCatalogConfigError",
     "RuntimePlugin",
     "RuntimeCatalogOperator",
