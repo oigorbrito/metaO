@@ -31,6 +31,29 @@ Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
 - local release gate in `scripts/run-local-release-gate.ps1`
 - release evidence validator in `scripts/validate_release_evidence.py`
 
+## Current-head audit execution
+
+At `main@a7585bd`, the unit suite passed with `733/733` using:
+
+```text
+python -m unittest discover -s tests/unit -p "test_*.py"
+```
+
+The provider-free integration subset passed in a temporary Python 3.13 environment with the declared `langgraph==1.2.11` dependency:
+
+```text
+tests.integration.test_o2_e2e_sandbox
+tests.integration.test_o3_failover_sandbox
+tests.integration.test_o4_governance_gates
+tests.integration.test_o5_runtime_swap
+tests.integration.test_operator_bootstrap_negative_e2e
+tests.integration.test_o1_langgraph_real
+tests.integration.test_operator_initialization_e2e
+RESULT = 9/9 PASS
+```
+
+This establishes current-head local/provider-free integration evidence only. It does not establish external-provider success, hosted-CI success, production deployment, or production acceptance.
+
 ## Validation principles
 
 - `IMPLEMENTED != EXECUTED`
