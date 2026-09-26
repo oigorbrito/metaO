@@ -17,7 +17,7 @@ class SelfHostedRunnerReadinessTests(TestCase):
     @mock.patch.object(_module.platform, "machine", return_value="x86_64")
     @mock.patch.object(_module.shutil, "which", return_value="/usr/bin/tool")
     def test_ready_machine_emits_bounded_non_secret_evidence(self, _which, _machine, _system):
-        with mock.patch.object(_module.sys, "version_info", (3, 12, 1)):
+        with mock.patch.object(_module.sys, "version_info", (3, 13, 1)):
             evidence = _module.evaluate_readiness()
 
         self.assertEqual(evidence["runner_readiness"], "PASS")
@@ -36,7 +36,7 @@ class SelfHostedRunnerReadinessTests(TestCase):
     @mock.patch.object(_module.platform, "machine", return_value="aarch64")
     @mock.patch.object(_module.shutil, "which", return_value="/usr/bin/tool")
     def test_non_x64_machine_fails_closed(self, _which, _machine, _system):
-        with mock.patch.object(_module.sys, "version_info", (3, 12, 1)):
+        with mock.patch.object(_module.sys, "version_info", (3, 13, 1)):
             evidence = _module.evaluate_readiness()
         self.assertEqual(evidence["runner_readiness"], "FAIL")
         self.assertFalse(evidence["x64"])
@@ -48,7 +48,7 @@ class SelfHostedRunnerReadinessTests(TestCase):
             return None if name == "ssh" else f"/usr/bin/{name}"
 
         with mock.patch.object(_module.shutil, "which", side_effect=which), mock.patch.object(
-            _module.sys, "version_info", (3, 12, 1)
+            _module.sys, "version_info", (3, 13, 1)
         ):
             evidence = _module.evaluate_readiness()
         self.assertEqual(evidence["runner_readiness"], "FAIL")
