@@ -2,8 +2,8 @@
 
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
-Applies to: repository `tihotm/metaO`
-Last reconciled commit: `ffc1aae`
+Applies to: repository `oigorbrito/metaO`
+Last reconciled commit: `0e6da02c7ec09c141bf5ae002ecbbea71fedc721`
 
 ## Purpose
 

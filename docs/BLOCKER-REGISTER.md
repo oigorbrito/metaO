@@ -2,8 +2,10 @@
 
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
-Applies to: repository `tihotm/metaO`
-Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
+Applies to: repository `oigorbrito/metaO`
+Last reconciled commit: `0e6da02c7ec09c141bf5ae002ecbbea71fedc721`
+
+Current reconciliation note: the GitHub API was reachable during the 2026-09-25 audit, and the current `main` CI run passed. Historical hosted-runner and API-authentication observations below remain evidence for their original runs; they are not current-head PASS or BLOCKED claims without a new exact-head execution.
 
 ## Current product blockers
 
@@ -14,7 +16,7 @@ Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
 | Real external runtime/provider execution | external provider / secret | blocked locally | Rust and Python conformance paths are not real provider execution without configured SDK dependencies/secrets |
 | Real credential broker lifecycle | external/local infrastructure | blocked locally | provider-neutral credential lease contracts are not a real issue/renew/revoke broker lifecycle |
 | Formal model execution | local toolchain | blocked | TLC/java are not available in the current environment |
-| GitHub PR/issue API reconciliation | external API / auth | blocked in this environment | `gh` issue/PR API calls returned `401` or `404` even though Git transport and `gh auth status` worked |
+| GitHub PR/issue API reconciliation | external API / auth | resolved for this audit | Read-only `gh` PR, issue, release and run queries succeeded on 2026-09-25; prior authentication failures remain historical evidence |
 
 ## Current operational blockers
 

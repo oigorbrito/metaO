@@ -3,8 +3,10 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`
-Date reconciled: 2026-09-08
+Last reconciled commit: `0e6da02c7ec09c141bf5ae002ecbbea71fedc721`
+Date reconciled: 2026-09-25
+
+Current-head qualification note: the executable initialization evidence recorded below was produced at `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`. It remains historical evidence and must not be promoted to current-head qualification without rerunning the exact path at `0e6da02c7ec09c141bf5ae002ecbbea71fedc721`.
 
 ## Purpose
 
