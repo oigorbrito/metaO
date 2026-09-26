@@ -98,7 +98,7 @@ See Issue #71 and `docs/GITHUB-ACTIONS-SUPPORT-PACKET.md`.
 The executed gate uses:
 
 ```text
-Python        = 3.12.x
+Python        = 3.13.x
 openai-agents = 0.20.0
 crewai        = 1.15.16
 langgraph     = 1.2.11
@@ -130,7 +130,7 @@ These seams are test infrastructure only and do not move framework SDK types or 
 
 - Windows PowerShell;
 - Git;
-- Python 3.12 available as `py -3.12` or `python`;
+- Python 3.13 available as `py -3.13` or `python`;
 - network access when dependency installation is required;
 - clean checkout unless running an explicitly diagnostic `-AllowDirty` invocation.
 
@@ -221,7 +221,7 @@ overall = PASS
 Failures before the final green run remain audit evidence:
 
 - PowerShell parser defect -> `HARNESS_FAIL` before functional tests;
-- missing Python 3.12 -> `BOOTSTRAP_FAIL` before functional tests;
+- missing Python 3.13 -> `BOOTSTRAP_FAIL` before functional tests;
 - OpenAI Agents `0.21.1` / CrewAI `1.15.16` resolver conflict -> bootstrap failure before functional tests;
 - generated `egg-info` dirty-worktree state -> bootstrap failure before functional tests;
 - first complete candidate `f16bb92cda77ede8299b6238a0561ed362070b71` -> `TEST_FAIL`, 21 results / 8 failures.

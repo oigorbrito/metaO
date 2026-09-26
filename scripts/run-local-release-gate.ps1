@@ -36,22 +36,22 @@ function Invoke-NativeChecked {
     }
 }
 
-function Resolve-Python312 {
+function Resolve-Python313 {
     $py = Get-Command py -ErrorAction SilentlyContinue
     if ($null -ne $py) {
-        $probeArgs = @("-3.12", "-c", "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)")
+        $probeArgs = @("-3.13", "-c", "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 13) else 1)")
         & $py.Source @probeArgs
         if ($LASTEXITCODE -eq 0) {
             return [pscustomobject]@{
                 FilePath = $py.Source
-                Prefix = @("-3.12")
+                Prefix = @("-3.13")
             }
         }
     }
 
     $python = Get-Command python -ErrorAction SilentlyContinue
     if ($null -ne $python) {
-        $probeArgs = @("-c", "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)")
+        $probeArgs = @("-c", "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 13) else 1)")
         & $python.Source @probeArgs
         if ($LASTEXITCODE -eq 0) {
             return [pscustomobject]@{
@@ -61,7 +61,7 @@ function Resolve-Python312 {
         }
     }
 
-    throw "Python 3.12 is required. Install Python 3.12 or make 'py -3.12' available."
+    throw "Python 3.13 is required. Install Python 3.13 or make 'py -3.13' available."
 }
 
 function Add-GateResult {
@@ -197,10 +197,10 @@ try {
         throw "Worktree is dirty. Commit/stash changes or rerun with -AllowDirty (evidence will record clean_worktree=false)."
     }
 
-    $Bootstrap = Resolve-Python312
+    $Bootstrap = Resolve-Python313
     $VenvPython = Join-Path $VenvPath "Scripts\python.exe"
     if (-not (Test-Path $VenvPython)) {
-        Write-Host "Creating isolated Python 3.12 environment at $VenvPath"
+        Write-Host "Creating isolated Python 3.13 environment at $VenvPath"
         $venvArgs = @($Bootstrap.Prefix) + @("-m", "venv", $VenvPath)
         Invoke-NativeChecked -FilePath $Bootstrap.FilePath -ArgumentList $venvArgs
     }
@@ -213,7 +213,7 @@ try {
 
     Invoke-NativeChecked -FilePath $script:PythonExe -ArgumentList @(
         "-c",
-        "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 12) else 1)"
+        "import sys; raise SystemExit(0 if sys.version_info[:2] == (3, 13) else 1)"
     )
 
     $PythonVersion = (& $script:PythonExe -c "import platform; print(platform.python_version())").Trim()

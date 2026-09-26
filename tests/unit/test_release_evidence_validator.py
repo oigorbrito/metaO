@@ -25,7 +25,7 @@ def valid_evidence() -> dict:
         "branch": EXPECTED_BRANCH,
         "commit": EXPECTED_COMMIT,
         "clean_worktree": True,
-        "python_version": "3.12.10",
+        "python_version": "3.13.15",
         "runtime_pins": dict(validator.EXPECTED_RUNTIME_PINS),
         "hosted_runner_blocker": "external_pre_step_all_standard_hosted_os",
         "phase": "complete",

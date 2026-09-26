@@ -37,7 +37,7 @@ A JSON file is accepted as `VALID_PASS` only when all of the following are true:
 3. branch exactly matches the expected branch supplied to the validator;
 4. commit exactly matches the expected candidate SHA supplied to the validator;
 5. `clean_worktree == true`;
-6. Python version is `3.12.x`;
+6. Python version is `3.13.x`;
 7. runtime pins exactly match:
    - OpenAI Agents `0.20.0`;
    - CrewAI `1.15.16`;
@@ -87,7 +87,7 @@ $Evidence = Get-ChildItem "$env:LOCALAPPDATA\metaO\release-gate-evidence\gate-*.
 Validate it against the exact candidate that produced it:
 
 ```powershell
-py -3.12 .\scripts\validate_release_evidence.py `
+py -3.13 .\scripts\validate_release_evidence.py `
     $Evidence.FullName `
     --expected-commit aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea `
     --expected-branch roadmap7/integration-candidate-v1

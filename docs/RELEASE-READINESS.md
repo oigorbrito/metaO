@@ -47,7 +47,7 @@ TAG = v0.1.0-rc.1
 ## Active runtime set
 
 ```text
-Python = 3.12.x
+Python = 3.13.x
 OpenAI Agents = 0.20.0
 CrewAI = 1.15.16
 LangGraph = 1.2.11
@@ -157,7 +157,7 @@ Earlier attempts remain important audit evidence but are no longer the current r
    PowerShell parser ambiguity; functional tests did not execute.
 
 2. BOOTSTRAP_FAIL
-   Python 3.12 missing; functional tests did not execute.
+   Python 3.13 is the declared release runtime; functional tests must execute in that environment.
 
 3. BOOTSTRAP_FAIL / dependency resolver
    OpenAI Agents 0.21.1 conflicted with CrewAI 1.15.16; functional tests did not execute.

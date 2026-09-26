@@ -96,8 +96,8 @@ try {
         throw "Worktree is dirty. Use -AllowDirty only for diagnostic evidence; dirty runs cannot produce PASS."
     }
 
-    $versionOutput = @(& py -3.12 --version 2>&1)
-    if ($LASTEXITCODE -ne 0) { throw "Python 3.12 is required and was not found via 'py -3.12'." }
+    $versionOutput = @(& py -3.13 --version 2>&1)
+    if ($LASTEXITCODE -ne 0) { throw "Python 3.13 is required and was not found via 'py -3.13'." }
     $PythonVersion = (($versionOutput | ForEach-Object { $_.ToString() }) -join " ").Trim()
 
     if (Test-Path $VenvPath) {
@@ -105,7 +105,7 @@ try {
     }
     New-Item -ItemType Directory -Path (Split-Path $VenvPath -Parent) -Force | Out-Null
 
-    $code = Invoke-Native -Name "create_venv" -FilePath "py" -ArgumentList @("-3.12", "-m", "venv", $VenvPath)
+    $code = Invoke-Native -Name "create_venv" -FilePath "py" -ArgumentList @("-3.13", "-m", "venv", $VenvPath)
     if ($code -ne 0) { throw "Virtual environment creation failed." }
 
     $VenvPython = Join-Path $VenvPath "Scripts\python.exe"

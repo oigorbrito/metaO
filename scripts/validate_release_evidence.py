@@ -85,8 +85,8 @@ def validate_evidence(
         errors.append("clean_worktree must be true")
 
     python_version = data.get("python_version")
-    if not isinstance(python_version, str) or re.match(r"^3\.12(?:\.|$)", python_version) is None:
-        errors.append(f"python_version must be 3.12.x, got {python_version!r}")
+    if not isinstance(python_version, str) or re.match(r"^3\.13(?:\.|$)", python_version) is None:
+        errors.append(f"python_version must be 3.13.x, got {python_version!r}")
 
     pins = data.get("runtime_pins")
     if pins != EXPECTED_RUNTIME_PINS:
