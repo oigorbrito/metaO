@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
+Last reconciled commit: `cfb133afdf92696b895a6be09ab9ee6081dd5e7e`
 
 ## Verification ladder
 
@@ -33,7 +33,9 @@ Last reconciled commit: `5348605cbcfb3bc02f3076fe1723447feff3ecdd`
 
 ## Current-head audit execution
 
-At `main@a7585bd`, the unit suite passed with `733/733` using:
+At `main@cfb133a`, the local release gate passed with `21/21` gates and zero failures using an isolated Python 3.13 environment. The full unit suite and real-runtime checks are included in that gate. The evidence file was validated against the exact commit and clean worktree.
+
+The deterministic unit suite was also exercised using:
 
 ```text
 python -m unittest discover -s tests/unit -p "test_*.py"
@@ -54,9 +56,7 @@ RESULT = 9/9 PASS
 
 This establishes current-head local/provider-free integration evidence only. It does not establish external-provider success, hosted-CI success, production deployment, or production acceptance.
 
-The current local release gate was also attempted at the exact head and stopped during bootstrap because the script requires Python 3.12 and that interpreter is not installed on the audit host. The result was `LOCAL_RELEASE_GATE = BOOTSTRAP_FAIL`, `RESULTS = 0`; this is a toolchain blocker, not a product PASS or FAIL.
-
-The exact-head hosted CI run `36213551526` completed with `failure` and no configured steps (`steps=[]`). This is recorded as an external runner/pre-step blocker and not as evidence that the current product tests failed.
+The exact-head hosted CI run `36217680709` completed with `failure` and no configured steps (`steps=[]`). This is recorded as an external runner/pre-step blocker and not as evidence that the current product tests failed.
 
 ## Validation principles
 

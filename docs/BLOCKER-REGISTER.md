@@ -3,15 +3,15 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `4bedae3715ff30ce36cb183417f136400f1a8c91`
+Last reconciled commit: `cfb133afdf92696b895a6be09ab9ee6081dd5e7e`
 
-Current reconciliation note: the GitHub API was reachable during the 2026-09-26 audit. The exact-head `main` CI run `36213551526` completed with failure before any configured step (`steps=[]`), so it is recorded as an external pre-step blocker rather than a product test failure. Historical hosted-runner and API-authentication observations below remain evidence for their original runs.
+Current reconciliation note: the GitHub API was reachable during the 2026-09-26 audit. The exact-head `main` CI run `36217680709` completed with failure before any configured step (`steps=[]`), so it is recorded as an external pre-step blocker rather than a product test failure. The local Python 3.13 release gate passed 21/21 gates with validated evidence; hosted-runner and API-authentication observations below remain evidence for their original runs.
 
 ## Current product blockers
 
 | BLOCKER | TYPE | CURRENT_STATUS | IMPACT |
 |---|---|---|---|
-| Hosted GitHub Actions pre-step failure | external infrastructure | blocked-current-head | `main` run `36213551526` failed with `steps=[]`; hosted CI cannot be used as product PASS evidence |
+| Hosted GitHub Actions pre-step failure | external infrastructure | blocked-current-head | `main` run `36217680709` failed with `steps=[]`; hosted CI cannot be used as product PASS evidence |
 | Exact release JSON file availability | evidence availability | blocked | independent revalidation of historical release evidence cannot proceed without the file |
 | Real external runtime/provider execution | external provider / secret | blocked locally | Rust and Python conformance paths are not real provider execution without configured SDK dependencies/secrets |
 | Real credential broker lifecycle | external/local infrastructure | blocked locally | provider-neutral credential lease contracts are not a real issue/renew/revoke broker lifecycle |
@@ -34,7 +34,7 @@ Current reconciliation note: the GitHub API was reachable during the 2026-09-26 
 | PY_LANGGRAPH_DEPS | RESOLVED_IN_HERMETIC_ENV | provider-free LangGraph integration tests | Python 3.13 temporary environment with `langgraph==1.2.11`; selected integration command plus O1 and canonical initialization | local Python 3.11 lacked the dependency; the declared hermetic environment passed | retain the hermetic dependency installation in the release path | 7/7 selected integration tests, O1 and initialization E2E passed |
 | FORMAL_TLC | BLOCKED_TOOLCHAIN | bounded formal model execution | `where.exe tlc`; `where.exe java` | no matching executable found | provide TLC/java or equivalent model-checking toolchain | no; executable Rust tests continued |
 | REAL_BROKER | BLOCKED_EXTERNAL | credential broker lifecycle | not executed | no safe local credential broker/provider configured | provide approved local broker/provider or revise acceptance criterion | no; provider-neutral composition continued |
-| PYTHON312_GATE | BLOCKED_TOOLCHAIN | local release gate bootstrap | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-local-release-gate.ps1` | `Python 3.12 is required`; launcher reports no suitable 3.12 runtime | install/provide Python 3.12 for the declared release environment | gate aborted in bootstrap with `RESULTS = 0`; no release claim was made |
+| PYTHON313_GATE | RESOLVED_LOCAL | local release gate | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-local-release-gate.ps1 -VenvPath "$env:LOCALAPPDATA\\metaO\\release-gate-venv313"` | none | retain Python 3.13 hermetic environment and pins | exact head `cfb133a`, clean worktree, `21/21 PASS`, evidence validated with `scripts/validate_release_evidence.py` |
 
 ## Rules
 
