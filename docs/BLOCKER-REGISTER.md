@@ -5,13 +5,13 @@ Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
 Last reconciled commit: `05306c2e205c1a94bf96e8753772728a11f4391d`
 
-Current reconciliation note: the GitHub API was reachable during the 2026-09-26 audit. The exact-head `main` CI run `36252305975` for `8fa8303` completed with failure before any configured step (`steps=[]`), so it is recorded as an external pre-step blocker rather than a product test failure. The local Python 3.13 release gate passed 21/21 gates with validated evidence; hosted-runner and API-authentication observations below remain evidence for their original runs.
+Current reconciliation note: the GitHub API was reachable during the 2026-09-26 audit. The exact-head `main` CI run `36252655742` for `e61db85` completed in two seconds with failure before any configured step (`steps=[]`, `runner_id=0`, empty `runner_name`), so it is recorded as an external runner-allocation blocker rather than a product test failure. The local Python 3.13 release gate passed 21/21 gates with validated evidence; hosted-runner and API-authentication observations below remain evidence for their original runs.
 
 ## Current product blockers
 
 | BLOCKER | TYPE | CURRENT_STATUS | IMPACT |
 |---|---|---|---|
-| Hosted GitHub Actions pre-step failure | external infrastructure | blocked-current-head | `main` run `36252305975` for `8fa8303` failed with `steps=[]`; hosted CI cannot be used as product PASS evidence |
+| Hosted GitHub Actions pre-step failure | external infrastructure | blocked-current-head | `main` run `36252655742` for `e61db85` failed with `steps=[]`, `runner_id=0` and no runner name; hosted CI cannot be used as product PASS evidence |
 | Exact release JSON file availability | evidence availability | blocked | independent revalidation of historical release evidence cannot proceed without the file |
 | Real external runtime/provider execution | external provider / secret | blocked locally | Rust and Python conformance paths are not real provider execution without configured SDK dependencies/secrets |
 | Real credential broker lifecycle | external/local infrastructure | blocked locally | provider-neutral credential lease contracts are not a real issue/renew/revoke broker lifecycle |
