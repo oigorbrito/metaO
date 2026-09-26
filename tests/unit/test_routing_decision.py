@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -95,7 +96,7 @@ class RoutingDecisionStoreTests(unittest.TestCase):
             store = SQLiteRoutingDecisionStore(path)
             value = receipt()
             store.record(value)
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection, connection:
                 connection.execute(
                     "UPDATE routing_decision_receipts SET payload_json=? WHERE receipt_id=?",
                     ("{}", value.receipt_id),

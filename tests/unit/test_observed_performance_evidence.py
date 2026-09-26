@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -60,7 +61,7 @@ class ObservedPerformanceEvidenceTests(unittest.TestCase):
             path = Path(temp) / "observed.db"
             store = SQLiteObservedPerformanceStore(path)
             store.record(evidence("e1"))
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection, connection:
                 connection.execute(
                     "UPDATE observed_performance_evidence SET payload_json=? WHERE evidence_id=?",
                     ("{}", "e1"),
