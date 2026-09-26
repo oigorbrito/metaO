@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `0e6da02c7ec09c141bf5ae002ecbbea71fedc721`
+Last reconciled commit: `4bedae3715ff30ce36cb183417f136400f1a8c91`
 
 Current reconciliation note: the GitHub API was reachable during the 2026-09-25 audit, and the current `main` CI run passed. Historical hosted-runner and API-authentication observations below remain evidence for their original runs; they are not current-head PASS or BLOCKED claims without a new exact-head execution.
 

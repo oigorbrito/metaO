@@ -6,7 +6,7 @@ Historical note: this document captures the release-readiness state for the vali
 
 This document separates current executable evidence, historical failed attempts, external infrastructure blockers, and claims that remain intentionally unmade.
 
-Current-head audit note (2026-09-25): the evidence in this document is bound to the historical candidate SHAs shown below. It does not qualify `main@0e6da02c7ec09c141bf5ae002ecbbea71fedc721` until the release gate is rerun on that exact commit.
+Current-head audit note (2026-09-25): the evidence in this document is bound to the historical candidate SHAs shown below. It does not qualify `main@4bedae3715ff30ce36cb183417f136400f1a8c91` until the release gate is rerun on that exact commit.
 
 ## Current canonical state
 
