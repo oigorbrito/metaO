@@ -56,7 +56,7 @@ RESULT = 9/9 PASS
 
 This establishes current-head local/provider-free integration evidence only. It does not establish external-provider success, hosted-CI success, production deployment, or production acceptance.
 
-The exact-head hosted CI run `36217903605` completed with `failure` and no configured steps (`steps=[]`). This is recorded as an external runner/pre-step blocker and not as evidence that the current product tests failed.
+The exact-head hosted CI run `36252305975` for `main@8fa8303` completed with `failure` and no configured steps (`steps=[]`). This is recorded as an external runner/pre-step blocker and not as evidence that the current product tests failed.
 
 ## Validation principles
 
