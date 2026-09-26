@@ -5,13 +5,13 @@ Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
 Last reconciled commit: `4bedae3715ff30ce36cb183417f136400f1a8c91`
 
-Current reconciliation note: the GitHub API was reachable during the 2026-09-25 audit, and the current `main` CI run passed. Historical hosted-runner and API-authentication observations below remain evidence for their original runs; they are not current-head PASS or BLOCKED claims without a new exact-head execution.
+Current reconciliation note: the GitHub API was reachable during the 2026-09-25 audit. The exact-head `main` CI run `36212085393` completed with failure before any configured step (`steps=[]`), so it is recorded as an external pre-step blocker rather than a product test failure. Historical hosted-runner and API-authentication observations below remain evidence for their original runs.
 
 ## Current product blockers
 
 | BLOCKER | TYPE | CURRENT_STATUS | IMPACT |
 |---|---|---|---|
-| Hosted GitHub Actions pre-step failure | external infrastructure | blocked | hosted CI cannot be used as product PASS evidence |
+| Hosted GitHub Actions pre-step failure | external infrastructure | blocked-current-head | `main` run `36212085393` failed with `steps=[]`; hosted CI cannot be used as product PASS evidence |
 | Exact release JSON file availability | evidence availability | blocked | independent revalidation of historical release evidence cannot proceed without the file |
 | Real external runtime/provider execution | external provider / secret | blocked locally | Rust and Python conformance paths are not real provider execution without configured SDK dependencies/secrets |
 | Real credential broker lifecycle | external/local infrastructure | blocked locally | provider-neutral credential lease contracts are not a real issue/renew/revoke broker lifecycle |
