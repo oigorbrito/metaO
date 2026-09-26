@@ -6,7 +6,7 @@ Applies to: repository `oigorbrito/metaO`
 Last reconciled commit: `4bedae3715ff30ce36cb183417f136400f1a8c91`
 Date reconciled: 2026-09-25
 
-Current-head qualification note: the executable initialization evidence recorded below was produced at `9dbdf542eaad59e5cc80b8a1a845bf527a36893c`. It remains historical evidence and must not be promoted to current-head qualification without rerunning the exact path at `4bedae3715ff30ce36cb183417f136400f1a8c91`.
+Current-head qualification note: the executable initialization evidence recorded below was produced at `9dbdf542eaad59e5cc80b8a1a845bf527a36893c` using the former Python 3.12 baseline. It remains historical evidence and must not be promoted to current-head qualification or used to qualify the current Python 3.13 baseline without rerunning the exact path at the current head.
 
 ## Purpose
 

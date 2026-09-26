@@ -48,7 +48,7 @@ ORCHESTRATOR_DONE != METAO_ACCEPTED
 
 The repository includes a deterministic local example runtime so a clean clone can exercise the real operator bootstrap path without external provider credentials or network calls. The example is for onboarding and operability verification only; it is **not** production-runtime or provider-backed evidence.
 
-Python 3.12 or newer is required.
+Python 3.13 or newer is required.
 
 1. **Install the package from the repository root**:
 
@@ -56,7 +56,7 @@ Python 3.12 or newer is required.
    python -m pip install -e .
    ```
 
-   On Windows, if `python` does not select Python 3.12+, use the corresponding launcher explicitly, for example `py -3.12 -m pip install -e .`.
+   On Windows, if `python` does not select Python 3.13+, use the corresponding launcher explicitly, for example `py -3.13 -m pip install -e .`.
 
 2. **Verify the installed console script**:
 
