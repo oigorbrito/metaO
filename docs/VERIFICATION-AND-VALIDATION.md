@@ -54,6 +54,8 @@ RESULT = 9/9 PASS
 
 This establishes current-head local/provider-free integration evidence only. It does not establish external-provider success, hosted-CI success, production deployment, or production acceptance.
 
+The current local release gate was also attempted at the exact head and stopped during bootstrap because the script requires Python 3.12 and that interpreter is not installed on the audit host. The result was `LOCAL_RELEASE_GATE = BOOTSTRAP_FAIL`, `RESULTS = 0`; this is a toolchain blocker, not a product PASS or FAIL.
+
 ## Validation principles
 
 - `IMPLEMENTED != EXECUTED`

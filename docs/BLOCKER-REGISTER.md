@@ -34,6 +34,7 @@ Current reconciliation note: the GitHub API was reachable during the 2026-09-25 
 | PY_LANGGRAPH_DEPS | RESOLVED_IN_HERMETIC_ENV | provider-free LangGraph integration tests | Python 3.13 temporary environment with `langgraph==1.2.11`; selected integration command plus O1 and canonical initialization | local Python 3.11 lacked the dependency; the declared hermetic environment passed | retain the hermetic dependency installation in the release path | 7/7 selected integration tests, O1 and initialization E2E passed |
 | FORMAL_TLC | BLOCKED_TOOLCHAIN | bounded formal model execution | `where.exe tlc`; `where.exe java` | no matching executable found | provide TLC/java or equivalent model-checking toolchain | no; executable Rust tests continued |
 | REAL_BROKER | BLOCKED_EXTERNAL | credential broker lifecycle | not executed | no safe local credential broker/provider configured | provide approved local broker/provider or revise acceptance criterion | no; provider-neutral composition continued |
+| PYTHON312_GATE | BLOCKED_TOOLCHAIN | local release gate bootstrap | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-local-release-gate.ps1` | `Python 3.12 is required`; launcher reports no suitable 3.12 runtime | install/provide Python 3.12 for the declared release environment | gate aborted in bootstrap with `RESULTS = 0`; no release claim was made |
 
 ## Rules
 
