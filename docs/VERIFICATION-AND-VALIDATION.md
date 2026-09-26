@@ -33,7 +33,7 @@ Last reconciled commit: `05306c2e205c1a94bf96e8753772728a11f4391d`
 
 ## Current-head audit execution
 
-At `main@cfb133a`, the local release gate passed with `21/21` gates and zero failures using an isolated Python 3.13 environment. The full unit suite and real-runtime checks are included in that gate. The evidence file was validated against the exact commit and clean worktree.
+At `main@9202078`, the local release gate passed with `21/21` gates and zero failures using an isolated Python 3.13 environment. The full unit suite and real-runtime checks are included in that gate. The evidence file `gate-20260926-122936.json` was validated against the exact commit and clean worktree.
 
 The deterministic unit suite was also exercised using:
 
