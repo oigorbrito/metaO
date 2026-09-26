@@ -3,7 +3,7 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `cfb133afdf92696b895a6be09ab9ee6081dd5e7e`
+Last reconciled commit: `05306c2e205c1a94bf96e8753772728a11f4391d`
 
 ## Verification ladder
 
@@ -56,7 +56,7 @@ RESULT = 9/9 PASS
 
 This establishes current-head local/provider-free integration evidence only. It does not establish external-provider success, hosted-CI success, production deployment, or production acceptance.
 
-The exact-head hosted CI run `36217680709` completed with `failure` and no configured steps (`steps=[]`). This is recorded as an external runner/pre-step blocker and not as evidence that the current product tests failed.
+The exact-head hosted CI run `36217903605` completed with `failure` and no configured steps (`steps=[]`). This is recorded as an external runner/pre-step blocker and not as evidence that the current product tests failed.
 
 ## Validation principles
 
