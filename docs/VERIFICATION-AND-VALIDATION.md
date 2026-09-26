@@ -56,7 +56,7 @@ This establishes current-head local/provider-free integration evidence only. It 
 
 The current local release gate was also attempted at the exact head and stopped during bootstrap because the script requires Python 3.12 and that interpreter is not installed on the audit host. The result was `LOCAL_RELEASE_GATE = BOOTSTRAP_FAIL`, `RESULTS = 0`; this is a toolchain blocker, not a product PASS or FAIL.
 
-The exact-head hosted CI run `36212085393` completed with `failure` and no configured steps (`steps=[]`). This is recorded as an external runner/pre-step blocker and not as evidence that the current product tests failed.
+The exact-head hosted CI run `36213551526` completed with `failure` and no configured steps (`steps=[]`). This is recorded as an external runner/pre-step blocker and not as evidence that the current product tests failed.
 
 ## Validation principles
 
