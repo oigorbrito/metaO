@@ -1,0 +1,4 @@
+## 2025-05-18 - Non-Finite Float Timestamp Bypass in Attestation Freshness
+**Vulnerability:** In Python, comparisons between `float('nan')` and finite numbers evaluate to `False`. When `verify_freshness` evaluated `issued_at_epoch > now_epoch + allowed_clock_skew_s` and `now_epoch - allowed_clock_skew_s > expires_at_epoch`, passing `nan` as an attestation timestamp or clock skew caused both stale/future checks to evaluate to `False`, returning `True` and bypassing freshness verification completely.
+**Learning:** Float timestamps in security functions must be explicitly checked for finiteness (`math.isfinite`) because Python's comparison operators with NaN fail-open when checking boundaries (`nan > threshold` is `False`).
+**Prevention:** Always validate all numeric timestamp and duration inputs using `math.isfinite()` before performing boundary checks in cryptographic and trust verification functions.
