@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "fixture_purpose": "Deterministic Project Discovery ambiguity fixtures. Benchmark-inspired labels are metadata only and are not metaO Core schema or authority.",
+  "sources": [
+    {
+      "source_id": "clarifycodebench-arxiv-v1",
+      "kind": "paper",
+      "reference": "arXiv:2607.00711v1",
+      "pinned_revision": null
+    },
+    {
+      "source_id": "clarifycodebench-repo",
+      "kind": "repository",
+      "reference": "fangz-cs/ClarifyCodeBench",
+      "pinned_revision": "5e2d5b5ce6259daa034cebb69f65e5e4c6dec3e9"
+    },
+    {
+      "source_id": "swe-rpg-arxiv-v1",
+      "kind": "paper",
+      "reference": "arXiv:2608.09072v1",
+      "pinned_revision": null
+    }
+  ],
+  "scenarios": [
+    {
+      "fixture_id": "behavior-payment-scope-material",
+      "benchmark_inspired_label": "Behavior",
+      "description": "Marketplace request does not specify whether platform payment is in scope.",
+      "materiality": "MATERIAL",
+      "reversibility": "REVERSIBLE",
+      "concern": "SCOPE_CHANGING",
+      "safe_default": null,
+      "expected_action": "ASK_HUMAN",
+      "rationale": "Payment changes product behavior, integration surface, compliance burden, and MVP scope.",
+      "source_ids": ["clarifycodebench-repo"]
+    },
+    {
+      "fixture_id": "ordering-atomicity-checkout-security",
+      "benchmark_inspired_label": "Ordering & Atomicity",
+      "description": "Checkout flow does not define whether inventory reservation and order creation must be atomic.",
+      "materiality": "MATERIAL",
+      "reversibility": "IRREVERSIBLE",
+      "concern": "REGULATORY_OR_SECURITY",
+      "safe_default": null,
+      "expected_action": "ASK_HUMAN",
+      "rationale": "Atomicity affects consistency, financial correctness, and failure semantics; silent defaults can create durable data corruption.",
+      "source_ids": ["clarifycodebench-repo"]
+    },
+    {
+      "fixture_id": "output-format-admin-date-display",
+      "benchmark_inspired_label": "Output Format",
+      "description": "Admin table date display format is unspecified and no external API contract depends on it.",
+      "materiality": "NON_MATERIAL",
+      "reversibility": "REVERSIBLE",
+      "concern": "GENERAL",
+      "safe_default": {
+        "value": "Use the repository locale/date display convention.",
+        "rationale": "Presentation-only choice is cheap to change and does not alter stored data or external contracts.",
+        "provenance": "METAO_ASSUMPTION:test-fixture-default"
+      },
+      "expected_action": "RECORD_SAFE_ASSUMPTION",
+      "rationale": "A documented reversible presentation default avoids unnecessary questioning.",
+      "source_ids": ["clarifycodebench-repo"]
+    },
+    {
+      "fixture_id": "terminology-local-variable-naming",
+      "benchmark_inspired_label": "Terminology",
+      "description": "Internal local naming for a non-public helper concept is unspecified.",
+      "materiality": "NON_MATERIAL",
+      "reversibility": "REVERSIBLE",
+      "concern": "GENERAL",
+      "safe_default": {
+        "value": "Follow existing repository naming conventions.",
+        "rationale": "Internal naming is reversible and does not change product behavior or public compatibility.",
+        "provenance": "METAO_ASSUMPTION:test-fixture-default"
+      },
+      "expected_action": "RECORD_SAFE_ASSUMPTION",
+      "rationale": "Terminology ambiguity is contextual; this instance is deliberately low impact.",
+      "source_ids": ["clarifycodebench-repo"]
+    },
+    {
+      "fixture_id": "behavior-web-vs-mobile-scope",
+      "benchmark_inspired_label": "Behavior",
+      "description": "User says build a marketplace but does not specify web-only versus native mobile plus web.",
+      "materiality": "MATERIAL",
+      "reversibility": "REVERSIBLE",
+      "concern": "SCOPE_CHANGING",
+      "safe_default": null,
+      "expected_action": "ASK_HUMAN",
+      "rationale": "Target surfaces materially change scope, architecture, acceptance obligations, staffing and delivery cost.",
+      "source_ids": ["clarifycodebench-arxiv-v1"]
+    },
+    {
+      "fixture_id": "behavior-user-fixed-technology-conflict",
+      "benchmark_inspired_label": "Behavior",
+      "description": "User explicitly fixes Rust while another unresolved input requests a framework that requires a conflicting runtime choice.",
+      "materiality": "MATERIAL",
+      "reversibility": "REVERSIBLE",
+      "concern": "USER_FIXED_TECHNOLOGY",
+      "safe_default": null,
+      "expected_action": "ASK_HUMAN",
+      "rationale": "A user-fixed technology is an explicit constraint and cannot be silently overridden by recommendation logic.",
+      "source_ids": ["clarifycodebench-arxiv-v1"]
+    },
+    {
+      "fixture_id": "multi-ambiguity-marketplace-intake",
+      "benchmark_inspired_label": "MULTI",
+      "description": "Marketplace intake contains two material blockers and one low-impact reversible presentation ambiguity.",
+      "materiality": "MIXED",
+      "reversibility": "MIXED",
+      "concern": "MULTI_ITEM",
+      "safe_default": null,
+      "expected_action": "ASK_HUMAN_WITH_SAFE_ASSUMPTION_FOR_NON_BLOCKER",
+      "rationale": "Safe defaults may reduce needless interaction, but every material blocker must still be resolved before readiness.",
+      "source_ids": ["clarifycodebench-arxiv-v1", "swe-rpg-arxiv-v1"],
+      "items": [
+        {
+          "item_id": "seller-model",
+          "benchmark_inspired_label": "Behavior",
+          "materiality": "MATERIAL",
+          "reversibility": "REVERSIBLE",
+          "concern": "SCOPE_CHANGING",
+          "safe_default": null,
+          "expected_action": "ASK_HUMAN"
+        },
+        {
+          "item_id": "payment-scope",
+          "benchmark_inspired_label": "Behavior",
+          "materiality": "MATERIAL",
+          "reversibility": "REVERSIBLE",
+          "concern": "SCOPE_CHANGING",
+          "safe_default": null,
+          "expected_action": "ASK_HUMAN"
+        },
+        {
+          "item_id": "admin-date-display",
+          "benchmark_inspired_label": "Output Format",
+          "materiality": "NON_MATERIAL",
+          "reversibility": "REVERSIBLE",
+          "concern": "GENERAL",
+          "safe_default": {
+            "value": "Use repository date display convention.",
+            "rationale": "Presentation-only and reversible.",
+            "provenance": "METAO_ASSUMPTION:test-fixture-default"
+          },
+          "expected_action": "RECORD_SAFE_ASSUMPTION"
+        }
+      ]
+    }
+  ],
+  "forbidden_authority_outputs": [
+    "SPEC_READY",
+    "PLAN_READY",
+    "PROJECT_ACCEPTED",
+    "ACCEPTED"
+  ]
+}

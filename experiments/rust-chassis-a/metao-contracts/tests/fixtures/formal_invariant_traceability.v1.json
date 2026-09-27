@@ -1,0 +1,102 @@
+{
+  "schema_version": 1,
+  "source_model": {
+    "issue": 302,
+    "pull_request": 303,
+    "model": "AcceptanceRetryAuthority",
+    "model_evidence_state": "MODEL_NOT_CHECKED"
+  },
+  "authority_boundary": {
+    "traceability_is_execution": false,
+    "model_invariant_is_implementation_proof": false,
+    "test_path_present_is_test_pass": false,
+    "python_oracle_is_rust_authority": false
+  },
+  "mappings": [
+    {
+      "invariant_id": "OrchestratorDoneIsNotAcceptance",
+      "implementation_state": "TEST_PATH_PRESENT",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": [
+        "experiments/rust-chassis-a/metao-kernel/tests/terminal_proof.rs",
+        "experiments/rust-chassis-a/metao-wire/tests/phase5_evidence_acceptance.rs"
+      ],
+      "python_oracle_targets": ["tests/phase6_shadow_oracle.py"],
+      "intent": "Runtime success/DONE remains observation; terminal acceptance requires independent acceptance evidence."
+    },
+    {
+      "invariant_id": "AcceptedRequiresIndependentFreshPass",
+      "implementation_state": "TEST_PATH_PRESENT",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": [
+        "experiments/rust-chassis-a/metao-kernel/tests/evidence_binding.rs",
+        "experiments/rust-chassis-a/metao-kernel/tests/terminal_proof.rs",
+        "experiments/rust-chassis-a/metao-kernel/tests/gate0_mutation.rs"
+      ],
+      "python_oracle_targets": ["tests/phase6_shadow_oracle.py"],
+      "intent": "Acceptance requires applicable verified evidence; exact binding alone with unverified evidence remains blocked."
+    },
+    {
+      "invariant_id": "StaleEvidenceCannotAcceptCurrentGeneration",
+      "implementation_state": "TEST_PATH_PRESENT",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": [
+        "experiments/rust-chassis-a/metao-kernel/tests/evidence_binding.rs",
+        "experiments/rust-chassis-a/metao-kernel/tests/acceptance_proof_replay.rs"
+      ],
+      "python_oracle_targets": ["tests/phase6_shadow_oracle.py"],
+      "intent": "Evidence/proof applicability is bound to authoritative current execution/context rather than reusable across stale state."
+    },
+    {
+      "invariant_id": "IncompleteRecoveryCannotEnableRetry",
+      "implementation_state": "TEST_PATH_PRESENT",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": [
+        "experiments/rust-chassis-a/metao-contracts/tests/failure_causality_tests.rs"
+      ],
+      "python_oracle_targets": ["tests/integration/test_r7_wu03_three_runtime_recovery.py"],
+      "intent": "Current-main failure-causality tests map incomplete/failed recovery to ineligible retry without treating traceability as execution proof."
+    },
+    {
+      "invariant_id": "UnknownNeverAccepts",
+      "implementation_state": "TEST_PATH_PRESENT",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": [
+        "experiments/rust-chassis-a/metao-kernel/tests/authoritative_terminal_sources.rs",
+        "experiments/rust-chassis-a/metao-kernel/tests/terminal_proof.rs"
+      ],
+      "python_oracle_targets": ["tests/phase6_shadow_oracle.py"],
+      "intent": "Missing/unknown authoritative evidence cannot be promoted to terminal PASS/ACCEPTED."
+    },
+    {
+      "invariant_id": "VerifierFailNeverAccepts",
+      "implementation_state": "TEST_PATH_PRESENT",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": ["experiments/rust-chassis-a/metao-kernel/tests/evidence_binding.rs"],
+      "python_oracle_targets": ["tests/phase6_shadow_oracle.py"],
+      "intent": "Canonical Rust acceptance treats failed obligation/verifier evidence as NotDone rather than Accept; ordinary verifier FAIL is not a generic hard policy/trust Block."
+    },
+    {
+      "invariant_id": "OldGenerationDoneCannotAcceptCurrent",
+      "implementation_state": "TEST_PATH_PRESENT",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": [
+        "experiments/rust-chassis-a/metao-kernel/tests/retry_history.rs",
+        "experiments/rust-chassis-a/metao-kernel/tests/acceptance_proof_replay.rs"
+      ],
+      "python_oracle_targets": ["tests/integration/test_r7_wu03_three_runtime_recovery.py"],
+      "intent": "Retry/failover lineage history and replay binding prevent an older execution result from terminalizing current authoritative lineage."
+    },
+    {
+      "invariant_id": "AcceptedGenerationMatchesCurrent",
+      "implementation_state": "TEST_PATH_PRESENT",
+      "execution_state": "EXECUTION_NOT_RUN",
+      "rust_targets": [
+        "experiments/rust-chassis-a/metao-kernel/tests/terminal_proof.rs",
+        "experiments/rust-chassis-a/metao-kernel/tests/acceptance_proof_replay.rs"
+      ],
+      "python_oracle_targets": ["tests/phase6_shadow_oracle.py"],
+      "intent": "Terminal proof/acceptance replay remains bound to the current authoritative execution/context identity."
+    }
+  ]
+}

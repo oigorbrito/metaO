@@ -1,8 +1,0 @@
-{
-  "name": "metaO Control Plane",
-  "description": "Framework-neutral meta-orchestrator control plane for selecting, governing, supervising, and independently accepting pluggable agent orchestrators.",
-  "permissions": [],
-  "capabilities": [
-    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
-  ]
-}
