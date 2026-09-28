@@ -1,0 +1,165 @@
+{
+  "schema": "metao-scientific-validation-matrix-v1",
+  "issue": 168,
+  "authority": "validation-registry-only; does not grant product or acceptance authority",
+  "gate_levels": [
+    "L0",
+    "L1",
+    "L2",
+    "L3",
+    "L4",
+    "L5",
+    "L6",
+    "L7"
+  ],
+  "result_states": [
+    "PASS",
+    "FAIL",
+    "BLOCKED",
+    "SKIPPED",
+    "NOT_REQUESTED"
+  ],
+  "families": [
+    {
+      "id": "T1",
+      "title": "False-DONE / independent acceptance",
+      "owner_issues": [
+        94,
+        100
+      ]
+    },
+    {
+      "id": "T2",
+      "title": "Budget / risk / approval precedence",
+      "owner_issues": [
+        140
+      ]
+    },
+    {
+      "id": "T3",
+      "title": "Retry / recovery / failover causality",
+      "owner_issues": [
+        141
+      ]
+    },
+    {
+      "id": "T4",
+      "title": "External-effect idempotency",
+      "owner_issues": [
+        158
+      ]
+    },
+    {
+      "id": "T5",
+      "title": "Runtime/workload identity",
+      "owner_issues": [
+        159
+      ]
+    },
+    {
+      "id": "T6",
+      "title": "Runtime health / circuit breaker / recovery",
+      "owner_issues": [
+        160
+      ]
+    },
+    {
+      "id": "T7",
+      "title": "Lease / fencing / split-brain",
+      "owner_issues": [
+        164
+      ]
+    },
+    {
+      "id": "T8",
+      "title": "Credential lease / revocation",
+      "owner_issues": [
+        165
+      ]
+    },
+    {
+      "id": "T9",
+      "title": "Capacity admission / tenant fairness",
+      "owner_issues": [
+        166
+      ]
+    },
+    {
+      "id": "T10",
+      "title": "Transparency / tamper evidence",
+      "owner_issues": [
+        167
+      ]
+    },
+    {
+      "id": "T11",
+      "title": "Stateful/property-based generated sequences",
+      "owner_issues": [
+        161
+      ]
+    },
+    {
+      "id": "T12",
+      "title": "Chaos / fault injection",
+      "owner_issues": [
+        161
+      ]
+    },
+    {
+      "id": "T13",
+      "title": "Multi-runtime replacement/conformance",
+      "owner_issues": [
+        145,
+        154,
+        162
+      ]
+    },
+    {
+      "id": "T14",
+      "title": "Engineering-workload containment",
+      "owner_issues": [
+        144
+      ]
+    },
+    {
+      "id": "T15",
+      "title": "Observability/interoperability authority boundaries",
+      "owner_issues": [
+        142,
+        147,
+        163
+      ]
+    }
+  ],
+  "receipt_contract": {
+    "required_fields": [
+      "schema",
+      "repository",
+      "commit",
+      "gate_id",
+      "gate_level",
+      "runtime_identities",
+      "mission_lineage",
+      "commands",
+      "environment",
+      "started_at",
+      "ended_at",
+      "duration_seconds",
+      "result",
+      "failure_reason",
+      "evidence_ids",
+      "external_systems"
+    ],
+    "external_systems_shape": {
+      "required_fields": [
+        "mode",
+        "systems"
+      ],
+      "mode_values": [
+        "REAL",
+        "SIMULATED",
+        "NONE"
+      ]
+    }
+  }
+}
