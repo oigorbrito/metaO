@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
+from math import isfinite
 from typing import Callable, MutableSet, Protocol, runtime_checkable
 
 
@@ -101,8 +102,17 @@ def verify_freshness(
     now_epoch: float,
     allowed_clock_skew_s: float = 0.0,
 ) -> bool:
+    if (
+        not isfinite(issued_at_epoch)
+        or not isfinite(expires_at_epoch)
+        or not isfinite(now_epoch)
+        or not isfinite(allowed_clock_skew_s)
+    ):
+        raise ValueError("attestation timestamps and allowed clock skew must be finite")
     if allowed_clock_skew_s < 0:
         raise ValueError("allowed_clock_skew_s must be non-negative")
+    if expires_at_epoch < issued_at_epoch:
+        raise ValueError("expires_at_epoch cannot precede issued_at_epoch")
     if issued_at_epoch > now_epoch + allowed_clock_skew_s:
         raise FutureAttestation("attestation issue time is in the future")
     if now_epoch - allowed_clock_skew_s > expires_at_epoch:
@@ -111,7 +121,7 @@ def verify_freshness(
 
 
 def reject_replay(attestation_id: str, seen: MutableSet[str]) -> bool:
-    if not attestation_id:
+    if not attestation_id or not attestation_id.strip():
         raise ValueError("attestation_id must be non-empty")
     if attestation_id in seen:
         raise ReplayDetected(f"replayed attestation: {attestation_id}")
@@ -125,6 +135,8 @@ def verify_trust_root(
     trusted_verifiers: set[str] | frozenset[str],
     revoked_verifiers: set[str] | frozenset[str] = frozenset(),
 ) -> bool:
+    if not verifier_id or not verifier_id.strip():
+        raise ValueError("verifier_id must be non-empty")
     if verifier_id in revoked_verifiers:
         raise RevokedVerifier(f"revoked verifier: {verifier_id}")
     if verifier_id not in trusted_verifiers:
@@ -141,7 +153,7 @@ def verify_attestation(
 ) -> bool:
     if not isinstance(artifact, bytes) or not isinstance(attestation, bytes):
         raise TypeError("artifact and attestation must be bytes")
-    if not identity:
+    if not identity or not identity.strip():
         raise ValueError("identity must be non-empty")
     if not provider.verify(artifact=artifact, attestation=attestation, identity=identity):
         raise AttestationRejected("standards provider rejected attestation")
