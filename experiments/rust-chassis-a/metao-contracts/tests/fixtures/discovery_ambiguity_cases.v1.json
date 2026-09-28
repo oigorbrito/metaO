@@ -19,6 +19,12 @@
       "kind": "paper",
       "reference": "arXiv:2608.09072v1",
       "pinned_revision": null
+    },
+    {
+      "source_id": "swe-rpg-repo",
+      "kind": "repository",
+      "reference": "Xin-Zhou-smu/SWE-RPG-Bench",
+      "pinned_revision": "688ed7918cbcabe6c9d9b9f393fad1053b286dd9"
     }
   ],
   "scenarios": [
@@ -32,7 +38,9 @@
       "safe_default": null,
       "expected_action": "ASK_HUMAN",
       "rationale": "Payment changes product behavior, integration surface, compliance burden, and MVP scope.",
-      "source_ids": ["clarifycodebench-repo"]
+      "source_ids": [
+        "clarifycodebench-repo"
+      ]
     },
     {
       "fixture_id": "ordering-atomicity-checkout-security",
@@ -44,7 +52,9 @@
       "safe_default": null,
       "expected_action": "ASK_HUMAN",
       "rationale": "Atomicity affects consistency, financial correctness, and failure semantics; silent defaults can create durable data corruption.",
-      "source_ids": ["clarifycodebench-repo"]
+      "source_ids": [
+        "clarifycodebench-repo"
+      ]
     },
     {
       "fixture_id": "output-format-admin-date-display",
@@ -60,7 +70,9 @@
       },
       "expected_action": "RECORD_SAFE_ASSUMPTION",
       "rationale": "A documented reversible presentation default avoids unnecessary questioning.",
-      "source_ids": ["clarifycodebench-repo"]
+      "source_ids": [
+        "clarifycodebench-repo"
+      ]
     },
     {
       "fixture_id": "terminology-local-variable-naming",
@@ -76,7 +88,9 @@
       },
       "expected_action": "RECORD_SAFE_ASSUMPTION",
       "rationale": "Terminology ambiguity is contextual; this instance is deliberately low impact.",
-      "source_ids": ["clarifycodebench-repo"]
+      "source_ids": [
+        "clarifycodebench-repo"
+      ]
     },
     {
       "fixture_id": "behavior-web-vs-mobile-scope",
@@ -88,7 +102,9 @@
       "safe_default": null,
       "expected_action": "ASK_HUMAN",
       "rationale": "Target surfaces materially change scope, architecture, acceptance obligations, staffing and delivery cost.",
-      "source_ids": ["clarifycodebench-arxiv-v1"]
+      "source_ids": [
+        "clarifycodebench-arxiv-v1"
+      ]
     },
     {
       "fixture_id": "behavior-user-fixed-technology-conflict",
@@ -100,7 +116,9 @@
       "safe_default": null,
       "expected_action": "ASK_HUMAN",
       "rationale": "A user-fixed technology is an explicit constraint and cannot be silently overridden by recommendation logic.",
-      "source_ids": ["clarifycodebench-arxiv-v1"]
+      "source_ids": [
+        "clarifycodebench-arxiv-v1"
+      ]
     },
     {
       "fixture_id": "multi-ambiguity-marketplace-intake",
@@ -112,7 +130,10 @@
       "safe_default": null,
       "expected_action": "ASK_HUMAN_WITH_SAFE_ASSUMPTION_FOR_NON_BLOCKER",
       "rationale": "Safe defaults may reduce needless interaction, but every material blocker must still be resolved before readiness.",
-      "source_ids": ["clarifycodebench-arxiv-v1", "swe-rpg-arxiv-v1"],
+      "source_ids": [
+        "clarifycodebench-arxiv-v1",
+        "swe-rpg-arxiv-v1"
+      ],
       "items": [
         {
           "item_id": "seller-model",

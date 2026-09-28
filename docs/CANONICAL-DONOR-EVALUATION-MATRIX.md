@@ -139,7 +139,7 @@ The central architecture test remains:
 | Discovery | `Fission-AI/OpenSpec` | `a0ddb60d040c61f4907436a9d91310934b1dda63` | **ADAPT — SECONDARY** | explore-before-commit, proposal/spec/design/tasks separation, change/archive evolution | #170–#177; not hard readiness authority |
 | Discovery | `bmad-code-org/BMAD-METHOD` | `cf0d98f03042c9640c3facd15efd93d8c8ce66c6` | **REFERENCE / SELECTIVE ADAPT** | right-size process, parent-intent traceability, replan from evidence | #170–#177; no BMAD workflow/backlog authority |
 | Clarification benchmark | `fangz-cs/ClarifyCodeBench` | `5e2d5b5ce6259daa034cebb69f65e5e4c6dec3e9` | **TEST_DONOR** | 419 human-annotated underspecified tasks, key-question concepts, taxonomy | #180 / #170–#177; benchmark judge is not a hard gate |
-| Clarification benchmark | SWE-RPG / arXiv:2608.09072 | paper available; advertised `Xin-Zhou-smu/SWE-RPG-Bench` repository observed public but empty (`size=0`) | **REFERENCE_FROM_PAPER / BLOCKED_EXTERNAL_ARTIFACT** | repository-level clarification/planning research hypothesis | #180 remains owner of reproducibility caveat; no code pin invented |
+| Clarification benchmark | `Xin-Zhou-smu/SWE-RPG-Bench` / arXiv:2608.09072 | `688ed7918cbcabe6c9d9b9f393fad1053b286dd9` (2026-09-07); 163-instance canonical dataset; requirement-clarification + planning ground truths; Docker/Modal evaluators | **TEST_DONOR / EXECUTABLE_ARTIFACT_PUBLISHED** | repository-level requirement clarification/planning fixtures and executable patch-evaluation boundary | #180; benchmark remains test evidence only and cannot mint `SPEC_READY`, `PLAN_READY`, or acceptance |
 | Requirements standard | ISO/IEC/IEEE 29148:2018 | published standard reference | **REFERENCE_ONLY** | clarity, completeness, verifiability semantics where relevant | #170–#177; draft future editions are not published authority |
 | Governance | `microsoft/agent-governance-toolkit` | `46463ef8689433817fcc0c582a7881f515d4df15` | **ADAPT / TEST_DONOR** | deterministic policy mediation, framework boundary, identity/trust, SRE/conformance | existing governance/security owners; never second Core/acceptance authority |
 | Governance | `aws-samples/sample-agentic-governance-platform` | `665bd07af4615e550d7980154ad34c811aff81ff` | **REFERENCE_ONLY** | enterprise registry/access/policy/observability/cost architecture | vendor-coupled AWS + Entra implementation; no Core dependency |
@@ -240,17 +240,22 @@ The research produced concrete regression requirements rather than product autho
 
 ## Open research caveat
 
-Issue #180 remains open only for a reproducibility limitation:
+Issue #180's former publication blocker was rechecked on 2026-09-28 and is no longer present:
 
 ```text
 SWE_RPG_PAPER = AVAILABLE
-SWE_RPG_ADVERTISED_REPOSITORY = PUBLIC_BUT_EMPTY_AT_INSPECTION
-REPRODUCIBLE_CODE_PIN = NOT_AVAILABLE
-CLASSIFICATION = BLOCKED_EXTERNAL_ARTIFACT
-PRODUCT_WIP_BLOCKED = NO
+SWE_RPG_REPOSITORY = PUBLIC_AND_NONEMPTY
+PINNED_REVISION = 688ed7918cbcabe6c9d9b9f393fad1053b286dd9
+CANONICAL_DATASET = 163 INSTANCES
+REQUIREMENT_CLARIFICATION_GROUND_TRUTHS = PRESENT
+IMPLEMENTATION_PLANNING_GROUND_TRUTHS = PRESENT
+DOCKER_EVALUATOR = PRESENT
+MODAL_EVALUATOR = PRESENT
+FULL_INDEPENDENT_BENCHMARK_REPRODUCTION = NOT_RUN
+PRODUCT_AUTHORITY = NO
 ```
 
-Do not convert this absence into a fabricated code pin or a product failure. ClarifyCodeBench and deterministic metaO assertions remain sufficient to continue Project Discovery design/testing independently.
+Publication/pinning is therefore resolved. A later independent execution may strengthen empirical evidence, but benchmark publication and exact source pinning are no longer externally blocked and are not required to grant Project Discovery readiness authority.
 
 ## Research limitations
 
