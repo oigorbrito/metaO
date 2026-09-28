@@ -74,7 +74,8 @@ class LangGraphOrchestratorAdapter:
         self._health_lock = RLock()
         self._descriptor = OrchestratorDescriptor(
             orchestrator_id=orchestrator_id, version=version,
-            capabilities=frozenset({"workflow", "agent"}), metadata={"adapter": "langgraph"},
+            capabilities=frozenset({"workflow", "agent"}),
+            metadata={"adapter": "langgraph", "workload_identity": "unsupported"},
         )
         self._config_id = config_id
         self._failure_origin_authority = failure_origin_authority
