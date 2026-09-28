@@ -45,3 +45,7 @@ ONE_GATE_PASS != COMPOSED_SYSTEM_PASS
 ```
 
 This registry is validation metadata only and has no product, routing, policy, or Acceptance authority.
+
+## Integration baseline
+
+This branch has been synchronized with current `main@663ad81b4e53665d573487226689a4a48fbd1a1b` without force-push. Exact-head CI evidence must be taken from the post-synchronization PR head.
