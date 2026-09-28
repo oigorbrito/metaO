@@ -293,7 +293,10 @@ impl RuntimeWorkloadIdentity {
             .trust_root_ref
             .as_deref()
             .ok_or(WorkloadIdentityAdmissionError::UntrustedTrustRoot)?;
-        if !trust_configuration.trusted_root_refs.contains(trust_root_ref) {
+        if !trust_configuration
+            .trusted_root_refs
+            .contains(trust_root_ref)
+        {
             return Err(WorkloadIdentityAdmissionError::UntrustedTrustRoot);
         }
         Ok(())
@@ -328,10 +331,6 @@ impl RuntimeWorkloadIdentity {
             runtime_version: execution_identity.runtime_version.clone(),
             config_id: execution_identity.config_id.clone(),
         };
-        self.validate_against_trust_configuration(
-            &expected_binding,
-            trust_configuration,
-            now_epoch,
-        )
+        self.validate_against_trust_configuration(&expected_binding, trust_configuration, now_epoch)
     }
 }
