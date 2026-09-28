@@ -54,6 +54,64 @@ class BlockMHostileTrustAcceptance(unittest.TestCase):
         with self.assertRaises(ReplayDetected):
             reject_replay("attestation-1", seen)
 
+    def test_freshness_rejects_non_finite_timestamps_and_inverted_intervals(self):
+        for bad_val in (float("nan"), float("inf"), float("-inf")):
+            with self.subTest(bad_val=bad_val):
+                with self.assertRaisesRegex(ValueError, "must be finite"):
+                    verify_freshness(
+                        issued_at_epoch=bad_val,
+                        expires_at_epoch=20,
+                        now_epoch=15,
+                    )
+                with self.assertRaisesRegex(ValueError, "must be finite"):
+                    verify_freshness(
+                        issued_at_epoch=10,
+                        expires_at_epoch=bad_val,
+                        now_epoch=15,
+                    )
+                with self.assertRaisesRegex(ValueError, "must be finite"):
+                    verify_freshness(
+                        issued_at_epoch=10,
+                        expires_at_epoch=20,
+                        now_epoch=bad_val,
+                    )
+                with self.assertRaisesRegex(ValueError, "must be finite"):
+                    verify_freshness(
+                        issued_at_epoch=10,
+                        expires_at_epoch=20,
+                        now_epoch=15,
+                        allowed_clock_skew_s=bad_val,
+                    )
+
+        with self.assertRaisesRegex(
+            ValueError, "expires_at_epoch cannot precede issued_at_epoch"
+        ):
+            verify_freshness(
+                issued_at_epoch=20,
+                expires_at_epoch=10,
+                now_epoch=15,
+            )
+
+    def test_empty_or_whitespace_identifiers_rejected(self):
+        seen = set()
+        for empty_val in ("", "   "):
+            with self.subTest(empty_val=empty_val):
+                with self.assertRaisesRegex(
+                    ValueError, "attestation_id must be non-empty"
+                ):
+                    reject_replay(empty_val, seen)
+                with self.assertRaisesRegex(
+                    ValueError, "verifier_id must be non-empty"
+                ):
+                    verify_trust_root(empty_val, trusted_verifiers={"v1"})
+                with self.assertRaisesRegex(ValueError, "identity must be non-empty"):
+                    verify_attestation(
+                        StandardCryptoProvider(lambda **kw: True),
+                        artifact=b"art",
+                        attestation=b"att",
+                        identity=empty_val,
+                    )
+
     def test_revoked_or_untrusted_verifier_fails_closed(self):
         trusted = {"verifier-good", "verifier-revoked"}
         self.assertTrue(
