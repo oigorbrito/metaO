@@ -22,6 +22,10 @@ fn fixture_schema_and_source_pins_are_explicit() {
     assert!(sources
         .iter()
         .any(|source| source["reference"] == "arXiv:2608.09072v1"));
+    assert!(sources.iter().any(|source| {
+        source["reference"] == "Xin-Zhou-smu/SWE-RPG-Bench"
+            && source["pinned_revision"] == "688ed7918cbcabe6c9d9b9f393fad1053b286dd9"
+    }));
 }
 
 #[test]

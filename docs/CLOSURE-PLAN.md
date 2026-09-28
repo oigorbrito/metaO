@@ -299,6 +299,6 @@ Remaining non-local closure items include:
 - real credential broker issue/renew/revoke lifecycle is not configured locally;
 - bounded formal model execution remains separate from implementation proof;
 - hosted GitHub Actions remains governed by issue #71 until a hosted run reaches configured repository steps;
-- SWE-RPG executable publication/pinning remains external under issue #180 where still applicable;
+- SWE-RPG executable publication/pinning is resolved at `Xin-Zhou-smu/SWE-RPG-Bench@688ed7918cbcabe6c9d9b9f393fad1053b286dd9`; full independent benchmark reproduction remains separate empirical work;
 - numeric hard-gate audit #420-#429 was converged by #443 and qualified successfully on integrated main;
 - stale remote branches are repository hygiene and should be deleted once branch-delete access is available.
