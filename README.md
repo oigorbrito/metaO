@@ -1,17 +1,107 @@
 # metaO
 
-metaO is a meta-orchestrator / control plane for selecting, governing, supervising, and independently accepting the work of pluggable agent orchestrators.
+**Framework-neutral control plane for governing pluggable agent orchestrators without letting the orchestrator own policy, runtime qualification, recovery, or final acceptance.**
 
-Architecture and implementation decisions are evidence-driven and documented under `docs/`.
+metaO exists for a specific problem: when multiple orchestrators/runtimes are available, the system that *does the work* should not automatically become the system that decides whether the work was authorized, healthy, verified, or accepted.
 
-Current canonical baseline:
+```text
+Mission
+  ↓
+Policy / Budget
+  ↓
+Runtime admission / selection
+  ↓
+Orchestrator / runtime
+  ↓
+Evidence
+  ↓
+Independent acceptance
+  ↓
+Accept / Replan / Block
+```
 
-- [`docs/POST-MVP-OPERATIONAL-BASELINE-V1.md`](docs/POST-MVP-OPERATIONAL-BASELINE-V1.md)
-- [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
-- [`docs/CAPABILITY-MAP.md`](docs/CAPABILITY-MAP.md)
-- [`docs/REQUIREMENTS.md`](docs/REQUIREMENTS.md)
-- [`docs/QUALITY-MODEL.md`](docs/QUALITY-MODEL.md)
-- [`docs/DOCUMENT-AUTHORITY-MAP.md`](docs/DOCUMENT-AUTHORITY-MAP.md) — ownership and precedence across current, operational, and historical documentation.
+The central rule is:
+
+```text
+ORCHESTRATOR_DONE != METAO_ACCEPTED
+```
+
+## What metaO owns
+
+- policy and budget authority;
+- runtime admission and health;
+- certification and revocation;
+- mission supervision and durable state;
+- fencing / restart / recovery boundaries;
+- evidence normalization;
+- independent acceptance;
+- framework/runtime adapters behind a neutral core boundary.
+
+## What metaO deliberately does not claim
+
+metaO is **not** presented as a proven production platform merely because these mechanisms exist.
+
+Current evidence includes qualified local/operator paths, integration tests, multiprocess/fault-injection slices, real runtime evidence for selected boundaries, and a deterministic clean-room quickstart.
+
+That does **not** automatically establish:
+
+- production-scale economics;
+- broad external-provider reliability;
+- superiority over simpler embedded governance;
+- that every control-plane mechanism is necessary in every deployment.
+
+The project treats those as separate empirical questions.
+
+## Architecture position
+
+metaO is intentionally above concrete orchestrators:
+
+```text
+                 metaO
+                   │
+       ┌───────────┼───────────┐
+       ▼           ▼           ▼
+   runtime A   runtime B   runtime C
+       │           │           │
+       └───────────┼───────────┘
+                   ▼
+             normalized evidence
+                   ▼
+          independent acceptance
+```
+
+Framework-specific SDKs belong behind adapters. Replacing an orchestrator should not require moving policy, budget, recovery, or acceptance authority into that orchestrator.
+
+## Evidence status
+
+The current capability map distinguishes implementation from the level of evidence supporting each capability.
+
+Representative qualified areas include:
+
+- framework-neutral contract;
+- independent acceptance;
+- governance / budget / approval;
+- durable mission state;
+- runtime admission / health;
+- runtime certification / revocation;
+- adapter boundaries;
+- local release gates;
+- Rust discovery / governed-execution composition;
+- external-effect deduplication;
+- multiprocess fencing;
+- composed fault-injection/system-closure tests;
+- canonical operator bootstrap and clean-room onboarding.
+
+Some areas remain partial, specified, or externally blocked. In particular, external-provider/runtime evidence is not generalized beyond the exact paths exercised.
+
+Canonical evidence view:
+
+- [Capability map](docs/CAPABILITY-MAP.md)
+- [Post-MVP operational baseline](docs/POST-MVP-OPERATIONAL-BASELINE-V1.md)
+- [Architecture](docs/ARCHITECTURE.md)
+- [Requirements](docs/REQUIREMENTS.md)
+- [Quality model](docs/QUALITY-MODEL.md)
+- [Document authority map](docs/DOCUMENT-AUTHORITY-MAP.md)
 
 ## Engineering workflow
 
