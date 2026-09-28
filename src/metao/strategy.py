@@ -125,7 +125,7 @@ class DeterministicScorer:
 
     @staticmethod
     def _clamp01(value: float) -> float:
-        # Performance optimization: Fast ternary branch avoids built-in max/min call overhead (~5x faster).
+        # Avoid nested built-in calls on this hot-path clamp while preserving finite-input semantics.
         return 0.0 if value < 0.0 else (1.0 if value > 1.0 else value)
 
     def score(self, *, outcome: float, quality: float, latency_ms: float, cost: float) -> ScoreBreakdown:
@@ -154,8 +154,7 @@ class CostQualityRouter:
         self.scorer = scorer or DeterministicScorer()
 
     def rank(self, pools: Iterable[OrchestratorPoolState], *, now_epoch: float | None = None) -> Tuple[RoutingCandidate, ...]:
-        # Performance optimization: Single-pass candidate classification eliminates multiple list/tuple
-        # allocations and redundant iterations over candidate pools (~18% faster router ranking).
+        # Single-pass classification avoids repeated candidate-pool traversal and intermediate tuples.
         normal, recovering, unknown = [], [], []
         for pool in pools:
             if pool.capacity_available(now_epoch=now_epoch):
