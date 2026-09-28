@@ -7,7 +7,8 @@
     "dev": "tsx server.ts",
     "build": "vite build",
     "start": "tsx server.ts",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:web-security": "tsx tests/securityHeaders.test.ts"
   },
   "dependencies": {
     "cors": "^2.8.5",
