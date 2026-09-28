@@ -1,0 +1,72 @@
+{
+  "schema": "metao-workload-identity-donors-v1",
+  "issue": 159,
+  "evidence_classification": "REFERENCE_PIN_ONLY",
+  "real_spire_execution": false,
+  "changes_product_runtime_dependencies": false,
+  "spiffe": {
+    "repository": "https://github.com/spiffe/spiffe",
+    "revision": "f97c46dfd0ff0d4e412cce5c73846a9ca32a99a2",
+    "reference_paths": [
+      {
+        "path": "standards/SPIFFE-ID.md",
+        "blob_sha": "caa1bef4671a9f825cffc342d5802f430c7e1258",
+        "role": "AUTHENTICATED_IDENTITY_FACT"
+      },
+      {
+        "path": "standards/X509-SVID.md",
+        "blob_sha": "cec8b73004a5ea4c90c18478999dfddb1ef841bc",
+        "role": "SUPPORTED_REFERENCE"
+      },
+      {
+        "path": "standards/JWT-SVID.md",
+        "blob_sha": "8f0f39c1007ce786b5a7214ac02e21c453081270",
+        "role": "SUPPORTED_REFERENCE"
+      },
+      {
+        "path": "standards/SPIFFE_Workload_API.md",
+        "blob_sha": "f56a8761f9f906bc54e3541636253afc700f7696",
+        "role": "ADAPTER_INTEGRATION_REFERENCE"
+      },
+      {
+        "path": "standards/SPIFFE_Trust_Domain_and_Bundle.md",
+        "blob_sha": "33746e4703f8056a5631a1de1cc2d35ffadaff35",
+        "role": "AUTHORITATIVE_TRUST_CONFIGURATION_REFERENCE"
+      }
+    ]
+  },
+  "spire": {
+    "repository": "https://github.com/spiffe/spire",
+    "release": "v1.15.3",
+    "annotated_tag_object": "af69d3fae6c82db1e19107b53a311cb5ec264ec7",
+    "release_commit": "2f7861ae3923caf1f57eb087fc2928d58c0fb1d2",
+    "reference_paths": [
+      {
+        "path": "pkg/agent/endpoints/workload/handler.go",
+        "blob_sha": "d67c15e01d11e9da5b3e1f935379d8fe08f31d0a"
+      },
+      {
+        "path": "pkg/agent/agent.go",
+        "blob_sha": "c96b52ea1762316d23e4195671857dbda196d294"
+      },
+      {
+        "path": "cmd/spire-agent/cli/run/run.go",
+        "blob_sha": "11b3a42dabc6403f94548cbede4637d6a00467bd"
+      }
+    ]
+  },
+  "authority_boundary": {
+    "spiffe_identity_is_policy_authority": false,
+    "caller_supplied_trust_root_allowed": false,
+    "dev_identity_can_claim_production_attestation": false,
+    "spire_runtime_dependency_in_core": false,
+    "metao_policy_authority_remains_authoritative": true
+  },
+  "remaining_external_evidence": [
+    "real SPIRE deployment",
+    "credential expiry and rotation execution",
+    "identity versus runtime-registration mismatch execution",
+    "identity versus OMA7 execution-context mismatch execution",
+    "two runtime adapters exposing equivalent identity facts or explicit unsupported state"
+  ]
+}
