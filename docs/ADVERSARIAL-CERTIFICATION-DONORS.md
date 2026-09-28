@@ -69,3 +69,7 @@ UNIVERSAL_SAFETY_CLAIM = NOT_AUTHORIZED
 ```
 
 Running AgentDojo/PyRIT against real or credential-backed runtimes remains separate external evidence work and requires the controlled environment described in #162.
+
+## Integration baseline
+
+This branch has been synchronized with current `main@663ad81b4e53665d573487226689a4a48fbd1a1b` without force-push. Exact-head CI evidence must be taken from the post-synchronization PR head.
