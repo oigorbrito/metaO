@@ -1,4 +1,5 @@
 use metao_contracts::execution_lease::BoundExecutionRuntimeIdentity;
+use metao_contracts::{EvidenceEnvelope, ExecutionId, MissionId, RuntimeId};
 use metao_contracts::workload_identity::{
     RuntimeIdentityBinding, RuntimeWorkloadIdentity, WorkloadCredentialKind,
     WorkloadIdentityAdmissionError, WorkloadIdentityAssurance, WorkloadIdentityError,
@@ -36,6 +37,31 @@ fn execution_identity() -> BoundExecutionRuntimeIdentity {
         lease_generation: 4,
         fencing_token: 9,
         evidence_ref: "dispatch-evidence-1".to_string(),
+    }
+}
+
+fn evidence() -> EvidenceEnvelope {
+    EvidenceEnvelope {
+        evidence_id: "evidence-1".to_string(),
+        obligation_id: "obligation-1".to_string(),
+        mission_id: MissionId::new("mission-1").expect("mission id"),
+        execution_id: ExecutionId::new("exec-1").expect("execution id"),
+        orchestrator_id: RuntimeId::new("runtime-a").expect("runtime id"),
+        adapter_version: "adapter-v1".to_string(),
+        attempt_id: "attempt-1".to_string(),
+        subject_id: "subject-1".to_string(),
+        subject_state_id: "subject-state-1".to_string(),
+        verification_context_id: "verify-context-1".to_string(),
+        policy_bundle_id: "policy-1".to_string(),
+        verifier_id: "verifier-1".to_string(),
+        payload_digest: "sha256:payload".to_string(),
+        provenance_root: "provenance-root-1".to_string(),
+        authority_id: "authority-1".to_string(),
+        passed: true,
+        created_at_epoch: 150.0,
+        expires_at_epoch: Some(180.0),
+        approval_id: None,
+        confidence: Some(1.0),
     }
 }
 
@@ -372,6 +398,78 @@ fn invalid_execution_binding_cannot_be_used_for_identity_admission() {
     assert_eq!(
         value.validate_for_execution_runtime(&execution, &trust_configuration(), 150),
         Err(WorkloadIdentityAdmissionError::InvalidExecutionIdentity)
+    );
+}
+
+#[test]
+fn matching_evidence_is_applicable_to_attested_execution_identity() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+    assert_eq!(
+        value.validate_evidence_applicability(
+            &execution_identity(),
+            &trust_configuration(),
+            &evidence(),
+            150,
+        ),
+        Ok(())
+    );
+}
+
+#[test]
+fn evidence_mission_execution_or_runtime_mismatch_fails_closed() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+
+    let mut wrong_mission = evidence();
+    wrong_mission.mission_id = MissionId::new("mission-2").expect("mission id");
+    assert_eq!(
+        value.validate_evidence_applicability(
+            &execution_identity(),
+            &trust_configuration(),
+            &wrong_mission,
+            150,
+        ),
+        Err(WorkloadIdentityAdmissionError::EvidenceBindingMismatch)
+    );
+
+    let mut wrong_execution = evidence();
+    wrong_execution.execution_id = ExecutionId::new("exec-2").expect("execution id");
+    assert_eq!(
+        value.validate_evidence_applicability(
+            &execution_identity(),
+            &trust_configuration(),
+            &wrong_execution,
+            150,
+        ),
+        Err(WorkloadIdentityAdmissionError::EvidenceBindingMismatch)
+    );
+
+    let mut wrong_runtime = evidence();
+    wrong_runtime.orchestrator_id = RuntimeId::new("runtime-b").expect("runtime id");
+    assert_eq!(
+        value.validate_evidence_applicability(
+            &execution_identity(),
+            &trust_configuration(),
+            &wrong_runtime,
+            150,
+        ),
+        Err(WorkloadIdentityAdmissionError::EvidenceBindingMismatch)
+    );
+}
+
+#[test]
+fn verification_context_remains_separate_from_workload_identity_binding() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+    let mut evidence = evidence();
+    evidence.verification_context_id = "verify-context-b".to_string();
+
+    assert_eq!(
+        value.validate_evidence_applicability(
+            &execution_identity(),
+            &trust_configuration(),
+            &evidence,
+            150,
+        ),
+        Ok(())
     );
 }
 
