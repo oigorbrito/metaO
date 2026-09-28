@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 
-import { securityHeaders } from '../server';
+import { securityHeaders } from '../src/lib/httpSecurity';
 
 async function main() {
   const app = express();

@@ -3,28 +3,14 @@ import path from 'path';
 import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 
+import { securityHeaders } from './src/lib/httpSecurity';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CLI_BIN = process.env.METAO_CLI_BIN || 'metao';
 const DB_PATH = process.env.METAO_DB || '.metao/metao.db';
 const UI_ACTOR = process.env.METAO_UI_ACTOR || 'operator-ui';
 const MUTATIONS_ENABLED = process.env.METAO_WEB_MUTATIONS === '1';
-
-export function securityHeaders(
-  _req: express.Request,
-  res: express.Response,
-  next: express.NextFunction,
-): void {
-  res.setHeader('X-Content-Type-Options', 'nosniff');
-  res.setHeader('X-Frame-Options', 'DENY');
-  res.setHeader('X-XSS-Protection', '0');
-  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  res.setHeader(
-    'Permissions-Policy',
-    'camera=(), microphone=(), geolocation=()',
-  );
-  next();
-}
 
 function cli(args: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
