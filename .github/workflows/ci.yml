@@ -27,5 +27,7 @@ jobs:
         run: npm install --ignore-scripts
       - name: TypeScript validation
         run: npm run lint
+      - name: Web security headers
+        run: npm run test:web-security
       - name: Web production build
         run: npm run build

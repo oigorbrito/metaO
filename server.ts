@@ -3,6 +3,8 @@ import path from 'path';
 import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 
+import { securityHeaders } from './src/lib/httpSecurity';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const CLI_BIN = process.env.METAO_CLI_BIN || 'metao';
@@ -146,6 +148,7 @@ async function startServer() {
   const app = express();
   const port = Number(process.env.PORT || 3000);
 
+  app.use(securityHeaders);
   app.use(express.json({ limit: '256kb' }));
 
   app.get('/healthz', (_req, res) => res.status(200).send('OK'));
