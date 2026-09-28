@@ -1,13 +1,41 @@
+use metao_contracts::execution_lease::BoundExecutionRuntimeIdentity;
 use metao_contracts::workload_identity::{
     RuntimeIdentityBinding, RuntimeWorkloadIdentity, WorkloadCredentialKind,
-    WorkloadIdentityAssurance, WorkloadIdentityError, WorkloadIdentityEvidenceBasis,
+    WorkloadIdentityAdmissionError, WorkloadIdentityAssurance, WorkloadIdentityError,
+    WorkloadIdentityEvidenceBasis, WorkloadIdentityTrustConfiguration,
+    WorkloadIdentityTrustConfigurationBasis,
 };
+use std::collections::BTreeSet;
 
 fn binding() -> RuntimeIdentityBinding {
     RuntimeIdentityBinding {
         runtime_id: "runtime-a".to_string(),
         runtime_version: "1.2.3".to_string(),
         config_id: "config-7".to_string(),
+    }
+}
+
+fn trust_configuration() -> WorkloadIdentityTrustConfiguration {
+    WorkloadIdentityTrustConfiguration {
+        configuration_ref: "trust-config:prod:v4".to_string(),
+        trust_domain: "example.org".to_string(),
+        trusted_root_refs: BTreeSet::from(["bundle:example.org:v4".to_string()]),
+        basis: WorkloadIdentityTrustConfigurationBasis::AuthoritativeConfiguration,
+    }
+}
+
+fn execution_identity() -> BoundExecutionRuntimeIdentity {
+    BoundExecutionRuntimeIdentity {
+        producer_id: "canonical-dispatch".to_string(),
+        mission_id: "mission-1".to_string(),
+        logical_execution_key: "logical-1".to_string(),
+        execution_id: "exec-1".to_string(),
+        runtime_id: "runtime-a".to_string(),
+        runtime_version: "1.2.3".to_string(),
+        config_id: "config-7".to_string(),
+        lease_generation: 4,
+        fencing_token: 9,
+        evidence_ref: "dispatch-evidence-1".to_string(),
     }
 }
 
@@ -234,6 +262,117 @@ fn unsupported_identity_remains_explicit() {
     let value = RuntimeWorkloadIdentity::new(value).expect("unsupported fact");
     assert_eq!(value.assurance, WorkloadIdentityAssurance::Unsupported);
     assert!(!value.is_currently_applicable(150));
+}
+
+#[test]
+fn authoritative_trust_configuration_admits_matching_attested_identity() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+    assert_eq!(
+        value.validate_against_trust_configuration(&binding(), &trust_configuration(), 150),
+        Ok(())
+    );
+}
+
+#[test]
+fn caller_declared_trust_configuration_is_never_authoritative() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+    let mut configuration = trust_configuration();
+    configuration.basis = WorkloadIdentityTrustConfigurationBasis::CallerDeclared;
+
+    assert_eq!(
+        value.validate_against_trust_configuration(&binding(), &configuration, 150),
+        Err(WorkloadIdentityAdmissionError::NonAuthoritativeTrustConfiguration)
+    );
+}
+
+#[test]
+fn caller_presented_root_must_exist_in_authoritative_configuration() {
+    let mut value = attested();
+    value.trust_root_ref = Some("bundle:attacker:v1".to_string());
+    let value = RuntimeWorkloadIdentity::new(value).expect("structurally valid identity");
+
+    assert_eq!(
+        value.validate_against_trust_configuration(&binding(), &trust_configuration(), 150),
+        Err(WorkloadIdentityAdmissionError::UntrustedTrustRoot)
+    );
+}
+
+#[test]
+fn empty_or_blank_authoritative_root_set_fails_closed() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+
+    let mut empty = trust_configuration();
+    empty.trusted_root_refs.clear();
+    assert_eq!(
+        value.validate_against_trust_configuration(&binding(), &empty, 150),
+        Err(WorkloadIdentityAdmissionError::EmptyTrustedRootSet)
+    );
+
+    let mut blank = trust_configuration();
+    blank.trusted_root_refs = BTreeSet::from([" ".to_string()]);
+    assert_eq!(
+        value.validate_against_trust_configuration(&binding(), &blank, 150),
+        Err(WorkloadIdentityAdmissionError::BlankTrustedRootRef)
+    );
+}
+
+#[test]
+fn trust_domain_must_match_authoritative_configuration() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+    let mut configuration = trust_configuration();
+    configuration.trust_domain = "other.example".to_string();
+
+    assert_eq!(
+        value.validate_against_trust_configuration(&binding(), &configuration, 150),
+        Err(WorkloadIdentityAdmissionError::TrustDomainMismatch)
+    );
+}
+
+#[test]
+fn expired_identity_is_rejected_even_when_root_is_trusted() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+    assert_eq!(
+        value.validate_against_trust_configuration(&binding(), &trust_configuration(), 200),
+        Err(WorkloadIdentityAdmissionError::IdentityNotCurrentlyApplicable)
+    );
+}
+
+#[test]
+fn development_identity_cannot_enter_attested_trust_admission() {
+    let mut value = attested();
+    value.credential_kind = WorkloadCredentialKind::Development;
+    value.assurance = WorkloadIdentityAssurance::Development;
+    value.evidence_basis = WorkloadIdentityEvidenceBasis::Unknown;
+    let value = RuntimeWorkloadIdentity::new(value).expect("development identity");
+
+    assert_eq!(
+        value.validate_against_trust_configuration(&binding(), &trust_configuration(), 150),
+        Err(WorkloadIdentityAdmissionError::IdentityNotAttested)
+    );
+}
+
+#[test]
+fn execution_bound_runtime_mismatch_rejects_identity_evidence() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+    let mut execution = execution_identity();
+    execution.runtime_id = "runtime-b".to_string();
+
+    assert_eq!(
+        value.validate_for_execution_runtime(&execution, &trust_configuration(), 150),
+        Err(WorkloadIdentityAdmissionError::RuntimeBindingMismatch)
+    );
+}
+
+#[test]
+fn invalid_execution_binding_cannot_be_used_for_identity_admission() {
+    let value = RuntimeWorkloadIdentity::new(attested()).expect("valid identity");
+    let mut execution = execution_identity();
+    execution.lease_generation = 0;
+
+    assert_eq!(
+        value.validate_for_execution_runtime(&execution, &trust_configuration(), 150),
+        Err(WorkloadIdentityAdmissionError::InvalidExecutionIdentity)
+    );
 }
 
 #[test]
