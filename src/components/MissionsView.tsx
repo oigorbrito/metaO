@@ -116,12 +116,12 @@ export const MissionsView: React.FC<Props> = ({
             <div className="flex items-center justify-between mb-2">
               <span className="text-[11px] font-mono text-indigo-400 font-semibold uppercase">Custom Workload</span>
               <span className="px-1.5 py-0.5 text-[10px] font-mono bg-indigo-500/10 text-indigo-400 rounded">
-                Configurable
+                Intent only
               </span>
             </div>
             <h4 className="text-sm font-bold text-white mb-1">Custom Mission Spec</h4>
             <p className="text-xs text-slate-400">
-              Configure custom objectives, required capabilities, budgets, policy rules, and verifier contexts.
+              Describe a custom mission intent and budget. Policy, verifier and acceptance authority remain backend-owned.
             </p>
           </div>
           <button
@@ -201,9 +201,9 @@ export const MissionsView: React.FC<Props> = ({
                         >
                           {m.acceptance_decision}
                         </span>
-                        {m.proof && (
+                        {m.acceptance?.proof && (
                           <span className="ml-1 text-[10px] text-slate-500 block">
-                            Signed Proof
+                            Acceptance Proof
                           </span>
                         )}
                       </td>
