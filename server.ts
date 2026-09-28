@@ -10,6 +10,22 @@ const DB_PATH = process.env.METAO_DB || '.metao/metao.db';
 const UI_ACTOR = process.env.METAO_UI_ACTOR || 'operator-ui';
 const MUTATIONS_ENABLED = process.env.METAO_WEB_MUTATIONS === '1';
 
+export function securityHeaders(
+  _req: express.Request,
+  res: express.Response,
+  next: express.NextFunction,
+): void {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-XSS-Protection', '0');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader(
+    'Permissions-Policy',
+    'camera=(), microphone=(), geolocation=()',
+  );
+  next();
+}
+
 function cli(args: string[]): Promise<any> {
   return new Promise((resolve, reject) => {
     execFile(
@@ -146,6 +162,7 @@ async function startServer() {
   const app = express();
   const port = Number(process.env.PORT || 3000);
 
+  app.use(securityHeaders);
   app.use(express.json({ limit: '256kb' }));
 
   app.get('/healthz', (_req, res) => res.status(200).send('OK'));
