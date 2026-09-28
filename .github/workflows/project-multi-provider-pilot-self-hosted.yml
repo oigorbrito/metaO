@@ -64,6 +64,7 @@ jobs:
           python3 - <<'PY'
           import json
           import os
+          import re
           from pathlib import Path
           path = Path(os.environ['RUNNER_TEMP']) / 'project-multi-provider-preflight.json'
           lines = [line for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
@@ -110,14 +111,12 @@ jobs:
           assert sys.version_info >= (3, 13), sys.version
           print(sys.version)
           PY
-      - name: Install metaO and pinned OpenAI Agents runtime
+      - name: Install hermetic metaO provider runtime
         shell: bash
         run: |
           set -euo pipefail
-          python3 -m pip install --upgrade pip
-          python3 -m pip install -e .
-          python3 -m pip install 'openai-agents==0.20.0'
-          python3 -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'"
+          python3 scripts/install_hermetic_pilot_runtime.py > "$RUNNER_TEMP/project-pilot-dependency-install.json"
+          cat "$RUNNER_TEMP/project-pilot-dependency-install.json"
       - name: Materialize SSH verification and identity files
         shell: bash
         run: |
@@ -136,7 +135,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 scripts/project_multi_provider_pilot.py > "$RUNNER_TEMP/project-multi-provider-pilot.json"
+          python3 scripts/run_project_multi_provider_pilot_hermetic.py > "$RUNNER_TEMP/project-multi-provider-pilot.json"
       - name: Validate bounded pilot evidence
         shell: bash
         run: |
@@ -162,5 +161,14 @@ jobs:
           assert evidence['remote_paths_emitted'] is False
           assert len(evidence['checkpoint_sha_lineage']) >= 3
           assert evidence['operational_pilot'] == 'PASS'
+          assert evidence['dependency_identity'] == 'VERIFIED'
+          for key in (
+              'bootstrap_lock_sha256',
+              'runtime_requirements_sha256',
+              'runtime_authority_openai_agents_wheel_sha256',
+          ):
+              assert re.fullmatch(r'[0-9a-f]{64}', evidence[key]), key
+          assert re.fullmatch(r'[0-9a-f]{40}', evidence['runtime_authority_source_commit'])
+          assert re.fullmatch(r'[0-9a-f]{40}', evidence['runtime_authority_uv_lock_blob_sha1'])
           print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
           PY
