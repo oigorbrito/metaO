@@ -157,6 +157,83 @@ rm -rf .metao
 
 For a real application/runtime, replace the example catalog entry with your own `RuntimePlugin` factory and keep the same `metao.runtime_factory:create_operator` composition path. Do not treat the committed `quickstart-local` runtime as a production runtime.
 
+## Web Operator Console
+
+The repository also contains a web operator console for observing and operating the canonical metaO control plane.
+
+The console is a **presentation and adapter layer only**. It does not replace Core and must not mint or override metaO authority.
+
+```text
+WEB_CONSOLE != METAO_AUTHORITY
+ORCHESTRATOR_DONE != METAO_ACCEPTED
+```
+
+The authority boundary is:
+
+```text
+React operator console
+        |
+        | HTTP / presentation DTOs
+        v
+server.ts web adapter
+        |
+        | delegates to the canonical metao CLI/backend
+        v
+metaO control plane
+        |
+        +-- policy and approval
+        +-- runtime admission / quarantine / restore
+        +-- certification and revocation
+        +-- benchmark and observed evidence
+        +-- mission supervision
+        +-- independent acceptance
+        +-- durable state and event ledger
+```
+
+The web layer may display canonical results and request governed operations, but it must not independently decide that a runtime is healthy, a certificate is valid, a policy is allowed, evidence is verified, or a mission is accepted.
+
+### Run the console
+
+First install and configure the Python backend as described in the Operator CLI quickstart above. Then install the web dependencies:
+
+```console
+npm install
+```
+
+Start the development server:
+
+```console
+npm run dev
+```
+
+By default, the web adapter is read-only for state-changing operations. To explicitly allow supported operator mutations in an authorized local environment, set:
+
+PowerShell:
+
+```powershell
+$env:METAO_WEB_MUTATIONS="1"
+npm run dev
+```
+
+Linux/POSIX shell:
+
+```sh
+export METAO_WEB_MUTATIONS=1
+npm run dev
+```
+
+Optional adapter configuration:
+
+- `METAO_CLI_BIN` — installed metaO CLI executable; defaults to `metao`.
+- `METAO_DB` — canonical mission database path; defaults to `.metao/metao.db`.
+- `METAO_UI_ACTOR` — operator identity recorded by supported backend mutations; defaults to `operator-ui`.
+
+Supported console surfaces include missions, runtimes, runtime control, certificates, benchmarks/evidence, doctor diagnostics, and the event ledger.
+
+Custom mission input is intentionally limited to **intent and budget**. The browser cannot declare policy approval, trusted verifiers, authorized authorities, or acceptance decisions. Until a backend-owned custom mission intake contract exists, arbitrary custom mission submission remains fail-closed.
+
+The committed quickstart examples remain available through the console, but they execute the repository-owned canonical mission specifications under `examples/`; the browser does not generate their policy or acceptance authority.
+
 ## Python API Quickstart
 
 The public durable-execution API takes an explicit durable-execution port. With a running Conductor instance:
