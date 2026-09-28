@@ -26,3 +26,7 @@ The supervision calculation assumes failure onset is uniformly distributed betwe
 The health-policy matrix executes the repository's actual Python `RuntimeHealthTracker` over deterministic transient-failure, burst-failure and recovery sequences. It records behavior for 81 parameter combinations and does not mutate `RuntimeHealthPolicy` defaults.
 
 Real-provider API/quota overhead, retry/backoff behavior, handoff cost, MTTR, task completion time, acceptance failure rate and monetary cost remain separate empirical work. No production default should be selected from this synthetic report alone.
+
+## Integration baseline
+
+This branch has been synchronized with current `main@663ad81b4e53665d573487226689a4a48fbd1a1b` without force-push. Exact-head CI evidence must be taken from the post-synchronization PR head.
