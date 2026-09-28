@@ -1,0 +1,77 @@
+{
+  "schema": "metao-adversarial-certification-donors-v1",
+  "issue": 162,
+  "evidence_classification": "REFERENCE_PIN_ONLY",
+  "real_adversarial_campaign_executed": false,
+  "changes_product_runtime_dependencies": false,
+  "core_contract": "experiments/rust-chassis-a/metao-contracts/src/runtime_certification.rs",
+  "donors": {
+    "agentdojo": {
+      "repository": "https://github.com/ethz-spylab/agentdojo",
+      "package": "agentdojo",
+      "version": "0.1.35",
+      "git_ref": "refs/tags/v0.1.35",
+      "release_commit": "a75aba7631d3ca5fb7ab938965c97ead2f9ff84b",
+      "released_on": "2025-10-27",
+      "artifacts": {
+        "sdist_sha256": "9eacbc89d996f8656b235ad7b626bcf840b1ace7101174ca62d790c7c6d62956",
+        "wheel_sha256": "364bea4219716b716bf639f504d195943f7f6a5535d312ca41d7098704a2affd"
+      },
+      "reference_paths": [
+        "src/agentdojo/benchmark.py",
+        "src/agentdojo/attacks/",
+        "src/agentdojo/task_suite/",
+        "src/agentdojo/functions_runtime.py"
+      ],
+      "paper": {
+        "title": "AgentDojo: A Dynamic Environment to Evaluate Prompt Injection Attacks and Defenses for LLM Agents",
+        "venue": "NeurIPS 2024 Datasets and Benchmarks Track",
+        "url": "https://openreview.net/forum?id=m1YYAQjO3w"
+      },
+      "normalization": {
+        "benign_utility": "AgentDojo utility result -> CertificationCategoryResult.benign_utility_passed",
+        "security_observation": "AgentDojo security result may contribute to forbidden_action_observed only when evaluator execution itself is conclusive",
+        "evaluator_or_api_error": "EvaluatorError",
+        "omitted_category": "NotRequested",
+        "unavailable_or_ambiguous_result": "Unknown"
+      }
+    },
+    "pyrit": {
+      "repository": "https://github.com/microsoft/PyRIT",
+      "package": "pyrit",
+      "version": "1.1.0",
+      "git_ref": "refs/tags/v1.1.0",
+      "release_commit_prefix": "d0524f0",
+      "released_on": "2026-09-04",
+      "artifacts": {
+        "sdist_sha256": "356f0ebb408df977f14cd0b6464d69bd41cc7b8c50df286929f3f536d3682ba1",
+        "wheel_sha256": "84581036bace7ff2aa92712e1e3f472a3a3bccc77567d5fbe642540c0ba20b0a"
+      },
+      "reference_paths": [
+        "doc/code/framework.md",
+        "doc/scanner/1_pyrit_scan.py",
+        "pyrit/score/scorer.py",
+        "pyrit/executor/attack/core/attack_strategy.py"
+      ],
+      "paper": {
+        "title": "PyRIT: Democratizing AI Red Teaming Through Open-Source Tooling",
+        "doi": "10.48550/arXiv.2410.02828",
+        "url": "https://doi.org/10.48550/arXiv.2410.02828"
+      },
+      "normalization": {
+        "attack_success_against_forbidden_objective": "Fail",
+        "conclusive_attack_failure_with_complete_category_evidence": "Pass",
+        "undetermined_score_or_outcome": "Unknown",
+        "evaluator_or_scorer_error": "EvaluatorError",
+        "omitted_category": "NotRequested"
+      }
+    }
+  },
+  "authority_boundary": {
+    "donor_is_runtime_dependency": false,
+    "donor_can_self_certify": false,
+    "donor_result_is_universal_safety_proof": false,
+    "independent_metaO_certification_remains_authority": true,
+    "attacks_default_to_controlled_non_production_fixture": true
+  }
+}
