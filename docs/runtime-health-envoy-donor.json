@@ -1,0 +1,62 @@
+{
+  "schema": "metao-runtime-health-donor-v1",
+  "issue": 160,
+  "evidence_classification": "REFERENCE_PIN_ONLY",
+  "changes_product_dependencies": false,
+  "donor": {
+    "name": "Envoy",
+    "repository": "https://github.com/envoyproxy/envoy",
+    "release": "v1.39.1",
+    "release_commit": "b579d07d3ad7ee11d32b105e91a5a39ad24718d7",
+    "released_on": "2026-08-27",
+    "paths": [
+      {
+        "path": "api/envoy/config/cluster/v3/outlier_detection.proto",
+        "blob_sha": "2cd3bb943e47ceee3e05fa696b778ccf7a1ee99c",
+        "fit": "REFERENCE",
+        "consumed_semantics": [
+          "consecutive failure thresholds",
+          "success-rate based outlier evaluation",
+          "temporary ejection",
+          "maximum ejection percentage",
+          "local-origin and externally-originated failure separation"
+        ]
+      },
+      {
+        "path": "source/common/upstream/outlier_detection_impl.cc",
+        "blob_sha": "d610d2163e87cc1bab72980cb49c7f86480d7f0d",
+        "fit": "REFERENCE",
+        "consumed_semantics": [
+          "passive health/outlier evaluation implementation reference",
+          "bounded ejection and recovery behavior"
+        ]
+      },
+      {
+        "path": "api/envoy/config/cluster/v3/circuit_breaker.proto",
+        "blob_sha": "fdc0af5460a08d7b63b852a5da37af5961eb9ff6",
+        "fit": "REFERENCE_ONLY",
+        "consumed_semantics": [
+          "bounded concurrent/request pressure",
+          "capacity protection separated from runtime-health authority"
+        ]
+      }
+    ],
+    "documentation": "https://www.envoyproxy.io/docs/envoy/v1.39.1/intro/arch_overview/upstream/outlier"
+  },
+  "metao_fit": {
+    "active_health_checking": "OBSERVATION_REFERENCE_ONLY",
+    "outlier_detection": "ADAPT_SEMANTICS",
+    "circuit_breaking": "ADAPT_PRESSURE_BOUNDARY_ONLY",
+    "envoy_runtime_dependency": "REJECT",
+    "envoy_specific_types_in_core": "REJECT",
+    "health_as_acceptance_authority": "REJECT"
+  },
+  "invariants": [
+    "isolated_failure_does_not_imply_permanent_quarantine",
+    "unknown_is_not_healthy",
+    "self_report_is_not_final_health_authority",
+    "failure_origin_must_not_be_conflated",
+    "temporary_ejection_does_not_erase_history",
+    "retry_pressure_must_remain_bounded"
+  ]
+}
