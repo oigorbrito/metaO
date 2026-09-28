@@ -8,9 +8,18 @@ import { metaoEngine } from './src/lib/metaoEngine';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-async function startServer() {
+export function createServerApp() {
   const app = express();
-  const PORT = process.env.PORT || 3000;
+
+  // Security HTTP Headers Middleware (defense-in-depth)
+  app.use((_req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-XSS-Protection', '0');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+    next();
+  });
 
   app.use(cors());
   app.use(express.json());
@@ -44,7 +53,7 @@ async function startServer() {
 
   app.post('/api/runtimes/:id/quarantine', (req, res) => {
     try {
-      const { reason, actor } = req.body;
+      const { reason, actor } = (req.body && typeof req.body === 'object') ? req.body : {};
       const runtime = metaoEngine.quarantineRuntime(
         req.params.id,
         reason || 'Operator quarantined runtime',
@@ -58,7 +67,7 @@ async function startServer() {
 
   app.post('/api/runtimes/:id/restore', (req, res) => {
     try {
-      const { reason, actor } = req.body;
+      const { reason, actor } = (req.body && typeof req.body === 'object') ? req.body : {};
       const runtime = metaoEngine.restoreRuntime(
         req.params.id,
         reason || 'Operator restored runtime',
@@ -83,7 +92,7 @@ async function startServer() {
 
   app.post('/api/certificates/:id/revoke', (req, res) => {
     try {
-      const { reason, actor } = req.body;
+      const { reason, actor } = (req.body && typeof req.body === 'object') ? req.body : {};
       const cert = metaoEngine.revokeCertificate(
         req.params.id,
         reason || 'Security or conformance revocation',
@@ -139,7 +148,7 @@ async function startServer() {
 
   app.post('/api/missions/:id/approve', (req, res) => {
     try {
-      const { approver, approved, reason } = req.body;
+      const { approver, approved, reason } = (req.body && typeof req.body === 'object') ? req.body : {};
       const record = metaoEngine.approveMission(
         req.params.id,
         approver || 'operator',
@@ -154,7 +163,7 @@ async function startServer() {
 
   app.post('/api/missions/:id/cancel', (req, res) => {
     try {
-      const { reason } = req.body;
+      const { reason } = (req.body && typeof req.body === 'object') ? req.body : {};
       const record = metaoEngine.cancelMission(req.params.id, reason);
       res.json(record);
     } catch (err: any) {
@@ -172,6 +181,13 @@ async function startServer() {
       res.status(500).json({ error: err.message });
     }
   });
+
+  return app;
+}
+
+async function startServer() {
+  const app = createServerApp();
+  const PORT = process.env.PORT || 3000;
 
   // Vite middleware in dev or static serving in prod
   const isProduction = process.env.NODE_ENV === 'production';
@@ -207,7 +223,9 @@ async function startServer() {
   });
 }
 
-startServer().catch((err) => {
-  console.error('Fatal server startup error:', err);
-  process.exit(1);
-});
+if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
+  startServer().catch((err) => {
+    console.error('Fatal server startup error:', err);
+    process.exit(1);
+  });
+}
