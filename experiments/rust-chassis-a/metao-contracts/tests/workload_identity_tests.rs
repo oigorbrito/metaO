@@ -1,11 +1,11 @@
 use metao_contracts::execution_lease::BoundExecutionRuntimeIdentity;
-use metao_contracts::{EvidenceEnvelope, ExecutionId, MissionId, RuntimeId};
 use metao_contracts::workload_identity::{
     RuntimeIdentityBinding, RuntimeWorkloadIdentity, WorkloadCredentialKind,
     WorkloadIdentityAdmissionError, WorkloadIdentityAssurance, WorkloadIdentityError,
     WorkloadIdentityEvidenceBasis, WorkloadIdentityTrustConfiguration,
     WorkloadIdentityTrustConfigurationBasis,
 };
+use metao_contracts::{EvidenceEnvelope, ExecutionId, MissionId, RuntimeId};
 use std::collections::BTreeSet;
 
 fn binding() -> RuntimeIdentityBinding {
