@@ -75,6 +75,7 @@ pub enum WorkloadIdentityAdmissionError {
     TrustDomainMismatch,
     UntrustedTrustRoot,
     InvalidExecutionIdentity,
+    EvidenceBindingMismatch,
 }
 
 impl WorkloadIdentityTrustConfiguration {
@@ -332,5 +333,22 @@ impl RuntimeWorkloadIdentity {
             config_id: execution_identity.config_id.clone(),
         };
         self.validate_against_trust_configuration(&expected_binding, trust_configuration, now_epoch)
+    }
+
+    pub fn validate_evidence_applicability(
+        &self,
+        execution_identity: &crate::execution_lease::BoundExecutionRuntimeIdentity,
+        trust_configuration: &WorkloadIdentityTrustConfiguration,
+        evidence: &crate::EvidenceEnvelope,
+        now_epoch: i64,
+    ) -> Result<(), WorkloadIdentityAdmissionError> {
+        self.validate_for_execution_runtime(execution_identity, trust_configuration, now_epoch)?;
+        if evidence.mission_id.as_str() != execution_identity.mission_id
+            || evidence.execution_id.as_str() != execution_identity.execution_id
+            || evidence.orchestrator_id.as_str() != execution_identity.runtime_id
+        {
+            return Err(WorkloadIdentityAdmissionError::EvidenceBindingMismatch);
+        }
+        Ok(())
     }
 }
