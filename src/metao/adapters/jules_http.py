@@ -270,8 +270,8 @@ class JulesHttpOrchestratorAdapter:
         session_name = self._canonical_session_name(created.get("name"))
         with self._lock:
             self._sessions[request.execution_id] = session_name
-        request.observe_external_execution_id(session_name)
             cancelled = request.execution_id in self._cancelled
+        request.observe_external_execution_id(session_name)
         if cancelled:
             self._request("DELETE", f"/{session_name}")
         return session_name
