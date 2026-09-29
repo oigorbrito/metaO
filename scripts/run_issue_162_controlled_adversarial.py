@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import argparse
 from hashlib import sha256
 from importlib.metadata import version as package_version
 import json
@@ -255,6 +256,10 @@ def negative_control(case: RuntimeCase) -> dict[str, Any]:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--output", type=Path)
+    args = parser.parse_args()
+
     if package_version("crewai") != CREWAI_VERSION:
         raise SystemExit("unexpected CrewAI version")
     if package_version("langgraph") != LANGGRAPH_VERSION:
@@ -295,7 +300,13 @@ def main() -> int:
         "reports": reports,
         "negative_controls": controls,
     }
-    print(json.dumps(payload, sort_keys=True, separators=(",", ":")))
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n"
+    if args.output is not None:
+        args.output.parent.mkdir(parents=True, exist_ok=True)
+        args.output.write_text(encoded, encoding="utf-8")
+        print(f"wrote controlled adversarial evidence: {args.output}")
+    else:
+        print(encoded, end="")
     return 0
 
 
