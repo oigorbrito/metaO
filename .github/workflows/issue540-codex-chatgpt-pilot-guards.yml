@@ -1,0 +1,70 @@
+name: Issue 540 Codex ChatGPT Pilot Guards
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue540-codex-chatgpt-pilot-guards.yml'
+      - 'scripts/run_issue_540_codex_chatgpt_pilot.py'
+      - 'src/metao/project_supervision.py'
+      - 'src/metao/adapters/codex_app_server.py'
+      - 'src/metao/adapters/codex_app_server_stdio.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  guard-qualification:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '22'
+
+      - name: Install metaO and pinned Codex CLI
+        run: |
+          python -m pip install -e .
+          npm install -g '@openai/codex@0.153.3'
+          codex --version | grep -F '0.153.3'
+
+      - name: Compile Codex ChatGPT pilot
+        run: python -m py_compile scripts/run_issue_540_codex_chatgpt_pilot.py
+
+      - name: Prove API key path fails closed
+        env:
+          OPENAI_API_KEY: synthetic-must-not-be-used
+        run: |
+          set +e
+          output="$(python scripts/run_issue_540_codex_chatgpt_pilot.py             --commit "${{ github.event.pull_request.head.sha || github.sha }}"             --output "$RUNNER_TEMP/should-not-exist.json"             --auth-check-only 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          test "$status" -ne 0
+          printf '%s\n' "$output" | grep -F 'OPENAI_API_KEY must be unset'
+          test ! -e "$RUNNER_TEMP/should-not-exist.json"
+
+      - name: Prove unauthenticated hosted runner fails closed
+        env:
+          OPENAI_API_KEY: ''
+        run: |
+          set +e
+          output="$(python scripts/run_issue_540_codex_chatgpt_pilot.py             --commit "${{ github.event.pull_request.head.sha || github.sha }}"             --output "$RUNNER_TEMP/should-not-exist.json"             --auth-check-only 2>&1)"
+          status=$?
+          set -e
+          printf '%s\n' "$output"
+          test "$status" -ne 0
+          printf '%s\n' "$output" | grep -F 'ChatGPT-authenticated Codex session required'
+          test ! -e "$RUNNER_TEMP/should-not-exist.json"
+
+      - name: Project supervision focused regressions
+        run: |
+          python tests/unit/test_issue_507_project_supervision.py
+          python tests/integration/test_issue_521_project_supervision_real_bridge.py
+
+      - name: Full unit suite regression
+        run: python -m unittest discover -s tests/unit -p 'test_*.py' -v
