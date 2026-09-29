@@ -34,10 +34,12 @@ jobs:
 
       - name: Confirm exact SPIRE version
         run: |
-          "$RUNNER_TEMP/spire-release/bin/spire-server" --version
-          "$RUNNER_TEMP/spire-release/bin/spire-agent" --version
-          "$RUNNER_TEMP/spire-release/bin/spire-server" --version | grep -F "${SPIRE_VERSION}"
-          "$RUNNER_TEMP/spire-release/bin/spire-agent" --version | grep -F "${SPIRE_VERSION}"
+          SERVER_VERSION="$("$RUNNER_TEMP/spire-release/bin/spire-server" --version 2>&1)"
+          AGENT_VERSION="$("$RUNNER_TEMP/spire-release/bin/spire-agent" --version 2>&1)"
+          printf '%s\n' "$SERVER_VERSION"
+          printf '%s\n' "$AGENT_VERSION"
+          test "$SERVER_VERSION" = "$SPIRE_VERSION"
+          test "$AGENT_VERSION" = "$SPIRE_VERSION"
 
       - name: Execute real workload attestation and restart
         env:
