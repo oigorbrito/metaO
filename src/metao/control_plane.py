@@ -164,6 +164,7 @@ AttemptStarted = Callable[[AttemptExecutionContext], None]
 
 
 AttemptFinished = Callable[[AttemptExecutionContext, ExecutionResult, float], None]
+ExternalExecutionObserved = Callable[[AttemptExecutionContext, str], None]
 
 
 
@@ -686,6 +687,9 @@ def execute_mission_once(
     on_attempt_finished: AttemptFinished | None = None,
 
 
+    on_external_execution_observed: ExternalExecutionObserved | None = None,
+
+
     selection_policy: SelectionPolicy | None = None,
 
 
@@ -989,16 +993,7 @@ def execute_mission_once(
 
 
 
-    request = ExecutionRequest(
-
-
-        execution_id=execution_id,
-
-
-        mission=mission,
-
-
-        context={
+    request_context = {
             **external_context,
 
 
@@ -1026,10 +1021,7 @@ def execute_mission_once(
             "created_at_epoch": now_epoch,
 
 
-        },
-
-
-    )
+        }
 
 
     clock = attempt_clock or time
@@ -1066,6 +1058,18 @@ def execute_mission_once(
 
 
         on_attempt_started(attempt_context)
+
+
+    request = ExecutionRequest(
+        execution_id=execution_id,
+        mission=mission,
+        context=request_context,
+        external_execution_id_observer=(
+            None
+            if on_external_execution_observed is None
+            else lambda external_id: on_external_execution_observed(attempt_context, external_id)
+        ),
+    )
 
 
     if cancellation_requested is not None and cancellation_requested():
@@ -1530,6 +1534,9 @@ def execute_mission(
             on_attempt_finished=on_attempt_finished,
 
 
+            on_external_execution_observed=on_external_execution_observed,
+
+
             selection_policy=selection_policy,
             execution_context=execution_context,
 
@@ -1857,6 +1864,7 @@ __all__ = [
 
 
     "AttemptFinished",
+    "ExternalExecutionObserved",
 
 
     "MissionStatus",
