@@ -47,6 +47,37 @@ impl RuntimeCertificationBinding {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub struct RuntimeCertificationEvidenceBinding {
+    pub evidence_id: String,
+    pub certification_ref: String,
+    pub certification: RuntimeCertificationBinding,
+}
+
+impl RuntimeCertificationEvidenceBinding {
+    pub fn validate(&self) -> Result<(), RuntimeCertificationError> {
+        if self.evidence_id.trim().is_empty() {
+            return Err(RuntimeCertificationError::BlankBindingField("evidence_id"));
+        }
+        if self.certification_ref.trim().is_empty() {
+            return Err(RuntimeCertificationError::BlankBindingField("certification_ref"));
+        }
+        self.certification.validate()
+    }
+
+    pub fn applies_to(
+        &self,
+        evidence_id: &str,
+        certification_ref: &str,
+        current: &RuntimeCertificationBinding,
+    ) -> bool {
+        self.validate().is_ok()
+            && self.evidence_id == evidence_id
+            && self.certification_ref == certification_ref
+            && self.certification == *current
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub enum RuntimeCertificationEvidenceBasis {
     IndependentEvaluator,
