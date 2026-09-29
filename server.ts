@@ -122,20 +122,13 @@ async function allBenchmarks(): Promise<any[]> {
 }
 
 async function allMissions(): Promise<any[]> {
-  const items = await cli(['list']);
-  return Promise.all(
-    (items || []).map(async (item: any) =>
-      withAcceptanceProof(await cli(['inspect', item.mission_id])),
-    ),
-  );
+  const items = await cli(['list', '--detailed']);
+  return (items || []).map((item: any) => withAcceptanceProof(item));
 }
 
 async function allEvents(): Promise<any[]> {
-  const missions = await cli(['list']);
-  const groups = await Promise.all(
-    (missions || []).map((item: any) => cli(['events', item.mission_id])),
-  );
-  return groups.flat().map((event: any) => ({
+  const events = await cli(['events']);
+  return (events || []).map((event: any) => ({
     event_id: event.event_id,
     mission_id: event.mission_id,
     kind: event.kind,
