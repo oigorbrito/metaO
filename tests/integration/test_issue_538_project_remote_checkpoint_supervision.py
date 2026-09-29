@@ -284,6 +284,7 @@ class Issue538RemoteCheckpointSupervisionIntegrationTests(unittest.TestCase):
         self.assertEqual(
             [(record.work_unit_id, record.verdict) for record in result.traceability],
             [
+                ("prepare", "FAIL"),
                 ("repair-prepare", "PASS"),
                 ("prepare", "CORRECTED_PASS"),
                 ("implement", "PASS"),

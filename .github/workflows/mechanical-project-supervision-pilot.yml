@@ -1,0 +1,82 @@
+name: Mechanical Project Supervision Pilot
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/mechanical-project-supervision-pilot.yml'
+      - 'scripts/run_mechanical_project_supervision_pilot.py'
+      - 'src/metao/project_*.py'
+      - 'src/metao/git_checkpoint*.py'
+      - 'src/metao/control_plane.py'
+      - 'src/metao/acceptance.py'
+      - 'tests/unit/test_issue_507_project_supervision.py'
+      - 'tests/integration/test_issue_523_project_supervision_trusted_git_bridge.py'
+      - 'tests/integration/test_issue_528_project_corrective_replan.py'
+      - 'tests/integration/test_issue_538_project_remote_checkpoint_supervision.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mechanical-pilot:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+
+      - name: Install metaO
+        run: python -m pip install -e .
+
+      - name: Run mechanical provider-free project supervision pilot
+        env:
+          EXACT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/run_mechanical_project_supervision_pilot.py \
+            --commit "$EXACT_HEAD_SHA" \
+            --output .artifacts/mechanical-project-supervision-pilot.json
+
+      - name: Validate evidence boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('.artifacts/mechanical-project-supervision-pilot.json').read_text())
+          assert data['classification'] == 'MECHANICAL_PROVIDER_FREE_PROJECT_SUPERVISION'
+          assert data['result'] == 'PASS'
+          claims = data['claims']
+          for key in (
+              'project_decomposition',
+              'multiple_work_units',
+              'multiple_executor_identities',
+              'capacity_failover',
+              'trusted_repository_handoff',
+              'failed_verification_detected',
+              'corrective_work_created',
+              'independent_acceptance',
+              'requirement_to_verdict_traceability',
+              'remote_checkpoint_semantics',
+          ):
+              assert claims[key] == 'EXECUTED'
+          assert claims['real_provider_calls'] == 'NOT_EXECUTED'
+          assert claims['real_provider_credentials'] == 'NOT_USED'
+          assert claims['real_provider_cost'] == 'NOT_MEASURED'
+          assert claims['cross_provider_external_handoff'] == 'NOT_PROVEN'
+          print('mechanical project supervision evidence boundary: PASS')
+          PY
+
+      - name: Full unit suite regression
+        run: python -m unittest discover -s tests/unit -p 'test_*.py' -v
+
+      - name: Upload mechanical pilot evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: mechanical-project-supervision-pilot-${{ github.run_id }}
+          path: .artifacts/mechanical-project-supervision-pilot.json
+          if-no-files-found: error
