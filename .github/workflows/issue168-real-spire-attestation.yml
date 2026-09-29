@@ -1,0 +1,87 @@
+name: Issue 168 Real SPIRE Workload Attestation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue168-real-spire-attestation.yml'
+      - 'scripts/run_issue_168_real_spire_attestation.py'
+      - 'scripts/validate_scientific_validation_matrix.py'
+      - 'docs/scientific-validation-matrix.json'
+      - 'experiments/rust-chassis-a/metao-contracts/src/workload_identity.rs'
+      - 'experiments/rust-chassis-a/metao-contracts/tests/workload_identity_tests.rs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-spire-attestation:
+    runs-on: ubuntu-24.04
+    env:
+      SPIRE_VERSION: '1.15.3'
+      SPIRE_SHA256: 'ca1a4d1155317bdd2afc7f36663828a10410c7c840e54725b90b4064b0a301c7'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+
+      - name: Install pinned SPIRE release
+        run: |
+          curl --fail --silent --show-error --location             "https://github.com/spiffe/spire/releases/download/v${SPIRE_VERSION}/spire-${SPIRE_VERSION}-linux-amd64-musl.tar.gz"             --output "$RUNNER_TEMP/spire.tgz"
+          echo "${SPIRE_SHA256}  $RUNNER_TEMP/spire.tgz" | sha256sum --check
+          mkdir -p "$RUNNER_TEMP/spire-release"
+          tar -xzf "$RUNNER_TEMP/spire.tgz" -C "$RUNNER_TEMP/spire-release" --strip-components=1
+
+      - name: Confirm exact SPIRE version
+        run: |
+          SERVER_VERSION="$("$RUNNER_TEMP/spire-release/bin/spire-server" --version 2>&1)"
+          AGENT_VERSION="$("$RUNNER_TEMP/spire-release/bin/spire-agent" --version 2>&1)"
+          printf '%s\n' "$SERVER_VERSION"
+          printf '%s\n' "$AGENT_VERSION"
+          test "$SERVER_VERSION" = "$SPIRE_VERSION"
+          test "$AGENT_VERSION" = "$SPIRE_VERSION"
+
+      - name: Execute real workload attestation and restart
+        env:
+          EXACT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/run_issue_168_real_spire_attestation.py             --spire-root "$RUNNER_TEMP/spire-release"             --spire-version "$SPIRE_VERSION"             --commit "$EXACT_HEAD_SHA"             --output .artifacts/issue-168-real-spire-attestation.json             --receipt .artifacts/issue-168-t5-scientific-receipt.json
+
+      - name: Validate scientific receipt
+        run: |
+          python scripts/validate_scientific_validation_matrix.py             --receipt .artifacts/issue-168-t5-scientific-receipt.json
+
+      - name: Validate provider-neutral workload identity contract
+        working-directory: experiments/rust-chassis-a
+        run: cargo test -p metao-contracts --test workload_identity_tests --verbose
+
+      - name: Enforce secret-free attestation evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          data = json.loads(Path('.artifacts/issue-168-real-spire-attestation.json').read_text())
+          assert data['classification'] == 'REAL_SPIRE_LOCAL_EPHEMERAL'
+          assert data['node_attestation']['passed'] is True
+          assert data['workload_attestation']['restart_reconnect_passed'] is True
+          assert data['workload_attestation']['spiffe_id'] == 'spiffe://example.org/metao/runtime/ci'
+          assert data['metao_projection']['assurance'] == 'Attested'
+          assert data['metao_projection']['evidence_basis'] == 'IdentityProviderVerified'
+          assert data['private_key_persisted'] is False
+          assert data['join_token_persisted'] is False
+          assert data['production_attestation_assurance_authorized'] is False
+          raw = json.dumps(data, sort_keys=True)
+          assert 'PRIVATE KEY' not in raw
+          print('real SPIRE workload attestation evidence: PASS')
+          PY
+
+      - name: Upload real workload identity evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue-168-real-spire-attestation-${{ github.run_id }}
+          path: |
+            .artifacts/issue-168-real-spire-attestation.json
+            .artifacts/issue-168-t5-scientific-receipt.json
+          if-no-files-found: error
