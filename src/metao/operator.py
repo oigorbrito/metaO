@@ -233,7 +233,11 @@ class MissionOperator:
             raise MissionCancellationUnavailable("mission cancellation is not configured")
         if handle.cancel_delegated:
             return handle
-        self._registry.get(handle.orchestrator_id).cancel(handle.execution_id)
+        executor = self._registry.get(handle.orchestrator_id)
+        restore_external = getattr(executor, "restore_external_execution_id", None)
+        if handle.external_execution_id is not None and callable(restore_external):
+            restore_external(handle.execution_id, handle.external_execution_id)
+        executor.cancel(handle.execution_id)
         return self._execution_handles.mark_cancel_delegated(handle.mission_id)
 
     def _start_cancel_watcher(self, handle: ActiveExecutionHandle) -> None:
@@ -280,6 +284,18 @@ class MissionOperator:
             self._delegate_cancel(handle)
         self._start_cancel_watcher(handle)
 
+    def _external_execution_observed(
+        self,
+        context: AttemptExecutionContext,
+        external_execution_id: str,
+    ) -> None:
+        if self._execution_handles is None:
+            return
+        self._execution_handles.bind_external_execution(
+            context.execution_id,
+            external_execution_id,
+        )
+
     def _attempt_finished(
         self,
         context: AttemptExecutionContext,
@@ -307,6 +323,7 @@ class MissionOperator:
             "cancellation_requested": lambda: self._cancel_requested(mission_id),
             "on_attempt_started": self._attempt_started,
             "on_attempt_finished": self._attempt_finished,
+            "on_external_execution_observed": self._external_execution_observed,
         }
 
     def run(
