@@ -307,6 +307,37 @@ Target invariants:
 - insufficient isolation fails closed or quarantines the runtime;
 - runtime-specific sandbox mechanisms remain outside Core.
 
+## 13.1 Issue #149 exact donor evidence
+
+The security/isolation implementation under #149 consumes a bounded public donor surface from Microsoft Agent Governance Toolkit and translates it into metaO-owned contracts/tests. The historical SMAG/OpenHands/Codex/WUS references remain hypotheses/reference material unless explicitly listed below as consumed.
+
+| Donor | Immutable pin | Consumed path/test | Reuse mode | metaO-owned executable translation |
+|---|---|---|---|---|
+| `microsoft/agent-governance-toolkit` | `46463ef8689433817fcc0c582a7881f515d4df15` | `SECURITY.md` threat boundaries; `docs/ARCHITECTURE.md` application enforcement vs container/VM defense-in-depth; `policy-engine/docs/security-conformance.md` with `cargo test --test security_conformance` | semantic/test donor only | `experiments/rust-chassis-a/metao-contracts/tests/runtime_security_tests.rs`; real-runtime controlled adversarial evidence from #707 |
+| `tihotm/smag` | `548a2ce85acb2aeb0e2d64a0fd03cfd839763ad8` | audit-level source only; no unreadable/unverifiable external path is promoted as consumed implementation evidence | audit/reference | this document's composition boundaries only |
+| `OpenHands/OpenHands` | N/A for #149 product implementation | reference family only; no code/path copied into Core | `REFERENCE_NOT_CONSUMED` | none |
+| `openai/codex` | N/A for #149 product implementation | reference family only; no code/path copied into Core | `REFERENCE_NOT_CONSUMED` | none |
+| `tihotm/work-unit-supervisor` | N/A for generic #149 Core boundary | engineering-plugin reference only | `REFERENCE_NOT_CONSUMED` | #144/WUS owns coding-specific containment |
+| `microsoft/agent-framework` | N/A for #149 security implementation | runtime/framework reference only; no security mechanism imported into Core | `REFERENCE_NOT_CONSUMED` | adapter boundary remains framework-neutral |
+
+The consumed donor does **not** authorize positive sandbox claims for CrewAI or LangGraph. Their actual adapter facts remain explicitly `security_isolation=unsupported`, and unsupported capability cannot satisfy a policy profile that requires isolation.
+
+The closure evidence for #149 is therefore:
+
+```text
+DONOR_PIN_PATH_TEST = EXPLICIT
+GENERIC_RUNTIME_SECURITY_CONTRACT = EXECUTED
+INSUFFICIENT_ISOLATION_FAILS_CLOSED = EXECUTED
+PERMISSION_ESCALATION_REJECTED = EXECUTED
+SECRET_REDACTION_REQUIREMENT = EXECUTED
+UNTRUSTED_CONTENT_AUTHORITY_ISOLATION = EXECUTED
+CREWAI_SECURITY_ISOLATION = UNSUPPORTED
+LANGGRAPH_SECURITY_ISOLATION = UNSUPPORTED
+CONTROLLED_ADVERSARIAL_REAL_RUNTIME_BOUNDARY = EXECUTED
+UNSUPPORTED != ENFORCED
+SANDBOX_ENGINE_IN_CORE = NO
+```
+
 ## 14. Operational surfaces
 
 SMAG CLI/config/service/OTLP/.NET client work must first pass a gap audit against current metaO.
