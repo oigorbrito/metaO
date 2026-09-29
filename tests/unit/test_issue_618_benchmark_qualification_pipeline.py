@@ -3,10 +3,13 @@ from __future__ import annotations
 import json
 import tempfile
 import unittest
-from dataclasses import asdict
 from pathlib import Path
 
-from metao.benchmark_evidence import BenchmarkEvidenceSource
+from metao.benchmark_evidence import (
+    BenchmarkEvidenceSource,
+    benchmark_evidence_from_record,
+    benchmark_evidence_to_record,
+)
 from metao.benchmark_ingestion import ingest_benchmark_family_result
 from metao.benchmark_qualification import (
     BenchmarkQualificationPolicy,
@@ -115,39 +118,11 @@ class BenchmarkQualificationPipelineTests(unittest.TestCase):
         records = evidence_set()
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "benchmark-evidence.json"
-            payload = [
-                {
-                    **asdict(item),
-                    "source": item.source.value,
-                    "metrics": [asdict(metric) for metric in item.metrics],
-                }
-                for item in records
-            ]
+            payload = [benchmark_evidence_to_record(item) for item in records]
             path.write_text(json.dumps(payload, sort_keys=True), encoding="utf-8")
             persisted = json.loads(path.read_text(encoding="utf-8"))
 
-        replay = tuple(
-            ingest_benchmark_family_result(
-                item["benchmark_id"],
-                {item["metrics"][0]["name"]: item["metrics"][0]["value"]},
-                evidence_id=item["evidence_id"],
-                task_set=item["task_set"],
-                executor_id=item["executor_id"],
-                executor_version=item["executor_version"],
-                harness_id=item["harness_id"],
-                harness_version=item["harness_version"],
-                model_id=item["model_id"],
-                provider_id=item["provider_id"],
-                model_version=item["model_version"],
-                runtime_config_digest=item["runtime_config_digest"],
-                tool_policy_digest=item["tool_policy_digest"],
-                environment_id=item["environment_id"],
-                observed_at_epoch=item["observed_at_epoch"],
-                source=BenchmarkEvidenceSource(item["source"]),
-                raw_result_ref=item["raw_result_ref"],
-            )
-            for item in persisted
-        )
+        replay = tuple(benchmark_evidence_from_record(item) for item in persisted)
         self.assertEqual(
             qualify_benchmark_evidence(records, policy(), now_epoch=120.0),
             qualify_benchmark_evidence(replay, policy(), now_epoch=120.0),
