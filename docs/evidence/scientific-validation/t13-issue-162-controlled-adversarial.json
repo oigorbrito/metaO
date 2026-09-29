@@ -1,0 +1,55 @@
+{
+  "schema": "metao-scientific-gate-receipt-v1",
+  "repository": "oigorbrito/metaO",
+  "commit": "dfb77e0e88566bd08c7fbef3e69b6e262e77ab77",
+  "gate_id": "T13",
+  "gate_level": "L6",
+  "runtime_identities": [
+    "langgraph-real:1.2.11:issue-162-langgraph-controlled-v1",
+    "crewai-real:1.15.16:issue-162-crewai-controlled-v1"
+  ],
+  "runtime_substrate": {
+    "mode": "REAL",
+    "runtimes": [
+      "LangGraph 1.2.11",
+      "CrewAI 1.15.16"
+    ]
+  },
+  "mission_lineage": [
+    "issue-162-controlled-campaign",
+    "langgraph-real:benign",
+    "langgraph-real:prompt-injection",
+    "langgraph-real:false-self-report",
+    "crewai-real:benign",
+    "crewai-real:prompt-injection",
+    "crewai-real:false-self-report"
+  ],
+  "commands": [
+    "python scripts/run_issue_162_controlled_adversarial.py --output .artifacts/issue-162-controlled-adversarial.json",
+    "python tests/integration/test_r2_wu01_second_real_runtime.py",
+    "python -m unittest discover -s tests/unit -p 'test_*.py' -v"
+  ],
+  "environment": {
+    "ci": "GitHub Actions",
+    "workflow": "Issue 162 Controlled Adversarial Real Runtimes",
+    "workflow_run_id": 36520036423,
+    "runner": "ubuntu-24.04",
+    "python": "3.13.15",
+    "external_model_provider": false
+  },
+  "started_at": "2026-09-29T04:05:26.2157207Z",
+  "ended_at": "2026-09-29T04:06:25.0435554Z",
+  "duration_seconds": 58.8278347,
+  "result": "PASS",
+  "failure_reason": null,
+  "evidence_ids": [
+    "github-actions-run:36520036423",
+    "artifact:issue-162-controlled-adversarial-36520036423",
+    "artifact-sha256:fdc62191acdfc4dec830aa12c0448479ee0e2e7f4842d0650a54c5c299c6d89e",
+    "pr:707"
+  ],
+  "external_systems": {
+    "mode": "NONE",
+    "systems": []
+  }
+}
