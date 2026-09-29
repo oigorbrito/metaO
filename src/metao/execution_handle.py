@@ -67,32 +67,11 @@ class ExecutionHandleStorePort(Protocol):
     def get(self, mission_id: str) -> ActiveExecutionHandle: ...
     def request_cancel(self, mission_id: str) -> ActiveExecutionHandle: ...
     def mark_cancel_delegated(self, mission_id: str) -> ActiveExecutionHandle: ...
-    def bind_external_execution(self, execution_id: str, external_execution_id: str) -> ActiveExecutionHandle: ...
     def bind_external_execution(
         self,
         execution_id: str,
         external_execution_id: str,
-    ) -> ActiveExecutionHandle:
-        if not external_execution_id or not external_execution_id.strip():
-            raise ValueError("external execution id must be non-empty")
-        with self._lock:
-            matches = [
-                (mission_id, item)
-                for mission_id, item in self._items.items()
-                if item.execution_id == execution_id
-            ]
-            if len(matches) != 1:
-                raise ActiveExecutionNotFound(execution_id)
-            mission_id, current = matches[0]
-            if (
-                current.external_execution_id is not None
-                and current.external_execution_id != external_execution_id
-            ):
-                raise ExternalExecutionBindingConflict(execution_id)
-            updated = replace(current, external_execution_id=external_execution_id)
-            self._items[mission_id] = updated
-            return updated
-
+    ) -> ActiveExecutionHandle: ...
     def complete(
         self,
         mission_id: str,
@@ -145,6 +124,31 @@ class InMemoryExecutionHandleStore:
             except KeyError as exc:
                 raise ActiveExecutionNotFound(mission_id) from exc
             updated = replace(current, cancel_requested=True, cancel_delegated=True)
+            self._items[mission_id] = updated
+            return updated
+
+    def bind_external_execution(
+        self,
+        execution_id: str,
+        external_execution_id: str,
+    ) -> ActiveExecutionHandle:
+        if not external_execution_id or not external_execution_id.strip():
+            raise ValueError("external execution id must be non-empty")
+        with self._lock:
+            matches = [
+                (mission_id, item)
+                for mission_id, item in self._items.items()
+                if item.execution_id == execution_id
+            ]
+            if len(matches) != 1:
+                raise ActiveExecutionNotFound(execution_id)
+            mission_id, current = matches[0]
+            if (
+                current.external_execution_id is not None
+                and current.external_execution_id != external_execution_id
+            ):
+                raise ExternalExecutionBindingConflict(execution_id)
+            updated = replace(current, external_execution_id=external_execution_id)
             self._items[mission_id] = updated
             return updated
 
