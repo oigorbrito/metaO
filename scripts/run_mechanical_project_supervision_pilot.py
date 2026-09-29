@@ -12,7 +12,7 @@ import time
 CASES = (
     (
         "project_supervisor_core",
-        ["python", "-m", "unittest", "tests.unit.test_issue_507_project_supervision", "-v"],
+        ["python", "tests/unit/test_issue_507_project_supervision.py"],
         [
             "decomposition",
             "capacity_failover",
@@ -81,6 +81,9 @@ def main() -> int:
         duration = time.monotonic() - case_started
         status = "PASS" if completed.returncode == 0 else "FAIL"
         failed = failed or completed.returncode != 0
+        print(f"[{case_id}] {status} ({duration:.3f}s)")
+        if completed.returncode != 0:
+            print(completed.stdout[-4000:])
         results.append(
             {
                 "case_id": case_id,
