@@ -1,0 +1,40 @@
+name: Issue 168 Composed Restart Failover
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue168-composed-restart-failover.yml'
+      - 'scripts/run_issue_168_composed_gate.py'
+      - 'scripts/validate_scientific_validation_matrix.py'
+      - 'docs/scientific-validation-matrix.json'
+      - 'experiments/rust-chassis-a/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  composed-restart-failover:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+      - name: Run composed restart/failover gate and emit receipt
+        env:
+          EXACT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/run_issue_168_composed_gate.py \
+            --commit "$EXACT_HEAD_SHA" \
+            --output .artifacts/issue-168-composed-restart-failover.json
+      - name: Validate scientific receipt
+        run: |
+          python scripts/validate_scientific_validation_matrix.py \
+            --receipt .artifacts/issue-168-composed-restart-failover.json
+      - name: Upload composed gate receipt
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue-168-composed-restart-failover-${{ github.run_id }}
+          path: .artifacts/issue-168-composed-restart-failover.json
+          if-no-files-found: error
