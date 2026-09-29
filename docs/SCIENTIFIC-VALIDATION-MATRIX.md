@@ -27,6 +27,7 @@ Every receipt must carry:
 - exact repository and commit;
 - gate family and L0-L7 evidence level;
 - runtime identities;
+- explicit runtime substrate mode (`REAL`, `SIMULATED`, or `NONE`), separate from external-system mode;
 - mission/execution lineage;
 - executed commands and environment;
 - start/end/duration;
@@ -37,6 +38,7 @@ Every receipt must carry:
 
 ```text
 SIMULATED != REAL
+REAL_RUNTIME != REAL_EXTERNAL_SYSTEM
 BLOCKED != FAIL
 BLOCKED != PASS
 SKIPPED != PASS
