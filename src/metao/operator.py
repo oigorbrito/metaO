@@ -611,7 +611,14 @@ class MissionOperator:
                 return self._execution_handles.get(mission_id)
 
         try:
-            self._registry.get(requested.orchestrator_id).cancel(requested.execution_id)
+            executor = self._registry.get(requested.orchestrator_id)
+            restore_external = getattr(executor, "restore_external_execution_id", None)
+            if requested.external_execution_id is not None and callable(restore_external):
+                restore_external(
+                    requested.execution_id,
+                    requested.external_execution_id,
+                )
+            executor.cancel(requested.execution_id)
         except Exception:
             pass
         return self._execution_handles.get(mission_id)
