@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 from math import isfinite
+from typing import Any, Mapping
 
 
 class BenchmarkEvidenceSource(str, Enum):
@@ -105,6 +106,76 @@ class BenchmarkEvidence:
         )
 
 
+def benchmark_evidence_to_record(evidence: BenchmarkEvidence) -> dict[str, object]:
+    """Serialize canonical benchmark evidence without benchmark-specific raw fields."""
+
+    return {
+        "evidence_id": evidence.evidence_id,
+        "benchmark_id": evidence.benchmark_id,
+        "benchmark_version": evidence.benchmark_version,
+        "task_set": evidence.task_set,
+        "executor_id": evidence.executor_id,
+        "executor_version": evidence.executor_version,
+        "harness_id": evidence.harness_id,
+        "harness_version": evidence.harness_version,
+        "model_id": evidence.model_id,
+        "provider_id": evidence.provider_id,
+        "model_version": evidence.model_version,
+        "runtime_config_digest": evidence.runtime_config_digest,
+        "tool_policy_digest": evidence.tool_policy_digest,
+        "environment_id": evidence.environment_id,
+        "observed_at_epoch": evidence.observed_at_epoch,
+        "source": evidence.source.value,
+        "raw_result_ref": evidence.raw_result_ref,
+        "metrics": [
+            {"name": metric.name, "value": metric.value, "unit": metric.unit}
+            for metric in evidence.metrics
+        ],
+    }
+
+
+def benchmark_evidence_from_record(record: Mapping[str, Any]) -> BenchmarkEvidence:
+    """Restore validated canonical benchmark evidence from a persisted record."""
+
+    try:
+        metrics_raw = record["metrics"]
+        if not isinstance(metrics_raw, list):
+            raise ValueError("persisted benchmark metrics must be a list")
+        metrics = tuple(
+            BenchmarkMetric(
+                name=str(item["name"]),
+                value=float(item["value"]),
+                unit=str(item["unit"]),
+            )
+            for item in metrics_raw
+            if isinstance(item, Mapping)
+        )
+        if len(metrics) != len(metrics_raw):
+            raise ValueError("persisted benchmark metrics must be objects")
+        return BenchmarkEvidence(
+            evidence_id=str(record["evidence_id"]),
+            benchmark_id=str(record["benchmark_id"]),
+            benchmark_version=str(record["benchmark_version"]),
+            task_set=str(record["task_set"]),
+            executor_id=str(record["executor_id"]),
+            executor_version=str(record["executor_version"]),
+            harness_id=str(record["harness_id"]),
+            harness_version=str(record["harness_version"]),
+            model_id=str(record["model_id"]),
+            provider_id=str(record["provider_id"]),
+            model_version=str(record["model_version"]),
+            runtime_config_digest=str(record["runtime_config_digest"]),
+            tool_policy_digest=str(record["tool_policy_digest"]),
+            environment_id=str(record["environment_id"]),
+            observed_at_epoch=float(record["observed_at_epoch"]),
+            source=BenchmarkEvidenceSource(str(record["source"])),
+            raw_result_ref=str(record["raw_result_ref"]),
+            metrics=metrics,
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise ValueError("invalid persisted benchmark evidence record") from exc
+
+
 def is_benchmark_evidence_fresh(
     evidence: BenchmarkEvidence,
     *,
@@ -138,5 +209,7 @@ __all__ = [
     "BenchmarkEvidenceSource",
     "BenchmarkMetric",
     "benchmark_evidence_comparable",
+    "benchmark_evidence_from_record",
+    "benchmark_evidence_to_record",
     "is_benchmark_evidence_fresh",
 ]
