@@ -34,7 +34,7 @@ jobs:
       - name: Run controlled adversarial campaign
         run: |
           mkdir -p .artifacts
-          python scripts/run_issue_162_controlled_adversarial.py | tee .artifacts/issue-162-controlled-adversarial.json
+          python scripts/run_issue_162_controlled_adversarial.py --output .artifacts/issue-162-controlled-adversarial.json
       - name: Validate machine-readable evidence boundary
         run: |
           python - <<'PY'
