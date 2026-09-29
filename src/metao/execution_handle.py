@@ -25,6 +25,10 @@ class ActiveExecutionNotFound(KeyError):
     pass
 
 
+class ExternalExecutionBindingConflict(RuntimeError):
+    pass
+
+
 @dataclass(frozen=True)
 class ActiveExecutionHandle:
     mission_id: str
@@ -38,6 +42,7 @@ class ActiveExecutionHandle:
     cancel_delegated: bool = False
     ended_at_epoch: float | None = None
     execution_status: ExecutionStatus | None = None
+    external_execution_id: str | None = None
 
     def __post_init__(self) -> None:
         if not self.mission_id or not self.execution_id or not self.orchestrator_id:
@@ -52,6 +57,8 @@ class ActiveExecutionHandle:
             raise ValueError("active execution cost must be non-negative")
         if self.status is ExecutionHandleStatus.COMPLETED and self.ended_at_epoch is None:
             raise ValueError("completed execution handle requires end timestamp")
+        if self.external_execution_id is not None and not self.external_execution_id.strip():
+            raise ValueError("external execution id must be non-empty when provided")
 
 
 @runtime_checkable
@@ -60,6 +67,11 @@ class ExecutionHandleStorePort(Protocol):
     def get(self, mission_id: str) -> ActiveExecutionHandle: ...
     def request_cancel(self, mission_id: str) -> ActiveExecutionHandle: ...
     def mark_cancel_delegated(self, mission_id: str) -> ActiveExecutionHandle: ...
+    def bind_external_execution(
+        self,
+        execution_id: str,
+        external_execution_id: str,
+    ) -> ActiveExecutionHandle: ...
     def complete(
         self,
         mission_id: str,
@@ -115,6 +127,31 @@ class InMemoryExecutionHandleStore:
             self._items[mission_id] = updated
             return updated
 
+    def bind_external_execution(
+        self,
+        execution_id: str,
+        external_execution_id: str,
+    ) -> ActiveExecutionHandle:
+        if not external_execution_id or not external_execution_id.strip():
+            raise ValueError("external execution id must be non-empty")
+        with self._lock:
+            matches = [
+                (mission_id, item)
+                for mission_id, item in self._items.items()
+                if item.execution_id == execution_id
+            ]
+            if len(matches) != 1:
+                raise ActiveExecutionNotFound(execution_id)
+            mission_id, current = matches[0]
+            if (
+                current.external_execution_id is not None
+                and current.external_execution_id != external_execution_id
+            ):
+                raise ExternalExecutionBindingConflict(execution_id)
+            updated = replace(current, external_execution_id=external_execution_id)
+            self._items[mission_id] = updated
+            return updated
+
     def complete(
         self,
         mission_id: str,
@@ -140,6 +177,7 @@ class InMemoryExecutionHandleStore:
 __all__ = [
     "ExecutionHandleStatus",
     "ActiveExecutionNotFound",
+    "ExternalExecutionBindingConflict",
     "ActiveExecutionHandle",
     "ExecutionHandleStorePort",
     "InMemoryExecutionHandleStore",

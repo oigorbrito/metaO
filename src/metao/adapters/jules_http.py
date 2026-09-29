@@ -271,9 +271,19 @@ class JulesHttpOrchestratorAdapter:
         with self._lock:
             self._sessions[request.execution_id] = session_name
             cancelled = request.execution_id in self._cancelled
+        request.observe_external_execution_id(session_name)
         if cancelled:
             self._request("DELETE", f"/{session_name}")
         return session_name
+
+    def restore_external_execution_id(
+        self,
+        execution_id: str,
+        external_execution_id: str,
+    ) -> None:
+        session_name = self._canonical_session_name(external_execution_id)
+        with self._lock:
+            self._sessions[execution_id] = session_name
 
     def get_session(self, execution_id: str) -> Mapping[str, Any]:
         session_name = self._session_name(execution_id)

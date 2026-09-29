@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Any, Mapping, Protocol, runtime_checkable
+from typing import Any, Callable, Mapping, Protocol, runtime_checkable
 
 from .capacity import CapacityObservation
 from .capabilities import Capability
@@ -63,11 +63,22 @@ class ExecutionRequest:
     execution_id: str
     mission: Mission
     context: Mapping[str, Any] = field(default_factory=dict)
+    external_execution_id_observer: Callable[[str], None] | None = field(
+        default=None,
+        repr=False,
+        compare=False,
+    )
 
     def __post_init__(self) -> None:
         if not self.execution_id:
             raise ValueError("execution_id is required")
         object.__setattr__(self, "context", MappingProxyType(dict(self.context)))
+
+    def observe_external_execution_id(self, external_execution_id: str) -> None:
+        if not external_execution_id or not external_execution_id.strip():
+            raise ValueError("external execution id must be non-empty")
+        if self.external_execution_id_observer is not None:
+            self.external_execution_id_observer(external_execution_id)
 
 
 @dataclass(frozen=True, slots=True)
