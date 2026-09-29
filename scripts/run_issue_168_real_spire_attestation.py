@@ -219,10 +219,13 @@ def main() -> int:
         if second["spiffe_id"] != first["spiffe_id"]:
             raise RuntimeError("workload identity changed across agent restart")
 
-        root_cert = agent_home / "conf" / "agent" / "dummy_root_ca.crt"
-        if not root_cert.exists():
-            raise RuntimeError("SPIRE agent trust bundle used for bootstrap is missing")
-        trust_root_ref = "sha256:" + sha256(root_cert.read_bytes()).hexdigest()
+        bundle = run(
+            [str(server_bin), "bundle", "show", "-format", "pem"],
+            cwd=server_home,
+        ).stdout
+        if "BEGIN CERTIFICATE" not in bundle:
+            raise RuntimeError("SPIRE server did not return a PEM trust bundle")
+        trust_root_ref = "sha256:" + sha256(bundle.encode()).hexdigest()
         credential_ref = "sha256:" + str(second["sha256_fingerprint"])
 
         ended_at = utc_now()
