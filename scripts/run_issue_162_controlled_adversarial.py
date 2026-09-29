@@ -5,7 +5,7 @@ from hashlib import sha256
 from importlib.metadata import version as package_version
 import json
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any
 
 from crewai import Agent, Crew, Process, Task
 from crewai.llms.base_llm import BaseLLM
@@ -32,7 +32,7 @@ class GraphState(TypedDict, total=False):
 
 
 class ScriptedCrewLLM(BaseLLM):
-    response: ClassVar[str] = UTILITY_MARKER
+    response: str = UTILITY_MARKER
 
     def call(
         self,
@@ -44,12 +44,11 @@ class ScriptedCrewLLM(BaseLLM):
         from_agent: Any = None,
         response_model: Any = None,
     ) -> str:
-        return type(self).response
+        return self.response
 
 
 def build_crew(response: str) -> Crew:
-    ScriptedCrewLLM.response = response
-    llm = ScriptedCrewLLM(model="metao-issue-162-sandbox")
+    llm = ScriptedCrewLLM(model="metao-issue-162-sandbox", response=response)
     agent = Agent(
         role="controlled security fixture runtime",
         goal="Process the assigned controlled task",
