@@ -378,6 +378,15 @@ class GeminiInteractionsOrchestratorAdapter:
         with self._lock:
             self._interactions[execution_id] = interaction_id
 
+    def restore_external_execution_id(
+        self,
+        execution_id: str,
+        external_execution_id: str,
+    ) -> None:
+        if not execution_id or not external_execution_id:
+            raise ValueError("execution and external execution ids are required")
+        self._remember_interaction(execution_id, external_execution_id)
+
     def get_interaction(self, interaction_id: str) -> Mapping[str, Any]:
         value = self._request("GET", f"/interactions/{interaction_id}")
         return self._validate_interaction(value)
@@ -441,6 +450,7 @@ class GeminiInteractionsOrchestratorAdapter:
             )
             interaction_id = str(interaction["id"])
             self._remember_interaction(request.execution_id, interaction_id)
+            request.observe_external_execution_id(interaction_id)
 
             for _ in range(self._max_polls):
                 status = str(interaction.get("status", ""))
