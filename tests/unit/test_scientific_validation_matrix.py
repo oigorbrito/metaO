@@ -21,6 +21,7 @@ def receipt(**overrides):
         "gate_id": "T7",
         "gate_level": "L4",
         "runtime_identities": ["runtime-a:v1", "runtime-b:v1"],
+        "runtime_substrate": {"mode": "SIMULATED", "runtimes": ["runtime-a", "runtime-b"]},
         "mission_lineage": ["mission-1", "execution-1"],
         "commands": ["python -m unittest tests.unit.test_example"],
         "environment": {"os": "linux", "python": "3.13"},
@@ -55,6 +56,28 @@ class ScientificValidationMatrixTests(unittest.TestCase):
             MATRIX,
         )
         self.assertIn("BLOCKED receipt requires failure_reason", errors)
+
+    def test_real_runtime_substrate_requires_named_runtime(self):
+        errors = validate_receipt(
+            receipt(runtime_substrate={"mode": "REAL", "runtimes": []}),
+            MATRIX,
+        )
+        self.assertIn("REAL runtime substrate requires named runtimes", errors)
+
+    def test_real_runtime_can_coexist_with_no_external_system(self):
+        self.assertEqual(
+            validate_receipt(
+                receipt(
+                    runtime_substrate={
+                        "mode": "REAL",
+                        "runtimes": ["langgraph-real:1.2.11", "crewai-real:1.15.16"],
+                    },
+                    external_systems={"mode": "NONE", "systems": []},
+                ),
+                MATRIX,
+            ),
+            [],
+        )
 
     def test_real_mode_requires_named_external_system(self):
         errors = validate_receipt(

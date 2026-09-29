@@ -148,12 +148,24 @@
       "result",
       "failure_reason",
       "evidence_ids",
-      "external_systems"
+      "external_systems",
+      "runtime_substrate"
     ],
     "external_systems_shape": {
       "required_fields": [
         "mode",
         "systems"
+      ],
+      "mode_values": [
+        "REAL",
+        "SIMULATED",
+        "NONE"
+      ]
+    },
+    "runtime_substrate_shape": {
+      "required_fields": [
+        "mode",
+        "runtimes"
       ],
       "mode_values": [
         "REAL",
