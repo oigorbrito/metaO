@@ -1,0 +1,59 @@
+name: Issue 168 Real Network Chaos
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue168-real-network-chaos.yml'
+      - 'scripts/run_issue_168_real_network_chaos.py'
+      - 'scripts/validate_scientific_validation_matrix.py'
+      - 'docs/scientific-validation-matrix.json'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-network-chaos:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Confirm network namespace tooling
+        run: |
+          ip -V
+          sudo ip netns list
+      - name: Execute real multi-namespace partition and recovery
+        env:
+          EXACT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/run_issue_168_real_network_chaos.py \
+            --commit "$EXACT_HEAD_SHA" \
+            --output .artifacts/issue-168-real-network-chaos.json \
+            --receipt .artifacts/issue-168-t12-network-chaos-receipt.json
+      - name: Validate scientific receipt
+        run: |
+          python scripts/validate_scientific_validation_matrix.py \
+            --receipt .artifacts/issue-168-t12-network-chaos-receipt.json
+      - name: Validate claim boundary
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+          data=json.loads(Path('.artifacts/issue-168-real-network-chaos.json').read_text())
+          assert data['classification']=='REAL_LOCAL_MULTI_NAMESPACE_NETWORK_CHAOS'
+          assert data['real_network_namespace_isolation'] is True
+          assert data['partition']['primary_unreachable'] is True
+          assert data['partition']['secondary_reachable'] is True
+          assert data['recovery']['primary_reachable'] is True
+          assert data['production_cluster_claim_authorized'] is False
+          print('real network chaos evidence: PASS')
+          PY
+      - name: Upload chaos evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue-168-real-network-chaos-${{ github.run_id }}
+          path: |
+            .artifacts/issue-168-real-network-chaos.json
+            .artifacts/issue-168-t12-network-chaos-receipt.json
+          if-no-files-found: error
