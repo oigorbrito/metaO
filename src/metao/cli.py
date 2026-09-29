@@ -365,10 +365,11 @@ def _parser() -> argparse.ArgumentParser:
     inspect_parser = sub.add_parser("inspect", help="show auditable mission record or active execution")
     inspect_parser.add_argument("mission_id")
 
-    sub.add_parser("list", help="list persisted missions")
+    list_parser = sub.add_parser("list", help="list persisted missions")
+    list_parser.add_argument("--detailed", action="store_true", help="include detailed mission records")
 
     events_parser = sub.add_parser("events", help="show persisted mission event ledger")
-    events_parser.add_argument("mission_id")
+    events_parser.add_argument("mission_id", nargs="?", default=None)
     events_parser.add_argument("--kind", choices=[kind.value for kind in MissionEventKind])
 
     approve_parser = sub.add_parser("approve", help="record human approval or denial")
@@ -429,15 +430,18 @@ def main(argv: Sequence[str] | None = None, *, stdout: TextIO | None = None, std
             _write_json(value, out)
             return 0
         if args.command == "list":
-            _write_json([_record_view(record, detailed=False) for record in store.list()], out)
+            _write_json([_record_view(record, detailed=args.detailed) for record in store.list()], out)
             return 0
         if args.command == "events":
-            items = ledger.list(args.mission_id)
-            if not items:
-                try:
-                    store.get(args.mission_id)
-                except MissionNotFound:
-                    _active_or_mission_not_found(handles, args.mission_id)
+            if args.mission_id:
+                items = ledger.list(args.mission_id)
+                if not items:
+                    try:
+                        store.get(args.mission_id)
+                    except MissionNotFound:
+                        _active_or_mission_not_found(handles, args.mission_id)
+            else:
+                items = ledger.all()
             if args.kind is not None:
                 requested = MissionEventKind(args.kind)
                 items = tuple(event for event in items if event.kind is requested)

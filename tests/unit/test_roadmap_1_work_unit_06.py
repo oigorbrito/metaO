@@ -156,6 +156,17 @@ class MetaOCliV1Tests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual([item["mission_id"] for item in items], ["a-mission", "z-mission"])
 
+        code, detailed_items, _ = self._call("list", "--detailed")
+        self.assertEqual(code, 0)
+        self.assertEqual([item["mission_id"] for item in detailed_items], ["a-mission", "z-mission"])
+        self.assertIn("mission", detailed_items[0])
+        self.assertIn("acceptance", detailed_items[0])
+
+        code, events, _ = self._call("events")
+        self.assertEqual(code, 0)
+        self.assertTrue(isinstance(events, list))
+        self.assertTrue(len(events) > 0)
+
     def test_cli_human_approval_flow_spans_separate_invocations(self):
         code, waiting, _ = self._call(
             "run",

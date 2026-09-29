@@ -121,21 +121,18 @@ async function allBenchmarks(): Promise<any[]> {
   return groups.flat();
 }
 
+// Performance optimization: Use `metao list --detailed` to fetch all detailed
+// mission records in a single CLI execution instead of spawning N+1 child processes.
 async function allMissions(): Promise<any[]> {
-  const items = await cli(['list']);
-  return Promise.all(
-    (items || []).map(async (item: any) =>
-      withAcceptanceProof(await cli(['inspect', item.mission_id])),
-    ),
-  );
+  const items = await cli(['list', '--detailed']);
+  return (items || []).map((item: any) => withAcceptanceProof(item));
 }
 
+// Performance optimization: Use `metao events` without mission_id to fetch all
+// ledger events in a single CLI execution instead of N+1 per-mission subprocess calls.
 async function allEvents(): Promise<any[]> {
-  const missions = await cli(['list']);
-  const groups = await Promise.all(
-    (missions || []).map((item: any) => cli(['events', item.mission_id])),
-  );
-  return groups.flat().map((event: any) => ({
+  const events = await cli(['events']);
+  return (events || []).map((event: any) => ({
     event_id: event.event_id,
     mission_id: event.mission_id,
     kind: event.kind,
