@@ -219,7 +219,9 @@ def main() -> int:
         if second["spiffe_id"] != first["spiffe_id"]:
             raise RuntimeError("workload identity changed across agent restart")
 
-        root_cert = server_home / "conf" / "server" / "dummy_upstream_ca.crt"
+        root_cert = agent_home / "conf" / "agent" / "dummy_root_ca.crt"
+        if not root_cert.exists():
+            raise RuntimeError("SPIRE agent trust bundle used for bootstrap is missing")
         trust_root_ref = "sha256:" + sha256(root_cert.read_bytes()).hexdigest()
         credential_ref = "sha256:" + str(second["sha256_fingerprint"])
 
