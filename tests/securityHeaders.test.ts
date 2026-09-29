@@ -4,6 +4,8 @@ import http from 'http';
 import { securityHeaders } from '../src/lib/httpSecurity';
 
 async function main() {
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
   const app = express();
   app.use(securityHeaders);
   app.get('/healthz', (_req, res) => res.status(200).send('OK'));
@@ -40,6 +42,8 @@ async function main() {
       'x-xss-protection': '0',
       'referrer-policy': 'strict-origin-when-cross-origin',
       'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+      'content-security-policy':
+        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
     };
 
     for (const [name, value] of Object.entries(expected)) {
@@ -51,7 +55,17 @@ async function main() {
         );
       }
     }
+    if (response.headers['strict-transport-security'] !== undefined) {
+      throw new Error(
+        'HSTS must be owned by the TLS-terminating deployment layer, not the local HTTP server',
+      );
+    }
   } finally {
+    if (previousNodeEnv === undefined) {
+      delete process.env.NODE_ENV;
+    } else {
+      process.env.NODE_ENV = previousNodeEnv;
+    }
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
     );
