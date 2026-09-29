@@ -109,7 +109,10 @@ fn b6_attempt_budget_exhaustion_blocks_retry_without_rewriting_outcome() {
     let projection =
         evaluate_retry_eligibility(&retry_facts(FactualExecutionOutcome::Timeout, 3, 3));
 
-    assert_eq!(projection.original_outcome, FactualExecutionOutcome::Timeout);
+    assert_eq!(
+        projection.original_outcome,
+        FactualExecutionOutcome::Timeout
+    );
     assert_eq!(projection.eligibility, RetryEligibility::Ineligible);
     assert_eq!(projection.next_attempt, None);
 }
