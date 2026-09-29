@@ -60,7 +60,7 @@ impl RuntimeCertificationEvidenceBinding {
             return Err(RuntimeCertificationError::BlankBindingField("evidence_id"));
         }
         if self.certification_ref.trim().is_empty() {
-            return Err(RuntimeCertificationError::BlankBindingField("certification_ref"));
+            return Err(RuntimeCertificationError::BlankBindingField(\n                "certification_ref",\n            ));
         }
         self.certification.validate()
     }
