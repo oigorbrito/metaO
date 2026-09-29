@@ -17,6 +17,7 @@ REQUIRED_RECEIPT_FIELDS = {
     "gate_id",
     "gate_level",
     "runtime_identities",
+    "runtime_substrate",
     "mission_lineage",
     "commands",
     "environment",
@@ -91,6 +92,20 @@ def validate_receipt(receipt: dict[str, object], matrix: dict[str, object]) -> l
         errors.append("invalid result")
     if not isinstance(receipt.get("duration_seconds"), (int, float)) or receipt["duration_seconds"] < 0:
         errors.append("duration_seconds must be non-negative")
+
+    runtime_substrate = receipt.get("runtime_substrate")
+    if not isinstance(runtime_substrate, dict):
+        errors.append("runtime_substrate must be an object")
+    else:
+        if runtime_substrate.get("mode") not in EXTERNAL_MODES:
+            errors.append("runtime_substrate.mode must be REAL, SIMULATED or NONE")
+        runtimes = runtime_substrate.get("runtimes")
+        if not isinstance(runtimes, list):
+            errors.append("runtime_substrate.runtimes must be a list")
+        if runtime_substrate.get("mode") == "REAL" and not runtimes:
+            errors.append("REAL runtime substrate requires named runtimes")
+        if runtime_substrate.get("mode") == "NONE" and runtimes:
+            errors.append("NONE runtime substrate cannot name runtimes")
 
     external = receipt.get("external_systems")
     if not isinstance(external, dict):
