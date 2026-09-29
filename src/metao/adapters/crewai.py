@@ -75,7 +75,11 @@ class CrewAIOrchestratorAdapter:
         self._descriptor = OrchestratorDescriptor(
             orchestrator_id=orchestrator_id, version=version,
             capabilities=frozenset({"workflow", "agent"}),
-            metadata={"adapter": "crewai", "workload_identity": "unsupported"},
+            metadata={
+                "adapter": "crewai",
+                "workload_identity": "unsupported",
+                "security_isolation": "unsupported",
+            },
         )
         self._config_id = config_id
         self._failure_origin_authority = failure_origin_authority
