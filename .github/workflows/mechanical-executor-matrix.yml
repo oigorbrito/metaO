@@ -93,10 +93,9 @@ jobs:
 
       - name: Observed-performance regression
         run: |
-          python -m unittest \
-            tests/unit/test_observed_performance_evidence.py \
-            tests/unit/test_empirical_selection.py \
-            tests/unit/test_observed_performance_runtime_factory.py -v
+          python tests/unit/test_observed_performance_evidence.py
+          python tests/unit/test_empirical_selection.py
+          python tests/unit/test_observed_performance_runtime_factory.py
 
       - name: Upload matrix evidence
         if: always()
