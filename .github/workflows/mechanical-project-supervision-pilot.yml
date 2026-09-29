@@ -67,6 +67,10 @@ jobs:
           assert claims['real_provider_credentials'] == 'NOT_USED'
           assert claims['real_provider_cost'] == 'NOT_MEASURED'
           assert claims['cross_provider_external_handoff'] == 'NOT_PROVEN'
+          assert claims['mechanical_operational_proof'] == 'EXECUTED'
+          assert claims['real_provider_pilot'] == 'NOT_EXECUTED'
+          assert data['issue_disposition']['issue_360'] == 'MECHANICAL_OPERATIONAL_PROOF'
+          assert data['issue_disposition']['issue_540'] == 'REAL_PROVIDER_PILOT_NOT_RUN'
           print('mechanical project supervision evidence boundary: PASS')
           PY
 

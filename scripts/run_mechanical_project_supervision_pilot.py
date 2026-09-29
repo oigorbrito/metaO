@@ -123,11 +123,17 @@ def main() -> int:
             "real_provider_credentials": "NOT_USED",
             "real_provider_cost": "NOT_MEASURED",
             "cross_provider_external_handoff": "NOT_PROVEN",
+            "mechanical_operational_proof": "EXECUTED",
+            "real_provider_pilot": "NOT_EXECUTED",
+        },
+        "issue_disposition": {
+            "issue_360": "MECHANICAL_OPERATIONAL_PROOF",
+            "issue_540": "REAL_PROVIDER_PILOT_NOT_RUN",
         },
         "claim_boundary": [
-            "MECHANICAL_SUBSTITUTE != REAL_PROVIDER_PILOT",
+            "MECHANICAL_OPERATIONAL_PROOF != REAL_PROVIDER_PILOT",
             "SIMULATED_PROVIDER_IDENTITY != REAL_PROVIDER_EXECUTION",
-            "PROJECT_ACCEPTED_IN_FIXTURE != #360_OPERATIONAL_PASS",
+            "PROJECT_ACCEPTED_IN_MECHANICAL_HARNESS != REAL_PROVIDER_PROJECT_ACCEPTED",
             "NO_PROVIDER_CREDIT != PROVIDER_PASS",
         ],
     }
