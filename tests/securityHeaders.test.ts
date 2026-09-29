@@ -40,6 +40,9 @@ async function main() {
       'x-xss-protection': '0',
       'referrer-policy': 'strict-origin-when-cross-origin',
       'permissions-policy': 'camera=(), microphone=(), geolocation=()',
+      'content-security-policy':
+        "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'",
+      'strict-transport-security': 'max-age=31536000; includeSubDomains',
     };
 
     for (const [name, value] of Object.entries(expected)) {

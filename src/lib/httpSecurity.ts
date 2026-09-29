@@ -13,5 +13,13 @@ export function securityHeaders(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=()',
   );
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'",
+  );
+  res.setHeader(
+    'Strict-Transport-Security',
+    'max-age=31536000; includeSubDomains',
+  );
   next();
 }
