@@ -12,6 +12,7 @@ from .execution_handle import (
     ActiveExecutionHandle,
     ActiveExecutionNotFound,
     ExecutionHandleStatus,
+    ExternalExecutionBindingConflict,
 )
 
 
@@ -47,10 +48,19 @@ class SQLiteExecutionHandleStore:
                     cancel_requested INTEGER NOT NULL CHECK (cancel_requested IN (0,1)),
                     cancel_delegated INTEGER NOT NULL CHECK (cancel_delegated IN (0,1)),
                     ended_at_epoch REAL,
-                    execution_status TEXT
+                    execution_status TEXT,
+                    external_execution_id TEXT
                 )
                 """
             )
+            columns = {
+                str(row[1])
+                for row in connection.execute("PRAGMA table_info(active_mission_executions)")
+            }
+            if "external_execution_id" not in columns:
+                connection.execute(
+                    "ALTER TABLE active_mission_executions ADD COLUMN external_execution_id TEXT"
+                )
 
     @staticmethod
     def _decode(row: tuple[Any, ...]) -> ActiveExecutionHandle:
@@ -67,6 +77,7 @@ class SQLiteExecutionHandleStore:
                 cancel_delegated,
                 ended_at_epoch,
                 execution_status,
+                external_execution_id,
             ) = row
             return ActiveExecutionHandle(
                 mission_id=str(mission_id),
@@ -80,6 +91,7 @@ class SQLiteExecutionHandleStore:
                 cancel_delegated=bool(cancel_delegated),
                 ended_at_epoch=None if ended_at_epoch is None else float(ended_at_epoch),
                 execution_status=None if execution_status is None else ExecutionStatus(str(execution_status)),
+                external_execution_id=None if external_execution_id is None else str(external_execution_id),
             )
         except (TypeError, ValueError) as exc:
             raise ExecutionHandleCorrupt("invalid active execution handle row") from exc
@@ -89,7 +101,7 @@ class SQLiteExecutionHandleStore:
             row = connection.execute(
                 """SELECT mission_id,execution_id,orchestrator_id,attempt_number,
                           started_at_epoch,cost,status,cancel_requested,cancel_delegated,
-                          ended_at_epoch,execution_status
+                          ended_at_epoch,execution_status,external_execution_id
                    FROM active_mission_executions WHERE mission_id=?""",
                 (mission_id,),
             ).fetchone()
@@ -110,8 +122,9 @@ class SQLiteExecutionHandleStore:
                 """
                 INSERT INTO active_mission_executions(
                     mission_id,execution_id,orchestrator_id,attempt_number,started_at_epoch,
-                    cost,status,cancel_requested,cancel_delegated,ended_at_epoch,execution_status
-                ) VALUES(?,?,?,?,?,?,?,?,?,?,?)
+                    cost,status,cancel_requested,cancel_delegated,ended_at_epoch,execution_status,
+                    external_execution_id
+                ) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)
                 ON CONFLICT(mission_id) DO UPDATE SET
                     execution_id=excluded.execution_id,
                     orchestrator_id=excluded.orchestrator_id,
@@ -122,7 +135,8 @@ class SQLiteExecutionHandleStore:
                     cancel_requested=excluded.cancel_requested,
                     cancel_delegated=excluded.cancel_delegated,
                     ended_at_epoch=NULL,
-                    execution_status=NULL
+                    execution_status=NULL,
+                    external_execution_id=NULL
                 """,
                 (
                     handle.mission_id,
@@ -136,6 +150,7 @@ class SQLiteExecutionHandleStore:
                     int(delegated),
                     None,
                     None,
+                    handle.external_execution_id,
                 ),
             )
         return self.get(handle.mission_id)
@@ -161,6 +176,36 @@ class SQLiteExecutionHandleStore:
             if cursor.rowcount != 1:
                 raise ActiveExecutionNotFound(mission_id)
         return self.get(mission_id)
+
+    def bind_external_execution(
+        self,
+        execution_id: str,
+        external_execution_id: str,
+    ) -> ActiveExecutionHandle:
+        if not external_execution_id or not external_execution_id.strip():
+            raise ValueError("external execution id must be non-empty")
+        with closing(self._connect()) as connection, connection:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                """SELECT mission_id,external_execution_id
+                   FROM active_mission_executions WHERE execution_id=?""",
+                (execution_id,),
+            ).fetchone()
+            if row is None:
+                raise ActiveExecutionNotFound(execution_id)
+            mission_id, current_external_id = row
+            if (
+                current_external_id is not None
+                and str(current_external_id) != external_execution_id
+            ):
+                raise ExternalExecutionBindingConflict(execution_id)
+            connection.execute(
+                """UPDATE active_mission_executions
+                   SET external_execution_id=?
+                   WHERE execution_id=?""",
+                (external_execution_id, execution_id),
+            )
+        return self.get(str(mission_id))
 
     def complete(
         self,
