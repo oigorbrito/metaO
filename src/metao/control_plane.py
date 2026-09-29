@@ -1433,6 +1433,9 @@ def execute_mission(
     on_attempt_finished: AttemptFinished | None = None,
 
 
+    on_external_execution_observed: ExternalExecutionObserved | None = None,
+
+
     selection_policy: SelectionPolicy | None = None,
 
 
