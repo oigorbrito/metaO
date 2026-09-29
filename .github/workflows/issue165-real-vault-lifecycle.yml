@@ -1,0 +1,113 @@
+name: Issue 165 Real Vault Broker Lifecycle
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/issue165-real-vault-lifecycle.yml'
+      - 'scripts/run_issue_165_real_vault_lifecycle.py'
+      - 'scripts/validate_scientific_validation_matrix.py'
+      - 'docs/scientific-validation-matrix.json'
+      - 'experiments/rust-chassis-a/metao-contracts/src/credential_lease.rs'
+      - 'experiments/rust-chassis-a/metao-contracts/tests/credential_lease_tests.rs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  real-vault-lifecycle:
+    runs-on: ubuntu-24.04
+    env:
+      VAULT_VERSION: '1.21.4'
+      VAULT_SHA256: '889b681990fe221b884b7932fa9c9dd0ee9811b9349554f1aa287ab63c9f3dae'
+      VAULT_ADDR: 'http://127.0.0.1:8200'
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: dtolnay/rust-toolchain@6bed0761d98439e5a578e2877258200ad565ba87 # stable
+
+      - name: Install pinned Vault binary
+        run: |
+          curl --fail --silent --show-error --location \
+            "https://releases.hashicorp.com/vault/${VAULT_VERSION}/vault_${VAULT_VERSION}_linux_amd64.zip" \
+            --output "$RUNNER_TEMP/vault.zip"
+          echo "${VAULT_SHA256}  $RUNNER_TEMP/vault.zip" | sha256sum --check
+          unzip -q "$RUNNER_TEMP/vault.zip" -d "$RUNNER_TEMP/vault-bin"
+          echo "$RUNNER_TEMP/vault-bin" >> "$GITHUB_PATH"
+
+      - name: Start ephemeral real Vault broker
+        run: |
+          ROOT_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
+          echo "::add-mask::$ROOT_TOKEN"
+          echo "VAULT_TOKEN=$ROOT_TOKEN" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/vault-bin/vault" server \
+            -dev \
+            -dev-root-token-id="$ROOT_TOKEN" \
+            -dev-listen-address=127.0.0.1:8200 \
+            -log-level=error \
+            >/dev/null 2>&1 &
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent "$VAULT_ADDR/v1/sys/health" >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "Vault dev server failed to become healthy" >&2
+          exit 1
+
+      - name: Confirm exact Vault version
+        run: |
+          vault version
+          vault version | grep -F "Vault v${VAULT_VERSION}"
+
+      - name: Execute issue renew revoke lifecycle
+        env:
+          EXACT_HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          python scripts/run_issue_165_real_vault_lifecycle.py \
+            --commit "$EXACT_HEAD_SHA" \
+            --vault-version "$VAULT_VERSION" \
+            --output .artifacts/issue-165-real-vault-lifecycle.json \
+            --receipt .artifacts/issue-165-scientific-receipt.json
+
+      - name: Validate scientific receipt
+        run: |
+          python scripts/validate_scientific_validation_matrix.py \
+            --receipt .artifacts/issue-165-scientific-receipt.json
+
+      - name: Validate provider-neutral credential lease contract
+        working-directory: experiments/rust-chassis-a
+        run: cargo test -p metao-contracts --test credential_lease_tests --verbose
+
+      - name: Enforce secret-free persisted evidence
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          evidence = json.loads(Path('.artifacts/issue-165-real-vault-lifecycle.json').read_text())
+          assert evidence['classification'] == 'REAL_BROKER_LOCAL_EPHEMERAL'
+          assert evidence['issue']['passed'] is True
+          assert evidence['renew']['passed'] is True
+          assert evidence['revoke']['passed'] is True
+          assert evidence['secret_material_persisted'] is False
+          assert evidence['production_assurance_authorized'] is False
+          projection = evidence['metao_projection']
+          assert projection['assurance'] == 'Brokered'
+          assert projection['evidence_basis'] == 'BrokerVerified'
+          assert projection['revocation_status'] == 'Revoked'
+          serialized = json.dumps(evidence, sort_keys=True)
+          assert 'client_token' not in serialized
+          assert 'VAULT_TOKEN' not in serialized
+          print('real Vault broker lifecycle evidence: PASS')
+          PY
+
+      - name: Upload real broker evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: issue-165-real-vault-lifecycle-${{ github.run_id }}
+          path: |
+            .artifacts/issue-165-real-vault-lifecycle.json
+            .artifacts/issue-165-scientific-receipt.json
+          if-no-files-found: error
