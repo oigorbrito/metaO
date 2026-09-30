@@ -179,8 +179,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--expected-commit", required=True, help="Exact candidate SHA")
     parser.add_argument(
         "--expected-branch",
-        default="roadmap7/integration-candidate-v1",
-        help="Expected evidence branch",
+        required=True,
+        help="Exact expected evidence branch",
     )
     args = parser.parse_args(argv)
 
