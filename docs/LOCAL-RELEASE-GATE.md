@@ -1,8 +1,8 @@
 # metaO Local Release Gate
 
-Status: OPERATIONAL AND EXECUTED SUCCESSFULLY FOR THE ROADMAPS 2-7 CANONICAL CANDIDATE — HOSTED RUNNERS REMAIN EXTERNALLY BLOCKED.
+Status: OPERATIONAL — CURRENT v0.2.0-rc.1 EXACT-HEAD GATE PASS 21/21 — INDEPENDENT JSON VALIDATION PASS.
 
-Historical note: this document remains the local-gate evidence record for the validated v0.1 lineage. It does not override `docs/POST-MVP-OPERATIONAL-BASELINE-V1.md` for current baseline authority.
+Historical Roadmaps 2-7 evidence remains below. Current release authority is the exact v0.2.0-rc.1 candidate recorded in the current-status section and in `docs/POST-MVP-OPERATIONAL-BASELINE-V1.md`.
 
 The local release gate exists to produce reproducible executable evidence when GitHub-hosted Actions cannot reach repository execution. It does not convert local execution into a production-readiness claim and it does not turn an external hosted-runner failure into a metaO functional failure.
 
@@ -255,11 +255,17 @@ The external hosted-runner blocker remains separate until a hosted job reaches c
 
 ```text
 LOCAL_GATE_IMPLEMENTATION = OPERATIONAL
-VALIDATED_CANDIDATE = aa9e4e9a2aae73c693eb43a31c71f0801d80d7ea
+BRANCH = main
+VALIDATED_CANDIDATE = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
 LOCAL_RELEASE_GATE = PASS 21/21
-FUNCTIONAL_PASS = CLAIMED_FOR_VALIDATED_SHA
-PR_68 = MERGED
-MAIN = 58feb12531982342bf3c12b9e8b8c61a5e819c5f
-HOSTED_ACTIONS = BLOCKED_EXTERNAL_PRE_STEP
-EXACT_JSON_VALIDATION = BLOCKED_EVIDENCE_FILE_UNAVAILABLE
+CLEAN_WORKTREE = true
+PHASE = complete
+FAILURE_COUNT = 0
+FATAL_ERROR = null
+EVIDENCE = C:\\Users\\igorb\\AppData\\Local\\metaO\\release-gate-evidence\\gate-20260930-161814.json
+EXACT_JSON_VALIDATION = VALID_PASS
+TAG = v0.2.0-rc.1
+TAG_TARGET = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
+HOSTED_CI_INFRASTRUCTURE = OPERATIONAL_ON_RECENT_RUNS
+PRODUCTION_CLAIM = NO
 ```
