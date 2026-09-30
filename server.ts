@@ -3,6 +3,7 @@ import path from 'path';
 import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 
+import { isSafeCliPositionalId } from './src/lib/cliSafety';
 import { securityHeaders } from './src/lib/httpSecurity';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -187,6 +188,10 @@ async function startServer() {
   });
 
   app.get('/api/missions/:id', async (req, res) => {
+    if (!isSafeCliPositionalId(req.params.id)) {
+      res.status(400).json({ error: 'Invalid ID parameter format' });
+      return;
+    }
     try {
       res.json(withAcceptanceProof(await cli(['inspect', req.params.id])));
     } catch (error: any) {
@@ -204,6 +209,10 @@ async function startServer() {
 
   app.post('/api/runtimes/:id/quarantine', async (req, res) => {
     if (!requireMutations(res)) return;
+    if (!isSafeCliPositionalId(req.params.id)) {
+      res.status(400).json({ error: 'Invalid ID parameter format' });
+      return;
+    }
     try {
       res.json(
         await cli([
@@ -224,6 +233,10 @@ async function startServer() {
 
   app.post('/api/runtimes/:id/restore', async (req, res) => {
     if (!requireMutations(res)) return;
+    if (!isSafeCliPositionalId(req.params.id)) {
+      res.status(400).json({ error: 'Invalid ID parameter format' });
+      return;
+    }
     try {
       res.json(
         await cli([
@@ -244,6 +257,10 @@ async function startServer() {
 
   app.post('/api/certificates/:id/revoke', async (req, res) => {
     if (!requireMutations(res)) return;
+    if (!isSafeCliPositionalId(req.params.id)) {
+      res.status(400).json({ error: 'Invalid ID parameter format' });
+      return;
+    }
     try {
       res.json(
         await cli([
@@ -264,6 +281,10 @@ async function startServer() {
 
   app.post('/api/missions/:id/approve', async (req, res) => {
     if (!requireMutations(res)) return;
+    if (!isSafeCliPositionalId(req.params.id)) {
+      res.status(400).json({ error: 'Invalid ID parameter format' });
+      return;
+    }
     try {
       const args = [
         'approve',
@@ -283,6 +304,10 @@ async function startServer() {
 
   app.post('/api/missions/:id/cancel', async (req, res) => {
     if (!requireMutations(res)) return;
+    if (!isSafeCliPositionalId(req.params.id)) {
+      res.status(400).json({ error: 'Invalid ID parameter format' });
+      return;
+    }
     try {
       await cli([
         'cancel',

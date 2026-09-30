@@ -1,9 +1,23 @@
 import express from 'express';
 import http from 'http';
 
+import { isSafeCliPositionalId } from '../src/lib/cliSafety';
 import { securityHeaders } from '../src/lib/httpSecurity';
 
 async function main() {
+  const safeIds = ['quickstart-accepted', 'runtime_1', 'mission:2026.09'];
+  for (const id of safeIds) {
+    if (!isSafeCliPositionalId(id)) {
+      throw new Error(`Expected safe CLI positional id: ${id}`);
+    }
+  }
+  const unsafeIds = ['', '--db', '-h', 'bad\nvalue', 'bad\rvalue', 'x'.repeat(513)];
+  for (const id of unsafeIds) {
+    if (isSafeCliPositionalId(id)) {
+      throw new Error(`Expected unsafe CLI positional id to be rejected: ${JSON.stringify(id)}`);
+    }
+  }
+
   const previousNodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = 'production';
   const app = express();
