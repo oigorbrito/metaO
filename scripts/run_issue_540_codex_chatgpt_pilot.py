@@ -29,7 +29,7 @@ from metao.project_supervision import (
     supervise_project,
 )
 
-_EXPECTED_CLI_VERSION = "0.153.3"
+_EXPECTED_CLI_VERSION = "0.154.0"
 _EXECUTOR_ID = "codex-chatgpt-real"
 _PROVIDER_ID = "openai-codex-chatgpt"
 _MARKERS = {
