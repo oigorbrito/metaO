@@ -104,29 +104,6 @@ function Invoke-PythonGate {
     }
 }
 
-function Invoke-ExecutableGate {
-    param(
-        [Parameter(Mandatory = $true)][string]$Name,
-        [Parameter(Mandatory = $true)][string]$FilePath,
-        [Parameter()][string[]]$ArgumentList = @()
-    )
-
-    Write-Host "`n=== $Name ==="
-    $watch = [System.Diagnostics.Stopwatch]::StartNew()
-    & $FilePath @ArgumentList
-    $code = $LASTEXITCODE
-    $watch.Stop()
-
-    if ($code -eq 0) {
-        Add-GateResult -Name $Name -Status "PASS" -ExitCodeValue 0 -DurationSeconds $watch.Elapsed.TotalSeconds
-        Write-Host "PASS: $Name"
-    }
-    else {
-        Add-GateResult -Name $Name -Status "FAIL" -ExitCodeValue $code -DurationSeconds $watch.Elapsed.TotalSeconds
-        Write-Host "FAIL: $Name (exit $code)"
-    }
-}
-
 function Invoke-SdkBoundaryGate {
     Write-Host "`n=== SDK-neutral Core/control-plane boundary ==="
     $watch = [System.Diagnostics.Stopwatch]::StartNew()
@@ -243,8 +220,10 @@ try {
         "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'; assert version('crewai') == '1.15.16'; assert version('langgraph') == '1.2.11'; print('OpenAI Agents', version('openai-agents')); print('CrewAI', version('crewai')); print('LangGraph', version('langgraph'))"
     )
 
-    $MetaOExe = Join-Path $VenvPath "Scripts\metao.exe"
-    Invoke-ExecutableGate -Name "installed_cli_help" -FilePath $MetaOExe -ArgumentList @("--help")
+    Invoke-PythonGate -Name "installed_cli_help" -ArgumentList @(
+        "-c",
+        "from importlib.metadata import distribution; dist = distribution('metao-control-plane'); matches = [ep for ep in dist.entry_points if ep.group == 'console_scripts' and ep.name == 'metao']; assert len(matches) == 1, f'expected one installed metao console entry point, got {len(matches)}'; ep = matches[0]; assert ep.value == 'metao.entrypoint:main', f'unexpected metao entry point: {ep.value}'; main = ep.load(); raise SystemExit(main(['--help']))"
+    )
     Invoke-PythonGate -Name "installed_import_smoke" -ArgumentList @(
         "-c",
         "import metao; import metao.runtime_factory; import metao.runtime_certification; import metao.runtime_certification_revocation"
