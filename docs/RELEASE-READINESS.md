@@ -6,7 +6,7 @@ Historical note: this document captures the release-readiness state for the vali
 
 This document separates current executable evidence, historical failed attempts, external infrastructure blockers, and claims that remain intentionally unmade.
 
-Current-head audit note (2026-09-25): the evidence in this document is bound to the historical candidate SHAs shown below. It does not qualify `main@4bedae3715ff30ce36cb183417f136400f1a8c91` until the release gate is rerun on that exact commit.
+Current-head audit note (2026-09-30): `v0.2.0-rc.1` is bound to the exact qualified executable candidate `main@23fc5c659ae5f0606e9e6774108c44636e29b0ac`. Later repository commits do not inherit this release authority automatically.
 
 ## Current exact-head release qualification — 2026-09-30
 
@@ -14,22 +14,24 @@ The current release candidate was executed from a clean Windows checkout and ind
 
 ```text
 branch = main
-candidate = f14a707a6a482bd1267141ce590af169e39c3488
+candidate = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
 phase = complete
 clean_worktree = true
 results = 21
 failure_count = 0
 fatal_error = null
 local_release_gate = PASS
-evidence = C:\\Users\\igorb\\AppData\\Local\\metaO\\release-gate-evidence\\gate-20260930-110723.json
-independent_json_validation = PASS
+evidence = C:\\Users\\igorb\\AppData\\Local\\metaO\\release-gate-evidence\\gate-20260930-161814.json
+independent_json_validation = VALID_PASS
 ```
 
 The validator initially rejected the evidence because its CLI default still named the historical Roadmap 7 branch. PR #725 removed that implicit historical authority and requires an explicit expected branch. The corrected validator passed CI and its dedicated workflow, then validated the same JSON with `--expected-branch main` and the exact candidate SHA.
 
 ```text
 VALIDATOR_TOOLING_MERGE = 52e35c4db86397aeb49ebb3abb47ed2381cb6881
-VALIDATOR_TOOLING_COMMIT != EXECUTED_RELEASE_CANDIDATE
+RELEASE_GATE_WINDOWS_HARNESS_FIX_MERGE = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
+TAG = v0.2.0-rc.1
+TAG_TARGET = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
 ```
 
 The historical GitHub Actions pre-step allocation failure is no longer current: recent qualification workflows run configured steps and pass. This does not retroactively create hosted-CI evidence for older SHAs, nor does it replace the exact local release gate above.
