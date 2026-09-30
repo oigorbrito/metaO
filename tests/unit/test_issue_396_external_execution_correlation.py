@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -107,7 +108,7 @@ class ExternalExecutionCorrelationTests(unittest.TestCase):
     def test_sqlite_migrates_legacy_handle_table_without_losing_state(self):
         with tempfile.TemporaryDirectory() as temp:
             path = Path(temp) / "legacy.db"
-            with sqlite3.connect(path) as connection:
+            with closing(sqlite3.connect(path)) as connection, connection:
                 connection.execute(
                     """
                     CREATE TABLE active_mission_executions (
