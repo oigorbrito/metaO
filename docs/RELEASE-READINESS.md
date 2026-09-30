@@ -62,12 +62,14 @@ The merge commit has the validated candidate as the accepted repository state, p
 
 ## Release candidate policy
 
+The post-v0.1 line advances to the first 0.2 release candidate. The version metadata change itself is not release authority; the merge SHA must be rerun through the exact-head local release gate before the tag is created.
+
 The repository version policy currently comes from `pyproject.toml`:
 
 ```text
-CURRENT_VERSION = 0.1.0
-NEXT_RELEASE_CANDIDATE_VERSION = 0.1.0-rc.1
-TAG = v0.1.0-rc.1
+CURRENT_VERSION = 0.2.0rc1
+RELEASE_CANDIDATE_VERSION = 0.2.0-rc.1
+TAG = v0.2.0-rc.1
 ```
 
 ## Active runtime set
