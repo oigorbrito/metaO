@@ -1,12 +1,33 @@
 # POST_MVP_OPERATIONAL_BASELINE_V1
 
-Status: CANONICAL BASELINE DRAFT FOR POST-MVP OPERATIONALIZATION
+Status: CANONICAL POST-MVP OPERATIONAL BASELINE — EXACT-HEAD RELEASE QUALIFIED
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Qualified executable commit: `974bb9389ea34e409d8d9cff50b47f427f7877e2`
-Date: 2026-09-09
+Qualified executable commit: `f14a707a6a482bd1267141ce590af169e39c3488`
+Date: 2026-09-30
 
 A later documentation-only merge may advance repository `HEAD` without invalidating the executable evidence bound to the qualified commit above. Any later change to product code, packaging, executable tests, or workflows must be requalified before inheriting these PASS claims.
+
+## 0. Current release qualification
+
+The current executable baseline is bound to `main@f14a707a6a482bd1267141ce590af169e39c3488`.
+
+```text
+BRANCH = main
+QUALIFIED_EXECUTABLE_COMMIT = f14a707a6a482bd1267141ce590af169e39c3488
+LOCAL_RELEASE_GATE = PASS 21/21
+CLEAN_WORKTREE = true
+PHASE = complete
+FATAL_ERROR = null
+FAILURE_COUNT = 0
+EVIDENCE = C:\\Users\\igorb\\AppData\\Local\\metaO\\release-gate-evidence\\gate-20260930-110723.json
+INDEPENDENT_JSON_VALIDATION = PASS
+VALIDATOR_TOOLING_MERGE = 52e35c4db86397aeb49ebb3abb47ed2381cb6881
+```
+
+The validator tooling merge is later than the executed candidate and does not inherit or replace the candidate's executable evidence. It only removes a historical default branch assumption and revalidates the same evidence with explicit `--expected-branch main` and exact commit binding.
+
+Recent GitHub-hosted workflows execute configured repository steps successfully again. The historical pre-step runner-allocation incident is therefore resolved as infrastructure history; no hosted-CI claim is silently attributed to the exact local release candidate unless separately bound to that SHA.
 
 ## 1. Repository identity
 
@@ -24,7 +45,7 @@ Current actual phase:
 - the clean-room qualification produced `current full suite` unit PASS, README quickstart E2E PASS, installed-console negative-bootstrap E2E PASS, and canonical initialization E2E PASS;
 - the documented first-use path reaches mission `ACCEPTED` and separate-process inspection from a fresh clone with an isolated venv;
 - first-run failure paths fail early without partial mission persistence for the covered cases;
-- hosted CI remains externally blocked before configured steps under #71.
+- GitHub-hosted workflow execution is operational again on recent qualification PRs; exact-head local release authority remains bound to the evidence above.
 
 This is not final project closure.
 
@@ -44,10 +65,11 @@ E2E_INIT_TEST_PASSES = YES
 INTEGRATED_INTO_MAIN = YES
 E2E_PASSES_ON_INTEGRATED_PATH = YES
 INITIALIZATION_RESOLVED = YES
-HOSTED_CI_PASS = NO / BLOCKED_EXTERNAL (#71)
+HOSTED_CI_INFRASTRUCTURE = OPERATIONAL_ON_RECENT_RUNS
+EXACT_CANDIDATE_HOSTED_CI = NOT_CLAIMED
 ```
 
-The initialization/onboarding conclusion is bounded to the qualified integrated executable path. It does not imply final project closure, hosted-CI PASS, or real external-provider success.
+The initialization/onboarding conclusion is bounded to the qualified integrated executable path. It does not imply final project closure, production SLOs, security certification, or generalized external-provider success.
 
 ## 3. Frozen architecture
 
@@ -156,7 +178,7 @@ Current capability truth is captured in `docs/CAPABILITY-MAP.md`. Short form:
 - current executable evidence exists for the acceptance boundary, runtime invariants, governance budget/approval, replay/fencing, release validator, and several integration/runtime slices;
 - some slices are only specified or partially composed;
 - cross-orchestrator and hostile-boundary claims remain partitioned by evidence level and should not be collapsed into a single PASS bucket;
-- hosted GitHub Actions remains externally blocked and is not product proof.
+- recent GitHub-hosted workflows execute normally again; hosted workflow success remains distinct from exact-candidate local release evidence.
 
 ## 7. Evidence-level definitions
 
@@ -216,13 +238,14 @@ CROSS_PROCESS_INSPECT = PASS
 NEGATIVE_BOOTSTRAP_CASES = PASS
 UNIT_REGRESSION = current full suite PASS
 WORKTREE_HYGIENE = PASS
-HOSTED_CI = BLOCKED_EXTERNAL (#71)
+HOSTED_CI_INFRASTRUCTURE = OPERATIONAL_ON_RECENT_RUNS
+EXACT_CANDIDATE_HOSTED_CI = NOT_CLAIMED
 ```
 
 ## 9. Known blockers
 
-- hosted GitHub Actions pre-step blocker remains external under #71; this no longer blocks the factual local conclusion that canonical initialization/onboarding is resolved on the qualified integrated executable state;
-- exact JSON re-validation of historical release evidence was separately blocked by file availability in prior reconciliation;
+- the historical GitHub Actions pre-step runner-allocation blocker is resolved by later successful hosted workflow executions;
+- current exact release JSON evidence for `f14a707a...` was independently validated PASS; historical evidence files remain historical.
 - Rust canonical parity is still the product direction but not the only live implementation language in this checkout;
 - numeric hard-gate audit #420-#429 was converged by #443 and is resolved on integrated main;
 - remote branch-reference cleanup is repository hygiene, not product correctness, and may require a Git client because the connected repository API does not expose branch deletion.
@@ -239,7 +262,7 @@ HOSTED_CI = BLOCKED_EXTERNAL (#71)
 - real runtime and integration evidence for the required operational slice;
 - external blockers separated from product correctness.
 
-The canonical Python operator initialization/onboarding requirement is satisfied for executable `main@974bb9389ea34e409d8d9cff50b47f427f7877e2`. That prerequisite must not be re-opened merely because hosted CI is blocked, but it also must not be used as a substitute for the remaining readiness requirements above.
+The canonical Python operator initialization/onboarding requirement and the current 21-gate local release qualification are satisfied for executable `main@f14a707a6a482bd1267141ce590af169e39c3488`. Those facts do not substitute for production SLO, security-certification, or generalized external-provider claims.
 
 ## 11. Final closure
 

@@ -3,12 +3,27 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Qualified executable commit: `974bb9389ea34e409d8d9cff50b47f427f7877e2`
-Date reconciled: 2026-09-09
+Qualified executable commit: `f14a707a6a482bd1267141ce590af169e39c3488`
+Date reconciled: 2026-09-30
 
 A later documentation-only merge may advance repository `HEAD` without changing the executable evidence binding above. Any later product-code, packaging, executable-test, or workflow change requires requalification before inheriting these PASS claims.
 
 This is the master closure plan for the post-MVP baseline. It replaces issue-by-issue ping-pong as the primary planning view.
+
+## Current closure fact: exact-head release qualification
+
+```text
+BRANCH = main
+QUALIFIED_EXECUTABLE_COMMIT = f14a707a6a482bd1267141ce590af169e39c3488
+LOCAL_RELEASE_GATE = PASS 21/21
+RELEASE_EVIDENCE_VALIDATOR = PASS
+CLEAN_WORKTREE = true
+FAILURE_COUNT = 0
+EVIDENCE = C:\\Users\\igorb\\AppData\\Local\\metaO\\release-gate-evidence\\gate-20260930-110723.json
+HOSTED_CI_INFRASTRUCTURE = OPERATIONAL_ON_RECENT_RUNS
+```
+
+The release qualification closes the current local exact-head release-evidence obligation. It does not establish production SLOs, security certification, real multi-provider failover, or generalized external-system assurance.
 
 ## Current closure fact: canonical operator initialization and onboarding
 
@@ -17,7 +32,7 @@ The canonical Python operator initialization/onboarding requirement is resolved 
 ```text
 REPOSITORY = oigorbrito/metaO
 BRANCH = main
-QUALIFIED_EXECUTABLE_COMMIT = 974bb9389ea34e409d8d9cff50b47f427f7877e2
+QUALIFIED_EXECUTABLE_COMMIT = f14a707a6a482bd1267141ce590af169e39c3488
 PYTHON = 3.12.10
 CLEAN_CLONE = YES
 ISOLATED_VENV = YES
@@ -33,14 +48,14 @@ FIRST_MISSION = ACCEPTED
 CROSS_PROCESS_INSPECT = PASS
 FINAL_WORKTREE = CLEAN
 INITIALIZATION_RESOLVED = YES
-HOSTED_CI = BLOCKED_EXTERNAL_PRE_STEP (#71)
+HOSTED_CI_INFRASTRUCTURE = OPERATIONAL_ON_RECENT_RUNS
 ```
 
 The canonical initialization E2E traversed installed CLI -> doctor -> canonical factory loading -> declarative runtime catalog -> real LangGraph runtime -> required certification -> admission -> mission execution -> `ACCEPTED` -> separate-process inspect with persisted execution/evidence/proof observable.
 
 The README clean-room E2E proves the committed documented onboarding path without hidden `my_app` modules, external credentials, or an uncommitted runtime catalog. The installed-console negative-bootstrap E2E proves the covered first-run failures occur before partial mission persistence.
 
-This closes the initialization/onboarding obligation only. It does not imply final project closure, hosted-CI PASS, or real external-provider success. Issue #71 remains the independent hosted-runner blocker.
+This closes the initialization/onboarding obligation. Current hosted workflow infrastructure is operational again, but neither that fact nor the local release gate implies production SLOs, security certification, or generalized real external-provider success.
 
 ## Block A - Documentation and requirements baseline
 

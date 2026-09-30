@@ -3,16 +3,17 @@
 Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Last reconciled commit: `05306c2e205c1a94bf96e8753772728a11f4391d`
+Last reconciled executable commit: `f14a707a6a482bd1267141ce590af169e39c3488`
+Last reconciled date: 2026-09-30
 
-Current reconciliation note: the GitHub API was reachable during the 2026-09-26 audit. The exact-head `main` CI run `36252655742` for `e61db85` completed in two seconds with failure before any configured step (`steps=[]`, `runner_id=0`, empty `runner_name`), so it is recorded as an external runner-allocation blocker rather than a product test failure. The local Python 3.13 release gate passed 21/21 gates with validated evidence; hosted-runner and API-authentication observations below remain evidence for their original runs.
+Current reconciliation note: the exact-head Windows local release gate passed 21/21 on `main@f14a707a6a482bd1267141ce590af169e39c3488` with a clean worktree and machine-readable evidence `gate-20260930-110723.json`. Independent evidence validation passed after the validator was corrected to require an explicit expected branch in PR #725. Recent GitHub-hosted workflows also execute configured repository steps successfully again, so the historical pre-step runner-allocation incident is resolved as infrastructure history rather than a current blocker.
 
 ## Current product blockers
 
 | BLOCKER | TYPE | CURRENT_STATUS | IMPACT |
 |---|---|---|---|
-| Hosted GitHub Actions pre-step failure | external infrastructure | blocked-current-head | `main` run `36252655742` for `e61db85` failed with `steps=[]`, `runner_id=0` and no runner name; hosted CI cannot be used as product PASS evidence |
-| Exact release JSON file availability | evidence availability | blocked | independent revalidation of historical release evidence cannot proceed without the file |
+| Hosted GitHub Actions pre-step failure | external infrastructure | resolved | recent CI and dedicated qualification workflows execute configured steps and pass; historical failed runs remain historical evidence |
+| Exact current release JSON validation | evidence availability | resolved | `gate-20260930-110723.json` validated PASS for branch `main` and candidate `f14a707a...` |
 | Real external runtime/provider execution | external provider / secret | blocked locally | Rust and Python conformance paths are not real provider execution without configured SDK dependencies/secrets |
 | Real credential broker lifecycle | external/local infrastructure | blocked locally | provider-neutral credential lease contracts are not a real issue/renew/revoke broker lifecycle |
 | Formal model execution | local toolchain | blocked | TLC/java are not available in the current environment |
@@ -34,7 +35,7 @@ Current reconciliation note: the GitHub API was reachable during the 2026-09-26 
 | PY_LANGGRAPH_DEPS | RESOLVED_IN_HERMETIC_ENV | provider-free LangGraph integration tests | Python 3.13 temporary environment with `langgraph==1.2.11`; selected integration command plus O1 and canonical initialization | local Python 3.11 lacked the dependency; the declared hermetic environment passed | retain the hermetic dependency installation in the release path | 7/7 selected integration tests, O1 and initialization E2E passed |
 | FORMAL_TLC | BLOCKED_TOOLCHAIN | bounded formal model execution | `where.exe tlc`; `where.exe java` | no matching executable found | provide TLC/java or equivalent model-checking toolchain | no; executable Rust tests continued |
 | REAL_BROKER | BLOCKED_EXTERNAL | credential broker lifecycle | not executed | no safe local credential broker/provider configured | provide approved local broker/provider or revise acceptance criterion | no; provider-neutral composition continued |
-| PYTHON313_GATE | RESOLVED_LOCAL | local release gate | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-local-release-gate.ps1 -VenvPath "$env:LOCALAPPDATA\\metaO\\release-gate-venv313"` | none | retain Python 3.13 hermetic environment and pins | exact head `9202078`, clean worktree, `21/21 PASS`, evidence `gate-20260926-122936.json` validated with `scripts/validate_release_evidence.py` |
+| PYTHON313_GATE | RESOLVED_LOCAL | local release gate | `powershell -NoProfile -ExecutionPolicy Bypass -File scripts/run-local-release-gate.ps1` | none | retain Python 3.13 hermetic environment and pins | exact candidate `f14a707a6a482bd1267141ce590af169e39c3488`, clean worktree, `21/21 PASS`, evidence `gate-20260930-110723.json`, independent validator PASS |
 
 ## Rules
 
