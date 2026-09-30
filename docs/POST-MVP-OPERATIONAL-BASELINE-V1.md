@@ -3,26 +3,29 @@
 Status: CANONICAL POST-MVP OPERATIONAL BASELINE — EXACT-HEAD RELEASE QUALIFIED
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
-Qualified executable commit: `f14a707a6a482bd1267141ce590af169e39c3488`
+Qualified executable commit: `23fc5c659ae5f0606e9e6774108c44636e29b0ac`
 Date: 2026-09-30
 
 A later documentation-only merge may advance repository `HEAD` without invalidating the executable evidence bound to the qualified commit above. Any later change to product code, packaging, executable tests, or workflows must be requalified before inheriting these PASS claims.
 
 ## 0. Current release qualification
 
-The current executable baseline is bound to `main@f14a707a6a482bd1267141ce590af169e39c3488`.
+The current executable baseline and `v0.2.0-rc.1` tag are bound to `main@23fc5c659ae5f0606e9e6774108c44636e29b0ac`.
 
 ```text
 BRANCH = main
-QUALIFIED_EXECUTABLE_COMMIT = f14a707a6a482bd1267141ce590af169e39c3488
+QUALIFIED_EXECUTABLE_COMMIT = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
 LOCAL_RELEASE_GATE = PASS 21/21
 CLEAN_WORKTREE = true
 PHASE = complete
 FATAL_ERROR = null
 FAILURE_COUNT = 0
-EVIDENCE = C:\\Users\\igorb\\AppData\\Local\\metaO\\release-gate-evidence\\gate-20260930-110723.json
-INDEPENDENT_JSON_VALIDATION = PASS
+EVIDENCE = C:\\Users\\igorb\\AppData\\Local\\metaO\\release-gate-evidence\\gate-20260930-161814.json
+INDEPENDENT_JSON_VALIDATION = VALID_PASS
 VALIDATOR_TOOLING_MERGE = 52e35c4db86397aeb49ebb3abb47ed2381cb6881
+RELEASE_GATE_WINDOWS_HARNESS_FIX_MERGE = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
+RELEASE_TAG = v0.2.0-rc.1
+RELEASE_TAG_TARGET = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
 ```
 
 The validator tooling merge is later than the executed candidate and does not inherit or replace the candidate's executable evidence. It only removes a historical default branch assumption and revalidates the same evidence with explicit `--expected-branch main` and exact commit binding.
@@ -245,7 +248,7 @@ EXACT_CANDIDATE_HOSTED_CI = NOT_CLAIMED
 ## 9. Known blockers
 
 - the historical GitHub Actions pre-step runner-allocation blocker is resolved by later successful hosted workflow executions;
-- current exact release JSON evidence for `f14a707a...` was independently validated PASS; historical evidence files remain historical.
+- current exact release JSON evidence for `23fc5c65...` was independently validated `VALID_PASS`; historical evidence files remain historical.
 - Rust canonical parity is still the product direction but not the only live implementation language in this checkout;
 - numeric hard-gate audit #420-#429 was converged by #443 and is resolved on integrated main;
 - remote branch-reference cleanup is repository hygiene, not product correctness, and may require a Git client because the connected repository API does not expose branch deletion.
@@ -262,7 +265,7 @@ EXACT_CANDIDATE_HOSTED_CI = NOT_CLAIMED
 - real runtime and integration evidence for the required operational slice;
 - external blockers separated from product correctness.
 
-The canonical Python operator initialization/onboarding requirement and the current 21-gate local release qualification are satisfied for executable `main@f14a707a6a482bd1267141ce590af169e39c3488`. Those facts do not substitute for production SLO, security-certification, or generalized external-provider claims.
+The canonical Python operator initialization/onboarding requirement and the current 21-gate local release qualification are satisfied for executable `main@23fc5c659ae5f0606e9e6774108c44636e29b0ac`, which is tagged exactly as `v0.2.0-rc.1`. Those facts do not substitute for production SLO, security-certification, or generalized external-provider claims.
 
 ## 11. Final closure
 
