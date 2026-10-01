@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Navbar, TabType } from './components/Navbar';
 import { StatsBar } from './components/StatsBar';
 import { MissionsView } from './components/MissionsView';
@@ -176,9 +176,12 @@ export default function App() {
     }
   };
 
-  const pendingApprovalsCount = missions.filter(
-    (mission) => mission.status === 'WAITING_APPROVAL',
-  ).length;
+  const pendingApprovalsCount = useMemo(
+    () =>
+      missions.filter((mission) => mission.status === 'WAITING_APPROVAL')
+        .length,
+    [missions],
+  );
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-cyan-500/20 selection:text-cyan-300">
