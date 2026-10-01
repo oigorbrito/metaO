@@ -89,10 +89,10 @@ async function allCertificates(): Promise<any[]> {
   const runtimes = await cli(['runtimes']);
   const groups = await Promise.all(
     (runtimes || []).map(async (runtime: any) => {
-      const certs = await cli(['runtime-certificates', runtime.orchestrator_id]);
-      const revocations = await cli([
-        'runtime-certificate-revocations',
-        runtime.orchestrator_id,
+      // Execute certificates and revocations queries concurrently for each runtime
+      const [certs, revocations] = await Promise.all([
+        cli(['runtime-certificates', runtime.orchestrator_id]),
+        cli(['runtime-certificate-revocations', runtime.orchestrator_id]),
       ]);
       const byId = new Map(
         (revocations || []).map((item: any) => [item.certificate_id, item]),
