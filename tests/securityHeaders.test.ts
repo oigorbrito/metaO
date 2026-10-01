@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 
-import { isSafeCliPositionalId } from '../src/lib/cliSafety';
+import { isSafeCliOptionValue, isSafeCliPositionalId } from '../src/lib/cliSafety';
 import { securityHeaders } from '../src/lib/httpSecurity';
 
 async function main() {
@@ -15,6 +15,19 @@ async function main() {
   for (const id of unsafeIds) {
     if (isSafeCliPositionalId(id)) {
       throw new Error(`Expected unsafe CLI positional id to be rejected: ${JSON.stringify(id)}`);
+    }
+  }
+
+  const safeOptionValues = ['Operator quarantine via web console', 'Valid reason 123', 'a'.repeat(512)];
+  for (const val of safeOptionValues) {
+    if (!isSafeCliOptionValue(val)) {
+      throw new Error(`Expected safe CLI option value: ${val}`);
+    }
+  }
+  const unsafeOptionValues = ['', '--flag', '-r', 'bad\nvalue', 'bad\rvalue', 123, 'x'.repeat(513)];
+  for (const val of unsafeOptionValues) {
+    if (isSafeCliOptionValue(val)) {
+      throw new Error(`Expected unsafe CLI option value to be rejected: ${JSON.stringify(val)}`);
     }
   }
 
