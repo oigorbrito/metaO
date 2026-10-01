@@ -3,7 +3,7 @@ import path from 'path';
 import { execFile } from 'child_process';
 import { fileURLToPath } from 'url';
 
-import { isSafeCliPositionalId } from './src/lib/cliSafety';
+import { isSafeCliOptionValue, isSafeCliPositionalId } from './src/lib/cliSafety';
 import { securityHeaders } from './src/lib/httpSecurity';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -213,6 +213,10 @@ async function startServer() {
       res.status(400).json({ error: 'Invalid ID parameter format' });
       return;
     }
+    if (req.body?.reason !== undefined && !isSafeCliOptionValue(req.body.reason)) {
+      res.status(400).json({ error: 'Invalid reason parameter format' });
+      return;
+    }
     try {
       res.json(
         await cli([
@@ -235,6 +239,10 @@ async function startServer() {
     if (!requireMutations(res)) return;
     if (!isSafeCliPositionalId(req.params.id)) {
       res.status(400).json({ error: 'Invalid ID parameter format' });
+      return;
+    }
+    if (req.body?.reason !== undefined && !isSafeCliOptionValue(req.body.reason)) {
+      res.status(400).json({ error: 'Invalid reason parameter format' });
       return;
     }
     try {
@@ -261,6 +269,10 @@ async function startServer() {
       res.status(400).json({ error: 'Invalid ID parameter format' });
       return;
     }
+    if (req.body?.reason !== undefined && !isSafeCliOptionValue(req.body.reason)) {
+      res.status(400).json({ error: 'Invalid reason parameter format' });
+      return;
+    }
     try {
       res.json(
         await cli([
@@ -285,6 +297,10 @@ async function startServer() {
       res.status(400).json({ error: 'Invalid ID parameter format' });
       return;
     }
+    if (req.body?.reason !== undefined && !isSafeCliOptionValue(req.body.reason)) {
+      res.status(400).json({ error: 'Invalid reason parameter format' });
+      return;
+    }
     try {
       const args = [
         'approve',
@@ -306,6 +322,10 @@ async function startServer() {
     if (!requireMutations(res)) return;
     if (!isSafeCliPositionalId(req.params.id)) {
       res.status(400).json({ error: 'Invalid ID parameter format' });
+      return;
+    }
+    if (req.body?.reason !== undefined && !isSafeCliOptionValue(req.body.reason)) {
+      res.status(400).json({ error: 'Invalid reason parameter format' });
       return;
     }
     try {
