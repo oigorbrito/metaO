@@ -72,6 +72,22 @@ metaO is intentionally above concrete orchestrators:
 
 Framework-specific SDKs belong behind adapters. Replacing an orchestrator should not require moving policy, budget, recovery, or acceptance authority into that orchestrator.
 
+## Current release candidate
+
+`v0.2.0-rc.1` is the current published prerelease.
+
+```text
+tag = v0.2.0-rc.1
+qualified executable commit = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
+local release gate = PASS 21/21
+independent release evidence validation = VALID_PASS
+GitHub Release = published prerelease
+```
+
+This release qualification is bound to the exact executable commit above. Later documentation-only commits may advance repository `main` without inheriting or replacing that executable evidence.
+
+This prerelease does **not** establish production readiness, production SLO validation, security certification, or generalized external-provider/provider-failover reliability.
+
 ## Evidence status
 
 The current capability map distinguishes implementation from the level of evidence supporting each capability.
@@ -124,7 +140,7 @@ Operational rules and evidence discipline are documented in:
 - [`docs/AGENT-HARNESS-ENGINEERING-GUIDE.md`](docs/AGENT-HARNESS-ENGINEERING-GUIDE.md) — empirically grounded instruction/harness authoring, progressive disclosure, anti-redundancy, and evaluation rules.
 - [`docs/GITHUB-WORKFLOW.md`](docs/GITHUB-WORKFLOW.md) — Issue/branch/PR lifecycle, merge gates, failure classification, and architecture guardrails.
 - [`docs/GITHUB-LABEL-TAXONOMY.md`](docs/GITHUB-LABEL-TAXONOMY.md) — canonical status/type/priority/area labels.
-- [`docs/GITHUB-ACTIONS-SUPPORT-PACKET.md`](docs/GITHUB-ACTIONS-SUPPORT-PACKET.md) — current hosted-runner pre-step blocker evidence and escalation packet.
+- [`docs/GITHUB-ACTIONS-SUPPORT-PACKET.md`](docs/GITHUB-ACTIONS-SUPPORT-PACKET.md) — historical hosted-runner incident evidence and escalation packet.
 
 Evidence remains fail-closed:
 
