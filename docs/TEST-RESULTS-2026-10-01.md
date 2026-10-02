@@ -103,6 +103,20 @@ The mixed executor harness initially returned a failing overall status because t
 
 Therefore there is **no Gemini cost comparison claim** in this evidence set.
 
+## Current pull-request validation
+
+The following GitHub workflow results are additional regression evidence for the current open PR heads. They do **not** replace the exact-head local release qualification above.
+
+| PR | Head | Validation | Result |
+|---|---|---|---|
+| #733 | `eacf01614787bf9dceb08b71ca7176802d18a837` | CI #1544 | **PASS** |
+| #734 | `61f341521868002726896ab789a099b0e64a741c` | CI #1545 | **PASS** |
+| #736 | `9b766912b17c78885812803a60f91be6c7a1905a` | CI #1543 | **PASS** |
+
+PR #733 is now restricted to `server.ts`, `src/App.tsx`, `src/components/EventLedgerView.tsx`, and `src/components/StatsBar.tsx`. PR #734 is restricted to `server.ts`, `src/lib/cliSafety.ts`, and `tests/securityHeaders.test.ts`. Unrelated README reversions and agent-journal files were removed before the current CI runs above.
+
+PR #735 itself previously passed CI #1542 before the README discoverability link was added. Its final workflow result belongs in the PR conversation rather than being recursively written into this dated evidence file.
+
 ## What these tests establish
 
 These tests establish exercised behavior for the exact local environment and benchmark runs above, including release-gate closure, independent evidence validation, real Codex-backed project supervision, workspace-write supervision and restoration, repeated bare-vs-metaO executor measurements, Antigravity supervision, cost/latency proxy measurements for Codex and Antigravity, and fail-closed behavior in the exercised paths.
