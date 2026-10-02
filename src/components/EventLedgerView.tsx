@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ListFilter, Terminal, Clock, ShieldCheck, Activity } from 'lucide-react';
 import { MissionEvent } from '../types/metao';
 
@@ -6,16 +6,19 @@ interface Props {
   events: MissionEvent[];
 }
 
-export const EventLedgerView: React.FC<Props> = ({ events }) => {
+export const EventLedgerView: React.FC<Props> = React.memo(({ events }) => {
   const [filter, setFilter] = useState('');
 
-  const filtered = filter
-    ? events.filter(
-        e =>
-          e.mission_id.toLowerCase().includes(filter.toLowerCase()) ||
-          e.kind.toLowerCase().includes(filter.toLowerCase())
-      )
-    : events;
+  // Memoize filtered events and hoist lowercased query to avoid 2*N string operations per render
+  const filtered = useMemo(() => {
+    if (!filter.trim()) return events;
+    const lowerFilter = filter.toLowerCase();
+    return events.filter(
+      e =>
+        e.mission_id.toLowerCase().includes(lowerFilter) ||
+        e.kind.toLowerCase().includes(lowerFilter)
+    );
+  }, [events, filter]);
 
   return (
     <div className="space-y-6">
@@ -86,4 +89,4 @@ export const EventLedgerView: React.FC<Props> = ({ events }) => {
       </div>
     </div>
   );
-};
+});

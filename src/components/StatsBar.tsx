@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { ShieldCheck, Cpu, CheckCircle2, Activity } from 'lucide-react';
 import { DoctorReport, MissionRecord, RuntimeCatalogEntry, RuntimeCertification } from '../types/metao';
 
@@ -9,10 +9,10 @@ interface Props {
   certifications: RuntimeCertification[];
 }
 
-export const StatsBar: React.FC<Props> = ({ doctor, runtimes, missions, certifications }) => {
-  const activeRuntimes = runtimes.filter(r => r.disposition === 'ACTIVE');
-  const validCerts = certifications.filter(c => c.passed && !c.revoked);
-  const acceptedMissions = missions.filter(m => m.status === 'ACCEPTED');
+export const StatsBar: React.FC<Props> = React.memo(({ doctor, runtimes, missions, certifications }) => {
+  const activeRuntimes = useMemo(() => runtimes.filter(r => r.disposition === 'ACTIVE'), [runtimes]);
+  const validCerts = useMemo(() => certifications.filter(c => c.passed && !c.revoked), [certifications]);
+  const acceptedMissions = useMemo(() => missions.filter(m => m.status === 'ACCEPTED'), [missions]);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
@@ -69,4 +69,4 @@ export const StatsBar: React.FC<Props> = ({ doctor, runtimes, missions, certific
       </div>
     </div>
   );
-};
+});
