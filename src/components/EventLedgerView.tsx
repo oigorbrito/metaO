@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { ListFilter, Terminal, Clock, ShieldCheck, Activity } from 'lucide-react';
 import { MissionEvent } from '../types/metao';
 
@@ -9,13 +9,17 @@ interface Props {
 export const EventLedgerView: React.FC<Props> = ({ events }) => {
   const [filter, setFilter] = useState('');
 
-  const filtered = filter
-    ? events.filter(
-        e =>
-          e.mission_id.toLowerCase().includes(filter.toLowerCase()) ||
-          e.kind.toLowerCase().includes(filter.toLowerCase())
-      )
-    : events;
+  // Performance optimization: Memoize filtering and normalize filter query string once per search update
+  // to avoid O(N) string lowercasing operations on every render when parent components re-render.
+  const filtered = useMemo(() => {
+    if (!filter.trim()) return events;
+    const lowerFilter = filter.toLowerCase();
+    return events.filter(
+      e =>
+        e.mission_id.toLowerCase().includes(lowerFilter) ||
+        e.kind.toLowerCase().includes(lowerFilter)
+    );
+  }, [events, filter]);
 
   return (
     <div className="space-y-6">
