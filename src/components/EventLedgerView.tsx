@@ -11,7 +11,7 @@ export const EventLedgerView: React.FC<Props> = React.memo(({ events }) => {
 
   // Memoize filtered events and hoist lowercased query to avoid 2*N string operations per render
   const filtered = useMemo(() => {
-    if (!filter) return events;
+    if (!filter.trim()) return events;
     const lowerFilter = filter.toLowerCase();
     return events.filter(
       e =>
