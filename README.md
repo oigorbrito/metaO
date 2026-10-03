@@ -119,6 +119,10 @@ Canonical evidence view:
 - [Quality model](docs/QUALITY-MODEL.md)
 - [Document authority map](docs/DOCUMENT-AUTHORITY-MAP.md)
 
+Recent executed-test ledger (evidence record, not release authority):
+
+- [MetaO Test Evidence — 2026-10-01](docs/TEST-RESULTS-2026-10-01.md)
+
 ## Engineering workflow
 
 metaO uses GitHub as the persistent engineering ledger and follows an **Issue-first** workflow:
