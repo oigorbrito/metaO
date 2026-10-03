@@ -13,21 +13,20 @@ export function securityHeaders(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=()',
   );
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader(
-      'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "script-src 'self'",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data:",
-        "connect-src 'self'",
-        "object-src 'none'",
-        "base-uri 'self'",
-        "frame-ancestors 'none'",
-      ].join('; '),
-    );
-  }
+  // Enforce Content-Security-Policy across all environments to ensure baseline security defense-in-depth
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self'",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' https://fonts.gstatic.com",
+      "img-src 'self' data:",
+      "connect-src 'self'",
+      "object-src 'none'",
+      "base-uri 'self'",
+      "frame-ancestors 'none'",
+    ].join('; '),
+  );
   next();
 }
