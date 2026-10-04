@@ -48,6 +48,14 @@ jobs:
             tests.unit.test_roadmap_1_work_unit_07.ObservabilityEventLedgerV1Tests.test_wait_approve_resume_trace_is_monotonic_across_sqlite_restarts \
             tests.unit.test_roadmap_1_work_unit_08.CliObservabilitySurfaceV1Tests.test_wait_approve_resume_events_span_cli_invocations_with_timestamps
 
+      - name: Install pinned heterogeneous runtimes
+        run: |
+          python -m pip install \
+            'openai-agents==0.20.0' \
+            'crewai==1.15.16' \
+            'langgraph==1.2.11'
+          python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'; assert version('crewai') == '1.15.16'; assert version('langgraph') == '1.2.11'"
+
       - name: Run heterogeneous runtime restart gate
         run: |
           python -m unittest -v \
