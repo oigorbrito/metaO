@@ -46,7 +46,7 @@ jobs:
           python -m unittest -v \
             tests.unit.test_roadmap_1_work_unit_05.HumanApprovalResumeV1Tests.test_sqlite_restart_between_wait_approve_and_resume \
             tests.unit.test_roadmap_1_work_unit_07.ObservabilityEventLedgerV1Tests.test_wait_approve_resume_trace_is_monotonic_across_sqlite_restarts \
-            tests.unit.test_roadmap_1_work_unit_08.CLIObservabilityV1Tests.test_wait_approve_resume_events_span_cli_invocations_with_timestamps
+            tests.unit.test_roadmap_1_work_unit_08.CliObservabilitySurfaceV1Tests.test_wait_approve_resume_events_span_cli_invocations_with_timestamps
 
       - name: Run heterogeneous runtime restart gate
         run: |
