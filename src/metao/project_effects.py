@@ -25,6 +25,7 @@ from .project_supervision import (
     ProjectObjective,
     RepositoryCheckpoint,
     WorkExecutionResult,
+    WorkExecutionStatus,
     WorkUnit,
 )
 
@@ -150,8 +151,16 @@ class ReconciledWorkUnitRunner:
         if reconciled.key != key:
             raise ValueError("effect reconciliation key binding mismatch")
         if reconciled.state is ProjectEffectState.AMBIGUOUS:
-            raise ProjectEffectAmbiguous(
-                f"effect state ambiguous for {key.value}; refusing reissue"
+            return WorkExecutionResult(
+                unit.work_unit_id,
+                target.executor_id,
+                target.provider_id,
+                WorkExecutionStatus.FAILED,
+                checkpoint.state_id,
+                evidence_ref=(
+                    f"{reconciled.authority_ref};"
+                    f"ambiguous-effect:{key.value}"
+                ),
             )
         if reconciled.state is ProjectEffectState.APPLIED:
             assert reconciled.execution is not None
