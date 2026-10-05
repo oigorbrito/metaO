@@ -47,9 +47,9 @@ B5 evaluates whether metaO can:
 
 - Governing issue: #744
 - Benchmark PR: #745
-- Benchmark head: `d2cfbf4dfd2f4ed0a0bfd7aaef14a52fb1b66fd9`
+- Benchmark head: `ba1c8a9990390b3b140ba840bebdc63fa74a5513`
 - Hosted workflow: `B5 Decomposition Recomposition Benchmark`
-- Workflow run: `37249631225`
+- Workflow run: `37250414857`
 - Workflow result: success
 - Product-gap follow-up: #746
 
