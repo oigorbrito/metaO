@@ -8,13 +8,71 @@ The repository has a reproducible GitHub-hosted Actions failure that occurs **be
 
 This must not be classified as a metaO functional test failure because checkout/setup/test steps never start.
 
+## 2026-10-05 recurrence — current blocker
+
+The pre-step hosted-runner failure has recurred on the current repository identity and is again active.
+
+Current integration candidate:
+
+```text
+repository = oigorbrito/metaO
+PR = #757
+head = a008e3115bc71c44c5e48cca1d808e7e28f5c790
+```
+
+Representative current runs:
+
+```text
+B6 Continuity Benchmark
+run = 37255114750
+job = 111590411721
+steps = null
+
+CI
+run = 37255115341
+job = 111590413730
+steps = null
+
+Release Evidence Validator
+run = 37255115271
+job = 111590413187
+steps = null
+
+B5 Decomposition Recomposition Benchmark
+run = 37255114724
+job = 111590411724
+steps = null
+```
+
+The GitHub pull-request UI also reports the broad check matrix as failed across unrelated workflows. That red aggregate is not evidence that the product tests failed because the jobs above never materialized configured steps.
+
+The recurrence affects independent workflow surfaces:
+- B5 benchmark;
+- B6 benchmark;
+- canonical integration;
+- runtime qualification;
+- release-evidence validator;
+- operator initialization;
+- ordinary CI.
+
+Current classification:
+
+```text
+STATUS = ACTIVE_RECURRENCE
+CLASSIFICATION = BLOCKED_EXTERNAL_PRE_STEP
+METAO_FUNCTIONAL_FAILURE = NO
+REMOTE_FUNCTIONAL_TESTS_EXECUTED = NO
+```
+
+The earlier August/September evidence below remains historical and should not be rewritten as current evidence.
+
 ## Repository
 
 ```text
-repository = tihotm/metaO
+repository = oigorbrito/metaO
 visibility = private
 default branch = main
-owner/admin = tihotm
+owner/admin = oigorbrito
 ```
 
 ## Reproduction matrix
@@ -159,7 +217,7 @@ Record the observed values in Issue #71. Do not infer them from the failed runs.
 
 ### Repository Actions settings
 
-Inspect repository `tihotm/metaO` -> Settings -> Actions -> General for:
+Inspect repository `oigorbrito/metaO` -> Settings -> Actions -> General for:
 
 ```text
 Actions enabled
@@ -175,7 +233,7 @@ If billing and repository settings are healthy, escalate to GitHub Support becau
 
 ## Resolution condition
 
-Issue #71 should not be considered resolved merely because one workflow is rerun.
+Issue #71 is reopened for the 2026-10-05 recurrence. It should not be considered resolved merely because one workflow is rerun.
 
 Minimum resolution evidence:
 
@@ -192,7 +250,15 @@ Functional PASS remains a separate question from runner recovery.
 ```text
 Subject: Private repository GitHub-hosted Actions jobs fail before Set up job with steps=null across Ubuntu/Windows/macOS
 
-Repository: tihotm/metaO (private)
+Repository: oigorbrito/metaO (private)
+
+Current recurrence:
+- PR #757
+- head a008e3115bc71c44c5e48cca1d808e7e28f5c790
+- B6 run 37255114750 / job 111590411721 -> steps=null
+- CI run 37255115341 / job 111590413730 -> steps=null
+- Release Evidence Validator run 37255115271 / job 111590413187 -> steps=null
+- B5 run 37255114724 / job 111590411724 -> steps=null
 
 We have a reproducible hosted-runner failure before repository execution. Jobs are created and end in failure, but the jobs API reports steps=null; checkout never starts. In some runs job log retrieval returns BlobNotFound/unavailable logs.
 
