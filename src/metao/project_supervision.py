@@ -373,6 +373,13 @@ def supervise_project(
 ) -> ProjectSupervisionResult:
     if max_executor_attempts_per_unit < 1 or max_corrective_units < 0:
         raise ValueError("invalid project supervision limits")
+    if resume_state is not None and persist_resume_state is None:
+        raise ValueError("resumed project supervision requires durable persistence")
+    if (
+        (resume_state is not None or persist_resume_state is not None)
+        and assert_resume_owner is None
+    ):
+        raise ValueError("durable project supervision requires owner fencing")
     if resume_state is None:
         graph = planner.plan(objective)
         if graph.authority_id != "metao":
