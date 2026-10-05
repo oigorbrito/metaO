@@ -234,6 +234,18 @@ try {
     Invoke-PythonGate -Name "r7_wu02_durable_escalation" -ArgumentList @("tests/unit/test_roadmap_7_work_unit_02.py")
     Invoke-PythonGate -Name "full_unit_suite" -ArgumentList @("-m", "unittest", "discover", "-s", "tests/unit", "-p", "test_*.py", "-v")
 
+    Invoke-PythonGate -Name "project_plane_process_crash_resume" -ArgumentList @(
+        "-m", "unittest", "-v",
+        "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectResumeAcrossCrashTests.test_process_b_resumes_only_pending_work_after_process_a_crash",
+        "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_real_process_takeover_increments_fence_and_stale_owner_is_rejected"
+    )
+    Invoke-PythonGate -Name "project_effect_crash_window_reconciliation" -ArgumentList @(
+        "-m", "unittest", "-v",
+        "tests.unit.test_issue_754_project_effect_reconciliation.Issue754DuplicateEffectCrashWindowTests.test_applied_effect_is_reconciled_after_crash_without_second_application",
+        "tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_ambiguous_effect_fails_closed_without_reissue",
+        "tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_ambiguous_effect_blocks_supervision_and_persists_terminal_state"
+    )
+
     Invoke-PythonGate -Name "r2_real_runtime_sandbox" -ArgumentList @("tests/integration/test_r2_wu01_second_real_runtime.py")
     Invoke-PythonGate -Name "r3_real_runtime_certification" -ArgumentList @("tests/integration/test_r3_wu04_real_runtime_certification.py")
     Invoke-PythonGate -Name "r4_real_declarative_certified_runtimes" -ArgumentList @("tests/integration/test_r4_wu03_real_declarative_certified_runtimes.py")
