@@ -449,6 +449,7 @@ def supervise_project(
                 repository_state_id=checkpoint.state_id,
             )
         )
+        persist_progress()
         return ProjectSupervisionResult(
             objective.project_id,
             ProjectVerdict.PROJECT_BLOCKED,
