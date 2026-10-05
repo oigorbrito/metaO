@@ -105,11 +105,24 @@ class Issue754ProjectEffectContractTests(unittest.TestCase):
 
         result = runner.run(objective, unit, target, checkpoint)
         self.assertEqual(result.status, WorkExecutionStatus.SUCCEEDED)
-        self.assertEqual(
-            effect.calls,
-            ["project:effect:logical-ticket"],
-        )
+        expected_key = ProjectEffectKey(
+            "project",
+            "effect",
+            "logical-ticket",
+        ).value
+        self.assertEqual(effect.calls, [expected_key])
         self.assertEqual(effect.calls, reconciliation.keys)
+
+
+    def test_effect_key_canonicalization_avoids_delimiter_collisions(self):
+        first = ProjectEffectKey("a:b", "c", "d").value
+        second = ProjectEffectKey("a", "b:c", "d").value
+        self.assertNotEqual(first, second)
+        self.assertEqual(
+            first,
+            ProjectEffectKey("a:b", "c", "d").value,
+        )
+        self.assertTrue(first.startswith("metao-project-effect-v1:"))
 
     def test_applied_reconciliation_reuses_authoritative_execution(self):
         execution = WorkExecutionResult(
