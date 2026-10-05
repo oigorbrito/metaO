@@ -4,15 +4,15 @@ Status: NORMATIVE_FOR_PROJECT
 Baseline version: V1
 Applies to: repository `oigorbrito/metaO`
 Last reconciled executable commit: `f14a707a6a482bd1267141ce590af169e39c3488`
-Last reconciled date: 2026-09-30
+Last reconciled date: 2026-10-05
 
-Current reconciliation note: the exact-head Windows local release gate passed 21/21 on `main@f14a707a6a482bd1267141ce590af169e39c3488` with a clean worktree and machine-readable evidence `gate-20260930-110723.json`. Independent evidence validation passed after the validator was corrected to require an explicit expected branch in PR #725. Recent GitHub-hosted workflows also execute configured repository steps successfully again, so the historical pre-step runner-allocation incident is resolved as infrastructure history rather than a current blocker.
+Current reconciliation note: the historical exact-head Windows local release gate passed 21/21 on `main@f14a707a6a482bd1267141ce590af169e39c3488` with a clean worktree and machine-readable evidence `gate-20260930-110723.json`. Independent validation passed. On 2026-10-05 the GitHub-hosted pre-step failure recurred on PR #757: representative B5/B6/CI/release-validator jobs again completed with `steps=null`, before checkout or repository execution. Issue #71 is reopened. The current candidate local gate definition has been extended to 23 fail-closed checks, but no 23/23 exact-head execution is yet recorded. Historical 21/21 evidence remains historical.
 
 ## Current product blockers
 
 | BLOCKER | TYPE | CURRENT_STATUS | IMPACT |
 |---|---|---|---|
-| Hosted GitHub Actions pre-step failure | external infrastructure | resolved | recent CI and dedicated qualification workflows execute configured steps and pass; historical failed runs remain historical evidence |
+| Hosted GitHub Actions pre-step failure | external infrastructure | active recurrence / BLOCKED_EXTERNAL_PRE_STEP | PR #757 current B5/B6/CI/release-validator jobs terminate with steps=null before checkout; blocks hosted EXECUTED/ACCEPTED evidence but is not a product functional failure |
 | Exact current release JSON validation | evidence availability | resolved | `gate-20260930-110723.json` validated PASS for branch `main` and candidate `f14a707a...` |
 | Real external runtime/provider execution | external provider / secret | blocked locally | Rust and Python conformance paths are not real provider execution without configured SDK dependencies/secrets |
 | Real credential broker lifecycle | external/local infrastructure | blocked locally | provider-neutral credential lease contracts are not a real issue/renew/revoke broker lifecycle |
