@@ -431,6 +431,7 @@ if mode == "a":
         repository=Repository(),
         verifier=Verifier(),
         persist_resume_state=persist,
+        assert_resume_owner=lambda: store.assert_owner(box[0].owner),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
@@ -458,6 +459,7 @@ else:
         verifier=Verifier(),
         resume_state=acquired.snapshot,
         persist_resume_state=persist,
+        assert_resume_owner=lambda: store.assert_owner(box[0].owner),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
