@@ -355,7 +355,7 @@ def main() -> int:
         )
 
         kinds = tuple(event.kind for event in result.trace)
-        assert result.verdict is ProjectVerdict.PROJECT_ACCEPTED, result.reason
+        assert result.verdict is ProjectVerdict.PROJECT_UNVERIFIED, result.reason
         assert result.executors_used == frozenset({"executor-openai", "executor-gemini"})
         assert result.providers_used == frozenset({"provider-openai", "provider-google"})
         assert ProjectTraceKind.FAILED_CAPACITY in kinds
@@ -392,6 +392,7 @@ def main() -> int:
             "credentials_emitted": False,
             "remote_paths_emitted": False,
             "operational_pilot": "PASS",
+            "project_acceptance": "NOT_ESTABLISHED_WITHOUT_GLOBAL_RECOMPOSITION_VERIFICATION",
         }
         print(json.dumps(evidence, sort_keys=True, separators=(",", ":")))
         return 0
