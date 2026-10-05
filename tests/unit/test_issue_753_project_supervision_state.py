@@ -71,6 +71,8 @@ def _snapshot(*, accepted: bool = True) -> ProjectSupervisionSnapshot:
         (),
         (ProjectTraceEvent(ProjectTraceKind.PLANNED),),
         traceability,
+        frozenset({"executor-a"}) if accepted else frozenset(),
+        frozenset({"provider-a"}) if accepted else frozenset(),
         RepositoryCheckpoint(
             "checkpoint-first" if accepted else "checkpoint-root",
             "repo-753",
@@ -170,6 +172,192 @@ print(f"{record.owner.holder_id}:{record.owner.generation}:{record.revision}")
             )
             self.assertEqual(reacquired.owner, created.owner)
             self.assertEqual(reacquired.revision, created.revision)
+
+
+class Issue753ProjectResumeAcrossCrashTests(unittest.TestCase):
+    def test_process_b_resumes_only_pending_work_after_process_a_crash(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            db = root / "project.db"
+            calls = root / "calls.log"
+
+            worker = r"""
+from __future__ import annotations
+
+import os
+from pathlib import Path
+import sys
+
+from metao.project_supervision import (
+    ExecutorTarget,
+    ProjectObjective,
+    ProjectVerdict,
+    RepositoryCheckpoint,
+    WorkExecutionResult,
+    WorkExecutionStatus,
+    WorkGraph,
+    WorkUnit,
+    WorkVerificationResult,
+    supervise_project,
+)
+from metao.project_supervision_state import SQLiteProjectSupervisionStateStore
+
+db = Path(sys.argv[1])
+calls = Path(sys.argv[2])
+mode = sys.argv[3]
+
+class Planner:
+    def plan(self, objective):
+        return WorkGraph(
+            "metao",
+            (
+                WorkUnit("first", "first"),
+                WorkUnit("second", "second", ("first",)),
+            ),
+        )
+    def corrective_work(self, objective, failed_unit, verification, graph):
+        return None
+
+class Scheduler:
+    def select(self, unit, *, excluded_executor_ids):
+        return ExecutorTarget("executor-a", "provider-a")
+
+class Runner:
+    def run(self, objective, unit, target, checkpoint):
+        with calls.open("a", encoding="utf-8") as stream:
+            stream.write(unit.work_unit_id + "\n")
+        state = "state-" + unit.work_unit_id
+        return WorkExecutionResult(
+            unit.work_unit_id,
+            target.executor_id,
+            target.provider_id,
+            WorkExecutionStatus.SUCCEEDED,
+            state,
+            artifact_ref="artifact:" + unit.work_unit_id,
+            evidence_ref="execution:" + unit.work_unit_id,
+        )
+
+class Repository:
+    def initial(self, objective):
+        if mode == "b":
+            raise AssertionError("resume path must not request a new initial checkpoint")
+        return RepositoryCheckpoint("root", "repo-753", "root", "artifact:root")
+    def capture(self, objective, unit, execution):
+        return RepositoryCheckpoint(
+            "checkpoint-" + unit.work_unit_id,
+            "repo-753",
+            execution.repository_state_id,
+            execution.artifact_ref,
+        )
+    def handoff(self, checkpoint, *, from_executor_id, to_executor_id):
+        return checkpoint
+
+class Verifier:
+    def verify(self, objective, unit, execution, checkpoint):
+        return WorkVerificationResult(
+            True,
+            "independent-verifier",
+            "verification:" + unit.work_unit_id,
+            "test:" + unit.work_unit_id,
+        )
+
+store = SQLiteProjectSupervisionStateStore(db)
+record_box = [None]
+
+if mode == "a":
+    def persist(state):
+        if record_box[0] is None:
+            record_box[0] = store.create(state, holder_id="process-a")
+        else:
+            record_box[0] = store.replace(
+                state,
+                owner=record_box[0].owner,
+                expected_revision=record_box[0].revision,
+            )
+        if state.accepted_work_unit_ids == frozenset({"first"}):
+            os._exit(23)
+
+    supervise_project(
+        objective=ProjectObjective("project-753", "req-753", "resume project after process crash"),
+        planner=Planner(),
+        scheduler=Scheduler(),
+        runner=Runner(),
+        repository=Repository(),
+        verifier=Verifier(),
+        persist_resume_state=persist,
+        max_executor_attempts_per_unit=1,
+        max_corrective_units=0,
+    )
+    raise AssertionError("process A should have crashed")
+else:
+    acquired = store.acquire("project-753", holder_id="process-b")
+    record_box[0] = acquired
+
+    def persist(state):
+        record_box[0] = store.replace(
+            state,
+            owner=record_box[0].owner,
+            expected_revision=record_box[0].revision,
+        )
+
+    result = supervise_project(
+        objective=ProjectObjective("project-753", "req-753", "resume project after process crash"),
+        planner=Planner(),
+        scheduler=Scheduler(),
+        runner=Runner(),
+        repository=Repository(),
+        verifier=Verifier(),
+        resume_state=acquired.snapshot,
+        persist_resume_state=persist,
+        max_executor_attempts_per_unit=1,
+        max_corrective_units=0,
+    )
+    if result.verdict is not ProjectVerdict.PROJECT_ACCEPTED:
+        raise SystemExit(91)
+    print("ACCEPTED")
+"""
+
+            first = subprocess.run(
+                [sys.executable, "-c", worker, str(db), str(calls), "a"],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(first.returncode, 23)
+
+            after_crash = SQLiteProjectSupervisionStateStore(db).load("project-753")
+            self.assertEqual(
+                after_crash.snapshot.accepted_work_unit_ids,
+                frozenset({"first"}),
+            )
+            self.assertEqual(after_crash.owner.holder_id, "process-a")
+
+            second = subprocess.run(
+                [sys.executable, "-c", worker, str(db), str(calls), "b"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(second.stdout.strip(), "ACCEPTED")
+
+            self.assertEqual(
+                calls.read_text(encoding="utf-8").splitlines(),
+                ["first", "second"],
+            )
+            final = SQLiteProjectSupervisionStateStore(db).load("project-753")
+            self.assertEqual(
+                final.snapshot.accepted_work_unit_ids,
+                frozenset({"first", "second"}),
+            )
+            self.assertEqual(final.owner.holder_id, "process-b")
+            self.assertEqual(final.owner.generation, 2)
+            self.assertEqual(
+                final.snapshot.checkpoint.state_id,
+                "state-second",
+            )
+            self.assertEqual(
+                final.snapshot.trace[-1].kind,
+                ProjectTraceKind.PROJECT_ACCEPTED,
+            )
 
 
 if __name__ == "__main__":
