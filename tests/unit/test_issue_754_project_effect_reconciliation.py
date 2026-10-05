@@ -28,7 +28,10 @@ from metao.project_supervision import (
     WorkVerificationResult,
     supervise_project,
 )
-from metao.project_supervision_state import SQLiteProjectSupervisionStateStore
+from metao.project_supervision_state import (
+    SQLiteProjectActionFence,
+    SQLiteProjectSupervisionStateStore,
+)
 
 
 class _EffectRunner:
@@ -70,6 +73,13 @@ class _Reconciliation:
             self.execution,
             "authority:test",
         )
+
+
+class _ImmediateFence:
+    """Unit-test-only fence; continuity evidence uses SQLiteProjectActionFence."""
+
+    def execute(self, action):
+        return action()
 
 
 class Issue754ProjectEffectContractTests(unittest.TestCase):
@@ -125,6 +135,7 @@ class Issue754ProjectEffectContractTests(unittest.TestCase):
             repository=Repository(),
             verifier=Verifier(),
             persist_resume_state=persisted.append,
+            action_fence=_ImmediateFence(),
             max_executor_attempts_per_unit=1,
             max_corrective_units=0,
         )
@@ -317,7 +328,10 @@ from metao.project_supervision import (
     WorkVerificationResult,
     supervise_project,
 )
-from metao.project_supervision_state import SQLiteProjectSupervisionStateStore
+from metao.project_supervision_state import (
+    SQLiteProjectActionFence,
+    SQLiteProjectSupervisionStateStore,
+)
 
 project_db = Path(sys.argv[1])
 effect_db = Path(sys.argv[2])
@@ -448,7 +462,10 @@ if mode == "a":
         repository=Repository(),
         verifier=Verifier(),
         persist_resume_state=persist,
-        assert_resume_owner=lambda: store.assert_owner(box[0].owner),
+        action_fence=SQLiteProjectActionFence(
+            store,
+            lambda: box[0].owner,
+        ),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
@@ -476,7 +493,10 @@ else:
         verifier=Verifier(),
         resume_state=acquired.snapshot,
         persist_resume_state=persist,
-        assert_resume_owner=lambda: store.assert_owner(box[0].owner),
+        action_fence=SQLiteProjectActionFence(
+            store,
+            lambda: box[0].owner,
+        ),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
