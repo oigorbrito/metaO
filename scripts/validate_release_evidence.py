@@ -21,6 +21,8 @@ EXPECTED_GATE_NAMES = (
     "r7_wu01_failure_aware_replan",
     "r7_wu02_durable_escalation",
     "full_unit_suite",
+    "project_plane_process_crash_resume",
+    "project_effect_crash_window_reconciliation",
     "r2_real_runtime_sandbox",
     "r3_real_runtime_certification",
     "r4_real_declarative_certified_runtimes",
