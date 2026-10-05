@@ -10,7 +10,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Callable, Protocol, runtime_checkable
+from typing import Callable, Protocol, TypeVar, runtime_checkable
 
 
 class ProjectVerdict(StrEnum):
@@ -249,6 +249,14 @@ class ProjectSupervisionResult:
     reason: str = ""
 
 
+_ActionResultT = TypeVar("_ActionResultT")
+
+
+@runtime_checkable
+class ProjectActionFencePort(Protocol):
+    def execute(self, action: Callable[[], _ActionResultT]) -> _ActionResultT: ...
+
+
 @runtime_checkable
 class ProjectPlannerPort(Protocol):
     def plan(self, objective: ProjectObjective) -> WorkGraph: ...
@@ -367,6 +375,7 @@ def supervise_project(
     initial_checkpoint_materializer: InitialCheckpointMaterializerPort | None = None,
     resume_state: ProjectResumeState | None = None,
     persist_resume_state: Callable[[ProjectResumeState], None] | None = None,
+    action_fence: ProjectActionFencePort | None = None,
     assert_resume_owner: Callable[[], None] | None = None,
     max_executor_attempts_per_unit: int = 3,
     max_corrective_units: int = 3,
@@ -377,9 +386,9 @@ def supervise_project(
         raise ValueError("resumed project supervision requires durable persistence")
     if (
         (resume_state is not None or persist_resume_state is not None)
-        and assert_resume_owner is None
+        and action_fence is None
     ):
-        raise ValueError("durable project supervision requires owner fencing")
+        raise ValueError("durable project supervision requires atomic action fencing")
     if resume_state is None:
         graph = planner.plan(objective)
         if graph.authority_id != "metao":
@@ -452,6 +461,12 @@ def supervise_project(
     def assert_current_owner() -> None:
         if assert_resume_owner is not None:
             assert_resume_owner()
+
+    def execute_fenced(action: Callable[[], _ActionResultT]) -> _ActionResultT:
+        if action_fence is not None:
+            return action_fence.execute(action)
+        assert_current_owner()
+        return action()
 
     def blocked(reason: str) -> ProjectSupervisionResult:
         trace.append(
@@ -529,10 +544,11 @@ def supervise_project(
                 return blocked(f"no executor available for {unit.work_unit_id}")
 
             if checkpoint_holder_executor_id is None and initial_checkpoint_materializer is not None:
-                assert_current_owner()
-                materialized = initial_checkpoint_materializer.materialize(
-                    checkpoint,
-                    to_executor_id=target.executor_id,
+                materialized = execute_fenced(
+                    lambda: initial_checkpoint_materializer.materialize(
+                        checkpoint,
+                        to_executor_id=target.executor_id,
+                    )
                 )
                 if materialized != checkpoint:
                     return blocked("repository checkpoint changed during initial materialization")
@@ -551,11 +567,12 @@ def supervise_project(
                 checkpoint_holder_executor_id is not None
                 and checkpoint_holder_executor_id != target.executor_id
             ):
-                assert_current_owner()
-                handed = repository.handoff(
-                    checkpoint,
-                    from_executor_id=checkpoint_holder_executor_id,
-                    to_executor_id=target.executor_id,
+                handed = execute_fenced(
+                    lambda: repository.handoff(
+                        checkpoint,
+                        from_executor_id=checkpoint_holder_executor_id,
+                        to_executor_id=target.executor_id,
+                    )
                 )
                 if handed != checkpoint:
                     return blocked("repository checkpoint changed during handoff")
@@ -584,8 +601,9 @@ def supervise_project(
                     checkpoint.state_id,
                 )
             )
-            assert_current_owner()
-            execution = runner.run(objective, unit, target, checkpoint)
+            execution = execute_fenced(
+                lambda: runner.run(objective, unit, target, checkpoint)
+            )
             if (
                 execution.work_unit_id != unit.work_unit_id
                 or execution.executor_id != target.executor_id
@@ -610,11 +628,12 @@ def supervise_project(
                 )
                 if next_target is None:
                     return blocked(f"capacity exhausted for {unit.work_unit_id}")
-                assert_current_owner()
-                handed = repository.handoff(
-                    checkpoint,
-                    from_executor_id=target.executor_id,
-                    to_executor_id=next_target.executor_id,
+                handed = execute_fenced(
+                    lambda: repository.handoff(
+                        checkpoint,
+                        from_executor_id=target.executor_id,
+                        to_executor_id=next_target.executor_id,
+                    )
                 )
                 if handed != checkpoint:
                     return blocked("repository checkpoint changed during handoff")
@@ -643,8 +662,9 @@ def supervise_project(
             return blocked(f"work unit did not complete: {unit.work_unit_id}")
         executed.add(unit.work_unit_id)
         previous_repository_id = checkpoint.repository_id
-        assert_current_owner()
-        checkpoint = repository.capture(objective, unit, execution)
+        checkpoint = execute_fenced(
+            lambda: repository.capture(objective, unit, execution)
+        )
         checkpoint_holder_executor_id = execution.executor_id
         if checkpoint.repository_id != previous_repository_id:
             return blocked("captured checkpoint changed repository identity")
@@ -794,6 +814,7 @@ __all__ = [
     "ProjectTraceabilityRecord",
     "ProjectResumeState",
     "ProjectSupervisionResult",
+    "ProjectActionFencePort",
     "ProjectPlannerPort",
     "ExecutorSchedulerPort",
     "WorkUnitRunnerPort",
