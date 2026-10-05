@@ -16,9 +16,10 @@ from dataclasses import dataclass, replace
 import json
 from pathlib import Path
 import sqlite3
-from typing import Any, Protocol, runtime_checkable
+from typing import Any, Callable, Protocol, TypeVar, runtime_checkable
 
 from .project_supervision import (
+    ProjectActionFencePort,
     ProjectResumeState,
     ProjectTraceEvent,
     ProjectTraceKind,
@@ -290,6 +291,9 @@ def _snapshot_from_json(raw: str) -> ProjectSupervisionSnapshot:
         raise ProjectSupervisionStateCorrupt("invalid project supervision snapshot") from exc
 
 
+_FenceResultT = TypeVar("_FenceResultT")
+
+
 class SQLiteProjectSupervisionStateStore:
     """SQLite state store with revision CAS and monotonic fenced ownership."""
 
@@ -446,6 +450,36 @@ class SQLiteProjectSupervisionStateStore:
         if owner_id != owner.holder_id or generation != owner.generation:
             raise StaleProjectOwner(owner.project_id)
 
+    def execute_if_owner(
+        self,
+        owner: ProjectOwnerToken,
+        action: Callable[[], _FenceResultT],
+    ) -> _FenceResultT:
+        connection = self._connect()
+        try:
+            connection.execute("BEGIN IMMEDIATE")
+            row = connection.execute(
+                """
+                SELECT owner_id, fencing_generation
+                FROM project_supervision_state
+                WHERE project_id = ?
+                """,
+                (owner.project_id,),
+            ).fetchone()
+            if row is None:
+                raise ProjectSupervisionStateNotFound(owner.project_id)
+            owner_id, generation = str(row[0]), int(row[1])
+            if owner_id != owner.holder_id or generation != owner.generation:
+                raise StaleProjectOwner(owner.project_id)
+            result = action()
+            connection.commit()
+            return result
+        except BaseException:
+            connection.rollback()
+            raise
+        finally:
+            connection.close()
+
     def replace(
         self,
         snapshot: ProjectSupervisionSnapshot,
@@ -496,6 +530,21 @@ class SQLiteProjectSupervisionStateStore:
         return ProjectSupervisionStateRecord(snapshot, new_revision, owner)
 
 
+class SQLiteProjectActionFence(ProjectActionFencePort):
+    """Hold the SQLite ownership lock across one externally mutating action."""
+
+    def __init__(
+        self,
+        store: SQLiteProjectSupervisionStateStore,
+        owner_supplier: Callable[[], ProjectOwnerToken],
+    ) -> None:
+        self._store = store
+        self._owner_supplier = owner_supplier
+
+    def execute(self, action: Callable[[], _FenceResultT]) -> _FenceResultT:
+        return self._store.execute_if_owner(self._owner_supplier(), action)
+
+
 __all__ = [
     "ProjectOwnerToken",
     "ProjectSupervisionSnapshot",
@@ -508,4 +557,5 @@ __all__ = [
     "StaleProjectOwner",
     "ProjectSupervisionStateCorrupt",
     "SQLiteProjectSupervisionStateStore",
+    "SQLiteProjectActionFence",
 ]
