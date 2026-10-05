@@ -106,6 +106,55 @@ class Issue753ProjectSupervisionStateTests(unittest.TestCase):
             self.assertEqual(loaded.owner.generation, 1)
             self.assertEqual(loaded.revision, 1)
 
+    def test_roundtrip_preserves_logical_result_binding_after_correction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Path(directory) / "project.db"
+            store = SQLiteProjectSupervisionStateStore(db)
+
+            base = _snapshot(accepted=False)
+            corrective = WorkUnit(
+                "repair-first",
+                "repair first work",
+                ("first",),
+                True,
+                "first",
+            )
+            result = WorkExecutionResult(
+                "repair-first",
+                "executor-b",
+                "provider-b",
+                WorkExecutionStatus.SUCCEEDED,
+                "state-repair",
+                "artifact:repair",
+                "evidence:repair",
+            )
+            snapshot = replace(
+                base,
+                units=base.units + (corrective,),
+                executed_work_unit_ids=frozenset({"first", "repair-first"}),
+                accepted_work_unit_ids=frozenset({"first", "repair-first"}),
+                accepted_results=(result,),
+                checkpoint=RepositoryCheckpoint(
+                    "checkpoint-repair",
+                    "repo-753",
+                    "state-repair",
+                    "artifact:repair",
+                ),
+                checkpoint_holder_executor_id="executor-b",
+                accepted_result_bindings=(
+                    ("first", result),
+                    ("repair-first", result),
+                ),
+            )
+
+            created = store.create(snapshot, holder_id="process-a")
+            loaded = SQLiteProjectSupervisionStateStore(db).load("project-753")
+
+            self.assertEqual(created, loaded)
+            bindings = dict(loaded.snapshot.accepted_result_bindings)
+            self.assertEqual(bindings["first"].work_unit_id, "repair-first")
+            self.assertEqual(bindings["repair-first"].artifact_ref, "artifact:repair")
+
     def test_real_process_takeover_increments_fence_and_stale_owner_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:
             db = Path(directory) / "project.db"
