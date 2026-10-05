@@ -5,6 +5,8 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import threading
+import time
 import unittest
 
 from metao.project_supervision import (
@@ -24,6 +26,7 @@ from metao.project_supervision import (
 from metao.project_supervision_state import (
     ProjectSupervisionSnapshot,
     ProjectSupervisionStateConflict,
+    SQLiteProjectActionFence,
     SQLiteProjectSupervisionStateStore,
     StaleProjectOwner,
 )
@@ -112,7 +115,10 @@ class Issue753ProjectSupervisionStateTests(unittest.TestCase):
             child = """
 from pathlib import Path
 import sys
-from metao.project_supervision_state import SQLiteProjectSupervisionStateStore
+from metao.project_supervision_state import (
+    SQLiteProjectActionFence,
+    SQLiteProjectSupervisionStateStore,
+)
 
 record = SQLiteProjectSupervisionStateStore(Path(sys.argv[1])).acquire(
     "project-753",
@@ -202,12 +208,80 @@ print(f"{record.owner.holder_id}:{record.owner.generation}:{record.revision}")
                     repository=Repository(),
                     verifier=Verifier(),
                     resume_state=stale.snapshot,
-                    assert_resume_owner=lambda: store.assert_owner(stale.owner),
+                    persist_resume_state=lambda state: None,
+                    action_fence=SQLiteProjectActionFence(
+                        store,
+                        lambda: stale.owner,
+                    ),
                     max_executor_attempts_per_unit=1,
                     max_corrective_units=0,
                 )
             self.assertEqual(runner.calls, 0)
 
+
+    def test_stale_owner_atomic_action_is_rejected_before_effect(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Path(directory) / "project.db"
+            store = SQLiteProjectSupervisionStateStore(db)
+            first = store.create(_snapshot(accepted=False), holder_id="process-a")
+            store.acquire("project-753", holder_id="process-b")
+
+            effects: list[str] = []
+            with self.assertRaises(StaleProjectOwner):
+                store.execute_if_owner(
+                    first.owner,
+                    lambda: effects.append("stale-effect"),
+                )
+            self.assertEqual(effects, [])
+
+    def test_takeover_waits_for_current_atomic_action_boundary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Path(directory) / "project.db"
+            store = SQLiteProjectSupervisionStateStore(db)
+            first = store.create(_snapshot(accepted=False), holder_id="process-a")
+
+            entered = threading.Event()
+            release = threading.Event()
+            action_done = threading.Event()
+            takeover_done = threading.Event()
+            takeover_records = []
+
+            def action():
+                entered.set()
+                if not release.wait(timeout=2):
+                    raise AssertionError("test did not release fenced action")
+                action_done.set()
+                return "done"
+
+            action_thread = threading.Thread(
+                target=lambda: store.execute_if_owner(first.owner, action),
+                daemon=True,
+            )
+            action_thread.start()
+            self.assertTrue(entered.wait(timeout=2))
+
+            def takeover():
+                takeover_records.append(
+                    SQLiteProjectSupervisionStateStore(db).acquire(
+                        "project-753",
+                        holder_id="process-b",
+                    )
+                )
+                takeover_done.set()
+
+            takeover_thread = threading.Thread(target=takeover, daemon=True)
+            takeover_thread.start()
+            time.sleep(0.1)
+            self.assertFalse(takeover_done.is_set())
+
+            release.set()
+            action_thread.join(timeout=2)
+            takeover_thread.join(timeout=2)
+
+            self.assertTrue(action_done.is_set())
+            self.assertTrue(takeover_done.is_set())
+            self.assertEqual(takeover_records[0].owner.holder_id, "process-b")
+            self.assertEqual(takeover_records[0].owner.generation, 2)
 
     def test_resume_requires_durable_persistence_and_owner_fencing(self):
         class Planner:
@@ -257,7 +331,7 @@ print(f"{record.owner.holder_id}:{record.owner.generation}:{record.revision}")
                 max_corrective_units=0,
             )
 
-        with self.assertRaisesRegex(ValueError, "requires owner fencing"):
+        with self.assertRaisesRegex(ValueError, "requires atomic action fencing"):
             supervise_project(
                 objective=objective,
                 planner=Planner(),
@@ -298,7 +372,7 @@ print(f"{record.owner.holder_id}:{record.owner.generation}:{record.revision}")
             def verify(self, objective, unit, execution, checkpoint):
                 raise AssertionError("invalid durable configuration must fail before verification")
 
-        with self.assertRaisesRegex(ValueError, "requires owner fencing"):
+        with self.assertRaisesRegex(ValueError, "requires atomic action fencing"):
             supervise_project(
                 objective=ProjectObjective(
                     "project-753",
@@ -458,7 +532,10 @@ if mode == "a":
         repository=Repository(),
         verifier=Verifier(),
         persist_resume_state=persist,
-        assert_resume_owner=lambda: store.assert_owner(record_box[0].owner),
+        action_fence=SQLiteProjectActionFence(
+            store,
+            lambda: record_box[0].owner,
+        ),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
@@ -483,7 +560,10 @@ else:
         verifier=Verifier(),
         resume_state=acquired.snapshot,
         persist_resume_state=persist,
-        assert_resume_owner=lambda: store.assert_owner(record_box[0].owner),
+        action_fence=SQLiteProjectActionFence(
+            store,
+            lambda: record_box[0].owner,
+        ),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
