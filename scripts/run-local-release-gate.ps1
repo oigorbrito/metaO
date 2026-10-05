@@ -246,7 +246,8 @@ try {
         "-m", "unittest", "-v",
         "tests.unit.test_issue_754_project_effect_reconciliation.Issue754DuplicateEffectCrashWindowTests.test_applied_effect_is_reconciled_after_crash_without_second_application",
         "tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_ambiguous_effect_fails_closed_without_reissue",
-        "tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_ambiguous_effect_blocks_supervision_and_persists_terminal_state"
+        "tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_ambiguous_effect_blocks_supervision_and_persists_terminal_state",
+        "tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_runner_cannot_choose_or_rotate_effect_identity"
     )
 
     Invoke-PythonGate -Name "r2_real_runtime_sandbox" -ArgumentList @("tests/integration/test_r2_wu01_second_real_runtime.py")
