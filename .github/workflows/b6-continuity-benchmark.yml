@@ -57,6 +57,8 @@ jobs:
           python -c "from importlib.metadata import version; assert version('openai-agents') == '0.20.0'; assert version('crewai') == '1.15.16'; assert version('langgraph') == '1.2.11'"
 
       - name: Run heterogeneous runtime restart gate
+        env:
+          PYTHONPATH: tests/integration
         run: |
           python -m unittest -v \
             tests.integration.test_r7_wu03_three_runtime_recovery.ThreeRuntimeRecoveryV1Tests.test_04_sqlite_restart_reuses_certificates_and_preserves_real_runtime_lineage
