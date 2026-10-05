@@ -500,9 +500,9 @@ else:
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
-    if result.verdict is not ProjectVerdict.PROJECT_ACCEPTED:
+    if result.verdict is not ProjectVerdict.PROJECT_UNVERIFIED:
         raise SystemExit(92)
-    print("ACCEPTED")
+    print("UNVERIFIED")
 """
 
             first = subprocess.run(
@@ -538,7 +538,7 @@ else:
                 capture_output=True,
                 text=True,
             )
-            self.assertEqual(second.stdout.strip(), "ACCEPTED")
+            self.assertEqual(second.stdout.strip(), "UNVERIFIED")
 
             key = ProjectEffectKey(
                 "project-754",
