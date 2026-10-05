@@ -19,6 +19,7 @@ import sqlite3
 from typing import Any, Protocol, runtime_checkable
 
 from .project_supervision import (
+    ProjectResumeState,
     ProjectTraceEvent,
     ProjectTraceKind,
     ProjectTraceabilityRecord,
@@ -71,47 +72,7 @@ class ProjectOwnerToken:
             raise ValueError("generation must be >= 1")
 
 
-@dataclass(frozen=True, slots=True)
-class ProjectSupervisionSnapshot:
-    project_id: str
-    requirement_id: str
-    objective: str
-    authority_id: str
-    units: tuple[WorkUnit, ...]
-    executed_work_unit_ids: frozenset[str]
-    accepted_work_unit_ids: frozenset[str]
-    accepted_results: tuple[WorkExecutionResult, ...]
-    awaiting_correction: tuple[tuple[str, str], ...]
-    trace: tuple[ProjectTraceEvent, ...]
-    traceability: tuple[ProjectTraceabilityRecord, ...]
-    checkpoint: RepositoryCheckpoint
-    checkpoint_holder_executor_id: str | None
-    corrective_count: int
-
-    def __post_init__(self) -> None:
-        for name, value in (
-            ("project_id", self.project_id),
-            ("requirement_id", self.requirement_id),
-            ("objective", self.objective),
-            ("authority_id", self.authority_id),
-        ):
-            if not value or not value.strip():
-                raise ValueError(f"{name} must be non-empty")
-        if self.corrective_count < 0:
-            raise ValueError("corrective_count must be >= 0")
-        unit_ids = {unit.work_unit_id for unit in self.units}
-        if not self.executed_work_unit_ids <= unit_ids:
-            raise ValueError("executed work references unknown unit")
-        if not self.accepted_work_unit_ids <= unit_ids:
-            raise ValueError("accepted work references unknown unit")
-        result_ids = {item.work_unit_id for item in self.accepted_results}
-        if not self.accepted_work_unit_ids <= result_ids:
-            raise ValueError("accepted work must retain execution result")
-        if len(result_ids) != len(self.accepted_results):
-            raise ValueError("accepted_results contain duplicate work_unit_id")
-        for failed_id, correction_id in self.awaiting_correction:
-            if failed_id not in unit_ids or correction_id not in unit_ids:
-                raise ValueError("awaiting correction references unknown unit")
+ProjectSupervisionSnapshot = ProjectResumeState
 
 
 @dataclass(frozen=True, slots=True)
@@ -266,6 +227,8 @@ def _snapshot_to_json(snapshot: ProjectSupervisionSnapshot) -> str:
         "traceability": [
             _traceability_to_json(item) for item in snapshot.traceability
         ],
+        "executors_used": sorted(snapshot.executors_used),
+        "providers_used": sorted(snapshot.providers_used),
         "checkpoint": {
             "checkpoint_id": snapshot.checkpoint.checkpoint_id,
             "repository_id": snapshot.checkpoint.repository_id,
@@ -306,6 +269,8 @@ def _snapshot_from_json(raw: str) -> ProjectSupervisionSnapshot:
                 _traceability_from_json(item)
                 for item in data.get("traceability", [])
             ),
+            frozenset(str(item) for item in data.get("executors_used", [])),
+            frozenset(str(item) for item in data.get("providers_used", [])),
             RepositoryCheckpoint(
                 str(checkpoint_data["checkpoint_id"]),
                 str(checkpoint_data["repository_id"]),
