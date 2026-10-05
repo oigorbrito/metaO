@@ -109,6 +109,12 @@ class ProjectSupervisionStateStorePort(Protocol):
 
     def assert_owner(self, owner: ProjectOwnerToken) -> None: ...
 
+    def execute_if_owner(
+        self,
+        owner: ProjectOwnerToken,
+        action: Callable[[], _FenceResultT],
+    ) -> _FenceResultT: ...
+
     def replace(
         self,
         snapshot: ProjectSupervisionSnapshot,
