@@ -269,7 +269,7 @@ class Issue538RemoteCheckpointSupervisionIntegrationTests(unittest.TestCase):
         self.assertLess(kinds.index(ProjectTraceKind.MATERIALIZED), kinds.index(ProjectTraceKind.DISPATCHED))
         self.assertIn(ProjectTraceKind.VERIFICATION_FAILED, kinds)
         self.assertIn(ProjectTraceKind.CORRECTIVE_WORK_CREATED, kinds)
-        self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_ACCEPTED)
+        self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_UNVERIFIED)
 
         self.assertEqual(transport.transfers[0], ("host-origin", "remote-a", initial_sha))
         self.assertEqual(transport.transfers[1][0:2], ("remote-a", "remote-c"))
