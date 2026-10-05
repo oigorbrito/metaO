@@ -199,6 +199,7 @@ class ProjectResumeState:
     checkpoint: RepositoryCheckpoint
     checkpoint_holder_executor_id: str | None
     corrective_count: int
+    accepted_result_bindings: tuple[tuple[str, WorkExecutionResult], ...] = ()
 
     def __post_init__(self) -> None:
         if self.project_id.strip() == "" or self.requirement_id.strip() == "":
@@ -235,6 +236,14 @@ class ProjectResumeState:
             raise ValueError("resume state accepted results contain duplicates")
         if not result_ids <= self.executed_work_unit_ids:
             raise ValueError("resume state results must reference executed work")
+        result_bindings = dict(self.accepted_result_bindings)
+        if len(result_bindings) != len(self.accepted_result_bindings):
+            raise ValueError("resume state accepted result bindings contain duplicates")
+        if not set(result_bindings) <= self.accepted_work_unit_ids:
+            raise ValueError("resume state result bindings must reference accepted work")
+        for logical_work_unit_id, result in self.accepted_result_bindings:
+            if result.work_unit_id not in self.executed_work_unit_ids:
+                raise ValueError("resume state bound result must reference executed work")
 
 
 @dataclass(frozen=True, slots=True)
@@ -419,9 +428,12 @@ def supervise_project(
         units = list(resume_state.units)
         executed = set(resume_state.executed_work_unit_ids)
         accepted = set(resume_state.accepted_work_unit_ids)
-        accepted_results = {
-            item.work_unit_id: item for item in resume_state.accepted_results
-        }
+        if resume_state.accepted_result_bindings:
+            accepted_results = dict(resume_state.accepted_result_bindings)
+        else:
+            accepted_results = {
+                item.work_unit_id: item for item in resume_state.accepted_results
+            }
         awaiting_correction = dict(resume_state.awaiting_correction)
         trace = list(resume_state.trace)
         traceability = list(resume_state.traceability)
@@ -441,8 +453,10 @@ def supervise_project(
             frozenset(executed),
             frozenset(accepted),
             tuple(
-                accepted_results[unit_id]
-                for unit_id in sorted(accepted_results)
+                {item.work_unit_id: item for item in accepted_results.values()}[unit_id]
+                for unit_id in sorted(
+                    {item.work_unit_id for item in accepted_results.values()}
+                )
             ),
             tuple(sorted(awaiting_correction.items())),
             tuple(trace),
@@ -452,6 +466,10 @@ def supervise_project(
             checkpoint,
             checkpoint_holder_executor_id,
             corrective_count,
+            tuple(
+                (unit_id, accepted_results[unit_id])
+                for unit_id in sorted(accepted_results)
+            ),
         )
 
     def persist_progress() -> None:
@@ -726,6 +744,7 @@ def supervise_project(
             if unit.corrective and unit.corrects_work_unit_id is not None:
                 corrected_id = unit.corrects_work_unit_id
                 accepted.add(corrected_id)
+                accepted_results[corrected_id] = execution
                 awaiting_correction.pop(corrected_id, None)
                 traceability.append(
                     ProjectTraceabilityRecord(
