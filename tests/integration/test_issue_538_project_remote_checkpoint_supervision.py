@@ -263,7 +263,7 @@ class Issue538RemoteCheckpointSupervisionIntegrationTests(unittest.TestCase):
             max_corrective_units=1,
         )
 
-        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_ACCEPTED)
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_UNVERIFIED)
         self.assertEqual(verifier.calls, ["prepare", "repair-prepare", "implement"])
         kinds = tuple(event.kind for event in result.trace)
         self.assertLess(kinds.index(ProjectTraceKind.MATERIALIZED), kinds.index(ProjectTraceKind.DISPATCHED))
