@@ -1,7 +1,7 @@
 import express from 'express';
 import http from 'http';
 
-import { isSafeCliPositionalId } from '../src/lib/cliSafety';
+import { isSafeCliPositionalId, isSafeCliReason } from '../src/lib/cliSafety';
 import { securityHeaders } from '../src/lib/httpSecurity';
 
 async function main() {
@@ -11,10 +11,36 @@ async function main() {
       throw new Error(`Expected safe CLI positional id: ${id}`);
     }
   }
-  const unsafeIds = ['', '--db', '-h', 'bad\nvalue', 'bad\rvalue', 'x'.repeat(513)];
+  const unsafeIds = [
+    '',
+    '--db',
+    '-h',
+    ' --db',
+    '\t-h',
+    'bad\nvalue',
+    'bad\rvalue',
+    'bad\tvalue',
+    'bad value',
+    ' runtime_1 ',
+    'x'.repeat(513),
+  ];
   for (const id of unsafeIds) {
     if (isSafeCliPositionalId(id)) {
       throw new Error(`Expected unsafe CLI positional id to be rejected: ${JSON.stringify(id)}`);
+    }
+  }
+
+  const safeReasons = ['Operator quarantine via web console', 'Routine maintenance', 'User request #123'];
+  for (const reason of safeReasons) {
+    if (!isSafeCliReason(reason)) {
+      throw new Error(`Expected safe CLI reason: ${reason}`);
+    }
+  }
+
+  const unsafeReasons = ['', '   ', '--db', ' -h', 'bad\nvalue', 'bad\rvalue', 'x'.repeat(513)];
+  for (const reason of unsafeReasons) {
+    if (isSafeCliReason(reason)) {
+      throw new Error(`Expected unsafe CLI reason to be rejected: ${JSON.stringify(reason)}`);
     }
   }
 

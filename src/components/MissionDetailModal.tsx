@@ -1,13 +1,22 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ShieldCheck, Terminal, Copy, Check } from 'lucide-react';
 import { MissionRecord } from '../types/metao';
 export const MissionDetailModal: React.FC<{mission:MissionRecord;onClose:()=>void}> = ({mission,onClose}) => {
   const [tab,setTab]=useState<'overview'|'proof'|'attempts'|'raw'>('overview'); const [copied,setCopied]=useState(false);
   const proof=mission.acceptance?.proof;
   const copy=()=>{navigator.clipboard.writeText(JSON.stringify(mission,null,2));setCopied(true);setTimeout(()=>setCopied(false),2000);};
-  return <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"><div className="bg-slate-900 border border-slate-800 rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
-    <div className="p-5 border-b border-slate-800 flex items-center justify-between"><div><h3 className="font-mono font-bold text-white">{mission.mission_id}</h3><p className="text-xs text-slate-400">{mission.mission.objective}</p></div><button onClick={onClose}><X className="w-5 h-5"/></button></div>
-    <div className="flex border-b border-slate-800 px-5 gap-4 text-xs">{(['overview','proof','attempts','raw'] as const).map(x=><button key={x} onClick={()=>setTab(x)} className={`py-2.5 border-b-2 ${tab===x?'border-cyan-400 text-cyan-400':'border-transparent text-slate-400'}`}>{x}</button>)}</div>
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"><div role="dialog" aria-modal="true" aria-labelledby="mission-detail-title" className="bg-slate-900 border border-slate-800 rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
+    <div className="p-5 border-b border-slate-800 flex items-center justify-between"><div><h3 id="mission-detail-title" className="font-mono font-bold text-white">{mission.mission_id}</h3><p className="text-xs text-slate-400">{mission.mission.objective}</p></div><button type="button" onClick={onClose} aria-label="Close modal" className="text-slate-400 hover:text-white transition p-1 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400"><X className="w-5 h-5"/></button></div>
+    <div role="tablist" className="flex border-b border-slate-800 px-5 gap-4 text-xs">{(['overview','proof','attempts','raw'] as const).map(x=><button key={x} type="button" role="tab" aria-selected={tab===x} onClick={()=>setTab(x)} className={`py-2.5 border-b-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400 ${tab===x?'border-cyan-400 text-cyan-400':'border-transparent text-slate-400'}`}>{x}</button>)}</div>
     <div className="p-5 overflow-y-auto flex-1 text-xs">
       {tab==='overview'&&<div className="space-y-4"><section className="bg-slate-950/60 border border-slate-800 rounded-lg p-4"><div className="text-[10px] uppercase font-mono text-slate-500 mb-2">Canonical mission state</div><div className="grid grid-cols-2 gap-3"><div>Status: <span className="font-mono text-cyan-300">{mission.status}</span></div><div>Acceptance: <span className="font-mono">{mission.acceptance_decision}</span></div></div><div className="mt-3 flex flex-wrap gap-1">{mission.mission.required_capabilities.map(c=><span key={c} className="px-2 py-0.5 bg-slate-800 rounded font-mono text-cyan-300">{c}</span>)}</div></section><section className="bg-slate-950/60 border border-slate-800 rounded-lg p-4"><div className="text-[10px] uppercase font-mono text-slate-500 mb-2">Canonical budget</div><pre className="text-slate-300 overflow-x-auto">{JSON.stringify(mission.budget,null,2)}</pre></section>{mission.approval_request&&<section className="bg-slate-950/60 border border-amber-500/20 rounded-lg p-4"><div className="text-amber-300 font-semibold">Human approval requested</div><pre className="mt-2 text-slate-300">{JSON.stringify(mission.approval_request,null,2)}</pre></section>}</div>}
       {tab==='proof'&&(proof?<div className="bg-slate-950/60 border border-emerald-500/20 rounded-lg p-4 space-y-3"><div className="flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-emerald-400"/><div><div className="font-semibold text-emerald-300">Canonical acceptance decision proof</div><div className="font-mono text-[10px] text-slate-400">{proof.digest}</div></div></div><div>Decision: {proof.decision}</div><div>Evidence IDs:<pre>{JSON.stringify(proof.evidence_ids,null,2)}</pre></div><div>Reasons:<pre className="whitespace-pre-wrap">{JSON.stringify(proof.reasons,null,2)}</pre></div></div>:<div className="p-8 text-center text-slate-500">No canonical acceptance proof is present.</div>)}
