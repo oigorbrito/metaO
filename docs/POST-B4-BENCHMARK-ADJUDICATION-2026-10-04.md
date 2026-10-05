@@ -1,5 +1,6 @@
 # Post-B4 Benchmark Battery Adjudication — 2026-10-04
 
+Updated: 2026-10-05
 Status: EVIDENCE_RECORD
 Issue: #748
 Applies to: repository `oigorbrito/metaO`
@@ -75,7 +76,30 @@ The adversarial fixture produced:
 The current `ProjectSupervisionResult` / trace surface does not expose an explicit
 project-level recomposition artifact or a project-level recomposition trace event.
 
-### B5 adjudication
+### B5 re-adjudication — 2026-10-05
+
+The historical run above remains the evidence that identified the gap.
+
+The current integrated implementation candidate adds an explicit project recomposer,
+an independent project-level original-spec verifier, and a fail-closed
+`PROJECT_UNVERIFIED` terminal for local-only completion.
+
+Current exact-head evidence:
+
+- Integration PR: #767
+- Exact head: `62442b873abd3955537a0813fc3bfea36ce6f1b5`
+- Hosted workflow: `B5 Decomposition Recomposition Benchmark`
+- Workflow run: `37336920793`
+- Workflow result: success
+- CI run on the same head: `37336921042` — success
+- Release Evidence Validator: `37336921110` — success
+
+The current B5 gate proves all three required paths:
+
+- valid recomposition `AB` -> `PROJECT_ACCEPTED`;
+- local-PASS/global-mismatch `AX` -> `PROJECT_BLOCKED`;
+- local-only completion without project recomposition/original-spec verification
+  -> `PROJECT_UNVERIFIED`, never `PROJECT_ACCEPTED`.
 
 | Dimension | Status |
 |---|---|
@@ -83,9 +107,10 @@ project-level recomposition artifact or a project-level recomposition trace even
 | Work-unit execution | PASS |
 | Dependency preservation | PASS |
 | Local unit verification | PASS |
-| Recomposition | GAP_IDENTIFIED |
-| Original-spec verification after recomposition | GAP_IDENTIFIED |
-| Aggregate B5 | GAP_IDENTIFIED |
+| Recomposition | PASS |
+| Original-spec verification after recomposition | PASS |
+| Local-only fail-closed acceptance boundary | PASS |
+| Aggregate B5 | PASS |
 
 Claim boundary:
 
@@ -95,7 +120,10 @@ PROJECT_ACCEPTED_WITHOUT_RECOMPOSITION_EVIDENCE != B5_PASS
 DECOMPOSITION_EXECUTION_PASS != RECOMPOSITION_PASS
 ```
 
-B5 is therefore adjudicated, but not complete as a product capability.
+B5 is therefore adjudicated as PASS on the exact integrated candidate head above.
+
+This is benchmark/execution evidence for the candidate. It does not by itself mean the
+product changes have been merged into `main`.
 
 ## 4. B6 — operational continuity
 
@@ -141,7 +169,25 @@ Therefore the evidence does not establish:
 - prevention of repeated non-idempotent work/effects across the crash window;
 - generalized external cross-provider handoff.
 
-### B6 adjudication
+### B6 re-adjudication — 2026-10-05
+
+The historical run above remains the evidence that identified the Project Plane gaps.
+
+The current integrated candidate adds durable Project Plane snapshots, revision/CAS,
+owner fencing, an atomic SQLite action-fence boundary, crash-safe resume, durable
+logical accepted-result bindings, and explicit effect reconciliation.
+
+Current exact-head evidence:
+
+- Integration PR: #767
+- Exact head: `62442b873abd3955537a0813fc3bfea36ce6f1b5`
+- Hosted workflow: `B6 Continuity Benchmark`
+- Workflow run: `37336920918`
+- Workflow result: success
+- CI run on the same head: `37336921042` — success
+- Release Evidence Validator: `37336921110` — success
+
+The B6 evidence payload reports:
 
 | Dimension | Status |
 |---|---|
@@ -150,10 +196,14 @@ Therefore the evidence does not establish:
 | Observability across SQLite restart | PASS |
 | CLI continuity across invocations | PASS |
 | Heterogeneous runtime restart/lineage | PASS |
-| Project-process crash/resume | GAP_IDENTIFIED |
-| Duplicate-effect crash window | GAP_IDENTIFIED |
+| Project-process crash/resume | PASS |
+| Duplicate-effect crash window | PASS |
 | Cross-provider external handoff | NOT_PROVEN |
-| Aggregate B6 | GAP_IDENTIFIED |
+| Aggregate B6 | NOT_PROVEN |
+
+The workflow itself succeeds because all currently executable gates pass and the payload
+records the unresolved external handoff boundary explicitly. Workflow success is not an
+aggregate B6 PASS.
 
 Claim boundary:
 
@@ -164,7 +214,10 @@ CHECKPOINT_CONTINUITY != EXACTLY_ONCE_EFFECT
 HETEROGENEOUS_RUNTIME_RESTART_PASS != CROSS_PROVIDER_EXTERNAL_HANDOFF_PASS
 ```
 
-B6 is therefore adjudicated, but not complete as a product continuity capability.
+B6 is therefore materially advanced: the Project Plane crash/resume and duplicate-effect
+gaps are executed as PASS on the current exact head. Aggregate B6 remains
+`NOT_PROVEN` solely because generalized cross-provider external handoff has not been
+executed.
 
 ## 5. Battery disposition
 
@@ -176,19 +229,21 @@ benchmarks.
 | B2 | Frozen prior evidence; unchanged here |
 | B3 | Frozen prior evidence; unchanged here |
 | B4 | Frozen prior evidence; unchanged here |
-| B5 | GAP_IDENTIFIED |
-| B6 | GAP_IDENTIFIED |
+| B5 | PASS on current exact-head integrated evidence |
+| B6 | NOT_PROVEN — cross-provider external handoff remains |
 
-The battery is **adjudicated with explicit gaps**.
+The battery is **re-adjudicated with one explicit unresolved B6 boundary**.
 
-It is not an all-PASS battery, and this document must not be used to claim that the
-missing B5 recomposition/original-spec capability or the missing B6 Project Plane
-crash-resume/duplicate-effect capability has been implemented or accepted.
+It is not an all-PASS battery. B5 now has exact-head PASS evidence. B6 has exact-head
+PASS evidence for Project Plane crash/resume and duplicate-effect reconciliation, but
+must not be promoted to aggregate PASS while cross-provider external handoff remains
+`NOT_PROVEN`.
 
 Product work is tracked separately:
 
-- #746 — project-level recomposition and original-spec verification;
-- #747 — durable Project Plane state, crash-safe resume, and duplicate-effect protection.
+- #746 / #761 — project-level recomposition, original-spec verification, and fail-closed local-only acceptance;
+- #747 / #753 / #754 / #762 — durable Project Plane state, crash-safe resume, atomic fencing, and duplicate-effect protection;
+- #765 / #767 — integrated candidate carrying the current exact-head evidence.
 
 Merging benchmark or documentation PRs records the evidence state. It does not convert
 `GAP_IDENTIFIED` into product PASS.
