@@ -213,6 +213,23 @@ class ProjectResumeState:
             raise ValueError("resume state executed work references unknown unit")
         if not self.accepted_work_unit_ids <= unit_ids:
             raise ValueError("resume state accepted work references unknown unit")
+        if not self.accepted_work_unit_ids <= self.executed_work_unit_ids:
+            raise ValueError("resume state accepted work must have executed")
+        awaiting_pairs = dict(self.awaiting_correction)
+        if len(awaiting_pairs) != len(self.awaiting_correction):
+            raise ValueError("resume state awaiting correction contains duplicate source")
+        for failed_id, correction_id in self.awaiting_correction:
+            if failed_id not in unit_ids or correction_id not in unit_ids:
+                raise ValueError("resume state awaiting correction references unknown unit")
+            correction = next(
+                item for item in self.units if item.work_unit_id == correction_id
+            )
+            if (
+                not correction.corrective
+                or correction.corrects_work_unit_id != failed_id
+                or failed_id not in correction.dependencies
+            ):
+                raise ValueError("resume state awaiting correction binding mismatch")
         result_ids = {item.work_unit_id for item in self.accepted_results}
         if len(result_ids) != len(self.accepted_results):
             raise ValueError("resume state accepted results contain duplicates")
@@ -350,6 +367,7 @@ def supervise_project(
     initial_checkpoint_materializer: InitialCheckpointMaterializerPort | None = None,
     resume_state: ProjectResumeState | None = None,
     persist_resume_state: Callable[[ProjectResumeState], None] | None = None,
+    assert_resume_owner: Callable[[], None] | None = None,
     max_executor_attempts_per_unit: int = 3,
     max_corrective_units: int = 3,
 ) -> ProjectSupervisionResult:
@@ -424,6 +442,10 @@ def supervise_project(
         if persist_resume_state is not None:
             persist_resume_state(current_resume_state())
 
+    def assert_current_owner() -> None:
+        if assert_resume_owner is not None:
+            assert_resume_owner()
+
     def blocked(reason: str) -> ProjectSupervisionResult:
         trace.append(
             ProjectTraceEvent(
@@ -432,6 +454,7 @@ def supervise_project(
                 repository_state_id=checkpoint.state_id,
             )
         )
+        persist_progress()
         return ProjectSupervisionResult(
             objective.project_id,
             ProjectVerdict.PROJECT_BLOCKED,
@@ -499,6 +522,7 @@ def supervise_project(
                 return blocked(f"no executor available for {unit.work_unit_id}")
 
             if checkpoint_holder_executor_id is None and initial_checkpoint_materializer is not None:
+                assert_current_owner()
                 materialized = initial_checkpoint_materializer.materialize(
                     checkpoint,
                     to_executor_id=target.executor_id,
@@ -520,6 +544,7 @@ def supervise_project(
                 checkpoint_holder_executor_id is not None
                 and checkpoint_holder_executor_id != target.executor_id
             ):
+                assert_current_owner()
                 handed = repository.handoff(
                     checkpoint,
                     from_executor_id=checkpoint_holder_executor_id,
@@ -552,6 +577,7 @@ def supervise_project(
                     checkpoint.state_id,
                 )
             )
+            assert_current_owner()
             execution = runner.run(objective, unit, target, checkpoint)
             if (
                 execution.work_unit_id != unit.work_unit_id
@@ -577,6 +603,7 @@ def supervise_project(
                 )
                 if next_target is None:
                     return blocked(f"capacity exhausted for {unit.work_unit_id}")
+                assert_current_owner()
                 handed = repository.handoff(
                     checkpoint,
                     from_executor_id=target.executor_id,
@@ -609,6 +636,7 @@ def supervise_project(
             return blocked(f"work unit did not complete: {unit.work_unit_id}")
         executed.add(unit.work_unit_id)
         previous_repository_id = checkpoint.repository_id
+        assert_current_owner()
         checkpoint = repository.capture(objective, unit, execution)
         checkpoint_holder_executor_id = execution.executor_id
         if checkpoint.repository_id != previous_repository_id:
