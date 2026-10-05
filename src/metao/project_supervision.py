@@ -213,6 +213,23 @@ class ProjectResumeState:
             raise ValueError("resume state executed work references unknown unit")
         if not self.accepted_work_unit_ids <= unit_ids:
             raise ValueError("resume state accepted work references unknown unit")
+        if not self.accepted_work_unit_ids <= self.executed_work_unit_ids:
+            raise ValueError("resume state accepted work must have executed")
+        awaiting_pairs = dict(self.awaiting_correction)
+        if len(awaiting_pairs) != len(self.awaiting_correction):
+            raise ValueError("resume state awaiting correction contains duplicate source")
+        for failed_id, correction_id in self.awaiting_correction:
+            if failed_id not in unit_ids or correction_id not in unit_ids:
+                raise ValueError("resume state awaiting correction references unknown unit")
+            correction = next(
+                item for item in self.units if item.work_unit_id == correction_id
+            )
+            if (
+                not correction.corrective
+                or correction.corrects_work_unit_id != failed_id
+                or failed_id not in correction.dependencies
+            ):
+                raise ValueError("resume state awaiting correction binding mismatch")
         result_ids = {item.work_unit_id for item in self.accepted_results}
         if len(result_ids) != len(self.accepted_results):
             raise ValueError("resume state accepted results contain duplicates")
