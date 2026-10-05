@@ -146,6 +146,36 @@ def baseline_recompose_and_verify(fragments: dict[str, str]) -> dict[str, object
     }
 
 
+def run_local_only_case() -> dict[str, object]:
+    runner = Runner("B")
+    result = supervise_project(
+        objective=ProjectObjective(
+            "b5-local-only",
+            "req-b5-composite",
+            f"Produce exactly the recomposed project artifact {EXPECTED_COMPOSITE!r}.",
+        ),
+        planner=Planner(),
+        scheduler=Scheduler(),
+        runner=runner,
+        repository=Repository(),
+        verifier=LocalVerifier(),
+        max_executor_attempts_per_unit=1,
+        max_corrective_units=0,
+    )
+    trace_kinds = [event.kind.value for event in result.trace]
+    return {
+        "case_id": "local-only-no-global-gate",
+        "candidate_project_verdict": result.verdict.value,
+        "candidate_calls": runner.calls,
+        "candidate_trace_kinds": trace_kinds,
+        "all_local_units_accepted": all(
+            record.verdict == "PASS" for record in result.traceability
+        ),
+        "project_artifact_ref": result.project_artifact_ref,
+        "project_verification_present": result.project_verification is not None,
+    }
+
+
 def run_case(case_id: str, right_fragment: str) -> dict[str, object]:
     runner = Runner(right_fragment)
     result = supervise_project(
@@ -203,6 +233,7 @@ def main() -> int:
 
     control = run_case("control", "B")
     adversarial = run_case("adversarial-global-mismatch", "X")
+    local_only = run_local_only_case()
 
     recomposition_trace_surface = "RECOMPOSED" in {member.name for member in ProjectTraceKind}
     project_artifact_surface = control["candidate_project_artifact_ref"] is not None
@@ -228,7 +259,22 @@ def main() -> int:
         and "PROJECT_ACCEPTED" not in adversarial["candidate_trace_kinds"]
     )
 
-    if control_ok and adversarial_closed and recomposition_trace_surface and project_artifact_surface:
+    local_only_closed = (
+        local_only["candidate_project_verdict"] == ProjectVerdict.PROJECT_UNVERIFIED.value
+        and local_only["all_local_units_accepted"] is True
+        and local_only["project_artifact_ref"] is None
+        and local_only["project_verification_present"] is False
+        and "PROJECT_UNVERIFIED" in local_only["candidate_trace_kinds"]
+        and "PROJECT_ACCEPTED" not in local_only["candidate_trace_kinds"]
+    )
+
+    if (
+        control_ok
+        and adversarial_closed
+        and local_only_closed
+        and recomposition_trace_surface
+        and project_artifact_surface
+    ):
         result = "PASS"
         reason = (
             "project-level recomposition executed and original-spec verification "
@@ -237,9 +283,12 @@ def main() -> int:
     elif not control_ok:
         result = "FAIL"
         reason = "control fixture did not satisfy the B5 recomposition acceptance path"
-    else:
+    elif not adversarial_closed:
         result = "FAIL"
         reason = "adversarial local-PASS/global-spec-FAIL case was not blocked"
+    else:
+        result = "FAIL"
+        reason = "local-only completion was incorrectly promoted to project acceptance"
 
     payload = {
         "schema": "metao-b5-decompose-recompose-v1",
@@ -249,7 +298,7 @@ def main() -> int:
         "candidate": "metao.project_supervision.supervise_project",
         "baseline": "deterministic-concatenate-then-exact-original-spec-check",
         "expected_composite": EXPECTED_COMPOSITE,
-        "cases": [control, adversarial],
+        "cases": [control, adversarial, local_only],
         "surface_observations": {
             "project_trace_has_recomposition_kind": recomposition_trace_surface,
             "project_result_has_project_artifact_field": project_artifact_surface,
@@ -263,10 +312,14 @@ def main() -> int:
             "original_spec_verification_after_recomposition": (
                 "PASS" if control_ok and adversarial_closed else "FAIL"
             ),
+            "local_only_without_global_gate": (
+                "PASS" if local_only_closed else "FAIL"
+            ),
         },
         "claim_boundary": [
             "LOCAL_WORK_UNIT_ACCEPTANCE != ORIGINAL_SPEC_SATISFIED",
             "PROJECT_ACCEPTED_WITHOUT_RECOMPOSITION_EVIDENCE != B5_PASS",
+            "LOCAL_ONLY_COMPLETION_WITHOUT_GLOBAL_GATE = PROJECT_UNVERIFIED",
             "DECOMPOSITION_EXECUTION_PASS != RECOMPOSITION_PASS",
             "B5_EVIDENCE != B6_CONTINUITY_EVIDENCE",
         ],
