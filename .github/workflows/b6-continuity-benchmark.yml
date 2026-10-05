@@ -16,6 +16,7 @@ on:
       - 'tests/integration/test_issue_538_project_remote_checkpoint_supervision.py'
       - 'tests/unit/test_issue_753_project_supervision_state.py'
       - 'tests/unit/test_issue_754_project_effect_reconciliation.py'
+      - 'tests/unit/test_issue_765_project_acceptance_continuity.py'
   workflow_dispatch:
 
 permissions:
@@ -63,7 +64,8 @@ jobs:
             tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_fresh_durable_supervision_requires_owner_fencing \
             tests.unit.test_issue_754_project_effect_reconciliation.Issue754DuplicateEffectCrashWindowTests.test_applied_effect_is_reconciled_after_crash_without_second_application \
             tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_ambiguous_effect_fails_closed_without_reissue \
-            tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_runner_cannot_choose_or_rotate_effect_identity
+            tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_runner_cannot_choose_or_rotate_effect_identity \
+            tests.unit.test_issue_765_project_acceptance_continuity.Issue765AcceptanceContinuityIntegrationTests.test_corrective_result_binding_survives_resume_and_recomposition
 
       - name: Install pinned heterogeneous runtimes
         run: |
