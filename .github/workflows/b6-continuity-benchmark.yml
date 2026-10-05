@@ -83,14 +83,15 @@ jobs:
               'mechanical_project_handoff': 'PASS',
               'durable_mission_restart_resume': 'PASS',
               'heterogeneous_runtime_restart_lineage': 'PASS',
-              'project_process_crash_resume': 'NOT_PROVEN',
+              'project_process_crash_resume': 'GAP_IDENTIFIED',
+              'duplicate_effect_crash_window': 'GAP_IDENTIFIED',
               'cross_provider_external_handoff': claims['cross_provider_external_handoff'],
           }
 
           payload = {
               'schema': 'metao-b6-continuity-v1',
               'commit': evidence['commit'],
-              'result': 'PASS',
+              'result': 'GAP_IDENTIFIED',
               'boundary': boundary,
           }
           Path('.artifacts/b6/b6-continuity.json').write_text(
