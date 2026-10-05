@@ -5,16 +5,31 @@ import { isSafeCliPositionalId } from '../src/lib/cliSafety';
 import { securityHeaders } from '../src/lib/httpSecurity';
 
 async function main() {
-  const safeIds = ['quickstart-accepted', 'runtime_1', 'mission:2026.09'];
+  const safeIds = [
+    'quickstart-accepted',
+    'runtime_1',
+    'mission:2026.09',
+    'Operator quarantine via web console',
+    'Certificate revocation for maintenance',
+  ];
   for (const id of safeIds) {
     if (!isSafeCliPositionalId(id)) {
-      throw new Error(`Expected safe CLI positional id: ${id}`);
+      throw new Error(`Expected safe CLI positional id / reason: ${id}`);
     }
   }
-  const unsafeIds = ['', '--db', '-h', 'bad\nvalue', 'bad\rvalue', 'x'.repeat(513)];
+  const unsafeIds = [
+    '',
+    '--db',
+    '-h',
+    '--actor',
+    'bad\nvalue',
+    'bad\rvalue',
+    'bad\0value',
+    'x'.repeat(513),
+  ];
   for (const id of unsafeIds) {
     if (isSafeCliPositionalId(id)) {
-      throw new Error(`Expected unsafe CLI positional id to be rejected: ${JSON.stringify(id)}`);
+      throw new Error(`Expected unsafe CLI positional id / reason to be rejected: ${JSON.stringify(id)}`);
     }
   }
 

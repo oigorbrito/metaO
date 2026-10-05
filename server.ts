@@ -213,13 +213,18 @@ async function startServer() {
       res.status(400).json({ error: 'Invalid ID parameter format' });
       return;
     }
+    const reason = req.body?.reason ?? 'Operator quarantine via web console';
+    if (!isSafeCliPositionalId(reason)) {
+      res.status(400).json({ error: 'Invalid reason parameter format' });
+      return;
+    }
     try {
       res.json(
         await cli([
           'runtime-quarantine',
           req.params.id,
           '--reason',
-          String(req.body?.reason || 'Operator quarantine via web console'),
+          reason,
           '--actor',
           UI_ACTOR,
           '--now-epoch',
@@ -237,13 +242,18 @@ async function startServer() {
       res.status(400).json({ error: 'Invalid ID parameter format' });
       return;
     }
+    const reason = req.body?.reason ?? 'Operator restore via web console';
+    if (!isSafeCliPositionalId(reason)) {
+      res.status(400).json({ error: 'Invalid reason parameter format' });
+      return;
+    }
     try {
       res.json(
         await cli([
           'runtime-restore',
           req.params.id,
           '--reason',
-          String(req.body?.reason || 'Operator restore via web console'),
+          reason,
           '--actor',
           UI_ACTOR,
           '--now-epoch',
@@ -261,13 +271,18 @@ async function startServer() {
       res.status(400).json({ error: 'Invalid ID parameter format' });
       return;
     }
+    const reason = req.body?.reason ?? 'Certificate revocation via web console';
+    if (!isSafeCliPositionalId(reason)) {
+      res.status(400).json({ error: 'Invalid reason parameter format' });
+      return;
+    }
     try {
       res.json(
         await cli([
           'runtime-certificate-revoke',
           req.params.id,
           '--reason',
-          String(req.body?.reason || 'Certificate revocation via web console'),
+          reason,
           '--actor',
           UI_ACTOR,
           '--now-epoch',
