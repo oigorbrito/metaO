@@ -47,21 +47,25 @@ jobs:
               Path('.artifacts/b5/b5-decomposition-recomposition.json').read_text()
           )
           assert evidence['commit'] == os.environ['EXACT_HEAD_SHA']
-          assert evidence['result'] == 'GAP_IDENTIFIED'
+          assert evidence['result'] == 'PASS'
           boundary = evidence['boundary']
           assert boundary['decomposition'] == 'PASS'
           assert boundary['work_unit_execution'] == 'PASS'
           assert boundary['dependency_preservation'] == 'PASS'
-          assert boundary['recomposition'] == 'GAP_IDENTIFIED'
-          assert boundary['original_spec_verification_after_recomposition'] == 'GAP_IDENTIFIED'
+          assert boundary['recomposition'] == 'PASS'
+          assert boundary['original_spec_verification_after_recomposition'] == 'PASS'
 
           adversarial = next(
               case for case in evidence['cases']
               if case['case_id'] == 'adversarial-global-mismatch'
           )
-          assert adversarial['candidate_project_verdict'] == 'PROJECT_ACCEPTED'
+          assert adversarial['candidate_project_verdict'] == 'PROJECT_BLOCKED'
           assert adversarial['all_local_units_accepted'] is True
           assert adversarial['baseline']['spec_satisfied'] is False
+          assert adversarial['candidate_project_artifact_ref'] == 'composite:AX'
+          assert adversarial['candidate_project_verification_accepted'] is False
+          assert 'PROJECT_VERIFICATION_FAILED' in adversarial['candidate_trace_kinds']
+          assert 'PROJECT_ACCEPTED' not in adversarial['candidate_trace_kinds']
           PY
 
       - name: Upload B5 evidence
