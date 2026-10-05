@@ -496,7 +496,10 @@ from metao.project_supervision import (
     WorkVerificationResult,
     supervise_project,
 )
-from metao.project_supervision_state import (\n    SQLiteProjectActionFence,\n    SQLiteProjectSupervisionStateStore,\n)
+from metao.project_supervision_state import (
+    SQLiteProjectActionFence,
+    SQLiteProjectSupervisionStateStore,
+)
 
 db = Path(sys.argv[1])
 calls = Path(sys.argv[2])
