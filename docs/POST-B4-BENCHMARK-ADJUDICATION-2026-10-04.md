@@ -84,7 +84,7 @@ The current integrated implementation candidate adds an explicit project recompo
 an independent project-level original-spec verifier, and a fail-closed
 `PROJECT_UNVERIFIED` terminal for local-only completion.
 
-Current exact-head evidence:
+Recorded exact-head evidence at re-adjudication time:
 
 - Integration PR: #767
 - Exact head: `62442b873abd3955537a0813fc3bfea36ce6f1b5`
@@ -124,6 +124,10 @@ B5 is therefore adjudicated as PASS on the exact integrated candidate head above
 
 This is benchmark/execution evidence for the candidate. It does not by itself mean the
 product changes have been merged into `main`.
+
+For the current PR head, use the exact-head run IDs recorded in #747 and #765. Later
+documentation/workflow-only commits do not retroactively change the identity of the
+recorded run above.
 
 ## 4. B6 — operational continuity
 
@@ -177,7 +181,7 @@ The current integrated candidate adds durable Project Plane snapshots, revision/
 owner fencing, an atomic SQLite action-fence boundary, crash-safe resume, durable
 logical accepted-result bindings, and explicit effect reconciliation.
 
-Current exact-head evidence:
+Recorded exact-head evidence at re-adjudication time:
 
 - Integration PR: #767
 - Exact head: `62442b873abd3955537a0813fc3bfea36ce6f1b5`
@@ -215,7 +219,7 @@ HETEROGENEOUS_RUNTIME_RESTART_PASS != CROSS_PROVIDER_EXTERNAL_HANDOFF_PASS
 ```
 
 B6 is therefore materially advanced: the Project Plane crash/resume and duplicate-effect
-gaps are executed as PASS on the current exact head. Aggregate B6 remains
+gaps are executed as PASS on the recorded exact head above. Aggregate B6 remains
 `NOT_PROVEN` solely because generalized cross-provider external handoff has not been
 executed.
 
