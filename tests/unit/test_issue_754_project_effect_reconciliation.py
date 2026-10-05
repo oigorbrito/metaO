@@ -561,7 +561,7 @@ else:
             self.assertEqual(final.owner.generation, 2)
             self.assertEqual(
                 final.snapshot.trace[-1].kind.value,
-                "PROJECT_ACCEPTED",
+                "PROJECT_UNVERIFIED",
             )
 
 
