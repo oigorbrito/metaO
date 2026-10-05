@@ -82,14 +82,60 @@ class Issue754ProjectEffectContractTests(unittest.TestCase):
             runner=effect,
             reconciliation=_Reconciliation(ProjectEffectState.AMBIGUOUS),
         )
-        with self.assertRaises(ProjectEffectAmbiguous):
-            runner.run(
-                ProjectObjective("project", "req", "objective"),
-                WorkUnit("effect", "create ticket"),
-                ExecutorTarget("executor-a", "provider-a"),
-                RepositoryCheckpoint("cp", "repo", "state", "artifact"),
-            )
+        result = runner.run(
+            ProjectObjective("project", "req", "objective"),
+            WorkUnit("effect", "create ticket"),
+            ExecutorTarget("executor-a", "provider-a"),
+            RepositoryCheckpoint("cp", "repo", "state", "artifact"),
+        )
+        self.assertEqual(result.status, WorkExecutionStatus.FAILED)
+        self.assertIn("ambiguous-effect:", result.evidence_ref)
         self.assertEqual(effect.calls, [])
+
+
+    def test_ambiguous_effect_blocks_supervision_and_persists_terminal_state(self):
+        class Planner:
+            def plan(self, objective):
+                return WorkGraph("metao", (WorkUnit("effect", "create ticket"),))
+            def corrective_work(self, objective, failed_unit, verification, graph):
+                return None
+
+        class Scheduler:
+            def select(self, unit, *, excluded_executor_ids):
+                return ExecutorTarget("executor-a", "provider-a")
+
+        class Repository:
+            def initial(self, objective):
+                return RepositoryCheckpoint("root", "repo", "root", "artifact:root")
+            def capture(self, objective, unit, execution):
+                raise AssertionError("FAILED ambiguous effect must not be captured")
+            def handoff(self, checkpoint, *, from_executor_id, to_executor_id):
+                return checkpoint
+
+        class Verifier:
+            def verify(self, objective, unit, execution, checkpoint):
+                raise AssertionError("FAILED ambiguous effect must not be verified")
+
+        persisted = []
+        result = supervise_project(
+            objective=ProjectObjective("project", "req", "objective"),
+            planner=Planner(),
+            scheduler=Scheduler(),
+            runner=ReconciledWorkUnitRunner(
+                runner=_EffectRunner(),
+                reconciliation=_Reconciliation(ProjectEffectState.AMBIGUOUS),
+            ),
+            repository=Repository(),
+            verifier=Verifier(),
+            persist_resume_state=persisted.append,
+            max_executor_attempts_per_unit=1,
+            max_corrective_units=0,
+        )
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_BLOCKED)
+        self.assertEqual(
+            persisted[-1].trace[-1].kind.value,
+            "PROJECT_BLOCKED",
+        )
 
     def test_not_applied_uses_stable_logical_effect_key(self):
         effect = _EffectRunner()
