@@ -294,8 +294,8 @@ def main() -> int:
             max_corrective_units=0,
         )
 
-    if result.verdict is not ProjectVerdict.PROJECT_ACCEPTED:
-        raise AssertionError(f"Codex-backed project was not accepted: {result.reason}")
+    if result.verdict is not ProjectVerdict.PROJECT_UNVERIFIED:
+        raise AssertionError(f"Codex-backed project did not reach the expected local-only unverified terminal: {result.reason}")
 
     evidence_ids = {
         unit_id: evidence["evidence_id"] for unit_id, evidence in runner.evidence.items()
@@ -322,7 +322,8 @@ def main() -> int:
             "REAL_CODEX_CHATGPT_SINGLE_PROVIDER != REAL_MULTI_PROVIDER",
             "CHATGPT_PLAN_AUTH != OPENAI_API_KEY",
             "READ_ONLY_LOGICAL_CHECKPOINT != REMOTE_GIT_MUTATION",
-            "PROJECT_ACCEPTED_SINGLE_PROVIDER != MULTI_PROVIDER_PILOT_PASS",
+            "PROJECT_UNVERIFIED_SINGLE_PROVIDER != PROJECT_ACCEPTED",
+            "PROJECT_UNVERIFIED_SINGLE_PROVIDER != MULTI_PROVIDER_PILOT_PASS",
         ],
     }
 
