@@ -152,6 +152,33 @@ class Issue746ProjectRecompositionTests(unittest.TestCase):
         self.assertNotIn(ProjectTraceKind.PROJECT_ACCEPTED, kinds)
         self.assertIn("original-spec", result.reason)
 
+    def test_local_only_completion_is_unverified_not_project_accepted(self):
+        result = supervise_project(
+            objective=ProjectObjective(
+                "project-761",
+                "req-761",
+                "Produce exactly AB from the accepted work products.",
+            ),
+            planner=_Planner(),
+            scheduler=_Scheduler(),
+            runner=_Runner("B"),
+            repository=_Repository(),
+            verifier=_LocalVerifier(),
+            max_executor_attempts_per_unit=1,
+            max_corrective_units=0,
+        )
+
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_UNVERIFIED)
+        self.assertIn(
+            ProjectTraceKind.PROJECT_UNVERIFIED,
+            [event.kind for event in result.trace],
+        )
+        self.assertNotIn(
+            ProjectTraceKind.PROJECT_ACCEPTED,
+            [event.kind for event in result.trace],
+        )
+        self.assertIn("not configured", result.reason)
+
     def test_recomposer_and_project_verifier_must_be_configured_together(self):
         with self.assertRaisesRegex(ValueError, "configured together"):
             supervise_project(
