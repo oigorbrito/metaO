@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+import hashlib
+import json
 from typing import Protocol, runtime_checkable
 
 from .project_supervision import (
@@ -55,7 +57,15 @@ class ProjectEffectKey:
     @property
     def value(self) -> str:
         # Deliberately stable across process restarts and executor attempts.
-        return f"{self.project_id}:{self.work_unit_id}:{self.logical_effect_id}"
+        # Hash a canonical tuple instead of delimiter-joining caller-controlled
+        # identifiers, avoiding collisions such as ("a:b", "c", "d") and
+        # ("a", "b:c", "d").
+        payload = json.dumps(
+            [self.project_id, self.work_unit_id, self.logical_effect_id],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        return "metao-project-effect-v1:" + hashlib.sha256(payload).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
