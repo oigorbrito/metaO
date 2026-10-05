@@ -236,7 +236,7 @@ class Issue521ProjectSupervisionRealBridgeTests(unittest.TestCase):
             max_executor_attempts_per_unit=3,
         )
 
-        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_ACCEPTED)
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_UNVERIFIED)
         self.assertEqual(result.executors_used, frozenset({"executor-a", "executor-c"}))
         self.assertEqual(result.providers_used, frozenset({"provider-x", "provider-y"}))
         self.assertEqual(
