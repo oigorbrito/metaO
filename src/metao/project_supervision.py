@@ -39,6 +39,7 @@ class ProjectTraceKind(StrEnum):
     RECOMPOSED = "RECOMPOSED"
     PROJECT_VERIFICATION_FAILED = "PROJECT_VERIFICATION_FAILED"
     PROJECT_VERIFICATION_PASSED = "PROJECT_VERIFICATION_PASSED"
+    PROJECT_UNVERIFIED = "PROJECT_UNVERIFIED"
     PROJECT_ACCEPTED = "PROJECT_ACCEPTED"
     PROJECT_BLOCKED = "PROJECT_BLOCKED"
 
@@ -430,7 +431,7 @@ def supervise_project(
             if project_recomposer is None and project_verifier is None:
                 trace.append(
                     ProjectTraceEvent(
-                        ProjectTraceKind.PROJECT_BLOCKED,
+                        ProjectTraceKind.PROJECT_UNVERIFIED,
                         checkpoint_id=checkpoint.checkpoint_id,
                         repository_state_id=checkpoint.state_id,
                     )
