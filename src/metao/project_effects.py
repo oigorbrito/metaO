@@ -1,7 +1,7 @@
 """Project-level effect deduplication and crash-window reconciliation.
 
-This module is an opt-in safety boundary for work units with externally visible,
-potentially non-idempotent effects. It does not change the legacy
+This module is an opt-in safety boundary for work units with one primary
+externally visible, potentially non-idempotent effect. It does not change the legacy
 WorkUnitRunnerPort contract. Instead, ReconciledWorkUnitRunner adapts an
 effect-safe runner plus an authoritative reconciliation port to that contract.
 
@@ -9,6 +9,7 @@ Claim boundary:
 - APPLIED reconciliation reuses the authoritative prior execution result.
 - NOT_APPLIED may execute using the stable idempotency key.
 - AMBIGUOUS fails closed and must never silently reissue.
+- The idempotency key is metaO-generated and stable for the work unit's primary effect.
 - This is logical-effect deduplication, not a generic exactly-once claim.
 """
 
@@ -99,12 +100,6 @@ class ProjectEffectReconciliationPort(Protocol):
 
 @runtime_checkable
 class IdempotentWorkUnitRunnerPort(Protocol):
-    def logical_effect_id(
-        self,
-        objective: ProjectObjective,
-        unit: WorkUnit,
-    ) -> str: ...
-
     def run_with_idempotency_key(
         self,
         objective: ProjectObjective,
@@ -135,11 +130,10 @@ class ReconciledWorkUnitRunner:
         target: ExecutorTarget,
         checkpoint: RepositoryCheckpoint,
     ) -> WorkExecutionResult:
-        logical_effect_id = self._runner.logical_effect_id(objective, unit)
         key = ProjectEffectKey(
             objective.project_id,
             unit.work_unit_id,
-            logical_effect_id,
+            "primary-work-unit-effect",
         )
         reconciled = self._reconciliation.reconcile(
             objective,
