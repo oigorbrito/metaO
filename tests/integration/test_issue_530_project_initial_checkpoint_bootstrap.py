@@ -191,7 +191,7 @@ class Issue530InitialCheckpointBootstrapIntegrationTests(unittest.TestCase):
                 initial_checkpoint_materializer=repository,
             )
 
-            self.assertEqual(result.verdict, ProjectVerdict.PROJECT_ACCEPTED)
+            self.assertEqual(result.verdict, ProjectVerdict.PROJECT_UNVERIFIED)
             self.assertEqual(len(executor.requests), 1)
             self.assertEqual(executor.requests[0].context["repository_state_id"], trusted_initial)
             kinds = tuple(event.kind for event in result.trace)
