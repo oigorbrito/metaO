@@ -15,6 +15,7 @@ from typing import Protocol, runtime_checkable
 
 class ProjectVerdict(StrEnum):
     PROJECT_ACCEPTED = "PROJECT_ACCEPTED"
+    PROJECT_UNVERIFIED = "PROJECT_UNVERIFIED"
     PROJECT_BLOCKED = "PROJECT_BLOCKED"
 
 
@@ -426,6 +427,24 @@ def supervise_project(
         if not unresolved:
             project_artifact_ref: str | None = None
             project_verification_result: ProjectVerificationResult | None = None
+            if project_recomposer is None and project_verifier is None:
+                trace.append(
+                    ProjectTraceEvent(
+                        ProjectTraceKind.PROJECT_BLOCKED,
+                        checkpoint_id=checkpoint.checkpoint_id,
+                        repository_state_id=checkpoint.state_id,
+                    )
+                )
+                return ProjectSupervisionResult(
+                    objective.project_id,
+                    ProjectVerdict.PROJECT_UNVERIFIED,
+                    WorkGraph(graph.authority_id, tuple(units)),
+                    tuple(trace),
+                    tuple(traceability),
+                    frozenset(executors_used),
+                    frozenset(providers_used),
+                    "project recomposition/original-spec verification not configured",
+                )
             if project_recomposer is not None and project_verifier is not None:
                 effective_work = tuple(
                     accepted_results[unit.work_unit_id]
