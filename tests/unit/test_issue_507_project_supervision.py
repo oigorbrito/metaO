@@ -160,7 +160,7 @@ class Issue507ProjectSupervisionTests(unittest.TestCase):
         self.assertIn(ProjectTraceKind.HANDED_OFF, kinds)
         self.assertIn(ProjectTraceKind.VERIFICATION_FAILED, kinds)
         self.assertIn(ProjectTraceKind.CORRECTIVE_WORK_CREATED, kinds)
-        self.assertIn(ProjectTraceKind.PROJECT_ACCEPTED, kinds)
+        self.assertIn(ProjectTraceKind.PROJECT_UNVERIFIED, kinds)
         self.assertEqual(
             repository.handoffs,
             [
