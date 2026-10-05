@@ -616,9 +616,9 @@ else:
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
-    if result.verdict is not ProjectVerdict.PROJECT_ACCEPTED:
+    if result.verdict is not ProjectVerdict.PROJECT_UNVERIFIED:
         raise SystemExit(91)
-    print("ACCEPTED")
+    print("UNVERIFIED")
 """
 
             first = subprocess.run(
@@ -641,7 +641,7 @@ else:
                 capture_output=True,
                 text=True,
             )
-            self.assertEqual(second.stdout.strip(), "ACCEPTED")
+            self.assertEqual(second.stdout.strip(), "UNVERIFIED")
 
             self.assertEqual(
                 calls.read_text(encoding="utf-8").splitlines(),
@@ -660,7 +660,7 @@ else:
             )
             self.assertEqual(
                 final.snapshot.trace[-1].kind,
-                ProjectTraceKind.PROJECT_ACCEPTED,
+                ProjectTraceKind.PROJECT_UNVERIFIED,
             )
 
 
