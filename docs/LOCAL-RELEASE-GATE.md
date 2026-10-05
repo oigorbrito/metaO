@@ -163,7 +163,7 @@ Dirty worktrees fail closed. `-AllowDirty` exists only for diagnosis and records
 
 ## Executed gate set
 
-The release gate records 21 checks:
+Historical validated candidates before #753/#754 recorded 21 checks. The current gate definition records 23 checks; the two added checks are named Project Plane continuity gates and must execute independently of the full unit suite.
 
 1. exact runtime versions;
 2. installed CLI help;
@@ -172,20 +172,22 @@ The release gate records 21 checks:
 5. Roadmap 7 WU01 failure-aware replan;
 6. Roadmap 7 WU02 durable escalation;
 7. full unit suite;
-8. Roadmap 2 real second-runtime sandbox;
-9. Roadmap 3 real runtime certification;
-10. Roadmap 4 real declarative certified runtimes;
-11. Roadmap 5 real certificate lifecycle;
-12. Roadmap 6 WU04 OpenAI adapter unit regression;
-13. Roadmap 6 WU04 real OpenAI Agents conformance;
-14. Roadmap 6 WU05 real three-runtime regression;
-15. Roadmap 7 WU03 three-runtime recovery regression;
-16. Block O O1 LangGraph real;
-17. Block O O2 end-to-end sandbox;
-18. Block O O3 failover sandbox;
-19. Block O O4 governance gates;
-20. Block O O5 runtime swap;
-21. SDK-neutral Core/control-plane boundary.
+8. Project Plane real-process crash/resume + fenced takeover (#753);
+9. Project effect crash-window reconciliation + fail-closed ambiguity (#754);
+10. Roadmap 2 real second-runtime sandbox;
+11. Roadmap 3 real runtime certification;
+12. Roadmap 4 real declarative certified runtimes;
+13. Roadmap 5 real certificate lifecycle;
+14. Roadmap 6 WU04 OpenAI adapter unit regression;
+15. Roadmap 6 WU04 real OpenAI Agents conformance;
+16. Roadmap 6 WU05 real three-runtime regression;
+17. Roadmap 7 WU03 three-runtime recovery regression;
+18. Block O O1 LangGraph real;
+19. Block O O2 end-to-end sandbox;
+20. Block O O3 failover sandbox;
+21. Block O O4 governance gates;
+22. Block O O5 runtime swap;
+23. SDK-neutral Core/control-plane boundary.
 
 Normal test gates continue after individual failures so a completed failed run contains the entire failing set rather than stopping at the first red gate.
 
@@ -257,7 +259,7 @@ The external hosted-runner blocker remains separate until a hosted job reaches c
 LOCAL_GATE_IMPLEMENTATION = OPERATIONAL
 BRANCH = main
 VALIDATED_CANDIDATE = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
-LOCAL_RELEASE_GATE = PASS 21/21
+LOCAL_RELEASE_GATE = PASS 21/21 (historical validated candidate; current definition is 23 gates)
 CLEAN_WORKTREE = true
 PHASE = complete
 FAILURE_COUNT = 0
