@@ -14,6 +14,8 @@ on:
       - 'tests/integration/test_issue_523_project_supervision_trusted_git_bridge.py'
       - 'tests/integration/test_issue_528_project_corrective_replan.py'
       - 'tests/integration/test_issue_538_project_remote_checkpoint_supervision.py'
+      - 'tests/unit/test_issue_753_project_supervision_state.py'
+      - 'tests/unit/test_issue_754_project_effect_reconciliation.py'
   workflow_dispatch:
 
 permissions:
@@ -47,6 +49,14 @@ jobs:
             tests.unit.test_roadmap_1_work_unit_05.HumanApprovalResumeV1Tests.test_sqlite_restart_between_wait_approve_and_resume \
             tests.unit.test_roadmap_1_work_unit_07.ObservabilityEventLedgerV1Tests.test_wait_approve_resume_trace_is_monotonic_across_sqlite_restarts \
             tests.unit.test_roadmap_1_work_unit_08.CliObservabilitySurfaceV1Tests.test_wait_approve_resume_events_span_cli_invocations_with_timestamps
+
+      - name: Run Project Plane process-crash and duplicate-effect gates
+        run: |
+          python -m unittest -v \
+            tests.unit.test_issue_753_project_supervision_state.Issue753ProjectResumeAcrossCrashTests.test_process_b_resumes_only_pending_work_after_process_a_crash \
+            tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_real_process_takeover_increments_fence_and_stale_owner_is_rejected \
+            tests.unit.test_issue_754_project_effect_reconciliation.Issue754DuplicateEffectCrashWindowTests.test_applied_effect_is_reconciled_after_crash_without_second_application \
+            tests.unit.test_issue_754_project_effect_reconciliation.Issue754ProjectEffectContractTests.test_ambiguous_effect_fails_closed_without_reissue
 
       - name: Install pinned heterogeneous runtimes
         run: |
@@ -83,15 +93,19 @@ jobs:
               'mechanical_project_handoff': 'PASS',
               'durable_mission_restart_resume': 'PASS',
               'heterogeneous_runtime_restart_lineage': 'PASS',
-              'project_process_crash_resume': 'GAP_IDENTIFIED',
-              'duplicate_effect_crash_window': 'GAP_IDENTIFIED',
+              'project_process_crash_resume': 'PASS',
+              'duplicate_effect_crash_window': 'PASS',
               'cross_provider_external_handoff': claims['cross_provider_external_handoff'],
           }
 
           payload = {
               'schema': 'metao-b6-continuity-v1',
               'commit': evidence['commit'],
-              'result': 'GAP_IDENTIFIED',
+              'result': (
+                  'PASS'
+                  if claims['cross_provider_external_handoff'] == 'EXECUTED'
+                  else 'NOT_PROVEN'
+              ),
               'boundary': boundary,
           }
           Path('.artifacts/b6/b6-continuity.json').write_text(
