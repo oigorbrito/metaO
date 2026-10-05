@@ -35,9 +35,6 @@ class _EffectRunner:
     def __init__(self) -> None:
         self.calls: list[str] = []
 
-    def logical_effect_id(self, objective, unit):
-        return "logical-ticket"
-
     def run_with_idempotency_key(
         self,
         objective,
@@ -154,11 +151,34 @@ class Issue754ProjectEffectContractTests(unittest.TestCase):
         expected_key = ProjectEffectKey(
             "project",
             "effect",
-            "logical-ticket",
+            "primary-work-unit-effect",
         ).value
         self.assertEqual(effect.calls, [expected_key])
         self.assertEqual(effect.calls, reconciliation.keys)
 
+
+    def test_runner_cannot_choose_or_rotate_effect_identity(self):
+        effect = _EffectRunner()
+        reconciliation = _Reconciliation(ProjectEffectState.NOT_APPLIED)
+        runner = ReconciledWorkUnitRunner(
+            runner=effect,
+            reconciliation=reconciliation,
+        )
+        objective = ProjectObjective("project", "req", "objective")
+        unit = WorkUnit("effect", "create ticket")
+        target = ExecutorTarget("executor-a", "provider-a")
+        checkpoint = RepositoryCheckpoint("cp", "repo", "state", "artifact")
+
+        runner.run(objective, unit, target, checkpoint)
+        runner.run(objective, unit, target, checkpoint)
+
+        expected = ProjectEffectKey(
+            "project",
+            "effect",
+            "primary-work-unit-effect",
+        ).value
+        self.assertEqual(effect.calls, [expected, expected])
+        self.assertEqual(reconciliation.keys, [expected, expected])
 
     def test_effect_key_canonicalization_avoids_delimiter_collisions(self):
         first = ProjectEffectKey("a:b", "c", "d").value
@@ -340,9 +360,6 @@ class Scheduler:
 
 
 class EffectRunner:
-    def logical_effect_id(self, objective, unit):
-        return "ticket-1"
-
     def run_with_idempotency_key(
         self,
         objective,
@@ -506,7 +523,7 @@ else:
             key = ProjectEffectKey(
                 "project-754",
                 "effect",
-                "ticket-1",
+                "primary-work-unit-effect",
             ).value
             with sqlite3.connect(effect_db) as connection:
                 row = connection.execute(
