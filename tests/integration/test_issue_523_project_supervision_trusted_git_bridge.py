@@ -256,7 +256,7 @@ class Issue523ProjectSupervisionTrustedGitBridgeTests(unittest.TestCase):
             kinds = tuple(event.kind for event in result.trace)
             self.assertIn(ProjectTraceKind.FAILED_CAPACITY, kinds)
             self.assertIn(ProjectTraceKind.HANDED_OFF, kinds)
-            self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_ACCEPTED)
+            self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_UNVERIFIED)
 
             self.assertEqual(len(executor_c.requests), 1)
             self.assertEqual(
