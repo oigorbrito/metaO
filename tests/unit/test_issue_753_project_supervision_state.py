@@ -8,13 +8,18 @@ import tempfile
 import unittest
 
 from metao.project_supervision import (
+    ExecutorTarget,
+    ProjectObjective,
     ProjectTraceEvent,
     ProjectTraceKind,
     ProjectTraceabilityRecord,
     RepositoryCheckpoint,
     WorkExecutionResult,
     WorkExecutionStatus,
+    WorkGraph,
     WorkUnit,
+    WorkVerificationResult,
+    supervise_project,
 )
 from metao.project_supervision_state import (
     ProjectSupervisionSnapshot,
@@ -141,6 +146,67 @@ print(f"{record.owner.holder_id}:{record.owner.generation}:{record.revision}")
             )
             self.assertEqual(updated.revision, 3)
             self.assertEqual(updated.snapshot.corrective_count, 1)
+
+
+    def test_stale_owner_is_rejected_before_runner_dispatch(self):
+        with tempfile.TemporaryDirectory() as directory:
+            db = Path(directory) / "project.db"
+            store = SQLiteProjectSupervisionStateStore(db)
+            stale = store.create(_snapshot(accepted=False), holder_id="process-a")
+            store.acquire("project-753", holder_id="process-b")
+
+            class Planner:
+                def plan(self, objective):
+                    raise AssertionError("resume state must provide graph")
+                def corrective_work(self, objective, failed_unit, verification, graph):
+                    return None
+
+            class Scheduler:
+                def select(self, unit, *, excluded_executor_ids):
+                    return ExecutorTarget("executor-a", "provider-a")
+
+            class Runner:
+                calls = 0
+                def run(self, objective, unit, target, checkpoint):
+                    self.calls += 1
+                    raise AssertionError("stale owner must be fenced before dispatch")
+
+            class Repository:
+                def initial(self, objective):
+                    raise AssertionError("resume path must not request initial checkpoint")
+                def capture(self, objective, unit, execution):
+                    raise AssertionError("stale owner must not capture")
+                def handoff(self, checkpoint, *, from_executor_id, to_executor_id):
+                    return checkpoint
+
+            class Verifier:
+                def verify(self, objective, unit, execution, checkpoint):
+                    return WorkVerificationResult(
+                        True,
+                        "independent-verifier",
+                        "evidence",
+                        "test",
+                    )
+
+            runner = Runner()
+            with self.assertRaises(StaleProjectOwner):
+                supervise_project(
+                    objective=ProjectObjective(
+                        "project-753",
+                        "req-753",
+                        "resume project after process crash",
+                    ),
+                    planner=Planner(),
+                    scheduler=Scheduler(),
+                    runner=runner,
+                    repository=Repository(),
+                    verifier=Verifier(),
+                    resume_state=stale.snapshot,
+                    assert_resume_owner=lambda: store.assert_owner(stale.owner),
+                    max_executor_attempts_per_unit=1,
+                    max_corrective_units=0,
+                )
+            self.assertEqual(runner.calls, 0)
 
     def test_revision_compare_and_swap_rejects_lost_update(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -285,6 +351,7 @@ if mode == "a":
         repository=Repository(),
         verifier=Verifier(),
         persist_resume_state=persist,
+        assert_resume_owner=lambda: store.assert_owner(record_box[0].owner),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
@@ -309,6 +376,7 @@ else:
         verifier=Verifier(),
         resume_state=acquired.snapshot,
         persist_resume_state=persist,
+        assert_resume_owner=lambda: store.assert_owner(record_box[0].owner),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
