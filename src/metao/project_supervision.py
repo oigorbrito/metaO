@@ -216,8 +216,8 @@ class ProjectResumeState:
         result_ids = {item.work_unit_id for item in self.accepted_results}
         if len(result_ids) != len(self.accepted_results):
             raise ValueError("resume state accepted results contain duplicates")
-        if not self.accepted_work_unit_ids <= result_ids:
-            raise ValueError("resume state accepted work must retain execution result")
+        if not result_ids <= self.executed_work_unit_ids:
+            raise ValueError("resume state results must reference executed work")
 
 
 @dataclass(frozen=True, slots=True)
@@ -456,6 +456,7 @@ def supervise_project(
                     repository_state_id=checkpoint.state_id,
                 )
             )
+            persist_progress()
             return ProjectSupervisionResult(
                 objective.project_id,
                 ProjectVerdict.PROJECT_ACCEPTED,
@@ -670,7 +671,6 @@ def supervise_project(
             if unit.corrective and unit.corrects_work_unit_id is not None:
                 corrected_id = unit.corrects_work_unit_id
                 accepted.add(corrected_id)
-                accepted_results[corrected_id] = execution
                 awaiting_correction.pop(corrected_id, None)
                 traceability.append(
                     ProjectTraceabilityRecord(
