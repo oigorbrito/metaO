@@ -242,7 +242,8 @@ try {
         "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_stale_owner_atomic_action_is_rejected_before_effect",
         "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_takeover_waits_for_current_atomic_action_boundary",
         "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_resume_requires_durable_persistence_and_owner_fencing",
-        "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_fresh_durable_supervision_requires_owner_fencing"
+        "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_fresh_durable_supervision_requires_owner_fencing",
+        "tests.unit.test_issue_765_project_acceptance_continuity.Issue765AcceptanceContinuityIntegrationTests.test_corrective_result_binding_survives_resume_and_recomposition"
     )
     Invoke-PythonGate -Name "project_effect_crash_window_reconciliation" -ArgumentList @(
         "-m", "unittest", "-v",
