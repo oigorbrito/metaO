@@ -238,7 +238,9 @@ try {
         "-m", "unittest", "-v",
         "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectResumeAcrossCrashTests.test_process_b_resumes_only_pending_work_after_process_a_crash",
         "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_real_process_takeover_increments_fence_and_stale_owner_is_rejected",
-        "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_stale_owner_is_rejected_before_runner_dispatch"
+        "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_stale_owner_is_rejected_before_runner_dispatch",
+        "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_resume_requires_durable_persistence_and_owner_fencing",
+        "tests.unit.test_issue_753_project_supervision_state.Issue753ProjectSupervisionStateTests.test_fresh_durable_supervision_requires_owner_fencing"
     )
     Invoke-PythonGate -Name "project_effect_crash_window_reconciliation" -ArgumentList @(
         "-m", "unittest", "-v",
