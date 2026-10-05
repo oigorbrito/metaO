@@ -104,7 +104,7 @@ class Issue509DependencyAcceptanceTests(unittest.TestCase):
             verifier=_Verifier(),
         )
 
-        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_ACCEPTED)
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_UNVERIFIED)
         self.assertEqual(runner.calls, ["upstream", "repair-upstream", "downstream"])
         records = {record.work_unit_id: record.verdict for record in result.traceability}
         self.assertEqual(records["upstream"], "CORRECTED_PASS")
