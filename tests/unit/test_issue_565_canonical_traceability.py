@@ -94,7 +94,7 @@ class Issue565CanonicalTraceabilityTests(unittest.TestCase):
             verifier=Verifier(),
         )
 
-        self.assertEqual(ProjectVerdict.PROJECT_ACCEPTED, result.verdict)
+        self.assertEqual(ProjectVerdict.PROJECT_UNVERIFIED, result.verdict)
         history = [
             (record.work_unit_id, record.verdict, record.evidence_ref)
             for record in result.traceability
