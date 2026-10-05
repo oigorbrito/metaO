@@ -233,6 +233,10 @@ def _snapshot_to_json(snapshot: ProjectSupervisionSnapshot) -> str:
         "accepted_results": [
             _execution_to_json(item) for item in snapshot.accepted_results
         ],
+        "accepted_result_bindings": [
+            [logical_work_unit_id, _execution_to_json(result)]
+            for logical_work_unit_id, result in snapshot.accepted_result_bindings
+        ],
         "awaiting_correction": [list(item) for item in snapshot.awaiting_correction],
         "trace": [_trace_to_json(item) for item in snapshot.trace],
         "traceability": [
@@ -292,6 +296,13 @@ def _snapshot_from_json(raw: str) -> ProjectSupervisionSnapshot:
             if data.get("checkpoint_holder_executor_id") is None
             else str(data["checkpoint_holder_executor_id"]),
             int(data.get("corrective_count", 0)),
+            tuple(
+                (
+                    str(item[0]),
+                    _execution_from_json(item[1]),
+                )
+                for item in data.get("accepted_result_bindings", [])
+            ),
         )
     except ProjectSupervisionStateCorrupt:
         raise
