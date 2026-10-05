@@ -56,6 +56,17 @@ class ReleaseEvidenceValidatorTests(unittest.TestCase):
     def test_valid_complete_pass_is_accepted(self):
         self.assertEqual(self.validate(valid_evidence()), [])
 
+    def test_project_plane_crash_gates_are_mandatory(self):
+        self.assertIn(
+            "project_plane_process_crash_resume",
+            validator.EXPECTED_GATE_NAMES,
+        )
+        self.assertIn(
+            "project_effect_crash_window_reconciliation",
+            validator.EXPECTED_GATE_NAMES,
+        )
+        self.assertEqual(len(validator.EXPECTED_GATE_NAMES), 23)
+
     def test_wrong_commit_fails_closed(self):
         evidence = valid_evidence()
         evidence["commit"] = "0" * 40
