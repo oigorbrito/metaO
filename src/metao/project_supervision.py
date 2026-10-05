@@ -367,6 +367,7 @@ def supervise_project(
     initial_checkpoint_materializer: InitialCheckpointMaterializerPort | None = None,
     resume_state: ProjectResumeState | None = None,
     persist_resume_state: Callable[[ProjectResumeState], None] | None = None,
+    assert_resume_owner: Callable[[], None] | None = None,
     max_executor_attempts_per_unit: int = 3,
     max_corrective_units: int = 3,
 ) -> ProjectSupervisionResult:
@@ -440,6 +441,10 @@ def supervise_project(
     def persist_progress() -> None:
         if persist_resume_state is not None:
             persist_resume_state(current_resume_state())
+
+    def assert_current_owner() -> None:
+        if assert_resume_owner is not None:
+            assert_resume_owner()
 
     def blocked(reason: str) -> ProjectSupervisionResult:
         trace.append(
@@ -517,6 +522,7 @@ def supervise_project(
                 return blocked(f"no executor available for {unit.work_unit_id}")
 
             if checkpoint_holder_executor_id is None and initial_checkpoint_materializer is not None:
+                assert_current_owner()
                 materialized = initial_checkpoint_materializer.materialize(
                     checkpoint,
                     to_executor_id=target.executor_id,
@@ -538,6 +544,7 @@ def supervise_project(
                 checkpoint_holder_executor_id is not None
                 and checkpoint_holder_executor_id != target.executor_id
             ):
+                assert_current_owner()
                 handed = repository.handoff(
                     checkpoint,
                     from_executor_id=checkpoint_holder_executor_id,
@@ -570,6 +577,7 @@ def supervise_project(
                     checkpoint.state_id,
                 )
             )
+            assert_current_owner()
             execution = runner.run(objective, unit, target, checkpoint)
             if (
                 execution.work_unit_id != unit.work_unit_id
@@ -595,6 +603,7 @@ def supervise_project(
                 )
                 if next_target is None:
                     return blocked(f"capacity exhausted for {unit.work_unit_id}")
+                assert_current_owner()
                 handed = repository.handoff(
                     checkpoint,
                     from_executor_id=target.executor_id,
@@ -627,6 +636,7 @@ def supervise_project(
             return blocked(f"work unit did not complete: {unit.work_unit_id}")
         executed.add(unit.work_unit_id)
         previous_repository_id = checkpoint.repository_id
+        assert_current_owner()
         checkpoint = repository.capture(objective, unit, execution)
         checkpoint_holder_executor_id = execution.executor_id
         if checkpoint.repository_id != previous_repository_id:
