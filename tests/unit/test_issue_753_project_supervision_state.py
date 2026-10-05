@@ -208,6 +208,113 @@ print(f"{record.owner.holder_id}:{record.owner.generation}:{record.revision}")
                 )
             self.assertEqual(runner.calls, 0)
 
+
+    def test_resume_requires_durable_persistence_and_owner_fencing(self):
+        class Planner:
+            def plan(self, objective):
+                raise AssertionError("resume state must provide graph")
+            def corrective_work(self, objective, failed_unit, verification, graph):
+                return None
+
+        class Scheduler:
+            def select(self, unit, *, excluded_executor_ids):
+                return ExecutorTarget("executor-a", "provider-a")
+
+        class Runner:
+            def run(self, objective, unit, target, checkpoint):
+                raise AssertionError("invalid resume configuration must fail before dispatch")
+
+        class Repository:
+            def initial(self, objective):
+                raise AssertionError("resume path must not request initial checkpoint")
+            def capture(self, objective, unit, execution):
+                raise AssertionError("invalid resume configuration must fail before capture")
+            def handoff(self, checkpoint, *, from_executor_id, to_executor_id):
+                return checkpoint
+
+        class Verifier:
+            def verify(self, objective, unit, execution, checkpoint):
+                raise AssertionError("invalid resume configuration must fail before verification")
+
+        objective = ProjectObjective(
+            "project-753",
+            "req-753",
+            "resume project after process crash",
+        )
+        state = _snapshot(accepted=False)
+
+        with self.assertRaisesRegex(ValueError, "requires durable persistence"):
+            supervise_project(
+                objective=objective,
+                planner=Planner(),
+                scheduler=Scheduler(),
+                runner=Runner(),
+                repository=Repository(),
+                verifier=Verifier(),
+                resume_state=state,
+                assert_resume_owner=lambda: None,
+                max_executor_attempts_per_unit=1,
+                max_corrective_units=0,
+            )
+
+        with self.assertRaisesRegex(ValueError, "requires owner fencing"):
+            supervise_project(
+                objective=objective,
+                planner=Planner(),
+                scheduler=Scheduler(),
+                runner=Runner(),
+                repository=Repository(),
+                verifier=Verifier(),
+                resume_state=state,
+                persist_resume_state=lambda state: None,
+                max_executor_attempts_per_unit=1,
+                max_corrective_units=0,
+            )
+
+    def test_fresh_durable_supervision_requires_owner_fencing(self):
+        class Planner:
+            def plan(self, objective):
+                return WorkGraph("metao", (WorkUnit("first", "first"),))
+            def corrective_work(self, objective, failed_unit, verification, graph):
+                return None
+
+        class Scheduler:
+            def select(self, unit, *, excluded_executor_ids):
+                return ExecutorTarget("executor-a", "provider-a")
+
+        class Runner:
+            def run(self, objective, unit, target, checkpoint):
+                raise AssertionError("invalid durable configuration must fail before dispatch")
+
+        class Repository:
+            def initial(self, objective):
+                return RepositoryCheckpoint("root", "repo-753", "root", "artifact:root")
+            def capture(self, objective, unit, execution):
+                raise AssertionError("invalid durable configuration must fail before capture")
+            def handoff(self, checkpoint, *, from_executor_id, to_executor_id):
+                return checkpoint
+
+        class Verifier:
+            def verify(self, objective, unit, execution, checkpoint):
+                raise AssertionError("invalid durable configuration must fail before verification")
+
+        with self.assertRaisesRegex(ValueError, "requires owner fencing"):
+            supervise_project(
+                objective=ProjectObjective(
+                    "project-753",
+                    "req-753",
+                    "resume project after process crash",
+                ),
+                planner=Planner(),
+                scheduler=Scheduler(),
+                runner=Runner(),
+                repository=Repository(),
+                verifier=Verifier(),
+                persist_resume_state=lambda state: None,
+                max_executor_attempts_per_unit=1,
+                max_corrective_units=0,
+            )
+
     def test_revision_compare_and_swap_rejects_lost_update(self):
         with tempfile.TemporaryDirectory() as directory:
             db = Path(directory) / "project.db"
