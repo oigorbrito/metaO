@@ -8,15 +8,15 @@ recomposition baseline on the same fixture.
 from __future__ import annotations
 
 import argparse
-from dataclasses import fields
 import json
 from pathlib import Path
 
 from metao.project_supervision import (
     ExecutorTarget,
+    ProjectCompositionResult,
     ProjectObjective,
-    ProjectSupervisionResult,
     ProjectTraceKind,
+    ProjectVerificationResult,
     ProjectVerdict,
     RepositoryCheckpoint,
     WorkExecutionResult,
@@ -111,12 +111,68 @@ class LocalVerifier:
         )
 
 
+class ProjectRecomposer:
+    def recompose(self, objective, graph, accepted_work, checkpoint):
+        fragments = [
+            execution.artifact_ref.rsplit(":", 1)[1]
+            for execution in accepted_work
+        ]
+        composite = "".join(fragments)
+        return ProjectCompositionResult(
+            objective.project_id,
+            f"composite:{composite}",
+            f"recomposition:{composite}",
+        )
+
+
+class OriginalSpecVerifier:
+    def verify(self, objective, composition, graph, traceability, checkpoint):
+        accepted = composition.artifact_ref == f"composite:{EXPECTED_COMPOSITE}"
+        return ProjectVerificationResult(
+            accepted,
+            "independent-project-verifier",
+            f"project-verification:{composition.artifact_ref}",
+            f"original-spec:{EXPECTED_COMPOSITE}",
+            "" if accepted else "recomposed result violates original specification",
+        )
+
+
 def baseline_recompose_and_verify(fragments: dict[str, str]) -> dict[str, object]:
     composite = fragments["left"] + fragments["right"]
     return {
         "composite": composite,
         "expected": EXPECTED_COMPOSITE,
         "spec_satisfied": composite == EXPECTED_COMPOSITE,
+    }
+
+
+def run_local_only_case() -> dict[str, object]:
+    runner = Runner("B")
+    result = supervise_project(
+        objective=ProjectObjective(
+            "b5-local-only",
+            "req-b5-composite",
+            f"Produce exactly the recomposed project artifact {EXPECTED_COMPOSITE!r}.",
+        ),
+        planner=Planner(),
+        scheduler=Scheduler(),
+        runner=runner,
+        repository=Repository(),
+        verifier=LocalVerifier(),
+        max_executor_attempts_per_unit=1,
+        max_corrective_units=0,
+    )
+    trace_kinds = [event.kind.value for event in result.trace]
+    return {
+        "case_id": "local-only-no-global-gate",
+        "candidate_project_verdict": result.verdict.value,
+        "candidate_calls": runner.calls,
+        "candidate_trace_kinds": trace_kinds,
+        "all_local_units_accepted": all(
+            record.verdict == "PASS" for record in result.traceability
+        ),
+        "project_artifact_ref": result.project_artifact_ref,
+        "project_verification_present": result.project_verification is not None,
     }
 
 
@@ -133,6 +189,8 @@ def run_case(case_id: str, right_fragment: str) -> dict[str, object]:
         runner=runner,
         repository=Repository(),
         verifier=LocalVerifier(),
+        project_recomposer=ProjectRecomposer(),
+        project_verifier=OriginalSpecVerifier(),
         max_executor_attempts_per_unit=1,
         max_corrective_units=0,
     )
@@ -142,6 +200,12 @@ def run_case(case_id: str, right_fragment: str) -> dict[str, object]:
         "case_id": case_id,
         "right_fragment": right_fragment,
         "candidate_project_verdict": result.verdict.value,
+        "candidate_project_artifact_ref": result.project_artifact_ref,
+        "candidate_project_verification_accepted": (
+            result.project_verification.accepted
+            if result.project_verification is not None
+            else None
+        ),
         "candidate_calls": runner.calls,
         "candidate_trace_kinds": trace_kinds,
         "candidate_traceability": [
@@ -169,40 +233,62 @@ def main() -> int:
 
     control = run_case("control", "B")
     adversarial = run_case("adversarial-global-mismatch", "X")
+    local_only = run_local_only_case()
 
-    recomposition_trace_surface = any(
-        "RECOMPOS" in member.name for member in ProjectTraceKind
-    )
-    result_fields = {field.name for field in fields(ProjectSupervisionResult)}
-    project_artifact_surface = any(
-        name in result_fields for name in ("artifact", "artifact_ref", "project_artifact")
-    )
+    recomposition_trace_surface = "RECOMPOSED" in {member.name for member in ProjectTraceKind}
+    project_artifact_surface = control["candidate_project_artifact_ref"] is not None
 
     control_ok = (
         control["candidate_project_verdict"] == ProjectVerdict.PROJECT_ACCEPTED.value
+        and control["candidate_project_artifact_ref"] == "composite:AB"
+        and control["candidate_project_verification_accepted"] is True
         and control["baseline"]["spec_satisfied"] is True
         and control["decomposition_observed"] is True
         and control["dependency_order_observed"] is True
+        and "RECOMPOSED" in control["candidate_trace_kinds"]
+        and "PROJECT_VERIFICATION_PASSED" in control["candidate_trace_kinds"]
     )
-    adversarial_exposes_gap = (
-        adversarial["candidate_project_verdict"] == ProjectVerdict.PROJECT_ACCEPTED.value
+    adversarial_closed = (
+        adversarial["candidate_project_verdict"] == ProjectVerdict.PROJECT_BLOCKED.value
+        and adversarial["candidate_project_artifact_ref"] == "composite:AX"
+        and adversarial["candidate_project_verification_accepted"] is False
         and adversarial["all_local_units_accepted"] is True
         and adversarial["baseline"]["spec_satisfied"] is False
+        and "RECOMPOSED" in adversarial["candidate_trace_kinds"]
+        and "PROJECT_VERIFICATION_FAILED" in adversarial["candidate_trace_kinds"]
+        and "PROJECT_ACCEPTED" not in adversarial["candidate_trace_kinds"]
     )
 
-    if not control_ok:
-        result = "FAIL"
-        reason = "control fixture did not establish decomposition/execution behavior"
-    elif adversarial_exposes_gap and not recomposition_trace_surface and not project_artifact_surface:
-        result = "GAP_IDENTIFIED"
+    local_only_closed = (
+        local_only["candidate_project_verdict"] == ProjectVerdict.PROJECT_UNVERIFIED.value
+        and local_only["all_local_units_accepted"] is True
+        and local_only["project_artifact_ref"] is None
+        and local_only["project_verification_present"] is False
+        and "PROJECT_UNVERIFIED" in local_only["candidate_trace_kinds"]
+        and "PROJECT_ACCEPTED" not in local_only["candidate_trace_kinds"]
+    )
+
+    if (
+        control_ok
+        and adversarial_closed
+        and local_only_closed
+        and recomposition_trace_surface
+        and project_artifact_surface
+    ):
+        result = "PASS"
         reason = (
-            "local unit acceptance can yield PROJECT_ACCEPTED while explicit recomposition "
-            "violates the original specification; current supervision result/trace surface "
-            "does not expose project-level recomposition evidence"
+            "project-level recomposition executed and original-spec verification "
+            "accepted the valid composite while blocking the adversarial mismatch"
         )
+    elif not control_ok:
+        result = "FAIL"
+        reason = "control fixture did not satisfy the B5 recomposition acceptance path"
+    elif not adversarial_closed:
+        result = "FAIL"
+        reason = "adversarial local-PASS/global-spec-FAIL case was not blocked"
     else:
-        result = "NOT_PROVEN"
-        reason = "benchmark did not establish either B5 completion or the expected bounded gap"
+        result = "FAIL"
+        reason = "local-only completion was incorrectly promoted to project acceptance"
 
     payload = {
         "schema": "metao-b5-decompose-recompose-v1",
@@ -212,7 +298,7 @@ def main() -> int:
         "candidate": "metao.project_supervision.supervise_project",
         "baseline": "deterministic-concatenate-then-exact-original-spec-check",
         "expected_composite": EXPECTED_COMPOSITE,
-        "cases": [control, adversarial],
+        "cases": [control, adversarial, local_only],
         "surface_observations": {
             "project_trace_has_recomposition_kind": recomposition_trace_surface,
             "project_result_has_project_artifact_field": project_artifact_surface,
@@ -222,14 +308,18 @@ def main() -> int:
             "work_unit_execution": "PASS" if control["dependency_order_observed"] else "FAIL",
             "dependency_preservation": "PASS" if control["dependency_order_observed"] else "FAIL",
             "local_unit_verification": "PASS" if control["all_local_units_accepted"] else "FAIL",
-            "recomposition": "GAP_IDENTIFIED" if adversarial_exposes_gap else "NOT_PROVEN",
+            "recomposition": "PASS" if control_ok and adversarial_closed else "FAIL",
             "original_spec_verification_after_recomposition": (
-                "GAP_IDENTIFIED" if adversarial_exposes_gap else "NOT_PROVEN"
+                "PASS" if control_ok and adversarial_closed else "FAIL"
+            ),
+            "local_only_without_global_gate": (
+                "PASS" if local_only_closed else "FAIL"
             ),
         },
         "claim_boundary": [
             "LOCAL_WORK_UNIT_ACCEPTANCE != ORIGINAL_SPEC_SATISFIED",
             "PROJECT_ACCEPTED_WITHOUT_RECOMPOSITION_EVIDENCE != B5_PASS",
+            "LOCAL_ONLY_COMPLETION_WITHOUT_GLOBAL_GATE = PROJECT_UNVERIFIED",
             "DECOMPOSITION_EXECUTION_PASS != RECOMPOSITION_PASS",
             "B5_EVIDENCE != B6_CONTINUITY_EVIDENCE",
         ],
@@ -239,8 +329,7 @@ def main() -> int:
     args.output.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n")
     print(json.dumps(payload, indent=2, sort_keys=True))
 
-    # GAP_IDENTIFIED is a successful benchmark adjudication, not a harness/test failure.
-    return 0 if result in {"GAP_IDENTIFIED", "PASS"} else 1
+    return 0 if result == "PASS" else 1
 
 
 if __name__ == "__main__":

@@ -241,13 +241,13 @@ class Issue528CorrectiveReplanIntegrationTests(unittest.TestCase):
                 max_corrective_units=1,
             )
 
-            self.assertEqual(result.verdict, ProjectVerdict.PROJECT_ACCEPTED)
+            self.assertEqual(result.verdict, ProjectVerdict.PROJECT_UNVERIFIED)
             self.assertEqual(verifier.calls, ["prepare", "repair-prepare", "implement"])
             kinds = tuple(event.kind for event in result.trace)
             self.assertIn(ProjectTraceKind.VERIFICATION_FAILED, kinds)
             self.assertIn(ProjectTraceKind.CORRECTIVE_WORK_CREATED, kinds)
             self.assertGreaterEqual(kinds.count(ProjectTraceKind.HANDED_OFF), 2)
-            self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_ACCEPTED)
+            self.assertEqual(kinds[-1], ProjectTraceKind.PROJECT_UNVERIFIED)
             self.assertEqual(
                 [(record.work_unit_id, record.verdict) for record in result.traceability],
                 [

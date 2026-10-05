@@ -1,3 +1,4 @@
+# exact-head evidence refresh: final re-adjudication head
 name: B5 Decomposition Recomposition Benchmark
 
 on:
@@ -7,6 +8,7 @@ on:
       - '.github/workflows/b5-decomposition-recomposition-benchmark.yml'
       - 'scripts/run_b5_decomposition_recomposition_benchmark.py'
       - 'src/metao/project_supervision.py'
+      - 'tests/unit/test_issue_746_project_recomposition.py'
   workflow_dispatch:
 
 permissions:
@@ -47,22 +49,41 @@ jobs:
               Path('.artifacts/b5/b5-decomposition-recomposition.json').read_text()
           )
           assert evidence['commit'] == os.environ['EXACT_HEAD_SHA']
-          assert evidence['result'] == 'GAP_IDENTIFIED'
+          assert evidence['result'] == 'PASS'
           boundary = evidence['boundary']
           assert boundary['decomposition'] == 'PASS'
           assert boundary['work_unit_execution'] == 'PASS'
           assert boundary['dependency_preservation'] == 'PASS'
-          assert boundary['recomposition'] == 'GAP_IDENTIFIED'
-          assert boundary['original_spec_verification_after_recomposition'] == 'GAP_IDENTIFIED'
+          assert boundary['recomposition'] == 'PASS'
+          assert boundary['original_spec_verification_after_recomposition'] == 'PASS'
+          assert boundary['local_only_without_global_gate'] == 'PASS'
 
           adversarial = next(
               case for case in evidence['cases']
               if case['case_id'] == 'adversarial-global-mismatch'
           )
-          assert adversarial['candidate_project_verdict'] == 'PROJECT_ACCEPTED'
+          assert adversarial['candidate_project_verdict'] == 'PROJECT_BLOCKED'
           assert adversarial['all_local_units_accepted'] is True
           assert adversarial['baseline']['spec_satisfied'] is False
+          assert adversarial['candidate_project_artifact_ref'] == 'composite:AX'
+          assert adversarial['candidate_project_verification_accepted'] is False
+          assert 'PROJECT_VERIFICATION_FAILED' in adversarial['candidate_trace_kinds']
+          assert 'PROJECT_ACCEPTED' not in adversarial['candidate_trace_kinds']
+
+          local_only = next(
+              case for case in evidence['cases']
+              if case['case_id'] == 'local-only-no-global-gate'
+          )
+          assert local_only['candidate_project_verdict'] == 'PROJECT_UNVERIFIED'
+          assert local_only['all_local_units_accepted'] is True
+          assert local_only['project_artifact_ref'] is None
+          assert local_only['project_verification_present'] is False
+          assert 'PROJECT_UNVERIFIED' in local_only['candidate_trace_kinds']
+          assert 'PROJECT_ACCEPTED' not in local_only['candidate_trace_kinds']
           PY
+
+      - name: Run B5 fail-closed unit regression
+        run: python -m unittest tests.unit.test_issue_746_project_recomposition -v
 
       - name: Upload B5 evidence
         if: always()

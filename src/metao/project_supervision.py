@@ -10,11 +10,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
-from typing import Protocol, runtime_checkable
+from typing import Callable, Protocol, TypeVar, runtime_checkable
 
 
 class ProjectVerdict(StrEnum):
     PROJECT_ACCEPTED = "PROJECT_ACCEPTED"
+    PROJECT_UNVERIFIED = "PROJECT_UNVERIFIED"
     PROJECT_BLOCKED = "PROJECT_BLOCKED"
 
 
@@ -35,6 +36,10 @@ class ProjectTraceKind(StrEnum):
     VERIFICATION_FAILED = "VERIFICATION_FAILED"
     CORRECTIVE_WORK_CREATED = "CORRECTIVE_WORK_CREATED"
     VERIFICATION_PASSED = "VERIFICATION_PASSED"
+    RECOMPOSED = "RECOMPOSED"
+    PROJECT_VERIFICATION_FAILED = "PROJECT_VERIFICATION_FAILED"
+    PROJECT_VERIFICATION_PASSED = "PROJECT_VERIFICATION_PASSED"
+    PROJECT_UNVERIFIED = "PROJECT_UNVERIFIED"
     PROJECT_ACCEPTED = "PROJECT_ACCEPTED"
     PROJECT_BLOCKED = "PROJECT_BLOCKED"
 
@@ -143,6 +148,38 @@ class WorkVerificationResult:
 
 
 @dataclass(frozen=True, slots=True)
+class ProjectCompositionResult:
+    project_id: str
+    artifact_ref: str
+    evidence_ref: str
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("project_id", self.project_id),
+            ("artifact_ref", self.artifact_ref),
+            ("evidence_ref", self.evidence_ref),
+        ):
+            _validate_traceability_reference(name, value)
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectVerificationResult:
+    accepted: bool
+    verifier_id: str
+    evidence_ref: str
+    test_ref: str
+    reason: str = ""
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("verifier_id", self.verifier_id),
+            ("evidence_ref", self.evidence_ref),
+            ("test_ref", self.test_ref),
+        ):
+            _validate_traceability_reference(name, value)
+
+
+@dataclass(frozen=True, slots=True)
 class ProjectTraceEvent:
     kind: ProjectTraceKind
     work_unit_id: str | None = None
@@ -181,6 +218,94 @@ class ProjectTraceabilityRecord:
             _validate_traceability_reference(name, value)
 
 
+@runtime_checkable
+class ProjectRecomposerPort(Protocol):
+    def recompose(
+        self,
+        objective: ProjectObjective,
+        graph: WorkGraph,
+        accepted_work: tuple[WorkExecutionResult, ...],
+        checkpoint: RepositoryCheckpoint,
+    ) -> ProjectCompositionResult: ...
+
+
+@runtime_checkable
+class ProjectVerifierPort(Protocol):
+    def verify(
+        self,
+        objective: ProjectObjective,
+        composition: ProjectCompositionResult,
+        graph: WorkGraph,
+        traceability: tuple[ProjectTraceabilityRecord, ...],
+        checkpoint: RepositoryCheckpoint,
+    ) -> ProjectVerificationResult: ...
+
+
+@dataclass(frozen=True, slots=True)
+class ProjectResumeState:
+    project_id: str
+    requirement_id: str
+    objective: str
+    authority_id: str
+    units: tuple[WorkUnit, ...]
+    executed_work_unit_ids: frozenset[str]
+    accepted_work_unit_ids: frozenset[str]
+    accepted_results: tuple[WorkExecutionResult, ...]
+    awaiting_correction: tuple[tuple[str, str], ...]
+    trace: tuple[ProjectTraceEvent, ...]
+    traceability: tuple[ProjectTraceabilityRecord, ...]
+    executors_used: frozenset[str]
+    providers_used: frozenset[str]
+    checkpoint: RepositoryCheckpoint
+    checkpoint_holder_executor_id: str | None
+    corrective_count: int
+    accepted_result_bindings: tuple[tuple[str, WorkExecutionResult], ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.project_id.strip() == "" or self.requirement_id.strip() == "":
+            raise ValueError("project resume state identity must be non-empty")
+        if self.objective.strip() == "" or self.authority_id.strip() == "":
+            raise ValueError("project resume state objective/authority must be non-empty")
+        if self.corrective_count < 0:
+            raise ValueError("corrective_count must be >= 0")
+        _validate_graph(self.units)
+        unit_ids = {unit.work_unit_id for unit in self.units}
+        if not self.executed_work_unit_ids <= unit_ids:
+            raise ValueError("resume state executed work references unknown unit")
+        if not self.accepted_work_unit_ids <= unit_ids:
+            raise ValueError("resume state accepted work references unknown unit")
+        if not self.accepted_work_unit_ids <= self.executed_work_unit_ids:
+            raise ValueError("resume state accepted work must have executed")
+        awaiting_pairs = dict(self.awaiting_correction)
+        if len(awaiting_pairs) != len(self.awaiting_correction):
+            raise ValueError("resume state awaiting correction contains duplicate source")
+        for failed_id, correction_id in self.awaiting_correction:
+            if failed_id not in unit_ids or correction_id not in unit_ids:
+                raise ValueError("resume state awaiting correction references unknown unit")
+            correction = next(
+                item for item in self.units if item.work_unit_id == correction_id
+            )
+            if (
+                not correction.corrective
+                or correction.corrects_work_unit_id != failed_id
+                or failed_id not in correction.dependencies
+            ):
+                raise ValueError("resume state awaiting correction binding mismatch")
+        result_ids = {item.work_unit_id for item in self.accepted_results}
+        if len(result_ids) != len(self.accepted_results):
+            raise ValueError("resume state accepted results contain duplicates")
+        if not result_ids <= self.executed_work_unit_ids:
+            raise ValueError("resume state results must reference executed work")
+        result_bindings = dict(self.accepted_result_bindings)
+        if len(result_bindings) != len(self.accepted_result_bindings):
+            raise ValueError("resume state accepted result bindings contain duplicates")
+        if not set(result_bindings) <= self.accepted_work_unit_ids:
+            raise ValueError("resume state result bindings must reference accepted work")
+        for logical_work_unit_id, result in self.accepted_result_bindings:
+            if result.work_unit_id not in self.executed_work_unit_ids:
+                raise ValueError("resume state bound result must reference executed work")
+
+
 @dataclass(frozen=True, slots=True)
 class ProjectSupervisionResult:
     project_id: str
@@ -191,6 +316,16 @@ class ProjectSupervisionResult:
     executors_used: frozenset[str]
     providers_used: frozenset[str]
     reason: str = ""
+    project_artifact_ref: str | None = None
+    project_verification: ProjectVerificationResult | None = None
+
+
+_ActionResultT = TypeVar("_ActionResultT")
+
+
+@runtime_checkable
+class ProjectActionFencePort(Protocol):
+    def execute(self, action: Callable[[], _ActionResultT]) -> _ActionResultT: ...
 
 
 @runtime_checkable
@@ -308,29 +443,121 @@ def supervise_project(
     runner: WorkUnitRunnerPort,
     repository: RepositoryCheckpointPort,
     verifier: WorkUnitVerifierPort,
+    project_recomposer: ProjectRecomposerPort | None = None,
+    project_verifier: ProjectVerifierPort | None = None,
     initial_checkpoint_materializer: InitialCheckpointMaterializerPort | None = None,
+    resume_state: ProjectResumeState | None = None,
+    persist_resume_state: Callable[[ProjectResumeState], None] | None = None,
+    action_fence: ProjectActionFencePort | None = None,
+    assert_resume_owner: Callable[[], None] | None = None,
     max_executor_attempts_per_unit: int = 3,
     max_corrective_units: int = 3,
 ) -> ProjectSupervisionResult:
     if max_executor_attempts_per_unit < 1 or max_corrective_units < 0:
         raise ValueError("invalid project supervision limits")
-    graph = planner.plan(objective)
-    if graph.authority_id != "metao":
-        raise ValueError("project decomposition authority must be metao")
-    _validate_graph(graph.units)
-    units = list(graph.units)
-    executed: set[str] = set()
-    accepted: set[str] = set()
-    awaiting_correction: dict[str, str] = {}
-    trace: list[ProjectTraceEvent] = [ProjectTraceEvent(ProjectTraceKind.PLANNED)]
-    traceability: list[ProjectTraceabilityRecord] = []
-    executors_used: set[str] = set()
-    providers_used: set[str] = set()
-    checkpoint = repository.initial(objective)
-    checkpoint_holder_executor_id: str | None = None
-    corrective_count = 0
+    if (project_recomposer is None) != (project_verifier is None):
+        raise ValueError("project recomposer and verifier must be configured together")
+    if resume_state is not None and persist_resume_state is None:
+        raise ValueError("resumed project supervision requires durable persistence")
+    if (
+        (resume_state is not None or persist_resume_state is not None)
+        and action_fence is None
+    ):
+        raise ValueError("durable project supervision requires atomic action fencing")
+    if resume_state is None:
+        graph = planner.plan(objective)
+        if graph.authority_id != "metao":
+            raise ValueError("project decomposition authority must be metao")
+        _validate_graph(graph.units)
+        units = list(graph.units)
+        executed: set[str] = set()
+        accepted: set[str] = set()
+        accepted_results: dict[str, WorkExecutionResult] = {}
+        awaiting_correction: dict[str, str] = {}
+        trace: list[ProjectTraceEvent] = [ProjectTraceEvent(ProjectTraceKind.PLANNED)]
+        traceability: list[ProjectTraceabilityRecord] = []
+        executors_used: set[str] = set()
+        providers_used: set[str] = set()
+        checkpoint = repository.initial(objective)
+        checkpoint_holder_executor_id: str | None = None
+        corrective_count = 0
+    else:
+        if (
+            resume_state.project_id != objective.project_id
+            or resume_state.requirement_id != objective.requirement_id
+            or resume_state.objective != objective.objective
+        ):
+            raise ValueError("project resume state objective binding mismatch")
+        if resume_state.authority_id != "metao":
+            raise ValueError("project resume state authority must be metao")
+        graph = WorkGraph(resume_state.authority_id, resume_state.units)
+        units = list(resume_state.units)
+        executed = set(resume_state.executed_work_unit_ids)
+        accepted = set(resume_state.accepted_work_unit_ids)
+        if resume_state.accepted_result_bindings:
+            accepted_results = dict(resume_state.accepted_result_bindings)
+        else:
+            accepted_results = {
+                item.work_unit_id: item for item in resume_state.accepted_results
+            }
+        awaiting_correction = dict(resume_state.awaiting_correction)
+        trace = list(resume_state.trace)
+        traceability = list(resume_state.traceability)
+        executors_used = set(resume_state.executors_used)
+        providers_used = set(resume_state.providers_used)
+        checkpoint = resume_state.checkpoint
+        checkpoint_holder_executor_id = resume_state.checkpoint_holder_executor_id
+        corrective_count = resume_state.corrective_count
 
-    def blocked(reason: str) -> ProjectSupervisionResult:
+    def current_resume_state() -> ProjectResumeState:
+        return ProjectResumeState(
+            objective.project_id,
+            objective.requirement_id,
+            objective.objective,
+            graph.authority_id,
+            tuple(units),
+            frozenset(executed),
+            frozenset(accepted),
+            tuple(
+                {item.work_unit_id: item for item in accepted_results.values()}[unit_id]
+                for unit_id in sorted(
+                    {item.work_unit_id for item in accepted_results.values()}
+                )
+            ),
+            tuple(sorted(awaiting_correction.items())),
+            tuple(trace),
+            tuple(traceability),
+            frozenset(executors_used),
+            frozenset(providers_used),
+            checkpoint,
+            checkpoint_holder_executor_id,
+            corrective_count,
+            tuple(
+                (unit_id, accepted_results[unit_id])
+                for unit_id in sorted(accepted_results)
+            ),
+        )
+
+    def persist_progress() -> None:
+        if persist_resume_state is not None:
+            persist_resume_state(current_resume_state())
+
+    def assert_current_owner() -> None:
+        if assert_resume_owner is not None:
+            assert_resume_owner()
+
+    def execute_fenced(action: Callable[[], _ActionResultT]) -> _ActionResultT:
+        if action_fence is not None:
+            return action_fence.execute(action)
+        assert_current_owner()
+        return action()
+
+    def blocked(
+        reason: str,
+        *,
+        project_artifact_ref: str | None = None,
+        project_verification: ProjectVerificationResult | None = None,
+    ) -> ProjectSupervisionResult:
         trace.append(
             ProjectTraceEvent(
                 ProjectTraceKind.PROJECT_BLOCKED,
@@ -338,6 +565,7 @@ def supervise_project(
                 repository_state_id=checkpoint.state_id,
             )
         )
+        persist_progress()
         return ProjectSupervisionResult(
             objective.project_id,
             ProjectVerdict.PROJECT_BLOCKED,
@@ -347,18 +575,110 @@ def supervise_project(
             frozenset(executors_used),
             frozenset(providers_used),
             reason,
+            project_artifact_ref,
+            project_verification,
         )
+
+    if resume_state is None:
+        persist_progress()
 
     while True:
         unresolved = [unit for unit in units if unit.work_unit_id not in accepted]
         if not unresolved:
+            project_artifact_ref: str | None = None
+            project_verification_result: ProjectVerificationResult | None = None
+
+            if project_recomposer is None and project_verifier is None:
+                trace.append(
+                    ProjectTraceEvent(
+                        ProjectTraceKind.PROJECT_UNVERIFIED,
+                        checkpoint_id=checkpoint.checkpoint_id,
+                        repository_state_id=checkpoint.state_id,
+                    )
+                )
+                persist_progress()
+                return ProjectSupervisionResult(
+                    objective.project_id,
+                    ProjectVerdict.PROJECT_UNVERIFIED,
+                    WorkGraph(graph.authority_id, tuple(units)),
+                    tuple(trace),
+                    tuple(traceability),
+                    frozenset(executors_used),
+                    frozenset(providers_used),
+                    "project recomposition/original-spec verification not configured",
+                )
+
+            assert project_recomposer is not None
+            assert project_verifier is not None
+            effective_work = tuple(
+                accepted_results[unit.work_unit_id]
+                for unit in units
+                if not unit.corrective
+            )
+            composition = project_recomposer.recompose(
+                objective,
+                WorkGraph(graph.authority_id, tuple(units)),
+                effective_work,
+                checkpoint,
+            )
+            if composition.project_id != objective.project_id:
+                return blocked("project recomposition binding mismatch")
+            project_artifact_ref = composition.artifact_ref
+            trace.append(
+                ProjectTraceEvent(
+                    ProjectTraceKind.RECOMPOSED,
+                    checkpoint_id=checkpoint.checkpoint_id,
+                    repository_state_id=checkpoint.state_id,
+                    artifact_ref=composition.artifact_ref,
+                    evidence_ref=composition.evidence_ref,
+                )
+            )
+            project_verification_result = project_verifier.verify(
+                objective,
+                composition,
+                WorkGraph(graph.authority_id, tuple(units)),
+                tuple(traceability),
+                checkpoint,
+            )
+            if project_verification_result.verifier_id in executors_used:
+                return blocked(
+                    "project verifier is not independent from executors",
+                    project_artifact_ref=project_artifact_ref,
+                    project_verification=project_verification_result,
+                )
+            if not project_verification_result.accepted:
+                trace.append(
+                    ProjectTraceEvent(
+                        ProjectTraceKind.PROJECT_VERIFICATION_FAILED,
+                        checkpoint_id=checkpoint.checkpoint_id,
+                        repository_state_id=checkpoint.state_id,
+                        artifact_ref=composition.artifact_ref,
+                        evidence_ref=project_verification_result.evidence_ref,
+                    )
+                )
+                return blocked(
+                    "project recomposition failed original-spec verification",
+                    project_artifact_ref=project_artifact_ref,
+                    project_verification=project_verification_result,
+                )
+            trace.append(
+                ProjectTraceEvent(
+                    ProjectTraceKind.PROJECT_VERIFICATION_PASSED,
+                    checkpoint_id=checkpoint.checkpoint_id,
+                    repository_state_id=checkpoint.state_id,
+                    artifact_ref=composition.artifact_ref,
+                    evidence_ref=project_verification_result.evidence_ref,
+                )
+            )
             trace.append(
                 ProjectTraceEvent(
                     ProjectTraceKind.PROJECT_ACCEPTED,
                     checkpoint_id=checkpoint.checkpoint_id,
                     repository_state_id=checkpoint.state_id,
+                    artifact_ref=project_artifact_ref,
                 )
             )
+            persist_progress()
             return ProjectSupervisionResult(
                 objective.project_id,
                 ProjectVerdict.PROJECT_ACCEPTED,
@@ -367,6 +687,8 @@ def supervise_project(
                 tuple(traceability),
                 frozenset(executors_used),
                 frozenset(providers_used),
+                project_artifact_ref=project_artifact_ref,
+                project_verification=project_verification_result,
             )
 
         def dependency_satisfied(unit: WorkUnit, dependency: str) -> bool:
@@ -401,9 +723,11 @@ def supervise_project(
                 return blocked(f"no executor available for {unit.work_unit_id}")
 
             if checkpoint_holder_executor_id is None and initial_checkpoint_materializer is not None:
-                materialized = initial_checkpoint_materializer.materialize(
-                    checkpoint,
-                    to_executor_id=target.executor_id,
+                materialized = execute_fenced(
+                    lambda: initial_checkpoint_materializer.materialize(
+                        checkpoint,
+                        to_executor_id=target.executor_id,
+                    )
                 )
                 if materialized != checkpoint:
                     return blocked("repository checkpoint changed during initial materialization")
@@ -422,10 +746,12 @@ def supervise_project(
                 checkpoint_holder_executor_id is not None
                 and checkpoint_holder_executor_id != target.executor_id
             ):
-                handed = repository.handoff(
-                    checkpoint,
-                    from_executor_id=checkpoint_holder_executor_id,
-                    to_executor_id=target.executor_id,
+                handed = execute_fenced(
+                    lambda: repository.handoff(
+                        checkpoint,
+                        from_executor_id=checkpoint_holder_executor_id,
+                        to_executor_id=target.executor_id,
+                    )
                 )
                 if handed != checkpoint:
                     return blocked("repository checkpoint changed during handoff")
@@ -454,7 +780,9 @@ def supervise_project(
                     checkpoint.state_id,
                 )
             )
-            execution = runner.run(objective, unit, target, checkpoint)
+            execution = execute_fenced(
+                lambda: runner.run(objective, unit, target, checkpoint)
+            )
             if (
                 execution.work_unit_id != unit.work_unit_id
                 or execution.executor_id != target.executor_id
@@ -479,10 +807,12 @@ def supervise_project(
                 )
                 if next_target is None:
                     return blocked(f"capacity exhausted for {unit.work_unit_id}")
-                handed = repository.handoff(
-                    checkpoint,
-                    from_executor_id=target.executor_id,
-                    to_executor_id=next_target.executor_id,
+                handed = execute_fenced(
+                    lambda: repository.handoff(
+                        checkpoint,
+                        from_executor_id=target.executor_id,
+                        to_executor_id=next_target.executor_id,
+                    )
                 )
                 if handed != checkpoint:
                     return blocked("repository checkpoint changed during handoff")
@@ -511,7 +841,9 @@ def supervise_project(
             return blocked(f"work unit did not complete: {unit.work_unit_id}")
         executed.add(unit.work_unit_id)
         previous_repository_id = checkpoint.repository_id
-        checkpoint = repository.capture(objective, unit, execution)
+        checkpoint = execute_fenced(
+            lambda: repository.capture(objective, unit, execution)
+        )
         checkpoint_holder_executor_id = execution.executor_id
         if checkpoint.repository_id != previous_repository_id:
             return blocked("captured checkpoint changed repository identity")
@@ -548,6 +880,7 @@ def supervise_project(
             return blocked("work unit verifier is not independent from executor")
         if verification.accepted:
             accepted.add(unit.work_unit_id)
+            accepted_results[unit.work_unit_id] = execution
             trace.append(
                 ProjectTraceEvent(
                     ProjectTraceKind.VERIFICATION_PASSED,
@@ -572,6 +905,7 @@ def supervise_project(
             if unit.corrective and unit.corrects_work_unit_id is not None:
                 corrected_id = unit.corrects_work_unit_id
                 accepted.add(corrected_id)
+                accepted_results[corrected_id] = execution
                 awaiting_correction.pop(corrected_id, None)
                 traceability.append(
                     ProjectTraceabilityRecord(
@@ -583,6 +917,7 @@ def supervise_project(
                         "CORRECTED_PASS",
                     )
                 )
+            persist_progress()
             continue
 
         trace.append(
@@ -641,6 +976,7 @@ def supervise_project(
                 artifact_ref=verification.evidence_ref,
             )
         )
+        persist_progress()
 
 
 __all__ = [
@@ -654,14 +990,20 @@ __all__ = [
     "RepositoryCheckpoint",
     "WorkExecutionResult",
     "WorkVerificationResult",
+    "ProjectCompositionResult",
+    "ProjectVerificationResult",
     "ProjectTraceEvent",
     "ProjectTraceabilityRecord",
+    "ProjectResumeState",
     "ProjectSupervisionResult",
+    "ProjectActionFencePort",
     "ProjectPlannerPort",
     "ExecutorSchedulerPort",
     "WorkUnitRunnerPort",
     "RepositoryCheckpointPort",
     "InitialCheckpointMaterializerPort",
     "WorkUnitVerifierPort",
+    "ProjectRecomposerPort",
+    "ProjectVerifierPort",
     "supervise_project",
 ]

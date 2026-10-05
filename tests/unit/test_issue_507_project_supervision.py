@@ -149,7 +149,7 @@ class Issue507ProjectSupervisionTests(unittest.TestCase):
             verifier=_Verifier(),
         )
 
-        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_ACCEPTED)
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_UNVERIFIED)
         self.assertEqual(result.graph.authority_id, "metao")
         self.assertGreater(len(result.graph.units), 1)
         self.assertTrue(any(unit.corrective for unit in result.graph.units))
@@ -160,7 +160,7 @@ class Issue507ProjectSupervisionTests(unittest.TestCase):
         self.assertIn(ProjectTraceKind.HANDED_OFF, kinds)
         self.assertIn(ProjectTraceKind.VERIFICATION_FAILED, kinds)
         self.assertIn(ProjectTraceKind.CORRECTIVE_WORK_CREATED, kinds)
-        self.assertIn(ProjectTraceKind.PROJECT_ACCEPTED, kinds)
+        self.assertIn(ProjectTraceKind.PROJECT_UNVERIFIED, kinds)
         self.assertEqual(
             repository.handoffs,
             [

@@ -95,7 +95,7 @@ class InitialMaterializationSupervisorTests(unittest.TestCase):
             initial_checkpoint_materializer=materializer,
         )
 
-        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_ACCEPTED)
+        self.assertEqual(result.verdict, ProjectVerdict.PROJECT_UNVERIFIED)
         self.assertEqual(len(materializer.calls), 1)
         self.assertEqual(materializer.calls[0][1], "executor-a")
         self.assertEqual(runner.calls, 1)
