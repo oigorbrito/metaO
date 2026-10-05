@@ -1,0 +1,127 @@
+name: B6 Zero-Cost Cross-Provider Handoff
+
+on:
+  workflow_dispatch:
+    inputs:
+      authorization:
+        description: 'Type I_AUTHORIZE_B6_ZERO_COST_CROSS_PROVIDER_HANDOFF exactly'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+
+      - name: Require exact zero-cost authorization before any provider secret
+        env:
+          METAO_AUTHORIZATION_INPUT: ${{ inputs.authorization }}
+        run: |
+          python - <<'PY'
+          import os
+          from scripts import run_b6_zero_cost_cross_provider_handoff as handoff
+
+          assert os.environ['METAO_AUTHORIZATION_INPUT'] == handoff.AUTHORIZATION_PHRASE
+          assert handoff.TARGET == 'gemma-4-26b-a4b-it'
+          assert handoff.SOURCE_COMMIT == 'c35a0fa98d27c9cca082441b72ab77ff0ea0e16d'
+          PY
+
+      - name: Materialize and verify exact Codex leg-A checkpoint
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin c35a0fa98d27c9cca082441b72ab77ff0ea0e16d
+          test "$(git show -s --format=%s c35a0fa98d27c9cca082441b72ab77ff0ea0e16d)" = "chore: complete Codex handoff leg A"
+          git show c35a0fa98d27c9cca082441b72ab77ff0ea0e16d:experiments/provider-handoff-smoke/handoff.txt > "$RUNNER_TEMP/handoff.txt"
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          from scripts import run_b6_zero_cost_cross_provider_handoff as handoff
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'handoff.txt'
+          data, digest = handoff.validate_checkpoint(path)
+          assert data == handoff.EXPECTED_SOURCE
+          print(f'checkpoint_sha256={digest}')
+          PY
+
+      - name: Run guard regression
+        run: python -m unittest tests.unit.test_issue_770_zero_cost_cross_provider_handoff -v
+
+  google-leg:
+    needs: guard
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: '3.13'
+
+      - name: Install metaO
+        run: python -m pip install -e .
+
+      - name: Materialize exact Codex leg-A checkpoint
+        run: |
+          set -euo pipefail
+          git fetch --no-tags --depth=1 origin c35a0fa98d27c9cca082441b72ab77ff0ea0e16d
+          git show c35a0fa98d27c9cca082441b72ab77ff0ea0e16d:experiments/provider-handoff-smoke/handoff.txt > "$RUNNER_TEMP/handoff.txt"
+
+      - name: Require configured zero-cost Gemini credential presence
+        env:
+          METAO_GEMINI_CREDENTIAL_PRESENT: ${{ secrets.METAO_GEMINI_API_KEY != '' }}
+        run: |
+          test "$METAO_GEMINI_CREDENTIAL_PRESENT" = "true"
+
+      - name: Execute Gemini/Gemma leg B against exact Codex checkpoint
+        env:
+          METAO_B6_CROSS_PROVIDER_AUTHORIZATION: ${{ inputs.authorization }}
+          METAO_GEMINI_API_KEY: ${{ secrets.METAO_GEMINI_API_KEY }}
+        run: |
+          python scripts/run_b6_zero_cost_cross_provider_handoff.py \
+            --checkpoint-file "$RUNNER_TEMP/handoff.txt" \
+            --output "$RUNNER_TEMP/b6-cross-provider-handoff.json"
+
+      - name: Validate bounded cross-provider evidence
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+
+          path = Path(os.environ['RUNNER_TEMP']) / 'b6-cross-provider-handoff.json'
+          evidence = json.loads(path.read_text(encoding='utf-8'))
+          assert evidence['source_provider_id'] == 'openai-codex-chatgpt'
+          assert evidence['destination_provider_id'] == 'google-gemini'
+          assert evidence['source_commit'] == 'c35a0fa98d27c9cca082441b72ab77ff0ea0e16d'
+          assert evidence['source_checkpoint_validated'] is True
+          assert evidence['destination_target'] == 'gemma-4-26b-a4b-it'
+          assert evidence['provider_backed_destination_execution'] == 'PASS'
+          assert evidence['destination_output_exactly_verified'] is True
+          assert evidence['cross_provider_external_handoff'] == 'EXECUTED'
+          assert evidence['incremental_provider_cost_policy'] == 'ZERO_COST_TARGET_ONLY'
+          assert evidence['credential_value_emitted'] is False
+          print(json.dumps(evidence, sort_keys=True, separators=(',', ':')))
+          PY
+
+      - name: Upload B6 cross-provider evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: b6-zero-cost-cross-provider-${{ github.run_id }}
+          path: ${{ runner.temp }}/b6-cross-provider-handoff.json
+          if-no-files-found: warn
