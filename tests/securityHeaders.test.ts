@@ -11,7 +11,19 @@ async function main() {
       throw new Error(`Expected safe CLI positional id: ${id}`);
     }
   }
-  const unsafeIds = ['', '--db', '-h', 'bad\nvalue', 'bad\rvalue', 'x'.repeat(513)];
+  const unsafeIds = [
+    '',
+    '--db',
+    '-h',
+    ' --db',
+    '\t-h',
+    'bad\nvalue',
+    'bad\rvalue',
+    'bad\tvalue',
+    'bad value',
+    ' runtime_1 ',
+    'x'.repeat(513),
+  ];
   for (const id of unsafeIds) {
     if (isSafeCliPositionalId(id)) {
       throw new Error(`Expected unsafe CLI positional id to be rejected: ${JSON.stringify(id)}`);
