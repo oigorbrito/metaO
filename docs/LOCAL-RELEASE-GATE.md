@@ -163,7 +163,7 @@ Dirty worktrees fail closed. `-AllowDirty` exists only for diagnosis and records
 
 ## Executed gate set
 
-Historical validated candidates before #753/#754 recorded 21 checks. The current gate definition records 23 checks; the two added checks are named Project Plane continuity gates and must execute independently of the full unit suite.
+Historical validated candidates before #753/#754 recorded 21 checks. The current unexecuted candidate definition records 23 checks; the two added checks are named Project Plane continuity gates and must execute independently of the full unit suite. Historical 21/21 evidence remains historical and is not upgraded to 23/23 retroactively.
 
 1. exact runtime versions;
 2. installed CLI help;
@@ -259,7 +259,7 @@ The external hosted-runner blocker remains separate until a hosted job reaches c
 LOCAL_GATE_IMPLEMENTATION = OPERATIONAL
 BRANCH = main
 VALIDATED_CANDIDATE = 23fc5c659ae5f0606e9e6774108c44636e29b0ac
-LOCAL_RELEASE_GATE = PASS 21/21 (historical validated candidate; current definition is 23 gates)
+LOCAL_RELEASE_GATE = PASS 21/21
 CLEAN_WORKTREE = true
 PHASE = complete
 FAILURE_COUNT = 0
