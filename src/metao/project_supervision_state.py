@@ -106,6 +106,8 @@ class ProjectSupervisionStateStorePort(Protocol):
         holder_id: str,
     ) -> ProjectSupervisionStateRecord: ...
 
+    def assert_owner(self, owner: ProjectOwnerToken) -> None: ...
+
     def replace(
         self,
         snapshot: ProjectSupervisionSnapshot,
@@ -427,6 +429,22 @@ class SQLiteProjectSupervisionStateStore:
             new_revision,
             ProjectOwnerToken(project_id, holder_id, new_generation),
         )
+
+    def assert_owner(self, owner: ProjectOwnerToken) -> None:
+        with closing(self._connect()) as connection, connection:
+            row = connection.execute(
+                """
+                SELECT owner_id, fencing_generation
+                FROM project_supervision_state
+                WHERE project_id = ?
+                """,
+                (owner.project_id,),
+            ).fetchone()
+        if row is None:
+            raise ProjectSupervisionStateNotFound(owner.project_id)
+        owner_id, generation = str(row[0]), int(row[1])
+        if owner_id != owner.holder_id or generation != owner.generation:
+            raise StaleProjectOwner(owner.project_id)
 
     def replace(
         self,
