@@ -75,6 +75,8 @@ class ProjectOwnerToken:
 
 ProjectSupervisionSnapshot = ProjectResumeState
 
+_FenceResultT = TypeVar("_FenceResultT")
+
 
 @dataclass(frozen=True, slots=True)
 class ProjectSupervisionStateRecord:
@@ -295,9 +297,6 @@ def _snapshot_from_json(raw: str) -> ProjectSupervisionSnapshot:
         raise
     except (KeyError, TypeError, ValueError, json.JSONDecodeError, IndexError) as exc:
         raise ProjectSupervisionStateCorrupt("invalid project supervision snapshot") from exc
-
-
-_FenceResultT = TypeVar("_FenceResultT")
 
 
 class SQLiteProjectSupervisionStateStore:
