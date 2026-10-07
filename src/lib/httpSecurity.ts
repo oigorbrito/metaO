@@ -13,21 +13,19 @@ export function securityHeaders(
     'Permissions-Policy',
     'camera=(), microphone=(), geolocation=()',
   );
-  if (process.env.NODE_ENV === 'production') {
-    res.setHeader(
-      'Content-Security-Policy',
-      [
-        "default-src 'self'",
-        "script-src 'self'",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        "img-src 'self' data:",
-        "connect-src 'self'",
-        "object-src 'none'",
-        "base-uri 'self'",
-        "frame-ancestors 'none'",
-      ].join('; '),
-    );
-  }
+  // Security enhancement: Enforce CSP in all environments (strict in production, dev-compatible for Vite HMR in dev)
+  const isProd = process.env.NODE_ENV === 'production';
+  const cspDirectives = [
+    "default-src 'self'",
+    isProd ? "script-src 'self'" : "script-src 'self' 'unsafe-eval' 'unsafe-inline'",
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "font-src 'self' https://fonts.gstatic.com",
+    "img-src 'self' data:",
+    isProd ? "connect-src 'self'" : "connect-src 'self' ws: wss:",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "frame-ancestors 'none'",
+  ];
+  res.setHeader('Content-Security-Policy', cspDirectives.join('; '));
   next();
 }
