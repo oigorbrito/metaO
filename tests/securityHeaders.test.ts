@@ -37,7 +37,19 @@ async function main() {
     }
   }
 
-  const unsafeReasons = ['', '   ', '--db', ' -h', 'bad\nvalue', 'bad\rvalue', 'x'.repeat(513)];
+  const unsafeReasons = [
+    '',
+    '   ',
+    '--db',
+    ' -h',
+    'bad\nvalue',
+    'bad\rvalue',
+    'bad\tvalue',
+    'bad\x1bvalue',
+    'bad\x07value',
+    'bad\x7fvalue',
+    'x'.repeat(513),
+  ];
   for (const reason of unsafeReasons) {
     if (isSafeCliReason(reason)) {
       throw new Error(`Expected unsafe CLI reason to be rejected: ${JSON.stringify(reason)}`);
