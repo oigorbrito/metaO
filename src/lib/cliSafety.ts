@@ -20,5 +20,7 @@ export function isSafeCliReason(value: unknown): value is string {
   if (value.trimStart().startsWith('-')) {
     return false;
   }
-  return !/[\0\r\n]/.test(value);
+  // Disallow ASCII control characters (0-31 and DEL/127) to prevent ANSI escape sequence injection
+  // and log/terminal pollution while permitting multi-word reason strings with spaces.
+  return !/[\0-\x1f\x7f]/.test(value);
 }
